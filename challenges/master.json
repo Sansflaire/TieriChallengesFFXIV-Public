@@ -1,11 +1,11 @@
 {
   "SchemaVersion": 1,
-  "Generated": "2026-08-23T07:19:42.6600099Z",
+  "Generated": "2026-08-23T07:25:02.0433792Z",
   "Challenges": [
     {
       "Id": "9f4f9b8f-b0a2-452b-b0c7-6fc17a8aa69c",
       "File": "challenges/9f4f9b8f-b0a2-452b-b0c7-6fc17a8aa69c.json",
-      "Sha256": "7bf4832b244926eed9602fa84eb484b011801ded396feb773bb2a3156bec511c",
+      "Sha256": "423a21dcacacc46004263e8190e8e9bf1cc10594ebd97035cde8a96f4438dde2",
       "Revision": 1,
       "Title": "Test Visit All Area",
       "Category": "Exploration",
@@ -14,7 +14,7 @@
     {
       "Id": "dead4e45-fe31-4425-955a-b72ade573b26",
       "File": "challenges/dead4e45-fe31-4425-955a-b72ade573b26.json",
-      "Sha256": "1fd0271990964baecd0ecb61be55617c82536492150ce2a592d60af35ce3663c",
+      "Sha256": "576a30ace3ccae849fa91cf36caa6746a4973e83e61eff8c5b0ba69fa7637f05",
       "Revision": 1,
       "Title": "Test Cheer on Pillar",
       "Category": "Miscellaneous",

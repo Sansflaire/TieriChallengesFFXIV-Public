@@ -1,6 +1,7 @@
 {
   "Id": "9f4f9b8f-b0a2-452b-b0c7-6fc17a8aa69c",
   "SortOrder": 13,
+  "MinPluginVersion": "0.0.0.0",
   "Category": "Exploration",
   "Title": "Test Visit All Area",
   "Detail": "Test Visit All Area",
