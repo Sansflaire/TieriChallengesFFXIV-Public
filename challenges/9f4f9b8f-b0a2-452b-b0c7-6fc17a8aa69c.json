@@ -1,0 +1,83 @@
+{
+  "Id": "9f4f9b8f-b0a2-452b-b0c7-6fc17a8aa69c",
+  "SortOrder": 13,
+  "Category": "Exploration",
+  "Title": "Test Visit All Area",
+  "Detail": "Test Visit All Area",
+  "Kind": 1,
+  "TerritoryId": 979,
+  "TerritoryName": "Empyreum",
+  "Areas": [
+    {
+      "Name": "Area 1",
+      "Shape": 0,
+      "X": -859.71094,
+      "Y": -10.0,
+      "Z": -774.93933,
+      "Radius": 1.0,
+      "SizeX": 6.0,
+      "SizeY": 6.0,
+      "SizeZ": 6.0,
+      "Scale": 0.5,
+      "RotationY": 0.0,
+      "Center": {
+        "X": -859.71094,
+        "Y": -10.0,
+        "Z": -774.93933
+      },
+      "EffectiveRadius": 0.5
+    },
+    {
+      "Name": "Area 2",
+      "Shape": 0,
+      "X": -859.70074,
+      "Y": -10.000001,
+      "Z": -780.5937,
+      "Radius": 1.0,
+      "SizeX": 6.0,
+      "SizeY": 6.0,
+      "SizeZ": 6.0,
+      "Scale": 0.5,
+      "RotationY": 0.0,
+      "Center": {
+        "X": -859.70074,
+        "Y": -10.000001,
+        "Z": -780.5937
+      },
+      "EffectiveRadius": 0.5
+    },
+    {
+      "Name": "Area 3",
+      "Shape": 0,
+      "X": -859.7192,
+      "Y": -10.0,
+      "Z": -786.2812,
+      "Radius": 1.0,
+      "SizeX": 6.0,
+      "SizeY": 6.0,
+      "SizeZ": 6.0,
+      "Scale": 0.5,
+      "RotationY": 0.0,
+      "Center": {
+        "X": -859.7192,
+        "Y": -10.0,
+        "Z": -786.2812
+      },
+      "EffectiveRadius": 0.5
+    }
+  ],
+  "EmoteId": 0,
+  "EmoteName": "",
+  "RequireFacing": false,
+  "FacingRadians": 0.0,
+  "FacingToleranceDeg": 30.0,
+  "MountId": 0,
+  "MountName": "",
+  "GearMode": 0,
+  "OutfitSetId": 0,
+  "OutfitName": "",
+  "GearItemId": 0,
+  "GearItemName": "",
+  "WholeZone": false,
+  "IsAreaKind": true
+}
