@@ -206,7 +206,12 @@ async function banHashes(env) {
   try {
     const fresh = await fetch(env.BANS_URL, {
       headers: { "User-Agent": "TieriChallengesFFXIV-Relay" },
-      cf: { cacheTtl: 60, cacheEverything: true },
+      // No extra caching layer of our own. raw.githubusercontent already fronts this with its
+      // own multi-minute CDN cache, and stacking a second one on top measurably delayed a ban:
+      // a real ban published and verified present at the origin still was not enforced 75s later,
+      // and only took effect around the four-minute mark. The remaining delay is raw's and cannot
+      // be removed from here; the Cache API fallback below still covers a fetch failure.
+      cf: { cacheTtl: 0 },
     });
 
     if (fresh.ok) {
