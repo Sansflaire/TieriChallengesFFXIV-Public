@@ -1,0 +1,126 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Local, gitignored secrets. Absent on a fresh clone, which is fine: SuggestionEndpoint
+       then resolves to empty and the suggestion feature disables itself with an explanatory
+       message rather than shipping a dead button. -->
+  <Import Project="Secrets.props" Condition="Exists('Secrets.props')" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Platforms>x64</Platforms>
+    <Platform>x64</Platform>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AssemblyName>TieriChallengesFFXIV</AssemblyName>
+    <RootNamespace>TieriChallengesFFXIV</RootNamespace>
+
+    <!-- SINGLE SOURCE OF TRUTH for the plugin version. Scheme is A.B.C.D:
+           A = channel (0 beta, 1 released)
+           B = percent toward the next full release, from the weighted milestone table
+           C = major update counter
+           D = minor update counter (resets to 0 when C increments)
+         PluginVersion.cs reads this back off the compiled assembly, so the UI cannot drift
+         from what was built. Bump it on EVERY change — see docs/How To Versioning.md.
+         The one thing that does NOT follow automatically is the manifest's AssemblyVersion
+         in ../TieriChallengesFFXIV.json; update that by hand to match. -->
+    <Version>0.81.28.0</Version>
+    <AssemblyVersion>0.81.28.0</AssemblyVersion>
+    <FileVersion>0.81.28.0</FileVersion>
+  </PropertyGroup>
+
+  <!-- TWO FLAVOURS OF THIS PLUGIN.
+       Debug   = Trist's DEVELOPER build. DEV_BUILD is defined, so the Challenge Creator and
+                 the /tchallenges creator command are compiled in, and the build deploys into
+                 devPlugins\TieriChallengesFFXIV\ for Dalamud to hot-load.
+       Release = the PUBLIC build. DEV_BUILD is NOT defined, so ChallengeCreatorWindow.cs
+                 compiles to nothing and the dev UI does not exist in the shipped DLL — it is
+                 absent, not merely hidden. Release does not deploy to devPlugins. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DefineConstants>$(DefineConstants);DEV_BUILD</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <DalamudLibPath>$(APPDATA)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
+    <PanacheUIPath>$(APPDATA)\XIVLauncher\devPlugins\PanacheUI\</PanacheUIPath>
+    <PluginDeployPath>$(APPDATA)\XIVLauncher\devPlugins\TieriChallengesFFXIV\</PluginDeployPath>
+  </PropertyGroup>
+
+  <!-- Bake the suggestion endpoint into assembly metadata so SuggestionService can read it back
+       without a literal in source. Keeps the secret in one gitignored file. -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SuggestionEndpoint</_Parameter1>
+      <_Parameter2>$(SuggestionEndpoint)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Dalamud"                HintPath="$(DalamudLibPath)Dalamud.dll"                  Private="false" />
+    <Reference Include="Dalamud.Common"           HintPath="$(DalamudLibPath)Dalamud.Common.dll"           Private="false" />
+    <Reference Include="Dalamud.Bindings.ImGui"   HintPath="$(DalamudLibPath)Dalamud.Bindings.ImGui.dll"   Private="false" />
+    <Reference Include="FFXIVClientStructs"       HintPath="$(DalamudLibPath)FFXIVClientStructs.dll"       Private="false" />
+    <Reference Include="InteropGenerator.Runtime" HintPath="$(DalamudLibPath)InteropGenerator.Runtime.dll" Private="false" />
+    <Reference Include="Lumina"                   HintPath="$(DalamudLibPath)Lumina.dll"                   Private="false" />
+    <Reference Include="Lumina.Excel"             HintPath="$(DalamudLibPath)Lumina.Excel.dll"             Private="false" />
+    <Reference Include="Newtonsoft.Json"          HintPath="$(DalamudLibPath)Newtonsoft.Json.dll"          Private="false" />
+    <Reference Include="Serilog"                  HintPath="$(DalamudLibPath)Serilog.dll"                  Private="false" />
+    <Reference Include="PanacheUI"                HintPath="$(PanacheUIPath)PanacheUI.dll"                 Private="false" />
+    <Reference Include="SkiaSharp"                HintPath="$(PanacheUIPath)SkiaSharp.dll"                 Private="false" />
+  </ItemGroup>
+
+  <!-- Dalamud loads the dev plugin from devPlugins\TieriChallengesFFXIV\, next to the
+       hand-authored TieriChallengesFFXIV.json manifest. -->
+  <Target Name="CopyToDevPlugins" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFolder="$(PluginDeployPath)"
+          OverwriteReadOnlyFiles="true" />
+  </Target>
+
+  <!-- Cue audio ships beside the DLL in a sounds\ folder and is played through Windows rather
+       than the game's mixer. The game's own copies of these sounds load fine and are silenced
+       somewhere past the point any parameter reaches, so shipping the audio is what makes the
+       cues work at all. build-public.ps1 puts the same folder in the release zip. -->
+  <ItemGroup>
+    <CueAudio Include="$(MSBuildProjectDirectory)\..\assets\sounds\*.wav" />
+  </ItemGroup>
+
+  <Target Name="CopyCueAudio" AfterTargets="Build">
+    <Copy SourceFiles="@(CueAudio)" DestinationFolder="$(TargetDir)sounds\"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(CueAudio)" DestinationFolder="$(PluginDeployPath)sounds\"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Built-in Appearance backgrounds. Same shape as CueAudio above: shipped beside the DLL in a
+       backgrounds\ folder rather than as an EmbeddedResource, because BackgroundPicker.Options
+       reads them from disk exactly like a user-supplied path — one code path for both, no
+       decode-from-stream special case for the built-ins. build-public.ps1 bundles the same
+       folder into the release zip. -->
+  <ItemGroup>
+    <BackgroundImage Include="$(MSBuildProjectDirectory)\..\assets\backgrounds\*.png" />
+  </ItemGroup>
+
+  <Target Name="CopyBackgroundImages" AfterTargets="Build">
+    <Copy SourceFiles="@(BackgroundImage)" DestinationFolder="$(TargetDir)backgrounds\"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(BackgroundImage)" DestinationFolder="$(PluginDeployPath)backgrounds\"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- See devPlugins/BROKEN.md §1 — each plugin's PluginLoadContext resolves DLLs only from
+       its OWN directory, never from devPlugins\PanacheUI\. PanacheUI + both SkiaSharp halves
+       must physically sit next to TieriChallengesFFXIV.dll or the plugin fails to load.
+       SkipUnchangedFiles keeps the 9.6 MB native libSkiaSharp from being recopied every build. -->
+  <Target Name="CopyPanacheLibs" AfterTargets="Build">
+    <Copy SourceFiles="$(PanacheUIPath)PanacheUI.dll;$(PanacheUIPath)SkiaSharp.dll;$(PanacheUIPath)libSkiaSharp.dll"
+          DestinationFolder="$(PluginDeployPath)"
+          OverwriteReadOnlyFiles="true"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

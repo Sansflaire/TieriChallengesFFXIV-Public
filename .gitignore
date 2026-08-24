@@ -1,0 +1,43 @@
+# Session rules are local-only — never committed (global rule).
+CLAUDE.md
+
+# Local secrets. Holds the suggestion endpoint (Discord webhook / Worker URL), which is baked
+# into the built DLL. Committing it would put a live credential in git history forever.
+src/Secrets.props
+
+# Build output
+src/bin/
+src/obj/
+bin/
+obj/
+dist/
+
+# Working clone of the public repo, created by the Creator's Publish button.
+publicrepo/
+*.user
+*.suo
+.vs/
+
+# The repo root IS the dev-plugin folder, so build artifacts land here.
+TieriChallengesFFXIV.dll
+TieriChallengesFFXIV.pdb
+TieriChallengesFFXIV.deps.json
+*.zip
+
+# Copied in by the CopyPanacheLibs target — owned by the PanacheUI repo, not this one.
+PanacheUI.dll
+SkiaSharp.dll
+libSkiaSharp.dll
+
+# Build output: cue audio copied next to the DLL. Source of truth is assets/sounds/.
+# Anchored with a leading slash so it cannot also match assets/sounds/.
+/sounds/
+
+# Build output: background images copied next to the DLL. Source of truth is assets/backgrounds/.
+/backgrounds/
+
+# Local-only credential notes. Never committed — see SECRETS.local.md itself for why.
+SECRETS.local.md
+
+# wrangler local state — account cache, build artefacts. Never useful in the repo.
+worker/.wrangler/
