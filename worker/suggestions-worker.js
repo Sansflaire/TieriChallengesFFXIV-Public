@@ -286,47 +286,95 @@ function unavailable() {
  * cannot exhaust everyone else's quota and a not-logged-in caller is still bounded.
  */
 async function rateLimit(sender, request, env) {
-  // Two independent keys, because they fail in opposite directions.
+  // Counted HERE, in the Cache API, rather than through env.RL_* rate-limit bindings.
   //
-  // `sender` is supplied by the CLIENT. Anyone hand-crafting requests just varies the name and
-  // walks straight past a sender-only limit -- which is exactly the person this is for. The IP
-  // comes from CF-Connecting-IP, set by Cloudflare at the edge and not forgeable by the caller.
+  // The bindings were tried first and are inert on this account: instrumented in production, they
+  // resolve to a live object with a working .limit() that returned {"success":true} for eight
+  // requests in one second against a three-per-ten-second limit. Whatever the cause, a limiter
+  // that always says yes is not a limiter, so this counts for itself.
   //
-  // IP alone is not enough either: a shared connection or a CGNAT range would punish innocent
-  // people for one abuser. So both are checked and EITHER tripping refuses the request.
+  // Cache API storage is per-colo and mildly racy under concurrency. Both are acceptable: a
+  // spammer hammering from one connection lands in ONE colo, which is the case this exists for,
+  // and a lost increment delays a block by one request rather than preventing it.
   const ip        = request.headers.get("CF-Connecting-IP") || "noip";
   const senderKey = (sender && sender.trim().toLowerCase()) || "anon";
 
   try {
-    if (!env.RL_BURST || !env.RL_SUSTAINED) {
-      // Loud, not silent. A missing binding used to fall through as "allowed", which meant a
-      // misconfigured limiter looked identical to a working one from the outside -- and it did,
-      // for a whole deploy. Configuration faults must be visible; only runtime faults fail open.
-      console.error("RATE LIMITER NOT BOUND -- requests are unlimited. Check wrangler.toml.");
-      return null;
-    }
+    // Checked in this order so an IP block wins: the sender name is caller-supplied and can be
+    // rotated freely, the IP cannot.
+    const ipHit = await bump("ip:" + ip, env);
+    const idHit = sender ? await bump("id:" + senderKey, env) : null;
 
-    const results = await Promise.all([
-      env.RL_BURST.limit({ key: "ip:" + ip }),
-      env.RL_SUSTAINED.limit({ key: "ip:" + ip }),
-      env.RL_BURST.limit({ key: "id:" + senderKey }),
-      env.RL_SUSTAINED.limit({ key: "id:" + senderKey }),
-    ]);
+    if (!ipHit.over && !(idHit && idHit.over)) return null;
 
-    if (results.every((r) => r && r.success)) return null;
+    // A name tripping the limit escalates to an IP block, as asked: one person cannot keep
+    // sending merely by editing the name they claim.
+    if (idHit && idHit.over && !ipHit.over) await forceBlockIp(ip, env);
 
-    const which = results[0].success && results[1].success ? "sender" : "ip";
-    console.log("rate limited by " + which + ": " + senderKey + " @ " + ip);
-    await noteSpam(sender, ip, env);
+    const why = ipHit.over ? "ip" : "sender";
+    console.log("rate limited by " + why + ": " + senderKey + " @ " + ip);
+    await noteSpam(sender, ip, env, why, ipHit.count);
 
-    // 429, not a silent drop. Unlike a ban this is a state the sender can correct, and the plugin
-    // already renders a non-2xx as "try again later".
     return json({ ok: false, error: "too many messages, slow down" }, 429);
   } catch (err) {
-    // A platform fault is the one case where letting an honest report through beats refusing
-    // every report. Distinct from the unbound case above, which is a bug and says so.
     console.error("rate limiter threw, allowing", String(err));
     return null;
+  }
+}
+
+/** Window length and ceiling. Deliberately generous — a real person sends one message, not eight. */
+const RL_WINDOW_S = 60;
+const RL_MAX      = 5;
+
+/**
+ * Increment a counter and report whether it is over the ceiling.
+ *
+ * Stores an absolute expiry inside the value rather than trusting the cache TTL alone, so a colo
+ * that serves a stale entry still gets the window right instead of extending a block forever.
+ */
+async function bump(key, env) {
+  const cache = caches.default;
+  const url   = "https://relay.internal/rl/" + encodeURIComponent(key);
+  const nowS  = Math.floor(Date.now() / 1000);
+
+  let count = 0, resetAt = nowS + RL_WINDOW_S, blockedUntil = 0;
+  try {
+    const prev = await cache.match(url);
+    if (prev) {
+      const v = await prev.json();
+      blockedUntil = v.blockedUntil || 0;
+      if ((v.resetAt || 0) > nowS) { count = v.count || 0; resetAt = v.resetAt; }
+    }
+  } catch { /* an unreadable counter starts a fresh window */ }
+
+  if (blockedUntil > nowS) return { over: true, count, blocked: true };
+
+  count += 1;
+  const over = count > RL_MAX;
+
+  try {
+    await cache.put(url, new Response(JSON.stringify({ count, resetAt, blockedUntil }), {
+      headers: { "cache-control": "max-age=" + Math.max(1, resetAt - nowS) },
+    }));
+  } catch (err) {
+    console.error("rl counter write failed", String(err));
+  }
+
+  return { over, count, blocked: false };
+}
+
+/** Escalate a name-based trip into an IP block, so rotating the claimed name buys nothing. */
+async function forceBlockIp(ip, env) {
+  const nowS = Math.floor(Date.now() / 1000);
+  try {
+    await caches.default.put(
+      "https://relay.internal/rl/" + encodeURIComponent("ip:" + ip),
+      new Response(JSON.stringify({
+        count: RL_MAX + 1, resetAt: nowS + RL_WINDOW_S, blockedUntil: nowS + RL_WINDOW_S,
+      }), { headers: { "cache-control": "max-age=" + RL_WINDOW_S } }));
+    console.log("escalated to an ip block: " + ip);
+  } catch (err) {
+    console.error("ip escalation failed", String(err));
   }
 }
 
@@ -341,7 +389,7 @@ async function rateLimit(sender, request, env) {
  * ALERT, not an enforcement decision. Under-counting delays a notification; it never lets a
  * message through, because the limiter above has already refused.</p>
  */
-async function noteSpam(sender, ip, env) {
+async function noteSpam(sender, ip, env, why, count) {
   const who = sender || ("unknown sender @ " + ip);
 
   const cache = caches.default;
@@ -382,7 +430,7 @@ async function alertOwner(who, ip, trips, env) {
         content:
           `**Rate limit tripped repeatedly**
 ` + "`" + who + "` from `" + ip + "`" + `
-${trips} refusals in the last hour. Their messages are being blocked, not delivered.
+${trips} refusals in the last hour (tripped by ${why}). Their messages are being blocked, not delivered.
 Ban them from the Creator's Bans tab if this continues.`,
         allowed_mentions: { parse: [] },
       }),
