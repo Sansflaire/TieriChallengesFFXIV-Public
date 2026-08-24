@@ -37,7 +37,7 @@ const BANS_TTL_MS    = 60_000;            // Re-fetch the ban list at most once 
 const BANS_CACHE_KEY = "https://relay.internal/bans";   // synthetic key for the Cache API
 
 /** How many limiter trips before you get told someone is doing it on purpose. */
-const SPAM_ALERT_AFTER = 3;
+const SPAM_ALERT_AFTER = 2;   // two refusals from one IP is already deliberate
 /** Don't re-alert about the same person more often than this. */
 const SPAM_ALERT_COOLDOWN_S = 3600;
 
@@ -393,25 +393,29 @@ async function noteSpam(sender, ip, env, why, count) {
   const who = sender || ("unknown sender @ " + ip);
 
   const cache = caches.default;
-  const key   = "https://relay.internal/spam/" + encodeURIComponent(who.toLowerCase());
+  // Keyed on the IP, NOT the name. Keying on the name was a bug that made the alert unreachable:
+  // a spammer rotating names created a fresh counter per request, so the trip count never rose
+  // above one and the notification never fired. The IP is the thing they cannot vary.
+  const key   = "https://relay.internal/spam/" + encodeURIComponent(ip);
 
-  let trips = 0, alerted = 0;
+  let trips = 0, alerted = 0, names = [];
   try {
     const prev = await cache.match(key);
-    if (prev) ({ trips = 0, alerted = 0 } = await prev.json());
+    if (prev) ({ trips = 0, alerted = 0, names = [] } = await prev.json());
   } catch { /* treat an unreadable counter as a fresh one */ }
 
   trips += 1;
+  if (sender && !names.includes(sender)) names = names.concat([sender]).slice(-5);
   const nowS = Math.floor(Date.now() / 1000);
   const due  = trips >= SPAM_ALERT_AFTER && (nowS - alerted) > SPAM_ALERT_COOLDOWN_S;
 
   if (due) {
     alerted = nowS;
-    await alertOwner(who, ip, trips, env);
+    await alertOwner(who, ip, trips, env, why, names);
   }
 
   try {
-    await cache.put(key, new Response(JSON.stringify({ trips, alerted }), {
+    await cache.put(key, new Response(JSON.stringify({ trips, alerted, names }), {
       headers: { "cache-control": "max-age=" + SPAM_ALERT_COOLDOWN_S },
     }));
   } catch (err) {
@@ -420,7 +424,7 @@ async function noteSpam(sender, ip, env, why, count) {
 }
 
 /** Post the spam notice to the same channel, clearly marked so it is not mistaken for a report. */
-async function alertOwner(who, ip, trips, env) {
+async function alertOwner(who, ip, trips, env, why, names) {
   try {
     await fetch(env.DISCORD_WEBHOOK, {
       method: "POST",
@@ -430,7 +434,9 @@ async function alertOwner(who, ip, trips, env) {
         content:
           `**Rate limit tripped repeatedly**
 ` + "`" + who + "` from `" + ip + "`" + `
-${trips} refusals in the last hour (tripped by ${why}). Their messages are being blocked, not delivered.
+**${trips}** refusals in the last hour, tripped by **${why}**.
+Names used: ${names.length ? names.map((n) => "`" + n + "`").join(", ") : "(none sent)"}
+Their messages are being blocked, not delivered.
 Ban them from the Creator's Bans tab if this continues.`,
         allowed_mentions: { parse: [] },
       }),

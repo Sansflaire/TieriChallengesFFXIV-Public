@@ -121,6 +121,19 @@ internal sealed class BanAdmin
             return;
         }
 
+        // HARD REFUSAL, not a warning. This directory holds real character names, and the folder
+        // the plugin is developed in is now a checkout of the PUBLIC repo. Mirroring into it would
+        // stage PII for a public push, and git history keeps it even if the folder is deleted
+        // afterwards. The path is a hand-typed config field, so this WILL be mis-set eventually.
+        if (PointsAtPublicRepo(_backupRepoPath))
+        {
+            _backupStatus = "REFUSED — that path is the PUBLIC repo. The ledger holds real "
+                          + "character names and must never be committed there. Point this at a "
+                          + "checkout of the private vault repo instead.";
+            Plugin.Log.Error("[BanAdmin] refused to mirror into a public repo checkout.");
+            return;
+        }
+
         try
         {
             string dir     = Path.Combine(_backupRepoPath, "backup");
@@ -138,6 +151,31 @@ internal sealed class BanAdmin
         {
             Plugin.Log.Error(ex, "[BanAdmin] mirror failed");
             _backupStatus = "MIRROR FAILED — see the log. The ledger itself was still saved.";
+        }
+    }
+
+    /// <summary>
+    /// True if <paramref name="path"/> is a git checkout whose origin is the public repo.
+    ///
+    /// <para>Reads .git/config directly rather than shelling out to git: this runs on the draw
+    /// thread, and spawning a process per frame to answer a question about a text file would be
+    /// absurd. A missing or unreadable config returns false — this gate exists to catch the
+    /// specific known-bad case, not to refuse everything it cannot classify.</para>
+    /// </summary>
+    private static bool PointsAtPublicRepo(string path)
+    {
+        try
+        {
+            string cfg = Path.Combine(path, ".git", "config");
+            if (!File.Exists(cfg)) return false;
+
+            string text = File.ReadAllText(cfg);
+            return text.Contains("TieriChallengesFFXIV-Public", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("TieriChallengesFFXIV-Sync", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
         }
     }
 
