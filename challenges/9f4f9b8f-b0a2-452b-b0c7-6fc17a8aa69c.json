@@ -1,10 +1,11 @@
 {
   "Id": "9f4f9b8f-b0a2-452b-b0c7-6fc17a8aa69c",
   "SortOrder": 13,
-  "MinPluginVersion": "0.0.0.0",
-  "Category": "Exploration",
+  "MinPluginVersion": "0.1.0.0",
+  "Category": "Debug",
   "Title": "Test Visit All Area",
   "Detail": "Test Visit All Area",
+  "Hint": "",
   "Kind": 1,
   "TerritoryId": 979,
   "TerritoryName": "Empyreum",
@@ -26,7 +27,8 @@
         "Y": -10.0,
         "Z": -774.93933
       },
-      "EffectiveRadius": 0.5
+      "EffectiveRadius": 0.5,
+      "MinExtent": 0.5
     },
     {
       "Name": "Area 2",
@@ -45,7 +47,8 @@
         "Y": -10.000001,
         "Z": -780.5937
       },
-      "EffectiveRadius": 0.5
+      "EffectiveRadius": 0.5,
+      "MinExtent": 0.5
     },
     {
       "Name": "Area 3",
@@ -64,9 +67,11 @@
         "Y": -10.0,
         "Z": -786.2812
       },
-      "EffectiveRadius": 0.5
+      "EffectiveRadius": 0.5,
+      "MinExtent": 0.5
     }
   ],
+  "ShowProgress": true,
   "EmoteId": 0,
   "EmoteName": "",
   "RequireFacing": false,

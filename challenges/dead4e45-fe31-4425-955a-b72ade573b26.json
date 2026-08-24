@@ -1,10 +1,11 @@
 {
   "Id": "dead4e45-fe31-4425-955a-b72ade573b26",
   "SortOrder": 14,
-  "MinPluginVersion": "0.0.0.0",
-  "Category": "Miscellaneous",
+  "MinPluginVersion": "0.1.0.0",
+  "Category": "Debug",
   "Title": "Test Cheer on Pillar",
   "Detail": "Test Cheer on Pillar",
+  "Hint": "",
   "Kind": 3,
   "TerritoryId": 979,
   "TerritoryName": "Empyreum",
@@ -26,9 +27,11 @@
         "Y": -7.9883194,
         "Z": -789.47455
       },
-      "EffectiveRadius": 0.5
+      "EffectiveRadius": 0.5,
+      "MinExtent": 0.5
     }
   ],
+  "ShowProgress": true,
   "EmoteId": 6,
   "EmoteName": "Cheer",
   "RequireFacing": false,
