@@ -46,5 +46,17 @@ libSkiaSharp.dll
 # Local-only credential notes. Never committed — see SECRETS.local.md itself for why.
 SECRETS.local.md
 
+# Ban ledger mirror written by the Creator's Bans tab: backup/bans-private.json plus dated
+# history under backup/history/.
+#
+# THIS IS THE PLAINTEXT LEDGER — real character names and the reasons they were banned. It is
+# the only readable record of who is banned (published hashes are one-way) and so the only way
+# to lift one, which is exactly why it exists and exactly why it must never be published.
+#
+# This repo's origin is TieriChallengesFFXIV-PUBLIC. Anything committed here is world-readable
+# the moment it is pushed, and git history is not something you can quietly take back.
+# The ledger's home is the private vault repo; this folder is a staging copy, nothing more.
+/banbackup/
+
 # wrangler local state — account cache, build artefacts. Never useful in the repo.
 worker/.wrangler/
