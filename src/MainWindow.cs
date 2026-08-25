@@ -159,6 +159,12 @@ internal sealed class MainWindow : IDisposable
     /// </summary>
     public Action? OnOpenStatus;
 
+    /// <summary>
+    /// Open the objective sheet for a challenge. Routed through Plugin rather than owning the
+    /// window here, so the plain-ImGui renderer reaches the same one instead of needing its own.
+    /// </summary>
+    public Action<string>? OnOpenObjectives;
+
     // ── Palette ──────────────────────────────────────────────────────────────
     // One accent (DESIGN_SYSTEM §1.2) + the shared semantic status palette (§3.3).
     private static readonly PColor Accent   = PColor.FromHex("#E3B341");
@@ -170,6 +176,21 @@ internal sealed class MainWindow : IDisposable
     // Hints get their own hue rather than reusing the gold accent: a revealed hint has to read
     // as "this is not the description you were looking at" at a glance, from across the row.
     private static readonly PColor HintAccent = PColor.FromHex("#8FB8E8");
+
+    /// <summary>
+    /// Theme colours. Gold is the plugin's own accent and stays the default; a quest is blue and an
+    /// adventure green. These are read off the challenge's STRUCTURE — see <see cref="ChallengeTheme"/>
+    /// for why no challenge carries a colour of its own.
+    /// </summary>
+    private static readonly PColor QuestBlue     = PColor.FromHex("#8FB8E8");
+    private static readonly PColor AdventureGreen = PColor.FromHex("#7FD6A9");
+
+    private static PColor ThemeColor(ChallengeTheme t) => t switch
+    {
+        ChallengeTheme.Quest     => QuestBlue,
+        ChallengeTheme.Adventure => AdventureGreen,
+        _                        => Accent,
+    };
     private static readonly PColor HintText   = PColor.FromHex("#A9C9F0").WithOpacity(0.95f);
 
     /// <summary>
@@ -2594,6 +2615,9 @@ internal sealed class MainWindow : IDisposable
         });
 
         // The number is not spoiler information — only ordering — so it survives the mask.
+        //
+        // For a chain, def.Title is already the CURRENT step's wording (ChallengeCatalog.FaceOf),
+        // so the row reads as the leg the player is on rather than the series name.
         string title = spoilered ? "??? Challenge"
                       : string.IsNullOrWhiteSpace(def.Title) ? "(unnamed challenge)" : def.Title;
         if (def.Number > 0) title = $"#{def.Number}  {title}";
@@ -2663,6 +2687,15 @@ internal sealed class MainWindow : IDisposable
             }
         }
 #endif
+
+        // A chain says where in the series it is, ahead of the step's own description — "Step 2 of
+        // 5" is the fact a quest row exists to carry, and def.Detail below already belongs to that
+        // step. Suppressed when the author hid progress, for chains whose length is a spoiler.
+        if (!done && def.StepLabel.Length > 0)
+        {
+            sub      = $"{def.StepLabel}  ·  {sub}";
+            subColor = QuestBlue;
+        }
 
         // A race the player is standing at the line of stops describing itself and starts asking.
         // This is the in-window route to starting one, and the ONLY route once the corner prompt
@@ -2763,6 +2796,21 @@ internal sealed class MainWindow : IDisposable
             uint here = (uint)Plugin.ClientState.TerritoryType;
             if (here != 0 && ZoneIndex.TerritoryOf(_config, def.Id) == here)
                 controls.AppendChild(PUI.Icon(Ico.HereNow, HereIconSz, Accent));
+        }
+
+        // Quest / adventure: a way into the full requirement sheet. The row can only ever show the
+        // leg the player is on, so without this the shape of a five-step chain is invisible.
+        // Withheld while spoilered — the sheet is the most detailed thing the mask has to hide.
+        if (def.HasObjectiveList && !spoilered)
+        {
+            string objId = def.Id;
+            var themed = ThemeColor(def.Theme);
+            controls.AppendChild(Pill("obj:" + objId, def.Theme == ChallengeTheme.Quest ? "QUEST" : "STEPS",
+                                      themed, () =>
+            {
+                _controlClickPending = true;
+                OnOpenObjectives?.Invoke(objId);
+            }));
         }
 
         // Locally authored challenges are badged, always and in every build, so an official

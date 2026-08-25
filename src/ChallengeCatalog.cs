@@ -38,8 +38,25 @@ public sealed record ChallengeDef(
     int           Number   = 0,
     ChallengeSource Source = ChallengeSource.Custom,
     string        Hint     = "",
-    int           Difficulty = 0)
+    int           Difficulty = 0,
+    ChallengeTheme Theme  = ChallengeTheme.Normal,
+    int           StepNumber = 0,
+    int           StepTotal  = 0,
+    bool          ShowProgress = true)
 {
+    /// <summary>A quest chain. The Title/Detail/Hint above are the CURRENT step's, not the chain's.</summary>
+    public bool IsChain => Theme == ChallengeTheme.Quest && StepTotal > 0;
+
+    /// <summary>
+    /// Several objectives worth listing out — a chain's steps, or an adventure's stops. Drives
+    /// whether the row offers a way into the objective window.
+    /// </summary>
+    public bool HasObjectiveList => Theme is ChallengeTheme.Quest or ChallengeTheme.Adventure;
+
+    /// <summary>"Step 2 of 5", or empty when there is nothing to count or the author hid it.</summary>
+    public string StepLabel =>
+        IsChain && ShowProgress && StepTotal > 1 ? $"Step {StepNumber} of {StepTotal}" : string.Empty;
+
     /// <summary>A difficulty was authored. Unrated challenges render no star row at all.</summary>
     public bool HasDifficulty => Difficulty is >= 1 and <= 5;
 
@@ -299,6 +316,31 @@ public static class ChallengeCatalog
         _ => PluginVersion.Current,
     };
 
+    /// <summary>
+    /// What a challenge's CONTENT requires, not just its kind.
+    ///
+    /// <para><b>A chain needs this and the kind switch cannot see it.</b> A quest chain's own Kind
+    /// is <see cref="ChallengeKind.InArea"/>, so a build that predates chains would load it
+    /// happily, ignore the <c>ChainSteps</c> property it has never heard of, find the challenge's
+    /// own <c>Requirements</c> list empty, fail <c>IsWellFormed</c> and skip it forever. That is
+    /// precisely the silent mis-tracking the version gate exists to prevent, so the floor has to be
+    /// raised by the presence of steps rather than by the kind.</para>
+    ///
+    /// <para>Always take the HIGHEST requirement any part of the content implies.</para>
+    /// </summary>
+    public static Version RequiredFor(CustomChallenge c)
+    {
+        var required = RequiredFor(c.Kind);
+
+        if (c.IsChain)
+        {
+            var chains = new Version(0, 81, 35, 0);
+            if (chains > required) required = chains;
+        }
+
+        return required;
+    }
+
     /// <summary>Parsed requirement, or 0.0.0.0 when absent or malformed (i.e. always loadable).</summary>
     public static Version RequiredVersion(CustomChallenge c)
     {
@@ -308,6 +350,59 @@ public static class ChallengeCatalog
 
     /// <summary>True if the string is a real GUID — used to spot pre-GUID ids during migration.</summary>
     public static bool IsGuid(string? id) => Guid.TryParse(id, out _);
+
+    // ── Chains ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The step a chain is currently on, clamped into range, or null when it is not a chain.
+    ///
+    /// <para>Clamped rather than trusted: a chain edited down to fewer steps must not leave a
+    /// player pointing past the end of it. Reading past the end would either throw or silently
+    /// read as "finished", and neither is a completion anyone earned.</para>
+    /// </summary>
+    public static ChainStep? CurrentStep(CustomChallenge c)
+    {
+        if (!c.IsChain) return null;
+
+        int idx = Math.Clamp(Plugin.Progress.ChainStep(c.Id), 0, c.ChainSteps.Count - 1);
+        return c.ChainSteps[idx];
+    }
+
+    /// <summary>Which step number the player is on, 1-based. 0 when not a chain.</summary>
+    public static int CurrentStepNumber(CustomChallenge c) =>
+        c.IsChain ? Math.Clamp(Plugin.Progress.ChainStep(c.Id), 0, c.ChainSteps.Count - 1) + 1 : 0;
+
+    /// <summary>
+    /// The zone a challenge should be FILED under right now.
+    ///
+    /// <para>For a chain that is wherever the current step points, not where the chain was
+    /// authored — a quest that walks the player from Gridania to Ul'dah belongs under Ul'dah once
+    /// they are on that leg. Everything else is simply its own territory.</para>
+    /// </summary>
+    public static ushort EffectiveTerritory(CustomChallenge c)
+    {
+        var step = CurrentStep(c);
+        if (step != null && step.TerritoryId != 0) return step.TerritoryId;
+        return c.TerritoryId;
+    }
+
+    /// <summary>
+    /// How a chain presents itself right now: the CURRENT step's wording, not the chain's.
+    /// A chain's own Title/Detail are the series name and blurb; the row has to show the leg the
+    /// player is actually on, or a five-step quest reads identically at every stage.
+    /// </summary>
+    public static (string Title, string Detail, string Hint) FaceOf(CustomChallenge c)
+    {
+        var step = CurrentStep(c);
+        if (step == null) return (c.Title ?? string.Empty, c.Detail ?? string.Empty, c.Hint ?? string.Empty);
+
+        // A step that leaves a field blank falls back to the chain's — an author who writes one
+        // hint for the whole quest should not have it vanish on step two.
+        return (
+            string.IsNullOrWhiteSpace(step.Title)  ? c.Title  ?? string.Empty : step.Title,
+            string.IsNullOrWhiteSpace(step.Detail) ? c.Detail ?? string.Empty : step.Detail,
+            string.IsNullOrWhiteSpace(step.Hint)   ? c.Hint   ?? string.Empty : step.Hint);
+    }
 
     /// <summary>
     /// Built-in and user-authored challenges together, in the player's chosen order. The Number
@@ -341,16 +436,22 @@ public static class ChallengeCatalog
                 if (string.IsNullOrWhiteSpace(o.Id)) continue;
                 if (!Loadable(o)) continue;
                 if (!seen.Add(o.Id)) continue;
+
+                var (oTitle, oDetail, oHint) = FaceOf(o);
                 list.Add((o.SortOrder, new ChallengeDef(
                     o.Id,
                     string.IsNullOrWhiteSpace(o.Category) ? "Miscellaneous" : o.Category,
-                    o.Title  ?? string.Empty,
-                    o.Detail ?? string.Empty,
+                    oTitle,
+                    oDetail,
                     o.Kind,
                     IsCustom: false,
                     Source:     ChallengeSource.Official,
-                    Hint:       o.Hint ?? string.Empty,
-                    Difficulty: o.Difficulty)));
+                    Hint:       oHint,
+                    Difficulty: o.Difficulty,
+                    Theme:      o.Theme,
+                    StepNumber: CurrentStepNumber(o),
+                    StepTotal:  o.ChainSteps?.Count ?? 0,
+                    ShowProgress: o.ShowProgress)));
             }
         }
 
@@ -367,16 +468,21 @@ public static class ChallengeCatalog
                 ? ChallengeSource.Official
                 : ChallengeSource.Custom;
 
+            var (cTitle, cDetail, cHint) = FaceOf(c);
             list.Add((c.SortOrder, new ChallengeDef(
                 c.Id,
                 string.IsNullOrWhiteSpace(c.Category) ? "Miscellaneous" : c.Category,
-                c.Title  ?? string.Empty,
-                c.Detail ?? string.Empty,
+                cTitle,
+                cDetail,
                 c.Kind,
                 IsCustom:   source == ChallengeSource.Custom,
                 Source:     source,
-                Hint:       c.Hint ?? string.Empty,
-                Difficulty: c.Difficulty)));
+                Hint:       cHint,
+                Difficulty: c.Difficulty,
+                Theme:      c.Theme,
+                StepNumber: CurrentStepNumber(c),
+                StepTotal:  c.ChainSteps?.Count ?? 0,
+                ShowProgress: c.ShowProgress)));
         }
 
         // ── Ordering ─────────────────────────────────────────────────────────

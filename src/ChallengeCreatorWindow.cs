@@ -112,6 +112,25 @@ internal sealed class ChallengeCreatorWindow
     private int  _raceFailSeconds;
     private bool _raceUseQuit;
 
+    // ── Chain draft state ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Steps of the quest chain being authored. Non-empty makes the draft a Quest.
+    ///
+    /// <para>Each step owns a full copy of the composite editor's state, so a step is authored the
+    /// same way a standalone challenge is. Rather than duplicate all of that, the editor loads ONE
+    /// step at a time into the shared draft fields (<see cref="_areas"/>, <see cref="_conditions"/>,
+    /// <see cref="_mode"/>) and writes it back when you switch away — see
+    /// <see cref="CommitStepDraft"/>. That is why <see cref="_editingStep"/> exists.</para>
+    /// </summary>
+    private readonly List<ChainStep> _chainSteps = new();
+
+    /// <summary>Index of the step currently loaded into the shared draft fields, or -1.</summary>
+    private int _editingStep = -1;
+
+    /// <summary>Progress resets on logout. Off by default — see Configuration.SessionOnly.</summary>
+    private bool _sessionOnly;
+
     /// <summary>
     /// Conditions per draft area, parallel to <see cref="_areas"/>.
     ///
@@ -522,6 +541,197 @@ internal sealed class ChallengeCreatorWindow
         if (removeAt >= 0) _areas.RemoveAt(removeAt);
     }
 
+    // ── Chain editor ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Write the shared draft fields back into the step they were loaded from. Called before every
+    /// switch away from a step, and before saving.
+    ///
+    /// <para>Without this, editing step 2 and then clicking step 3 would silently discard step 2's
+    /// work — the shared fields would simply be overwritten.</para>
+    /// </summary>
+    private void CommitStepDraft()
+    {
+        if (_editingStep < 0 || _editingStep >= _chainSteps.Count) return;
+
+        SyncConditionSlots();
+        var step = _chainSteps[_editingStep];
+
+        step.Mode = _mode;
+        step.Requirements.Clear();
+
+        for (int i = 0; i < _areas.Count; i++)
+        {
+            var req = new AreaRequirement
+            {
+                Area          = _areas[i].Clone(),
+                Label         = _areas[i].Name,
+                WithinSeconds = _mode == AreaMode.InOrder ? _within[i] : 0,
+            };
+            foreach (var c in _conditions[i]) req.Conditions.Add(c.Clone());
+            step.Requirements.Add(req);
+
+            if (_mode == AreaMode.Single) break;
+        }
+    }
+
+    /// <summary>Load a step into the shared draft fields, committing whatever was there first.</summary>
+    private void LoadStepDraft(int index)
+    {
+        CommitStepDraft();
+
+        if (index < 0 || index >= _chainSteps.Count) { _editingStep = -1; return; }
+
+        var step = _chainSteps[index];
+        _editingStep = index;
+        _mode = step.Mode;
+
+        _areas.Clear();
+        _conditions.Clear();
+        _within.Clear();
+
+        foreach (var r in step.Requirements)
+        {
+            var area = r.Area?.Clone() ?? new ChallengeArea();
+            if (!string.IsNullOrWhiteSpace(r.Label)) area.Name = r.Label;
+            _areas.Add(area);
+
+            var conds = new List<ChallengeCondition>();
+            foreach (var c in r.Conditions) conds.Add(c.Clone());
+            _conditions.Add(conds);
+
+            _within.Add(r.WithinSeconds);
+        }
+
+        SyncConditionSlots();
+    }
+
+    private void DrawChainSection()
+    {
+        ImGui.TextUnformatted("Quest chain");
+        ImGui.TextDisabled(
+            "Steps are done in order. Each one replaces the last on the challenge row, and only "
+          + "finishing the last step completes the challenge. Leave this empty for a normal "
+          + "challenge or an adventure.");
+
+        if (ImGui.Button("＋ Add step", new Vector2(130, 26)))
+        {
+            CommitStepDraft();
+            _chainSteps.Add(new ChainStep
+            {
+                Id            = ChallengeCatalog.NewId(),
+                Title         = $"Step {_chainSteps.Count + 1}",
+                TerritoryId   = _territoryId,
+                TerritoryName = _territoryName,
+            });
+            LoadStepDraft(_chainSteps.Count - 1);
+        }
+
+        if (_chainSteps.Count == 0)
+        {
+            ImGui.TextDisabled("No steps — this draft is not a chain.");
+            return;
+        }
+
+        ImGui.SameLine();
+        ImGui.TextDisabled($"{_chainSteps.Count} step(s)");
+
+        int removeAt = -1;
+        int moveUp   = -1;
+
+        for (int i = 0; i < _chainSteps.Count; i++)
+        {
+            ImGui.PushID(3000 + i);
+            var step = _chainSteps[i];
+
+            bool editing = i == _editingStep;
+            string label = string.IsNullOrWhiteSpace(step.Title) ? "(unnamed step)" : step.Title;
+            string flag  = step.IsWellFormed() ? string.Empty : "  [incomplete]";
+
+            if (ImGui.CollapsingHeader($"{i + 1}. {label}{flag}###chainstep{i}",
+                                       editing ? ImGuiTreeNodeFlags.DefaultOpen : ImGuiTreeNodeFlags.None))
+            {
+                if (!editing)
+                {
+                    if (ImGui.Button("Edit this step's areas", new Vector2(190, 24)))
+                        LoadStepDraft(i);
+                    ImGui.TextDisabled($"{step.Requirements.Count} area(s), {step.Mode}");
+                }
+
+                string t = step.Title;
+                ImGui.SetNextItemWidth(-1);
+                if (ImGui.InputTextWithHint("##steptitle", "step name", ref t, 128)) step.Title = t;
+
+                string d = step.Detail;
+                ImGui.SetNextItemWidth(-1);
+                if (ImGui.InputTextWithHint("##stepdetail", "what the player must do", ref d, 512))
+                    step.Detail = d;
+
+                string h = step.Hint;
+                ImGui.SetNextItemWidth(-1);
+                if (ImGui.InputTextWithHint("##stephint", "hint (optional)", ref h, 512)) step.Hint = h;
+
+                // A step's own zone is what re-files the chain as the player advances. Captured
+                // explicitly, never read from the player at save time — same rule as the challenge's.
+                ImGui.TextUnformatted($"Zone: {(step.TerritoryId == 0 ? "(chain's zone)" : step.TerritoryName)}");
+                ImGui.SameLine();
+                if (ImGui.Button("Set to my current zone##stepzone", new Vector2(190, 22)))
+                {
+                    step.TerritoryId   = (ushort)Plugin.ClientState.TerritoryType;
+                    step.TerritoryName = PlayerStateReader.ZoneName(step.TerritoryId);
+                }
+
+                if (editing)
+                {
+                    ImGui.Separator();
+                    ImGui.TextColored(Good, "Editing this step's areas below.");
+                }
+
+                ImGui.Separator();
+                if (i > 0 && ImGui.Button("Move up", new Vector2(90, 22))) moveUp = i;
+                ImGui.SameLine();
+                if (ImGui.Button("Delete step", new Vector2(110, 22))) removeAt = i;
+            }
+
+            ImGui.PopID();
+        }
+
+        if (moveUp > 0)
+        {
+            CommitStepDraft();
+            (_chainSteps[moveUp - 1], _chainSteps[moveUp]) = (_chainSteps[moveUp], _chainSteps[moveUp - 1]);
+
+            // Steps are keyed by GUID, not position, so reordering carries a player's progress
+            // with the step rather than shifting them onto a different one. The editing index
+            // still has to follow the move so the shared draft keeps pointing at the same step.
+            if (_editingStep == moveUp)          _editingStep = moveUp - 1;
+            else if (_editingStep == moveUp - 1) _editingStep = moveUp;
+        }
+
+        if (removeAt >= 0)
+        {
+            _chainSteps.RemoveAt(removeAt);
+            if (_editingStep == removeAt)     _editingStep = -1;
+            else if (_editingStep > removeAt) _editingStep--;
+        }
+
+        // The shared area editor below belongs to whichever step is loaded. Saying so is the whole
+        // difference between an obvious UI and a baffling one.
+        ImGui.Separator();
+        if (_editingStep >= 0 && _editingStep < _chainSteps.Count)
+        {
+            ImGui.TextColored(Good,
+                $"The areas and conditions below belong to step {_editingStep + 1}: "
+              + $"{_chainSteps[_editingStep].Title}");
+        }
+        else
+        {
+            ImGui.TextColored(Warn,
+                "No step selected — open a step above and press \"Edit this step's areas\" first. "
+              + "Areas placed now belong to the challenge itself, not to any step.");
+        }
+    }
+
     // ── Race editor ──────────────────────────────────────────────────────────
 
     /// <summary>Fixed slot order inside <see cref="_areas"/> while authoring a race.</summary>
@@ -665,6 +875,9 @@ internal sealed class ChallengeCreatorWindow
     {
         SyncConditionSlots();
 
+        DrawChainSection();
+        ImGui.Separator();
+
         ImGui.TextUnformatted("How many places?");
 
         string current = "?", blurb = string.Empty;
@@ -682,6 +895,16 @@ internal sealed class ChallengeCreatorWindow
             ImGui.EndCombo();
         }
         if (!string.IsNullOrEmpty(blurb)) ImGui.TextDisabled(blurb);
+
+        // Only meaningful once there is more than one thing to be part-way through.
+        if (_mode != AreaMode.Single || _chainSteps.Count > 0)
+        {
+            ImGui.Checkbox("All in one login session (progress resets on logout)", ref _sessionOnly);
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Off by default. An adventure or quest the player is told to take "
+                               + "their time over must not lose its progress every logout.\n"
+                               + "Turn ON only when doing it in one sitting is the point.");
+        }
 
         // Switching back to Single with several areas already placed would silently orphan
         // everything past the first — say so rather than dropping them at save time.
@@ -1532,7 +1755,7 @@ internal sealed class ChallengeCreatorWindow
                     // Recomputed from the challenge's CONTENT, never from "today's build". This
                     // used to stamp the current version on every save, so renaming a published
                     // challenge withheld it from everyone still on an older plugin.
-                    draft.MinPluginVersion = ChallengeCatalog.RequiredFor(draft.Kind).ToString();
+                    draft.MinPluginVersion = ChallengeCatalog.RequiredFor(draft).ToString();
                     _config.CustomChallenges[idx] = draft;
                     _feedback = $"Saved changes to \"{draft.Title}\".";
                 }
@@ -1582,6 +1805,10 @@ internal sealed class ChallengeCreatorWindow
         {
             // What this challenge's CONTENT requires — not the build that authored it. Older
             // plugins refuse only a kind they cannot evaluate; see ChallengeCatalog.RequiredFor.
+            // Placeholder — recomputed from the finished draft at the bottom of this method, once
+            // the chain steps are on it. RequiredFor needs the CONTENT, not just the kind: a chain
+            // carries Kind = InArea and would otherwise be stamped as loadable by builds that
+            // cannot evaluate it.
             MinPluginVersion = ChallengeCatalog.RequiredFor(_kind).ToString(),
             Category      = category,
             Title         = _title.Trim(),
@@ -1606,14 +1833,27 @@ internal sealed class ChallengeCreatorWindow
             WholeZone     = _wholeZone,
             ShowProgress  = _showProgress,
             Mode          = _mode,
+            SessionOnly   = _sessionOnly,
         };
+
+        // The chain, if any. Committed first so the step currently loaded into the shared draft
+        // fields is written back rather than discarded.
+        if (_chainSteps.Count > 0)
+        {
+            CommitStepDraft();
+            foreach (var s in _chainSteps) draft.ChainSteps.Add(s.Clone());
+        }
 
         foreach (var a in _areas) draft.Areas.Add(a.Clone());
 
         // Composite stops are assembled from the parallel draft lists. Deep-copied for the same
         // reason LoadDraft deep-copies areas: the draft must stay independent of what is stored,
         // or every keystroke would edit the saved challenge live with no way to cancel.
-        if (_kind == ChallengeKind.InArea)
+        // A chain hangs its content on its STEPS. The shared area fields currently hold whichever
+        // step is loaded, and copying them into the challenge's own Requirements as well would
+        // duplicate one step's areas at the top level — harmless to the tracker, which dispatches
+        // chains ahead of Kind, but it would ship nonsense in the published file.
+        if (_kind == ChallengeKind.InArea && _chainSteps.Count == 0)
         {
             SyncConditionSlots();
 
@@ -1652,6 +1892,9 @@ internal sealed class ChallengeCreatorWindow
             draft.Areas.Clear();
         }
 
+        // Now that the draft is fully populated. See the placeholder note above.
+        draft.MinPluginVersion = ChallengeCatalog.RequiredFor(draft).ToString();
+
         return draft;
     }
 
@@ -1675,7 +1918,30 @@ internal sealed class ChallengeCreatorWindow
 
     private static string WhyCompositeIncomplete(CustomChallenge d)
     {
-        if (d.TerritoryId == 0)          return "Log in so the zone can be captured.";
+        if (d.TerritoryId == 0) return "Log in so the zone can be captured.";
+
+        if (d.IsChain)
+        {
+            for (int i = 0; i < d.ChainSteps.Count; i++)
+            {
+                var s = d.ChainSteps[i];
+                if (s.IsWellFormed()) continue;
+
+                if (s.Requirements.Count == 0)
+                    return $"Step {i + 1} has no areas — select it and add one.";
+                if (s.Mode == AreaMode.Single && s.Requirements.Count != 1)
+                    return $"Step {i + 1} is Single mode but has {s.Requirements.Count} areas.";
+
+                foreach (var r in s.Requirements)
+                    foreach (var c in r.Conditions)
+                        if (!c.IsWellFormed())
+                            return $"Step {i + 1}: \"{ConditionLabel(c.Type)}\" still needs a value.";
+
+                return $"Step {i + 1}: facing on its own cannot complete a step.";
+            }
+            return "Incomplete.";
+        }
+
         if (d.Requirements.Count == 0)   return "Add at least one area.";
 
         if (d.Mode == AreaMode.Single && d.Requirements.Count != 1)
@@ -1719,10 +1985,21 @@ internal sealed class ChallengeCreatorWindow
         _areas.Clear();
         _conditions.Clear();
         _within.Clear();
+        _chainSteps.Clear();
+        _editingStep = -1;
 
-        _mode = c.Mode;
+        _mode        = c.Mode;
+        _sessionOnly = c.SessionOnly;
 
-        if (c.Kind == ChallengeKind.InArea)
+        if (c.IsChain)
+        {
+            foreach (var s in c.ChainSteps) _chainSteps.Add(s.Clone());
+
+            // Open the first step so the shared area editor below is pointing at something rather
+            // than at nothing, which reads as "my areas vanished".
+            if (_chainSteps.Count > 0) LoadStepDraft(0);
+        }
+        else if (c.Kind == ChallengeKind.InArea)
         {
             // Composite challenges keep their areas in Requirements, so unpack them back into the
             // parallel draft lists the editor works on. Same deep-copy rule for the conditions.
@@ -1791,6 +2068,9 @@ internal sealed class ChallengeCreatorWindow
         _mode = AreaMode.Single;
         _raceFailSeconds = 0;
         _raceUseQuit     = false;
+        _chainSteps.Clear();
+        _editingStep = -1;
+        _sessionOnly = false;
         _emoteId = 0; _emoteName = string.Empty;
         _mountId = 0; _mountName = string.Empty;
         _outfitId = 0; _outfitName = string.Empty;
@@ -1972,7 +2252,7 @@ internal sealed class ChallengeCreatorWindow
                 AreaMode.InOrder  => "in order",
                 _                 => "single",
             };
-            ImGui.TextDisabled($"mode: {modeLabel}");
+            ImGui.TextDisabled($"mode: {modeLabel}{(c.SessionOnly ? " · one session only" : string.Empty)}");
 
             for (int i = 0; i < c.Requirements.Count; i++)
             {
@@ -1981,6 +2261,20 @@ internal sealed class ChallengeCreatorWindow
                     ? $"  (within {r.WithinSeconds}s)"
                     : string.Empty;
                 ImGui.TextDisabled($"   {i + 1}. {r.Describe()}{timing}");
+            }
+        }
+
+        if (c.IsChain)
+        {
+            ImGui.TextDisabled($"QUEST · {c.ChainSteps.Count} step(s)");
+            for (int i = 0; i < c.ChainSteps.Count; i++)
+            {
+                var s = c.ChainSteps[i];
+                string zone = s.TerritoryId == 0 ? c.TerritoryName : s.TerritoryName;
+                string flag = s.IsWellFormed() ? string.Empty : "  [incomplete]";
+                ImGui.TextDisabled(
+                    $"   {i + 1}. {(string.IsNullOrWhiteSpace(s.Title) ? "(unnamed)" : s.Title)} "
+                  + $"· {zone} · {s.Requirements.Count} area(s){flag}");
             }
         }
 

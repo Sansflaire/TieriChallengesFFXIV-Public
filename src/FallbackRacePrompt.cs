@@ -30,6 +30,12 @@ internal sealed class FallbackRacePrompt
     private readonly ChallengeTracker _tracker;
     private readonly Action           _save;
 
+    /// <summary>Matches <see cref="RacePromptToast.ResultHoldSeconds"/>.</summary>
+    private const double ResultHoldSeconds = 6.0;
+
+    private RaceEndedEvent? _result;
+    private long _resultAtMs;
+
     public FallbackRacePrompt(Configuration config, CompletionStore store,
                               ChallengeTracker tracker, Action save)
     {
@@ -39,18 +45,34 @@ internal sealed class FallbackRacePrompt
         _save    = save;
     }
 
+    /// <summary><inheritdoc cref="RacePromptToast.OnRaceEnded"/></summary>
+    public void OnRaceEnded(RaceEndedEvent e, bool firstCompletion)
+    {
+        if (firstCompletion) return;
+
+        _result     = e;
+        _resultAtMs = Environment.TickCount64;
+    }
+
     public void Draw()
     {
         string? runningId = _tracker.RunningRaceId;
-        string? armedId   = null;
 
-        if (runningId == null && !_config.RacePromptSuppressed)
+        var result = _result;
+        if (result != null
+            && (Environment.TickCount64 - _resultAtMs) / 1000.0 > ResultHoldSeconds)
+        {
+            _result = result = null;
+        }
+
+        string? armedId = null;
+        if (runningId == null && result == null && !_config.RacePromptSuppressed)
         {
             var armed = _tracker.ArmedRaces;
             if (armed.Count > 0) armedId = armed[0];
         }
 
-        string? id = runningId ?? armedId;
+        string? id = runningId ?? result?.Id ?? armedId;
         if (id == null) return;
 
         var def = ChallengeCatalog.FindCustom(_config, id);
@@ -87,8 +109,9 @@ internal sealed class FallbackRacePrompt
             ImGui.TextUnformatted(string.IsNullOrWhiteSpace(def.Title) ? "(unnamed race)" : def.Title);
             ImGui.Separator();
 
-            if (running) DrawRunning(def);
-            else         DrawArmed(def);
+            if (running)             DrawRunning(def);
+            else if (result != null) DrawResult(result);
+            else                     DrawArmed(def);
         }
 
         ImGui.End();
@@ -118,6 +141,24 @@ internal sealed class FallbackRacePrompt
             Plugin.ChatGui.Print("[Challenges] Race prompts hidden. "
                                + "Start races from the challenge list, or re-enable them in Settings.");
         }
+    }
+
+    private void DrawResult(RaceEndedEvent result)
+    {
+        bool best     = result.Outcome == RaceOutcome.Finished && result.NewBest;
+        bool finished = result.Outcome == RaceOutcome.Finished;
+
+        var color = best ? Accent : finished ? Live : Danger;
+
+        ImGui.TextColored(color, best ? "PERSONAL BEST" : result.Describe());
+        ImGui.TextColored(color, CompletionStore.FormatRaceTime(result.Seconds));
+
+        if (best && result.PreviousBest.HasValue)
+            ImGui.TextDisabled($"beat {CompletionStore.FormatRaceTime(result.PreviousBest.Value)}");
+        else if (best)
+            ImGui.TextDisabled("first recorded time");
+        else if (result.PreviousBest.HasValue)
+            ImGui.TextDisabled($"best stands at {CompletionStore.FormatRaceTime(result.PreviousBest.Value)}");
     }
 
     private void DrawRunning(CustomChallenge def)

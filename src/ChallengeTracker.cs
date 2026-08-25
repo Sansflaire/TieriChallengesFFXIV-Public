@@ -180,7 +180,8 @@ internal sealed class ChallengeTracker : IDisposable
     /// exactly once and <see cref="_run"/> is always cleared — a run left dangling would keep
     /// failing its own time limit every tick forever.
     /// </summary>
-    private void EndRun(RaceOutcome outcome, bool newBest = false, double? previousBest = null)
+    private void EndRun(RaceOutcome outcome, bool newBest = false, double? previousBest = null,
+                        bool firstCompletion = false)
     {
         if (_run == null) return;
 
@@ -196,12 +197,13 @@ internal sealed class ChallengeTracker : IDisposable
         {
             RaceEnded?.Invoke(new RaceEndedEvent
             {
-                Id           = run.Id,
-                Title        = title,
-                Outcome      = outcome,
-                Seconds      = run.ElapsedSeconds,
-                NewBest      = newBest,
-                PreviousBest = previousBest,
+                Id              = run.Id,
+                Title           = title,
+                Outcome         = outcome,
+                Seconds         = run.ElapsedSeconds,
+                NewBest         = newBest,
+                PreviousBest    = previousBest,
+                FirstCompletion = firstCompletion,
             });
         }
         catch (Exception ex)
@@ -223,6 +225,18 @@ internal sealed class ChallengeTracker : IDisposable
     /// <summary>Force a rebuild of the active set — called when definitions change.</summary>
     public void Invalidate() => _cachedVersion = int.MinValue;
 
+    /// <summary>
+    /// Drop every in-memory objective set. Called by Reset alongside
+    /// <see cref="ProgressStore.ResetAll"/> — wiping only the file would leave these sets live in
+    /// memory, and the next satisfied stop would write the old positions straight back out.
+    /// </summary>
+    public void ClearPartialProgress()
+    {
+        _visited.Clear();
+        _sequence.Clear();
+        _stepStamp.Clear();
+    }
+
     // ── Progress queries for the UI ──────────────────────────────────────────
 
     /// <summary>
@@ -233,6 +247,15 @@ internal sealed class ChallengeTracker : IDisposable
     {
         done = 0;
         total = 0;
+
+        // A chain counts STEPS, not the stops inside the step it happens to be on — "3/5" on a
+        // quest means three legs done, which is the number the player is tracking.
+        if (ch.IsChain)
+        {
+            total = ch.ChainSteps.Count;
+            done  = Math.Clamp(Plugin.Progress.ChainStep(ch.Id), 0, total);
+            return total > 1;
+        }
 
         switch (ch.Kind)
         {
@@ -375,7 +398,11 @@ internal sealed class ChallengeTracker : IDisposable
             // you can never beat again is a trophy, not a target. Finishing an already-completed
             // race records the time and does NOT re-fire the completion fanfare (see EvalRace).
             if (_store.IsComplete(ch.Id) && ch.Kind != ChallengeKind.RaceTimer) continue;
-            if (ch.TerritoryId != 0 && ch.TerritoryId != territory) continue;  // wrong zone
+            // A chain lives wherever its CURRENT step points, not where it was authored. Gating on
+            // the chain's own territory would make a five-zone quest evaluable only in the first
+            // zone, and it would stall forever at step two.
+            ushort zone = ChallengeCatalog.EffectiveTerritory(ch);
+            if (zone != 0 && zone != territory) continue;  // wrong zone
 
             _active.Add(ch);
         }
@@ -408,6 +435,19 @@ internal sealed class ChallengeTracker : IDisposable
         {
             var ch = _active[i];
             bool done;
+
+            // A chain owns its content through its STEPS, so it is dispatched ahead of Kind —
+            // only the current step is ever evaluated, whatever kind the chain itself carries.
+            if (ch.IsChain)
+            {
+                done = EvalChain(ch, pos);
+                if (done)
+                {
+                    _active.RemoveAt(i);
+                    MarkComplete(ch);
+                }
+                continue;
+            }
 
             switch (ch.Kind)
             {
@@ -631,7 +671,7 @@ internal sealed class ChallengeTracker : IDisposable
             bool newBest = _store.RecordRaceTime(ch.Id, seconds);
             bool firstTime = !_store.IsComplete(ch.Id);
 
-            EndRun(RaceOutcome.Finished, newBest, previous);
+            EndRun(RaceOutcome.Finished, newBest, previous, firstTime);
 
             // Only a first finish is a completion. A repeat run has already been recorded above.
             return firstTime;
@@ -675,9 +715,78 @@ internal sealed class ChallengeTracker : IDisposable
         var reqs = ch.Requirements;
         if (reqs == null || reqs.Count == 0) return false;
 
-        return ch.Mode == AreaMode.InOrder
-            ? EvalCompositeOrdered(ch, reqs, pos)
-            : EvalCompositeAny(ch, reqs, pos);
+        // An adventure's progress outlives the session unless the author explicitly asked for the
+        // old one-sitting constraint. See Configuration.SessionOnly.
+        return EvalSet(ch, ch.Id, ch.Mode, reqs, pos, persist: !ch.SessionOnly, announceStops: true);
+    }
+
+    /// <summary>
+    /// Satisfy one set of stops — the shared engine behind an adventure's objectives and a chain
+    /// step's, which are the same shape and differ only in what owns them.
+    /// </summary>
+    /// <param name="key">
+    /// Identity of the set: a challenge id for an adventure, a STEP id for a chain step. Never a
+    /// position — reordering steps must not hand a player somebody else's progress.
+    /// </param>
+    /// <param name="announceStops">
+    /// Raise per-stop progress notifications. False for chain steps, where the notification that
+    /// matters is "step 2 of 5" and a second one counting stops inside the step would be noise.
+    /// </param>
+    private bool EvalSet(CustomChallenge ch, string key, AreaMode mode,
+                         List<AreaRequirement> reqs, Vector3 pos, bool persist, bool announceStops)
+    {
+        if (reqs == null || reqs.Count == 0) return false;
+
+        return mode == AreaMode.InOrder
+            ? EvalSetOrdered(ch, key, reqs, pos, persist, announceStops)
+            : EvalSetAny(ch, key, reqs, pos, persist, announceStops);
+    }
+
+    /// <summary>
+    /// One step of a quest chain. Only the CURRENT step is ever evaluated — that is what makes a
+    /// chain a chain rather than a set — and only finishing the LAST one completes the challenge.
+    ///
+    /// <para>Chain progress always persists. A chain is explicitly the "take as long as you like"
+    /// shape, so a session-scoped one would be a contradiction.</para>
+    /// </summary>
+    private bool EvalChain(CustomChallenge ch, Vector3 pos)
+    {
+        int idx = Plugin.Progress.ChainStep(ch.Id);
+
+        // Clamped rather than trusted: a chain edited down to fewer steps must not leave a player
+        // pointing past the end of it, and treating that as "finished" would hand out a completion
+        // nobody earned.
+        if (idx >= ch.ChainSteps.Count) idx = ch.ChainSteps.Count - 1;
+        if (idx < 0) return false;
+
+        var step = ch.ChainSteps[idx];
+        if (step == null || !step.IsWellFormed()) return false;
+
+        // Keyed by the STEP's id, not by position, so reordering steps while authoring cannot
+        // silently hand a player another step's partial progress.
+        bool satisfied = EvalSet(ch, step.Id, step.Mode, step.Requirements, pos,
+                                 persist: true, announceStops: false);
+        if (!satisfied) return false;
+
+        int next = idx + 1;
+        bool finished = next >= ch.ChainSteps.Count;
+
+        Plugin.Progress.SetChainStep(ch.Id, next);
+
+        // The step's own stop progress is spent — clearing it keeps the file from accumulating a
+        // row per step of every chain the player has ever walked through.
+        ClearSetState(step.Id, persist: true);
+
+        _config.StateVersion++;   // the chain's zone may have just changed; force a Rebuild
+
+        Plugin.Log.Information(
+            $"[Chain] \"{ch.Title}\" advanced to step {next + 1}/{ch.ChainSteps.Count}.");
+
+        // Same rule as everywhere else: the finishing step is announced by MarkComplete.
+        if (!finished && ch.ShowProgress)
+            RaiseProgress(ch, next, ch.ChainSteps.Count);
+
+        return finished;
     }
 
     /// <summary>True when the player is in this stop's area AND all its conditions hold.</summary>
@@ -697,14 +806,10 @@ internal sealed class ChallengeTracker : IDisposable
     /// one-element case of AnyOrder, so it needs no separate path — the set fills to 1 and the
     /// challenge completes.
     /// </summary>
-    private bool EvalCompositeAny(CustomChallenge ch, List<AreaRequirement> reqs, Vector3 pos)
+    private bool EvalSetAny(CustomChallenge ch, string key, List<AreaRequirement> reqs,
+                            Vector3 pos, bool persist, bool announceStops)
     {
-        if (!_visited.TryGetValue(ch.Id, out var set))
-        {
-            set = new HashSet<int>();
-            _visited[ch.Id] = set;
-        }
-
+        var set = SetState(key, persist);
         int before = set.Count;
 
         for (int a = 0; a < reqs.Count; a++)
@@ -714,14 +819,39 @@ internal sealed class ChallengeTracker : IDisposable
         }
 
         bool complete = set.Count >= reqs.Count;
+        if (set.Count == before) return complete;
+
+        if (persist) Plugin.Progress.SetStops(key, set);
 
         // Same rule as every other kind: the finishing step is announced by MarkComplete, so
         // announcing it here too would double the sound and the popup. Single-stop challenges
         // report no partial progress at all — there is none to report.
-        if (set.Count > before && !complete && ChallengeCatalog.HasStepProgress(ch))
+        if (announceStops && !complete && ChallengeCatalog.HasStepProgress(ch))
             RaiseProgress(ch, set.Count, reqs.Count);
 
         return complete;
+    }
+
+    /// <summary>
+    /// The satisfied-stop set for a key, seeded from disk the first time it is touched this
+    /// session when the set persists.
+    /// </summary>
+    private HashSet<int> SetState(string key, bool persist)
+    {
+        if (_visited.TryGetValue(key, out var set)) return set;
+
+        set = persist ? Plugin.Progress.Stops(key) : new HashSet<int>();
+        _visited[key] = set;
+        return set;
+    }
+
+    /// <summary>Forget a set entirely, on disk too when it persists.</summary>
+    private void ClearSetState(string key, bool persist)
+    {
+        _visited.Remove(key);
+        _sequence.Remove(key);
+        _stepStamp.Remove(key);
+        if (persist) Plugin.Progress.Clear(key);
     }
 
     /// <summary>
@@ -729,39 +859,53 @@ internal sealed class ChallengeTracker : IDisposable
     /// means, and a stop may carry a <see cref="AreaRequirement.WithinSeconds"/> budget measured
     /// from the moment the previous one was satisfied — the "within X seconds of Y" relation.
     /// </summary>
-    private bool EvalCompositeOrdered(CustomChallenge ch, List<AreaRequirement> reqs, Vector3 pos)
+    private bool EvalSetOrdered(CustomChallenge ch, string key, List<AreaRequirement> reqs,
+                                Vector3 pos, bool persist, bool announceStops)
     {
-        int idx = _sequence.TryGetValue(ch.Id, out var v) ? v : 0;
+        // Ordered progress is a PREFIX of satisfied indices, so the persisted set's count is the
+        // index. One storage shape serves both modes rather than a second map that could drift
+        // out of agreement with this one.
+        int idx = _sequence.TryGetValue(key, out var v) ? v : SetState(key, persist).Count;
         if (idx >= reqs.Count) return true;
 
         var next = reqs[idx];
-        if (!StopSatisfied(next, pos)) return false;
+        if (!StopSatisfied(next, pos)) { _sequence[key] = idx; return false; }
 
         // Timed step: the clock runs from when the PREVIOUS stop landed. Blowing the budget resets
         // the whole sequence rather than merely failing this step — a partially-run ordered
         // challenge that stayed half-complete would let the player stroll the remainder untimed.
         if (idx > 0 && next.WithinSeconds > 0)
         {
-            long since = Environment.TickCount64 - (_stepStamp.TryGetValue(ch.Id, out var t) ? t : 0);
+            long since = Environment.TickCount64 - (_stepStamp.TryGetValue(key, out var t) ? t : 0);
             if (since > next.WithinSeconds * 1000L)
             {
                 Plugin.Log.Debug(
                     $"[Tracker] \"{ch.Title}\" step {idx + 1} missed its {next.WithinSeconds}s window "
                   + $"({since / 1000f:0.#}s) — sequence reset.");
 
-                _sequence[ch.Id]  = 0;
-                _stepStamp.Remove(ch.Id);
+                _sequence[key] = 0;
+                _stepStamp.Remove(key);
+                _visited.Remove(key);
+                if (persist) Plugin.Progress.SetStops(key, new HashSet<int>());
                 return false;
             }
         }
 
         idx++;
-        _sequence[ch.Id]  = idx;
-        _stepStamp[ch.Id] = Environment.TickCount64;
+        _sequence[key]  = idx;
+        _stepStamp[key] = Environment.TickCount64;
+
+        if (persist)
+        {
+            var prefix = new HashSet<int>();
+            for (int i = 0; i < idx; i++) prefix.Add(i);
+            _visited[key] = prefix;
+            Plugin.Progress.SetStops(key, prefix);
+        }
 
         bool complete = idx >= reqs.Count;
 
-        if (!complete && ChallengeCatalog.HasStepProgress(ch))
+        if (announceStops && !complete && ChallengeCatalog.HasStepProgress(ch))
             RaiseProgress(ch, idx, reqs.Count);
 
         return complete;
@@ -820,6 +964,12 @@ internal sealed class ChallengeTracker : IDisposable
         _visited.Remove(ch.Id);
         _sequence.Remove(ch.Id);
         _stepStamp.Remove(ch.Id);
+
+        // Persisted partial progress is spent once the challenge is done. Left behind, a later
+        // Reset would clear the completion but restore a half-finished state for it.
+        Plugin.Progress.Clear(ch.Id);
+        if (ch.IsChain)
+            foreach (var s in ch.ChainSteps) ClearSetState(s.Id, persist: true);
 
         int number = ChallengeCatalog.DisplayNumber(_config, ch.Id);
         Plugin.Log.Information($"[Tracker] Challenge #{number} \"{ch.Title}\" auto-completed.");

@@ -56,6 +56,37 @@ internal sealed class RacePromptToast : IDisposable
     private PanacheSurface? _surface;
     private readonly DateTime _start = DateTime.UtcNow;
 
+    /// <summary>How long the result panel lingers after a run ends.</summary>
+    private const double ResultHoldSeconds = 6.0;
+
+    /// <summary>
+    /// The run that just ended, held so the panel can report it after the tracker has already
+    /// cleared its state.
+    ///
+    /// <para>Latched here rather than pushed through <see cref="ProgressQueue"/> because this
+    /// surface is already in the corner the player is watching while they run, and routing it
+    /// through the progress toast would put the result in a DIFFERENT box from the clock that
+    /// produced it — and the two would fight for the same screen position.</para>
+    /// </summary>
+    private RaceEndedEvent? _result;
+    private long _resultAtMs;
+
+    /// <summary>
+    /// Show the outcome of a finished run.
+    ///
+    /// <para>A FIRST completion is deliberately skipped: that path already raises the full
+    /// completion fanfare and its own toast, and two celebration popups for one event read as a
+    /// bug. Every other ending — a new best, a repeat finish, a timeout, leaving the course — has
+    /// nothing else announcing it.</para>
+    /// </summary>
+    public void OnRaceEnded(RaceEndedEvent e, bool firstCompletion)
+    {
+        if (firstCompletion) return;
+
+        _result     = e;
+        _resultAtMs = Environment.TickCount64;
+    }
+
     public RacePromptToast(ITextureProvider texProvider, Configuration config,
                            CompletionStore store, ChallengeTracker tracker, Action save)
     {
@@ -75,15 +106,25 @@ internal sealed class RacePromptToast : IDisposable
     public void Draw()
     {
         string? runningId = _tracker.RunningRaceId;
-        string? armedId   = null;
 
-        if (runningId == null && !_config.RacePromptSuppressed)
+        // The result takes precedence over re-arming. Finishing a race usually leaves the player
+        // standing somewhere that immediately re-arms something, and flipping straight back to
+        // "Ready to start?" would swallow the time they just set before they could read it.
+        var result = _result;
+        if (result != null
+            && (Environment.TickCount64 - _resultAtMs) / 1000.0 > ResultHoldSeconds)
+        {
+            _result = result = null;
+        }
+
+        string? armedId = null;
+        if (runningId == null && result == null && !_config.RacePromptSuppressed)
         {
             var armed = _tracker.ArmedRaces;
             if (armed.Count > 0) armedId = armed[0];   // one line at a time; overlapping starts are pathological
         }
 
-        string? id = runningId ?? armedId;
+        string? id = runningId ?? result?.Id ?? armedId;
         if (id == null) return;
 
         var def = ChallengeCatalog.FindCustom(_config, id);
@@ -125,7 +166,7 @@ internal sealed class RacePromptToast : IDisposable
         _surface.Resize(physW, physH);
         _surface.Scale = uiScale;
 
-        var root = BuildTree(def, running);
+        var root = BuildTree(def, running, running ? null : result);
 
         var origin     = ImGui.GetCursorScreenPos();
         var mouse      = ImGui.GetMousePos();
@@ -151,9 +192,13 @@ internal sealed class RacePromptToast : IDisposable
         ImGui.End();
     }
 
-    private Node BuildTree(CustomChallenge def, bool running)
+    private Node BuildTree(CustomChallenge def, bool running, RaceEndedEvent? result)
     {
-        var edge = running ? Live : Accent;
+        // A personal best is gold — the plugin's own celebration colour, and distinct from the
+        // green "you finished" and the red "you failed" that could follow the very same run.
+        var edge = result != null
+            ? (result.Outcome == RaceOutcome.Finished ? (result.NewBest ? Accent : Live) : Danger)
+            : running ? Live : Accent;
 
         var root = new Node().WithStyle(s =>
         {
@@ -196,11 +241,62 @@ internal sealed class RacePromptToast : IDisposable
             s.TextOverflow = TextOverflow.Ellipsis;
         }));
 
-        if (running) BuildRunning(body, def);
-        else         BuildArmed(body, def);
+        if (running)           BuildRunning(body, def);
+        else if (result != null) BuildResult(body, result);
+        else                   BuildArmed(body, def);
 
         root.AppendChild(body);
         return root;
+    }
+
+    /// <summary>The few seconds after a run ends: what happened, and the time if there was one.</summary>
+    private void BuildResult(Node body, RaceEndedEvent result)
+    {
+        bool best     = result.Outcome == RaceOutcome.Finished && result.NewBest;
+        bool finished = result.Outcome == RaceOutcome.Finished;
+
+        var headColor = best ? Accent : finished ? Live : Danger;
+        string head = best ? "PERSONAL BEST" : result.Describe();
+
+        body.AppendChild(new Node().WithText(head).WithStyle(s =>
+        {
+            s.WidthMode    = SizeMode.Fill;
+            s.HeightMode   = SizeMode.Fit;
+            s.FontSize     = 11f;
+            s.Bold         = true;
+            s.Color        = headColor;
+            s.TextOverflow = TextOverflow.Ellipsis;
+        }));
+
+        // The time itself, big, for any run that produced one. A failed run still shows its clock —
+        // "how close was I" is the first thing a player wants after timing out.
+        body.AppendChild(new Node().WithText(CompletionStore.FormatRaceTime(result.Seconds))
+                                   .WithStyle(s =>
+        {
+            s.WidthMode  = SizeMode.Fill;
+            s.HeightMode = SizeMode.Fit;
+            s.FontSize   = 20f;
+            s.Bold       = true;
+            s.Color      = headColor;
+        }));
+
+        string sub = best && result.PreviousBest.HasValue
+            ? $"beat {CompletionStore.FormatRaceTime(result.PreviousBest.Value)}"
+            : finished && result.PreviousBest.HasValue
+                ? $"best stands at {CompletionStore.FormatRaceTime(result.PreviousBest.Value)}"
+                : best ? "first recorded time" : string.Empty;
+
+        if (!string.IsNullOrEmpty(sub))
+        {
+            body.AppendChild(new Node().WithText(sub).WithStyle(s =>
+            {
+                s.WidthMode    = SizeMode.Fill;
+                s.HeightMode   = SizeMode.Fit;
+                s.FontSize     = 10f;
+                s.Color        = Theme.TextMuted;
+                s.TextOverflow = TextOverflow.Ellipsis;
+            }));
+        }
     }
 
     private void BuildArmed(Node body, CustomChallenge def)

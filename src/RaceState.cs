@@ -20,6 +20,13 @@ public sealed class RaceEndedEvent
     /// <summary>The time to beat before this run, if there was one.</summary>
     public double? PreviousBest { get; init; }
 
+    /// <summary>
+    /// This run completed the challenge for the FIRST time, so the normal completion path is also
+    /// firing its fanfare and toast for it. Everything that celebrates a race must check this and
+    /// stay quiet, or one event produces two popups.
+    /// </summary>
+    public bool FirstCompletion { get; init; }
+
     public string Describe() => Outcome switch
     {
         RaceOutcome.Finished  => NewBest

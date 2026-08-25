@@ -155,6 +155,51 @@ public sealed class CustomChallenge
     /// </summary>
     public List<AreaRequirement> Requirements { get; set; } = new();
 
+    // ── Quest chains (Blue) ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Ordered steps. Non-empty makes this a <see cref="ChallengeTheme.Quest"/>: the row shows only
+    /// the CURRENT step, and only finishing the last one completes the challenge.
+    ///
+    /// <para>Independent of <see cref="Kind"/> — a chain's steps each carry their own
+    /// <c>Requirements</c>, so the chain itself does not need a kind beyond
+    /// <see cref="ChallengeKind.InArea"/> to hang them on.</para>
+    /// </summary>
+    public List<ChainStep> ChainSteps { get; set; } = new();
+
+    public bool IsChain => ChainSteps is { Count: > 0 };
+
+    /// <summary>
+    /// Progress resets on logout instead of persisting. Off by default, which is the change
+    /// multi-objective challenges needed: an adventure the player is told to take their time over
+    /// cannot lose its progress every time they log out.
+    ///
+    /// <para>Turn it ON to author the old "within one login session" constraint deliberately —
+    /// a route that is only interesting done in one sitting.</para>
+    /// </summary>
+    public bool SessionOnly { get; set; }
+
+    /// <summary>
+    /// What this challenge IS, derived from its structure. See <see cref="ChallengeTheme"/> for
+    /// why there is no field backing this.
+    /// </summary>
+    public ChallengeTheme Theme =>
+        IsChain                                              ? ChallengeTheme.Quest
+        : Kind == ChallengeKind.InArea && StopCount > 1       ? ChallengeTheme.Adventure
+        : ChallengeTheme.Normal;
+
+    /// <summary>
+    /// The step the player is on, or null when this is not a chain or the chain is finished.
+    /// Index is clamped rather than trusted — a chain edited down to fewer steps must not leave a
+    /// player pointing past the end of it.
+    /// </summary>
+    public ChainStep? StepAt(int index)
+    {
+        if (!IsChain) return null;
+        if (index < 0 || index >= ChainSteps.Count) return null;
+        return ChainSteps[index];
+    }
+
     // ── RaceTimer ────────────────────────────────────────────────────────────
 
     /// <summary>Volume that arms the race, and re-entering which restarts the clock.</summary>
@@ -238,6 +283,16 @@ public sealed class CustomChallenge
     private bool CompositeIsWellFormed()
     {
         if (TerritoryId == 0) return false;
+
+        // A chain hangs its content on its STEPS, not on its own Requirements — so the two are
+        // validated separately and a chain never needs a Requirements list of its own.
+        if (IsChain)
+        {
+            foreach (var s in ChainSteps)
+                if (s == null || !s.IsWellFormed()) return false;
+            return true;
+        }
+
         if (Requirements == null || Requirements.Count == 0) return false;
         if (Mode == AreaMode.Single && Requirements.Count != 1) return false;
 

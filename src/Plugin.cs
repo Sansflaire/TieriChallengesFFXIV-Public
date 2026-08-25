@@ -44,6 +44,15 @@ public sealed class Plugin : IDalamudPlugin
     internal static InventoryWatcher Inventory { get; private set; } = null!;
 
     /// <summary>
+    /// Partial progress for adventures and quest chains — how far through a multi-objective
+    /// challenge the player is. Static for the same reason as <see cref="Inventory"/>: it is
+    /// consulted from the tracker tick, from <c>ChallengeCatalog</c> while building every row, and
+    /// from <c>ZoneIndex</c> while deciding which zone a chain currently belongs to. Threading an
+    /// instance through all three would touch every call site of each to gain nothing.
+    /// </summary>
+    internal static ProgressStore Progress { get; private set; } = null!;
+
+    /// <summary>
     /// True in Trist's developer build, false in the public artifact. Set from the DEV_BUILD
     /// compile constant, which TieriChallengesFFXIV.csproj defines for the Debug configuration
     /// only. Dev-only features are additionally compiled out entirely — this flag is for UI
@@ -101,6 +110,12 @@ public sealed class Plugin : IDalamudPlugin
     /// </summary>
     private readonly StatusWindow _statusWindow;
 
+    /// <summary>
+    /// The requirement sheet for quests and adventures. Renderer-agnostic and drawn at root scope,
+    /// like the status popup — both renderers open the same window rather than each carrying one.
+    /// </summary>
+    private readonly ObjectiveWindow _objectiveWindow;
+
     // PanacheUI-backed. NULL when the library could not be loaded — these types must never be
     // constructed in that case, because merely loading them throws. See PanacheAvailability.
     private readonly CompletionToast? _toast;
@@ -152,6 +167,12 @@ public sealed class Plugin : IDalamudPlugin
         // migration can move legacy progress into it rather than dropping it on the floor.
         _store = new CompletionStore(PluginInterface.GetPluginConfigDirectory());
         _store.Load();
+
+        // Partial progress. Loaded before the catalogue is read for the first time — a chain's row
+        // is built from whichever step the player is on, so an unloaded store would render every
+        // chain at step one for the first frame.
+        Progress = new ProgressStore(PluginInterface.GetPluginConfigDirectory());
+        Progress.Load();
 
         _config.MigrateIfNeeded(_store);
         SaveConfig();   // persist any id / sort rewrites migration performed
@@ -229,9 +250,13 @@ public sealed class Plugin : IDalamudPlugin
         _fallbackProgressToast = new FallbackProgressToast(RevealChallenge);
         _fallbackRacePrompt    = new FallbackRacePrompt(_config, _store, _tracker, SaveConfig);
         _statusWindow          = new StatusWindow(_config);
+        _objectiveWindow       = new ObjectiveWindow(_config, _store);
 
         if (_mainWindow != null)
-            _mainWindow.OnOpenStatus = () => _statusWindow.IsVisible = !_statusWindow.IsVisible;
+        {
+            _mainWindow.OnOpenStatus     = () => _statusWindow.IsVisible = !_statusWindow.IsVisible;
+            _mainWindow.OnOpenObjectives = id => _objectiveWindow.Toggle(id);
+        }
 
         // One handler per event, which fans out to sound, fly text and the popup IN THAT ORDER.
         // Subscribing the popup queues directly used to put the cue behind the display; now the
@@ -242,7 +267,8 @@ public sealed class Plugin : IDalamudPlugin
 
         _fallbackWindow = new FallbackWindow(_config, _store, _tracker, _dialogs, _sync,
                                              SaveConfig, RestoreFromPermanent);
-        _fallbackWindow.OnOpenStatus = () => _statusWindow.IsVisible = !_statusWindow.IsVisible;
+        _fallbackWindow.OnOpenStatus     = () => _statusWindow.IsVisible = !_statusWindow.IsVisible;
+        _fallbackWindow.OnOpenObjectives = id => _objectiveWindow.Toggle(id);
         _tracker.Attach();
 
         // Pick up new official challenges shortly after load, without blocking startup.
@@ -490,6 +516,9 @@ public sealed class Plugin : IDalamudPlugin
 
         try { _statusWindow.Draw(); }
         catch (Exception ex) { Log.Error(ex, "Status window draw exception"); }
+
+        try { _objectiveWindow.Draw(); }
+        catch (Exception ex) { Log.Error(ex, "Objective window draw exception"); }
 
         // Exactly one toast renderer per frame — TryCurrent advances the clock, so drawing both
         // would double the fade speed and drop popups.
@@ -763,21 +792,42 @@ public sealed class Plugin : IDalamudPlugin
     {
         string name = string.IsNullOrWhiteSpace(e.Title) ? "Race" : e.Title;
 
+        // The bottom-right result panel. Suppresses itself on a first completion, where the normal
+        // completion toast is already celebrating the same event.
+        if (UsePanache) _racePrompt?.OnRaceEnded(e, e.FirstCompletion);
+        else            _fallbackRacePrompt.OnRaceEnded(e, e.FirstCompletion);
+
         switch (e.Outcome)
         {
             case RaceOutcome.Finished:
-                if (e.NewBest && e.PreviousBest.HasValue)
+                if (e.NewBest && !e.FirstCompletion)
                 {
-                    // Beat an existing time: the only case the completion path says nothing about.
+                    // Beat your own time. The completion path says nothing about this — it only
+                    // ever fires once, on the first finish — so this is the whole celebration:
+                    // gold fly text over the player, the corner panel above, and a chat line.
                     Sound.Play(SoundService.Cue.ObjectiveProgress);
-                    FlyTextService.ShowProgress(name, 1, 1);
+                    FlyTextService.ShowPersonalBest(e.Seconds);
+
+                    string was = e.PreviousBest.HasValue
+                        ? $" (was {CompletionStore.FormatRaceTime(e.PreviousBest.Value)})"
+                        : string.Empty;
                     ChatGui.Print(
-                        $"[Challenges] {name} — NEW BEST {CompletionStore.FormatRaceTime(e.Seconds)} "
-                      + $"(was {CompletionStore.FormatRaceTime(e.PreviousBest.Value)}).");
+                        $"[Challenges] {name} — PERSONAL BEST {CompletionStore.FormatRaceTime(e.Seconds)}{was}.");
+                }
+                else if (!e.FirstCompletion)
+                {
+                    string best = e.PreviousBest.HasValue
+                        ? $" Best stands at {CompletionStore.FormatRaceTime(e.PreviousBest.Value)}."
+                        : string.Empty;
+                    ChatGui.Print(
+                        $"[Challenges] {name} — finished in {CompletionStore.FormatRaceTime(e.Seconds)}.{best}");
                 }
                 else
                 {
-                    ChatGui.Print($"[Challenges] {name} — finished in {CompletionStore.FormatRaceTime(e.Seconds)}.");
+                    // First completion: the fanfare and toast belong to OnCompleted. Only the time
+                    // itself is worth adding, since nothing else reports it.
+                    ChatGui.Print(
+                        $"[Challenges] {name} — finished in {CompletionStore.FormatRaceTime(e.Seconds)}.");
                 }
                 break;
 

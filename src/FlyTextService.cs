@@ -36,6 +36,16 @@ internal static class FlyTextService
     public static void ShowComplete(string title)
         => Show(title, "Complete!", Green);
 
+    /// <summary>
+    /// "Personal Best!" / "41.20s" — a race run that beat the stored time.
+    ///
+    /// <para>Gold rather than the green a completion uses: beating your own time is not the same
+    /// event as finishing something for the first time, and the two must not look alike when they
+    /// can happen seconds apart on the same challenge.</para>
+    /// </summary>
+    public static void ShowPersonalBest(double seconds)
+        => Show("Personal Best!", CompletionStore.FormatRaceTime(seconds), Gold);
+
     /// <summary>A short red error line — right-click-to-teleport's two failure cases.</summary>
     public static void ShowError(string headline, string detail)
         => Show(headline, detail, Red);

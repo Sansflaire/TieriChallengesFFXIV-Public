@@ -380,6 +380,15 @@ internal sealed class Dialogs
                 Plugin.Sound.Play(SoundService.Cue.ResetConfirmed);
 
                 _store.ResetCurrent();
+
+                // Partial progress goes too. Unlike the permanent ledger and the race best-time
+                // file — both of which are RECORDS of things that happened — a half-finished quest
+                // chain is exactly what "let me do these again" has to clear, or the player is
+                // left unable to start it over. The tracker's in-memory sets are dropped in the
+                // same motion, or they would write the old positions straight back out.
+                Plugin.Progress.ResetAll();
+                _tracker.ClearPartialProgress();
+
                 _config.StateVersion++;
                 _tracker.Invalidate();
                 _save();

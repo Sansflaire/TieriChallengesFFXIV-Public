@@ -115,6 +115,9 @@ internal sealed class FallbackWindow
     /// <summary>Wired by Plugin. Opens the live-state popup, same as the Panache renderer's.</summary>
     public Action? OnOpenStatus;
 
+    /// <summary>Open the shared requirement sheet — see <c>MainWindow.OnOpenObjectives</c>.</summary>
+    public Action<string>? OnOpenObjectives;
+
     /// <summary>
     /// Put the window back in the middle of the screen on the next frame. Mirror of
     /// <c>MainWindow.RequestCenter</c> — see there for why this is a deferred request.
@@ -486,6 +489,14 @@ internal sealed class FallbackWindow
                 {
                     if (!_hintShown.Remove(def.Id)) _hintShown.Add(def.Id);
                     hintOpen = !hintOpen;
+                }
+
+                // Quest / adventure sheet, in parity with the Panache row.
+                if (!spoilered && def.HasObjectiveList)
+                {
+                    ImGui.SameLine();
+                    string label = def.Theme == ChallengeTheme.Quest ? "Quest" : "Steps";
+                    if (ImGui.SmallButton($"{label}##obj_{def.Id}")) OnOpenObjectives?.Invoke(def.Id);
                 }
 
                 // Race controls, in parity with the Panache row. This is the only way to start a

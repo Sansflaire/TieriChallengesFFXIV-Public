@@ -453,8 +453,16 @@ internal static class ZoneIndex
     }
 
     /// <summary>Which zone a challenge belongs to. 0 when it is not bound to one.</summary>
-    public static uint TerritoryOf(Configuration cfg, string challengeId) =>
-        ChallengeCatalog.FindCustom(cfg, challengeId)?.TerritoryId ?? 0u;
+    /// <remarks>
+    /// A quest chain reports its CURRENT step's zone, so it re-files itself under wherever it
+    /// currently points as the player works through it — see
+    /// <see cref="ChallengeCatalog.EffectiveTerritory"/>.
+    /// </remarks>
+    public static uint TerritoryOf(Configuration cfg, string challengeId)
+    {
+        var c = ChallengeCatalog.FindCustom(cfg, challengeId);
+        return c == null ? 0u : ChallengeCatalog.EffectiveTerritory(c);
+    }
 
     /// <summary>
     /// Select a zone and make sure it is actually visible: a revealed challenge inside a
