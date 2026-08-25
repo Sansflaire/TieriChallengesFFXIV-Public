@@ -8,7 +8,7 @@ the generic [How To Versioning](How%20To%20Versioning.md); this document supplie
 ## Current version
 
 ```
-0.81.32.1    beta · 81% toward 1.0 · 32 major updates · 1 minor update
+0.81.32.2    beta · 81% toward 1.0 · 32 major updates · 2 minor updates
 ```
 
 **Repositories — three of them since the 2026-08-24 split. This table was wrong for a while;

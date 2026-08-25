@@ -476,6 +476,20 @@ internal sealed class MainWindow : IDisposable
         /// <summary>Dropdown affordance on a menu-bar title.</summary>
         public const int MenuChevron  = 97;   // chevron-down, solid
 
+        /// <summary>
+        /// "Report a bug…". The ladybug rather than the stag beetle (0113): at the 13px a menu
+        /// row draws, the beetle's antlered mandibles collapse into noise, while the ladybug's
+        /// rounder body still reads as an insect. It is also the shape software has meant by
+        /// "bug" for decades.
+        /// </summary>
+        public const int Bug          = 115;  // ladybug from above
+
+        /// <summary>
+        /// "Sound test". The plain eighth note, not one of the beamed pairs (0110/0112) — a
+        /// single glyph stays legible at 13px where two notes and a beam start to merge.
+        /// </summary>
+        public const int SoundTest    = 109;  // single eighth note
+
         /// <summary>The "these challenges need a newer plugin" banner.</summary>
         public const int Warning      = 121;  // rounded triangle outline, exclamation inside
 
@@ -1972,9 +1986,10 @@ internal sealed class MainWindow : IDisposable
         // as the public build does — including this whole menu. /tchallenges preview comes back.
         if (!_config.PublicPreview)
         {
-            // Dev items carry no icons by Trist's call — the developer surface does not need to
-            // look finished. Ico.None still reserves the column so this menu lines up with the
-            // public ones sitting beside it in the same bar.
+            // Dev items are mostly unillustrated by Trist's call — the developer surface does not
+            // need to look finished — and Ico.None still reserves the column so this menu lines up
+            // with the public ones beside it in the same bar. Sound test is the exception: it was
+            // asked for by name once a music note existed in the set.
             menus.Add(new MenuDef("Developer", new List<MenuItem>
             {
                 new("Challenge Creator", () => OnOpenCreator?.Invoke(), Accent, Ico.Creator),
@@ -1984,7 +1999,7 @@ internal sealed class MainWindow : IDisposable
                     _save();
                     Plugin.ChatGui.Print("[Challenges] Public preview ON — /tchallenges preview to exit.");
                 }, Neutral, Ico.None),
-                new("Sound test", () => OnOpenSoundTest?.Invoke(), Accent, Ico.None),
+                new("Sound test", () => OnOpenSoundTest?.Invoke(), Accent, Ico.SoundTest),
             }));
         }
 #endif
@@ -1999,9 +2014,7 @@ internal sealed class MainWindow : IDisposable
         // Only when an endpoint was baked in at build time.
         if (SuggestionService.IsConfigured)
         {
-            // No bug icon exists in the bundled set yet — Ico.None keeps this row's label aligned
-            // with "Suggest a feature…" directly under it rather than shifting it left.
-            help.Add(new MenuItem("Report a bug…", _dialogs.RequestBugReport, Danger, Ico.None));
+            help.Add(new MenuItem("Report a bug…", _dialogs.RequestBugReport, Danger, Ico.Bug));
             help.Add(new MenuItem("Suggest a feature…", _dialogs.RequestSuggestion, StatusOk, Ico.Suggest));
         }
 
