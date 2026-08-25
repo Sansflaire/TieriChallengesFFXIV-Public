@@ -324,7 +324,7 @@ internal sealed class MainWindow : IDisposable
     /// sets no <c>ClipContent</c>, and there is a 5px gap beneath it before the progress line.
     /// Keep this comfortably under that gap.</para>
     /// </remarks>
-    private const float CatIconDrop  = 3f;
+    private const float CatIconDrop  = 1.5f;
     /// <summary>One pip in the five-slot difficulty meter.</summary>
     private const float StarSz       = 11f;
     private const float StarGap      = 2f;

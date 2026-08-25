@@ -28,9 +28,9 @@
          from what was built. Bump it on EVERY change — see docs/How To Versioning.md.
          The one thing that does NOT follow automatically is the manifest's AssemblyVersion
          in ../TieriChallengesFFXIV.json; update that by hand to match. -->
-    <Version>0.81.29.3</Version>
-    <AssemblyVersion>0.81.29.3</AssemblyVersion>
-    <FileVersion>0.81.29.3</FileVersion>
+    <Version>0.81.29.4</Version>
+    <AssemblyVersion>0.81.29.4</AssemblyVersion>
+    <FileVersion>0.81.29.4</FileVersion>
   </PropertyGroup>
 
   <!-- TWO FLAVOURS OF THIS PLUGIN.
