@@ -116,6 +116,27 @@ foreach ($lib in 'PanacheUI.dll','SkiaSharp.dll','libSkiaSharp.dll') {
     Copy-Item $src $payload
 }
 
+# PanacheUI's bundled icon PNGs.
+#
+# These were missing from every zip up to and including 0.81.28.0, so every icon in the plugin -
+# the completion checkbox, the hint button, the close and lock controls, the difficulty meter -
+# rendered as a grey placeholder for anyone who installed it normally. It was invisible here
+# because PanacheIcons searches devPlugins\PanacheUI\Icons first, which only exists on this
+# machine. Plugin.TrySetIconFolder points the framework at the copy packaged below.
+#
+# Fails the build rather than warning: a silent recurrence looks like a broken UI, not a missing
+# asset, and that is precisely how it went unnoticed the first time.
+$iconsSrc = Join-Path $env:APPDATA 'XIVLauncher\devPlugins\PanacheUI\Icons'
+if (-not (Test-Path $iconsSrc)) { Fail "Missing PanacheUI icon folder: $iconsSrc" }
+
+$icons = @(Get-ChildItem (Join-Path $iconsSrc '*.png'))
+if ($icons.Count -eq 0) { Fail "No icons in $iconsSrc - every icon in the UI would be a placeholder." }
+
+$iconsDst = Join-Path $payload 'Icons'
+New-Item -ItemType Directory -Path $iconsDst | Out-Null
+Copy-Item $icons $iconsDst
+Ok "bundled $($icons.Count) icon(s)"
+
 # Cue audio. Shipped rather than read from the game's archives: the game's own copies of these
 # sounds load correctly and are silenced somewhere in its mixer that no volume, category or bus
 # write could reach, so the plugin plays these through Windows instead.

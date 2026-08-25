@@ -48,10 +48,6 @@ internal sealed class ProgressToast : IDisposable
     private PanacheSurface? _surface;
     private readonly DateTime _start = DateTime.UtcNow;
 
-    // SkiaRenderer paints no hover cue of its own, so the button's is tracked here — same
-    // pattern as MainWindow._hoverId.
-    private bool _hover;
-    private bool _hoverNext;
 
     public ProgressToast(ITextureProvider texProvider, Action<ProgressEvent> reveal)
     {
@@ -106,7 +102,6 @@ internal sealed class ProgressToast : IDisposable
         _surface.Resize(physW, physH);
         _surface.Scale = uiScale;
 
-        _hoverNext = false;
         var root = BuildTree(e, alpha);
 
         var origin     = ImGui.GetCursorScreenPos();
@@ -126,8 +121,6 @@ internal sealed class ProgressToast : IDisposable
 
         if (tex.HasValue)
             ImGui.Image(tex.Value, new Vector2(physW, physH));
-
-        _hover = _hoverNext;
 
         ImGui.End();
     }
@@ -237,11 +230,11 @@ internal sealed class ProgressToast : IDisposable
 
         var captured = e;
         var button = PUI.PillButton("progress_show", "Show", Accent);
-        if (_hover)
-            button.WithStyle(s => s.BackgroundColor = Accent.WithOpacity(0.32f));
 
-        button.OnClick      += _ => _reveal(captured);
-        button.OnMouseEnter += _ => _hoverNext = true;
+        // Declared on the node, cross-faded by the renderer — the two-field hover latch this
+        // used to carry is gone, and with it the frame of lag it introduced.
+        button.WithStyle(s => s.HoverBackgroundColor = Accent.WithOpacity(0.32f));
+        button.OnClick += _ => _reveal(captured);
 
         footer.AppendChild(button);
         body.AppendChild(footer);

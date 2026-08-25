@@ -51,8 +51,6 @@ internal sealed class SoundTestWindow : IDisposable
     private PanacheSurface? _surface;
     private readonly DateTime _start = DateTime.UtcNow;
 
-    private string? _hoverId;
-    private string? _hoverNext;
 
     /// <summary>
     /// Scratch entry for the bank browser — not a cue, just what Play will audition.
@@ -92,7 +90,6 @@ internal sealed class SoundTestWindow : IDisposable
 
         _surface ??= new PanacheSurface(_texProvider, SurfaceW, SurfaceH);
 
-        _hoverNext = null;
         var root = BuildTree();
 
         var origin     = ImGui.GetCursorScreenPos();
@@ -113,8 +110,6 @@ internal sealed class SoundTestWindow : IDisposable
 
         if (tex.HasValue)
             ImGui.Image(tex.Value, new Vector2(SurfaceW, SurfaceH));
-
-        _hoverId = _hoverNext;
 
         ImGui.End();
     }
@@ -403,18 +398,18 @@ internal sealed class SoundTestWindow : IDisposable
         return slash >= 0 && slash < bank.Length - 1 ? bank.Substring(slash + 1) : bank;
     }
 
-    // SkiaRenderer paints no hover cue of its own, so every button tracks its own — same pattern
-    // as MainWindow.Pill.
+    // The hover cue is declared on the node and cross-faded by the renderer — same as
+    // MainWindow.Pill, which this deliberately mirrors.
     private Node Btn(string id, string text, PColor accent, Action onClick, float topMargin)
     {
         var node = PUI.PillButton(id, text, accent);
-        node.WithStyle(s => s.Margin = new EdgeSize(topMargin, 0, 0, 0));
+        node.WithStyle(s =>
+        {
+            s.Margin               = new EdgeSize(topMargin, 0, 0, 0);
+            s.HoverBackgroundColor = accent.WithOpacity(0.32f);
+        });
 
-        if (_hoverId == id)
-            node.WithStyle(s => s.BackgroundColor = accent.WithOpacity(0.32f));
-
-        node.OnClick      += _ => onClick();
-        node.OnMouseEnter += _ => _hoverNext = id;
+        node.OnClick += _ => onClick();
         return node;
     }
 

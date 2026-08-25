@@ -35,10 +35,19 @@ namespace TieriChallengesFFXIV;
 /// InteractionManager. The tree is rebuilt every frame, so handlers are re-subscribed to fresh
 /// Node objects each frame — that is correct and does not leak.
 ///
-/// SkiaRenderer does NOT paint hover states (verified — it never reads Anim.IsHovered), so the
-/// mandatory hover cue of DESIGN_SYSTEM §7.2 is implemented here via _hoverId / _hoverNext.
-/// That costs one frame of lag, which is imperceptible and is the price of a tree that is
-/// thrown away every frame.
+/// The mandatory hover cue of DESIGN_SYSTEM §7.2 is declared on the node —
+/// <c>Style.HoverBackgroundColor</c> / <c>HoverBorderColor</c> / <c>HoverColor</c> — and
+/// cross-faded by SkiaRenderer from the node's own animation state. It used to be a
+/// <c>_hoverId</c> / <c>_hoverNext</c> pair repainted from this class, back when the renderer
+/// ignored <c>Anim.IsHovered</c>; that cost a frame of lag and a handler per interactive node.
+///
+/// One consequence worth knowing before adding a control: <b>hover does not reach a
+/// <c>PointerEvents.None</c> child</b>, so the node that PAINTS the cue must be the node the
+/// pointer actually hits. Where a cue used to live on an inert child, the Id and the click
+/// moved down onto that child (see <c>ModeTab</c>); where a glyph brightened on hover inside a
+/// button, that component was dropped in favour of the button box's own fill (see
+/// <c>IconButton</c>). A glyph tint cannot be hover-driven at all — there is no
+/// <c>HoverImageTint</c>.
 /// </summary>
 internal sealed class MainWindow : IDisposable
 {
@@ -205,6 +214,11 @@ internal sealed class MainWindow : IDisposable
     private const float MenuTitlePadX    = 10f;
     private const int   MenuItemH        = 24;
     private const float MenuPanelMinW    = 150f;
+    private const float MenuItemPadX     = 12f;
+    // Font sizes are tokens because MenuTitleWidth / MenuItemWidth measure against them. A literal
+    // here and a different literal at the draw site would place every dropdown slightly wrong.
+    private const float MenuTitleFontSize = 12f;
+    private const float MenuItemFontSize  = 11.5f;
 
 
     // Tab strip at the top of the master pane.
@@ -220,21 +234,27 @@ internal sealed class MainWindow : IDisposable
 
     // Hint display. A revealed hint replaces the description line and may need more than one
     // line, so the row grows rather than truncating what the player just asked to see.
-    private const float HintLineH    = 14f;
-    private const int   HintMaxLines     = 3;
+    //
+    // How that growth is worked out changed completely on 2026-08-25. It used to be a hand-rolled
+    // word wrapper fed by two guesses — an average glyph width, and a flat "width the pills take"
+    // constant that had to be re-tuned by hand every time a row icon changed size (250 → 205 →
+    // 230). Both are gone. The row is now Fit-height with a MinHeight floor and the hint node is
+    // TextOverflow.Wrap, so PanacheUI measures the real text against the width the row's actual
+    // children actually leave — see LayoutEngine.HorizontalFillWidth, which exists for exactly
+    // this shape. Nothing here can go stale when an icon is resized, because nothing here knows
+    // an icon's size any more.
     /// <summary>
-    /// Row width the text column does NOT get: the checkbox, gaps, the CUSTOM badge, the hint
-    /// button and the status pill.
-    ///
-    /// <para>Tracks the row icons, so it moves whenever they do. 250 originally; 205 once the
-    /// "HIDE HINT" pill collapsed to a round icon; 230 now that the checkbox and hint button
-    /// doubled. Left stale it silently mis-wraps hints — too high breaks lines early for room
-    /// that is free, too low runs them under the pills.</para>
+    /// Cap on a revealed hint's lines; the renderer ellipsises the last one. Without a cap, one
+    /// wordy hint could push every other challenge off the screen.
     /// </summary>
-    private const float HintReservedW = 230f;
-    /// <summary>Average glyph width at the 10px sub-line size. Estimate — see <see cref="WrapHint"/>.</summary>
-    private const float HintCharW    = 5.1f;
-    /// <summary>Scales with the font: bigger glyphs mean fewer of them fit on a line.</summary>
+    private const int HintMaxLines = 3;
+
+    /// <summary>
+    /// The second line of a challenge row — description, completion date, or hint. One token
+    /// because the hint and the line it replaces must rasterise identically; two numbers that
+    /// happened to agree would drift the first time either was touched.
+    /// </summary>
+    private const float SubFontSize = 10f;
 
     // Icon sizing. Every bundled PanacheUI icon is square, so one number sizes each use.
     /// <summary>Corner controls (lock, close): the button box.</summary>
@@ -277,12 +297,10 @@ internal sealed class MainWindow : IDisposable
     private const float StarGap      = 2f;
 
 
-    /// <summary>Width the five-pip meter plus its leading row gap takes out of a challenge row.</summary>
-    private float StarBlockW  => 5f * StarSz + 4f * StarGap + 10f;
-
-    // The action-pill row-breaking helper that used to live here went with the pills — the menu
-    // bar replaced them. Its estimate-a-width approach survives in EstimateMenuTitleWidth, which
-    // needs the same trick for the same reason: Panache exposes no text measurement.
+    // Both of the estimate-a-width helpers that used to live here are gone: the challenge row's
+    // hint wrapper (layout measures it now) and the star block's contribution to it. PanacheUI
+    // grew real text measurement on 2026-08-24, so nothing in this file guesses at text extents
+    // any more — see MenuTitleWidth / MenuItemWidth for the menu bar's side of the same change.
 
     // Header height is now exactly its content, not a fraction of the window.
     //
@@ -372,8 +390,23 @@ internal sealed class MainWindow : IDisposable
 
     private PanacheSurface? _surface;
 
-    // Hover tracking — see the class remark.
-    private string? _hoverId;
+    /// <summary>
+    /// Id of the node under the pointer this frame, or null.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Not a hover cue.</b> Every hover cue in this window is declared on the node
+    /// (<c>Style.HoverBackgroundColor</c> / <c>HoverBorderColor</c> / <c>HoverColor</c>) and
+    /// cross-faded by the renderer, so the paired <c>_hoverId</c> field this used to sit beside
+    /// is gone along with every <c>OnMouseEnter</c> that existed only to feed it.</para>
+    ///
+    /// <para>What survives is the two gestures Panache's own events do not reach from here:
+    /// right-click-to-teleport on a zone row, and the dev-only right-click Copy GUID on a
+    /// challenge title. Both are read in <c>DrawWindow</c> at the ImGui level, which is why this
+    /// is "this frame" and not "last frame" — see the read-order note there.</para>
+    ///
+    /// <para>Only <c>ZoneRow</c> and <c>ChallengeRow</c>'s title still write it. If both gestures
+    /// ever move onto <c>Node.OnRightClick</c> (which does now exist — see §8A), this goes too.</para>
+    /// </remarks>
     private string? _hoverNext;
 
     /// <summary>
@@ -549,18 +582,19 @@ internal sealed class MainWindow : IDisposable
         if (tex.HasValue)
             ImGui.Image(tex.Value, new Vector2(w, h));
 
-        // Read BEFORE the _hoverId assignment below: _hoverNext is a fresh Node's animation state
-        // set during the Render call just above, and — because the tree is rebuilt every frame —
-        // it already reflects whatever is under the cursor THIS frame, not last frame's. Using
-        // _hoverId instead would fire the teleport one frame behind the row actually clicked.
+        // _hoverNext was updated during the Render call just above, so it reflects what is under
+        // the cursor THIS frame rather than last frame's row. It is maintained by an
+        // enter/leave pair (see ZoneRow) instead of the enter-only handler it used to have —
+        // that alone never cleared, so moving off the last zone row you touched and right-
+        // clicking empty space would teleport you to it.
         if (rightClick) HandleZoneRightClick(_hoverNext);
 
 #if DEV_BUILD
         if (rightClick && !_config.PublicPreview)
         {
-            // Read _hoverNext, not _hoverId, for the same reason the zone handler does: the tree is
-            // rebuilt before the click is dispatched, so _hoverId is a frame behind and would open
-            // the menu for whichever row the pointer was over LAST frame.
+            // Same single-field read as the zone handler above, and for the same reason: this is
+            // what the pointer is over NOW. The previous-frame copy that used to back the hover
+            // cue is gone, so there is no stale value left to reach for by mistake.
             if (_hoverNext != null && _hoverNext.StartsWith("chal:", StringComparison.Ordinal))
             {
                 _ctxChallengeId = _hoverNext["chal:".Length..];
@@ -587,7 +621,6 @@ internal sealed class MainWindow : IDisposable
             ImGui.SetTooltip($"Right-click to teleport to {ZoneIndex.DisplayName(_config, hoveredZone)}");
         }
 
-        _hoverId  = _hoverNext;
         _openMenu = _openMenuNext;
 
         ImGui.End();
@@ -1132,11 +1165,11 @@ internal sealed class MainWindow : IDisposable
                     s.WidthMode    = SizeMode.Fill;
                     s.HeightMode   = SizeMode.Fit;
                     s.FontSize     = 10f;
-                    s.Color        = _hoverId == id ? TextHi : (only ? StatusOk : Theme.TextSubtle);
+                    s.Color        = only ? StatusOk : Theme.TextSubtle;
+                    s.HoverColor   = TextHi;
                     s.TextOverflow = TextOverflow.Ellipsis;
                 });
 
-            toggle.OnMouseEnter += _ => _hoverNext = id;
             toggle.OnClick += _ =>
             {
                 _config.ZonesWithChallengesOnly = !_config.ZonesWithChallengesOnly;
@@ -1193,11 +1226,11 @@ internal sealed class MainWindow : IDisposable
                 s.HeightMode   = SizeMode.Fit;
                 s.FontSize     = 10f;
                 s.Bold         = all;
-                s.Color        = _hoverId == id ? TextHi : (all ? Danger : Theme.TextSubtle);
+                s.Color        = all ? Danger : Theme.TextSubtle;
+                s.HoverColor   = TextHi;
                 s.TextOverflow = TextOverflow.Ellipsis;
             });
 
-        toggle.OnMouseEnter += _ => _hoverNext = id;
         toggle.OnClick += _ =>
         {
             _config.DevShowAllContent = !_config.DevShowAllContent;
@@ -1215,17 +1248,21 @@ internal sealed class MainWindow : IDisposable
     /// </summary>
     private Node ModeTab(GroupMode mode, string label, bool active)
     {
-        string id  = "group_" + mode;
-        bool   hot = _hoverId == id;
+        string id = "group_" + mode;
 
-        var tab = new Node().WithId(id).WithStyle(s =>
+        var tab = new Node().WithStyle(s =>
         {
             s.Flow       = Flow.Vertical;
             s.WidthMode  = SizeMode.Fit;
             s.HeightMode = SizeMode.Fill;
         });
 
-        tab.AppendChild(new Node().WithText(label).WithStyle(s =>
+        // The Id, the click and the hover all live on the LABEL, not on this wrapper. A
+        // renderer-painted hover only ever reads the hovered node's own animation state, and
+        // hover does not reach a PointerEvents.None child — so the node that draws the cue has
+        // to be the node the pointer actually hits. The divider below is decorative and loses
+        // nothing by being outside the hit area.
+        var face = new Node().WithId(id).WithText(label).WithStyle(s =>
         {
             s.WidthMode       = SizeMode.Fit;
             s.HeightMode      = SizeMode.Fill;
@@ -1233,27 +1270,32 @@ internal sealed class MainWindow : IDisposable
             s.FontSize        = 11.5f;
             s.Bold            = active;
             s.TextAlign       = TextAlign.Center;
-            s.Color           = active ? Accent : hot ? TextHi : Theme.TextMuted;
+            s.Color           = active ? Accent : Theme.TextMuted;
 
             // Selected tab carries the pane colour, so the seam below it disappears.
-            s.BackgroundColor = active ? Surface(Theme.Panel)
-                              : hot    ? PColor.White.WithOpacity(0.04f)
-                                       : PColor.Transparent;
+            s.BackgroundColor = active ? Surface(Theme.Panel) : PColor.Transparent;
+
+            // The active tab is already at its emphasised colour; washing it further on hover
+            // would say "clickable" about the one tab that does nothing when clicked.
+            if (!active)
+            {
+                s.HoverColor           = TextHi;
+                s.HoverBackgroundColor = PColor.White.WithOpacity(0.04f);
+            }
 
             s.BorderRadiusTopLeft  = TabRadius;
             s.BorderRadiusTopRight = TabRadius;
-            s.PointerEvents        = PointerEvents.None;
-        }));
+        });
 
-        tab.AppendChild(TabDivider(!active));
-
-        tab.OnMouseEnter += _ => _hoverNext = id;
-        tab.OnClick += _ =>
+        face.OnClick += _ =>
         {
             if (_config.Grouping == mode) return;
             _config.Grouping = mode;
             _save();
         };
+
+        tab.AppendChild(face);
+        tab.AppendChild(TabDivider(!active));
 
         return tab;
     }
@@ -1328,20 +1370,19 @@ internal sealed class MainWindow : IDisposable
     /// </summary>
     private Node ExpansionRow(ZoneIndex.Expansion expansion, int done, int total, bool collapsed)
     {
-        string rowId  = $"exp_{expansion.Id}";
-        bool   hovered = _hoverId == rowId;
+        string rowId = $"exp_{expansion.Id}";
 
         var row = new Node().WithId(rowId).WithStyle(s =>
         {
-            s.Flow            = Flow.Horizontal;
-            s.WidthMode       = SizeMode.Fill;
-            s.HeightMode      = SizeMode.Fixed; s.Height = RowH_Expansion;
-            s.Padding         = new EdgeSize(0, PadPaneX);
-            s.Gap             = 6;
-            s.BackgroundColor = hovered ? Theme.Panel2.WithOpacity(0.95f) : Theme.Panel2;
+            s.Flow                 = Flow.Horizontal;
+            s.WidthMode            = SizeMode.Fill;
+            s.HeightMode           = SizeMode.Fixed; s.Height = RowH_Expansion;
+            s.Padding              = new EdgeSize(0, PadPaneX);
+            s.Gap                  = 6;
+            s.BackgroundColor      = Theme.Panel2;
+            s.HoverBackgroundColor = Theme.Panel2.WithOpacity(0.95f);
         });
 
-        row.OnMouseEnter += _ => _hoverNext = rowId;
         row.OnClick += _ =>
         {
             if (!_config.CollapsedExpansions.Remove(expansion.Id))
@@ -1403,20 +1444,27 @@ internal sealed class MainWindow : IDisposable
         // the plugin comes from one place.
         string displayName = ZoneIndex.DisplayName(_config, territoryId);
 
-        string rowId  = $"zone_{territoryId}";
-        bool   hovered = _hoverId == rowId;
+        string rowId = $"zone_{territoryId}";
 
         var row = new Node().WithId(rowId).WithStyle(s =>
         {
             s.Flow       = Flow.Horizontal;
             s.WidthMode  = SizeMode.Fill;
             s.HeightMode = SizeMode.Fixed; s.Height = RowH_Zone;
-            s.BackgroundColor = selected ? Accent.WithOpacity(0.09f)
-                              : hovered  ? PColor.White.WithOpacity(0.03f)
-                              : PColor.Transparent;
+            s.BackgroundColor = selected ? Accent.WithOpacity(0.09f) : PColor.Transparent;
+
+            // Selected rows keep their accent wash rather than picking up the white one —
+            // hovering the row you are already on should not restyle it (§7.2).
+            if (!selected) s.HoverBackgroundColor = PColor.White.WithOpacity(0.03f);
         });
 
+        // Not a hover cue — the renderer paints that now — but the answer to "which zone is under
+        // the cursor" for right-click-to-teleport and its tooltip, neither of which Panache's own
+        // events cover from here. Paired with a leave handler: enter fires only on the transition,
+        // so an enter-only handler would hold the last row touched forever and let a right-click
+        // on empty space teleport you somewhere you were no longer pointing at.
         row.OnMouseEnter += _ => _hoverNext = rowId;
+        row.OnMouseLeave += _ => { if (_hoverNext == rowId) _hoverNext = null; };
         row.OnClick      += _ => { _config.SelectedTerritory = (int)territoryId; _save(); };
 
         row.AppendChild(new Node().WithStyle(s =>
@@ -1490,8 +1538,7 @@ internal sealed class MainWindow : IDisposable
         var (done, total) = ChallengeCatalog.CategoryProgress(_config, _store, category);
         float frac = ChallengeCatalog.Percent(done, total);
 
-        string rowId  = $"cat_{category}";
-        bool  hovered = _hoverId == rowId;
+        string rowId = $"cat_{category}";
 
         var row = new Node().WithId(rowId).WithStyle(s =>
         {
@@ -1499,14 +1546,12 @@ internal sealed class MainWindow : IDisposable
             s.WidthMode  = SizeMode.Fill;
             s.HeightMode = SizeMode.Fixed; s.Height = RowH_Master;
             // Selection: accent @ 9% fill. Hover on non-selected: white @ 3% (§6.1, §7.2).
-            s.BackgroundColor = selected ? Accent.WithOpacity(0.09f)
-                              : hovered  ? PColor.White.WithOpacity(0.03f)
-                              : PColor.Transparent;
+            s.BackgroundColor = selected ? Accent.WithOpacity(0.09f) : PColor.Transparent;
+            if (!selected) s.HoverBackgroundColor = PColor.White.WithOpacity(0.03f);
         });
 
         var captured = category;
-        row.OnClick      += _ => { _config.SelectedCategory = captured; _save(); };
-        row.OnMouseEnter += _ => _hoverNext = rowId;
+        row.OnClick += _ => { _config.SelectedCategory = captured; _save(); };
 
         // 2px selection bar at full accent opacity.
         row.AppendChild(new Node().WithStyle(s =>
@@ -1744,30 +1789,36 @@ internal sealed class MainWindow : IDisposable
         {
             string id   = "menu_" + menu.Title;
             bool   open = _openMenu == menu.Title;
-            bool   hot  = open || _hoverId == id;
 
             var title = new Node().WithId(id).WithText(menu.Title).WithStyle(s =>
             {
                 s.WidthMode       = SizeMode.Fit;
                 s.HeightMode      = SizeMode.Fill;
                 s.Padding         = new EdgeSize(0, MenuTitlePadX);
-                s.FontSize        = 12f;
+                s.FontSize        = MenuTitleFontSize;
                 s.Bold            = open;
-                s.Color           = hot ? Accent : TextHi;
-                s.BackgroundColor = open ? Accent.WithOpacity(0.16f)
-                                  : hot  ? PColor.White.WithOpacity(0.05f)
-                                         : PColor.Transparent;
-                s.BorderRadius    = 4f;
                 s.TextAlign       = TextAlign.Center;
+                s.BorderRadius    = 4f;
+
+                // An open title is already at the hover appearance and beyond, so it declares no
+                // hover colours at all — otherwise moving the pointer onto the menu you just
+                // opened would visibly wash it a second time.
+                s.Color           = open ? Accent : TextHi;
+                s.BackgroundColor = open ? Accent.WithOpacity(0.16f) : PColor.Transparent;
+
+                if (!open)
+                {
+                    s.HoverColor           = Accent;
+                    s.HoverBackgroundColor = PColor.White.WithOpacity(0.05f);
+                }
             });
 
             var captured = menu.Title;
             title.OnMouseEnter += _ =>
             {
-                _hoverNext = id;
-
-                // Hovering while a menu is already open switches to this one, which is how every
-                // desktop menu bar behaves. Hovering with none open does nothing.
+                // Behaviour, not appearance: hovering while a menu is already open switches to
+                // this one, which is how every desktop menu bar behaves. Hovering with none open
+                // does nothing. The visual cue is the renderer's job above.
                 if (_openMenu != null) _openMenuNext = captured;
             };
             title.OnClick += _ => _openMenuNext = _openMenu == captured ? null : captured;
@@ -1791,15 +1842,18 @@ internal sealed class MainWindow : IDisposable
 
         var menus = BuildMenus();
 
-        // Left edge of the open title, accumulated across the titles before it. There is no text
-        // measurement API, so this is an estimate at the menu font size — a few pixels of drift
-        // moves the dropdown slightly, which is cosmetic.
+        // Left edge of the open title, accumulated across the titles before it. Measured exactly
+        // now (see MenuTitleWidth) rather than estimated, so the dropdown lines up with its title
+        // instead of landing a few pixels off. The +2 is the bar's Gap — see BuildMenuBar.
+        //
+        // Every title counted here is by definition NOT the open one (the loop stops at it), so
+        // none of them are bold.
         float x = MenuBarLeft;
         MenuDef? target = null;
         foreach (var menu in menus)
         {
             if (menu.Title == _openMenu) { target = menu; break; }
-            x += EstimateMenuTitleWidth(menu.Title) + 2f;
+            x += MenuTitleWidth(menu.Title, open: false) + 2f;
         }
 
         if (target == null)
@@ -1826,7 +1880,7 @@ internal sealed class MainWindow : IDisposable
 
         float panelW = MenuPanelMinW;
         foreach (var item in target.Items)
-            panelW = MathF.Max(panelW, EstimateMenuItemWidth(item.Label));
+            panelW = MathF.Max(panelW, MenuItemWidth(item.Label));
 
         // Keep the panel on screen when a menu near the right edge is opened.
         float left = MathF.Min(x, MathF.Max(0f, w - panelW - 4f));
@@ -1852,27 +1906,32 @@ internal sealed class MainWindow : IDisposable
         foreach (var item in target.Items)
         {
             string itemId = $"mi_{target.Title}_{item.Label}";
-            bool   hov    = _hoverId == itemId;
 
             // The row is a horizontal container now rather than a text node, so the label moved
             // into a child of its own. That child keeps HeightMode.Fill because the renderer
             // centres text inside whatever box it is handed — a Fit-height label would sit on the
             // top edge of the row instead of level with its icon.
+            //
+            // The highlight bar is the entire hover cue. The label and icon used to flip to TextHi
+            // as well, which threw away the only signal that "Reset progress" is destructive and
+            // "Sync" is not — item.Color is semantic, and hover is not a reason to discard it.
             var row = new Node().WithId(itemId).WithStyle(s =>
             {
-                s.Flow            = Flow.Horizontal;
-                s.WidthMode       = SizeMode.Fill;
-                s.HeightMode      = SizeMode.Fixed; s.Height = MenuItemH;
-                s.Padding         = new EdgeSize(0, 12);
-                s.Gap             = MenuIconGap;
-                s.BackgroundColor = hov ? Accent.WithOpacity(0.22f) : PColor.Transparent;
+                s.Flow                 = Flow.Horizontal;
+                s.WidthMode            = SizeMode.Fill;
+                s.HeightMode           = SizeMode.Fixed; s.Height = MenuItemH;
+                s.Padding              = new EdgeSize(0, MenuItemPadX);
+                s.Gap                  = MenuIconGap;
+                s.AlignItems           = AlignItems.Center;
+                s.BackgroundColor      = PColor.Transparent;
+                s.HoverBackgroundColor = Accent.WithOpacity(0.22f);
             });
 
             if (item.IconId != Ico.None)
             {
-                var glyph = PUI.Icon(item.IconId, MenuIconSz, hov ? TextHi : item.Color);
-                glyph.WithStyle(s => s.Margin = new EdgeSize((MenuItemH - MenuIconSz) / 2f, 0, 0, 0));
-                row.AppendChild(glyph);
+                // No centring margin: AlignItems.Center above does it, and unlike a
+                // (MenuItemH - MenuIconSz) / 2 margin it stays correct if either size changes.
+                row.AppendChild(PUI.Icon(item.IconId, MenuIconSz, item.Color));
             }
             else
             {
@@ -1890,14 +1949,13 @@ internal sealed class MainWindow : IDisposable
             {
                 s.WidthMode     = SizeMode.Fill;
                 s.HeightMode    = SizeMode.Fill;
-                s.FontSize      = 11.5f;
-                s.Color         = hov ? TextHi : item.Color;
+                s.FontSize      = MenuItemFontSize;
+                s.Color         = item.Color;
                 s.TextOverflow  = TextOverflow.Ellipsis;
                 s.PointerEvents = PointerEvents.None;
             }));
 
             var action = item.OnClick;
-            row.OnMouseEnter += _ => _hoverNext = itemId;
             row.OnClick += _ =>
             {
                 _openMenuNext = null;
@@ -1947,19 +2005,19 @@ internal sealed class MainWindow : IDisposable
         });
 
         string itemId = "ctxcopy:" + id;
-        bool   hov    = _hoverId == itemId;
 
         var item = new Node().WithId(itemId).WithText("Copy GUID").WithStyle(s =>
         {
-            s.WidthMode       = SizeMode.Fill;
-            s.HeightMode      = SizeMode.Fixed; s.Height = MenuItemH;
-            s.Padding         = new EdgeSize(0, 12);
-            s.FontSize        = 11.5f;
-            s.Color           = hov ? TextHi : Theme.TextMuted;
-            s.BackgroundColor = hov ? Accent.WithOpacity(0.22f) : PColor.Transparent;
+            s.WidthMode            = SizeMode.Fill;
+            s.HeightMode           = SizeMode.Fixed; s.Height = MenuItemH;
+            s.Padding              = new EdgeSize(0, MenuItemPadX);
+            s.FontSize             = MenuItemFontSize;
+            s.Color                = Theme.TextMuted;
+            s.HoverColor           = TextHi;
+            s.BackgroundColor      = PColor.Transparent;
+            s.HoverBackgroundColor = Accent.WithOpacity(0.22f);
         });
 
-        item.OnMouseEnter += _ => _hoverNext = itemId;
         item.OnClick += _ =>
         {
             ImGui.SetClipboardText(id);
@@ -1972,9 +2030,22 @@ internal sealed class MainWindow : IDisposable
     }
 #endif
 
-    private float EstimateMenuTitleWidth(string label) => MenuTitlePadX * 2f + label.Length * 6.9f;
-    private float EstimateMenuItemWidth(string label)  =>
-        24f + MenuIconSz + MenuIconGap + label.Length * 6.6f;
+    // Measured, not estimated. These were `label.Length * 6.9f` and `label.Length * 6.6f` — a
+    // mean glyph width that was wrong for every label that was not average, and wrong in the same
+    // direction for all of them at once whenever the font size changed. PUI.MeasureText asks the
+    // same SKFont the renderer will paint with, so the dropdown now lands under its title exactly
+    // and the panel is exactly as wide as its longest item.
+    //
+    // Bold matters: an open menu title is bold (see BuildMenuBar), and bold is wider. Measuring
+    // the regular weight would drift every title after an open one leftward.
+
+    /// <summary>Width of a menu-bar title, at the weight it will actually be drawn in.</summary>
+    private float MenuTitleWidth(string label, bool open) =>
+        MenuTitlePadX * 2f + PUI.MeasureText(label, MenuTitleFontSize, bold: open);
+
+    /// <summary>Width a dropdown item needs: padding, icon column, gap, then the label itself.</summary>
+    private float MenuItemWidth(string label) =>
+        MenuItemPadX * 2f + MenuIconSz + MenuIconGap + PUI.MeasureText(label, MenuItemFontSize);
 
     // ── Detail pane ──────────────────────────────────────────────────────────
 
@@ -2103,16 +2174,17 @@ internal sealed class MainWindow : IDisposable
         // for a spoilered challenge — the hint exists to help FIND something, so offering it here
         // would leak exactly what the mask is hiding.
         bool hintOpen = !spoilered && def.HasHint && _hintShown.Contains(def.Id);
-        var  hintLines = hintOpen ? WrapHint(def.Hint, detailW, def.HasDifficulty) : null;
-        int  rowH = hintLines is { Count: > 1 }
-            ? RowH_Challenge + (int)MathF.Ceiling((hintLines.Count - 1) * HintLineH)
-            : RowH_Challenge;
 
+        // Fit height over a MinHeight floor, rather than a height this method computes. A hint
+        // that wraps to three lines makes the text column taller, the column makes the row
+        // taller, and layout works out the wrap width from the siblings that are really there.
+        // The floor is what keeps every unexpanded row the uniform RowH_Challenge the list is
+        // designed around — Fit alone would shrink rows to their text.
         var row = new Node().WithStyle(s =>
         {
             s.Flow          = Flow.Horizontal;
             s.WidthMode     = SizeMode.Fill;
-            s.HeightMode    = SizeMode.Fixed; s.Height = rowH;
+            s.HeightMode    = SizeMode.Fit; s.MinHeight = RowH_Challenge;
             s.Padding       = new EdgeSize(0, PadPaneX);
             s.Gap           = 10;
 
@@ -2127,9 +2199,15 @@ internal sealed class MainWindow : IDisposable
             }
         });
 
-        // Completion checkbox, vertically centred by margin (nodes stack from the top). Centred
-        // against RowH_Challenge rather than rowH deliberately: when a revealed hint grows the row,
-        // the mark stays level with the title line instead of drifting to the middle of the block.
+        // Completion checkbox, vertically centred by margin.
+        //
+        // This row is the ONE place that deliberately keeps a hand-computed centring margin
+        // instead of AlignItems.Center — do not "finish the job" here. AlignItems centres against
+        // the row's real height, and this row grows when a hint is revealed; every marker would
+        // then drift down to the middle of a three-line block. RowH_Challenge is the unexpanded
+        // height, so pinning to it keeps the marks level with the TITLE line whatever the row
+        // does underneath, which is the behaviour that was wanted. Same reasoning for the pin and
+        // the difficulty meter below.
         //
         // A checkbox rather than the dot this replaced. The dot encoded done/not-done purely as a
         // colour change, which is the one distinction a colour-blind player is least likely to
@@ -2169,10 +2247,15 @@ internal sealed class MainWindow : IDisposable
 
 #if DEV_BUILD
         // Hover is tracked ONLY to answer "what is the pointer over?" for the right-click menu, so
-        // it is wired in dev builds alone. No visual change: nothing reads _hoverId for this id,
-        // which keeps a non-clickable title from growing a hover cue it has not earned.
+        // it is wired in dev builds alone. No visual change: the style declares no Hover* colours,
+        // which keeps a non-clickable title from growing a cue it has not earned. Enter/leave
+        // pair for the same reason ZoneRow uses one — enter alone never clears.
         if (!_config.PublicPreview)
-            titleNode.OnMouseEnter += _ => _hoverNext = "chal:" + def.Id;
+        {
+            string hoverKey = "chal:" + def.Id;
+            titleNode.OnMouseEnter += _ => _hoverNext = hoverKey;
+            titleNode.OnMouseLeave += _ => { if (_hoverNext == hoverKey) _hoverNext = null; };
+        }
 #endif
 
         textCol.AppendChild(titleNode);
@@ -2221,19 +2304,20 @@ internal sealed class MainWindow : IDisposable
         // The hint wins over everything above, including the completion date and the dev flags:
         // it is only ever showing because the player explicitly asked for it, and an explicit
         // request should not be silently overridden by an automatic line.
-        if (hintLines != null)
+        if (hintOpen)
         {
-            for (int i = 0; i < hintLines.Count; i++)
+            // The one node in this window that wraps. Fit height reports the wrapped height, which
+            // is what grows the row — the prefix is part of the same string so it cannot push the
+            // first line over on its own.
+            textCol.AppendChild(new Node().WithText("Hint: " + def.Hint.Trim()).WithStyle(s =>
             {
-                textCol.AppendChild(new Node().WithText(hintLines[i]).WithStyle(s =>
-                {
-                    s.WidthMode    = SizeMode.Fill;
-                    s.HeightMode   = SizeMode.Fit;
-                    s.FontSize     = 10f;
-                    s.Color        = HintText;
-                    s.TextOverflow = TextOverflow.Ellipsis;
-                }));
-            }
+                s.WidthMode    = SizeMode.Fill;
+                s.HeightMode   = SizeMode.Fit;
+                s.FontSize     = SubFontSize;
+                s.Color        = HintText;
+                s.TextOverflow = TextOverflow.Wrap;
+                s.MaxLines     = HintMaxLines;
+            }));
         }
         else
         {
@@ -2241,7 +2325,7 @@ internal sealed class MainWindow : IDisposable
             {
                 s.WidthMode    = SizeMode.Fill;
                 s.HeightMode   = SizeMode.Fit;
-                s.FontSize     = 10f;
+                s.FontSize     = SubFontSize;
                 s.Color        = subColor;
                 s.TextOverflow = TextOverflow.Ellipsis;
             }));
@@ -2329,58 +2413,6 @@ internal sealed class MainWindow : IDisposable
         return btn;
     }
 
-    /// <summary>
-    /// Break a hint into display lines.
-    ///
-    /// <para>PanacheUI does not wrap text — <c>TextOverflow</c> is Clip or Ellipsis only — so a
-    /// hint longer than the row would simply be cut off. The budget here is a character estimate
-    /// rather than a real measurement, because no measuring API is exposed to consumers. Erring
-    /// short just wraps a word early; erring long ellipsises the tail of one line. Either beats
-    /// losing the rest of the hint outright.</para>
-    /// </summary>
-    private List<string> WrapHint(string hint, int detailW, bool hasStars)
-    {
-        // The prefix is wrapped along with the text so it cannot push the first line over budget.
-        string[] words = ("Hint: " + hint.Trim())
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-        // The star block is charged only to rows that actually have one. Folding it into the flat
-        // HintReservedW would break lines early on every unrated challenge, for space those rows
-        // never spend.
-        float reserved = HintReservedW + (hasStars ? StarBlockW : 0f);
-        int   budget   = Math.Max(24, (int)((detailW - reserved) / HintCharW));
-
-        var lines = new List<string>();
-        var line  = new System.Text.StringBuilder();
-
-        foreach (string word in words)
-        {
-            if (line.Length > 0 && line.Length + 1 + word.Length > budget)
-            {
-                lines.Add(line.ToString());
-                line.Clear();
-            }
-
-            if (line.Length > 0) line.Append(' ');
-            line.Append(word);
-        }
-
-        if (line.Length > 0) lines.Add(line.ToString());
-        if (lines.Count == 0) lines.Add("Hint: " + hint);
-
-        // Past the line cap, fold the remainder into the last line and let the renderer ellipsise
-        // it. Growing the row without limit would let one wordy hint push every other challenge
-        // off the screen.
-        if (lines.Count > HintMaxLines)
-        {
-            int first = HintMaxLines - 1;
-            string tail = string.Join(" ", lines.GetRange(first, lines.Count - first));
-            lines.RemoveRange(first, lines.Count - first);
-            lines.Add(tail);
-        }
-
-        return lines;
-    }
 
     /// <summary>
     /// Right-hand status pill: DONE, live step progress for multi-area challenges
@@ -2446,15 +2478,15 @@ internal sealed class MainWindow : IDisposable
 
     // ── Small builders ───────────────────────────────────────────────────────
 
-    /// <summary>An interactive pill with the mandatory hover cue wired up.</summary>
+    /// <summary>
+    /// An interactive pill with the mandatory hover cue wired up — declared on the node now, so
+    /// the renderer cross-fades it instead of this window repainting on a state field.
+    /// </summary>
     private Node Pill(string id, string text, PColor accent, Action onClick)
     {
         var node = PUI.PillButton(id, text, accent);
-        if (_hoverId == id)
-            node.WithStyle(s => s.BackgroundColor = accent.WithOpacity(0.32f));
-
-        node.OnClick      += _ => onClick();
-        node.OnMouseEnter += _ => _hoverNext = id;
+        node.WithStyle(s => s.HoverBackgroundColor = accent.WithOpacity(0.32f));
+        node.OnClick += _ => onClick();
         return node;
     }
 
@@ -2499,29 +2531,29 @@ internal sealed class MainWindow : IDisposable
     /// </summary>
     private Node IconToggle(string id, int iconActive, int iconInactive, bool active, Action onClick)
     {
-        bool hot = _hoverId == id;
-
         var node = new Node().WithId(id).WithStyle(s =>
         {
             s.WidthMode       = SizeMode.Fixed; s.Width  = ChromeBtn;
             s.HeightMode      = SizeMode.Fixed; s.Height = ChromeBtn;
             s.Flow            = Flow.Horizontal;
-            // Padding is how the glyph gets centred: this framework does not vertically centre
-            // flow children, so an even inset on all four sides is the centring mechanism.
+            // Padding, not AlignItems: this has to centre on BOTH axes, and AlignItems only
+            // handles the cross one. An even inset does both at once.
             s.Padding         = new EdgeSize((ChromeBtn - ChromeGlyph) / 2f);
             s.BorderRadius    = 5;
             s.BorderWidth     = 1;
-            s.BackgroundColor = active ? Accent.WithOpacity(hot ? 0.45f : 0.32f)
-                              : hot    ? Neutral.WithOpacity(0.20f)
-                                       : Neutral.WithOpacity(0.10f);
+            s.BackgroundColor = active ? Accent.WithOpacity(0.32f) : Neutral.WithOpacity(0.10f);
             s.BorderColor     = active ? Accent.WithOpacity(0.75f) : Neutral.WithOpacity(0.40f);
+
+            s.HoverBackgroundColor = active ? Accent.WithOpacity(0.45f) : Neutral.WithOpacity(0.20f);
         });
 
+        // Tinted by state, never by hover — which is what lets this control use the renderer's
+        // hover entirely. A glyph inside a button is PointerEvents.None, so it is never itself
+        // "hovered" and a HoverColor on it would never fire.
         node.AppendChild(PUI.Icon(active ? iconActive : iconInactive, ChromeGlyph,
             active ? PColor.Black.WithOpacity(0.85f) : Neutral.WithOpacity(0.85f)));
 
-        node.OnClick      += _ => onClick();
-        node.OnMouseEnter += _ => _hoverNext = id;
+        node.OnClick += _ => onClick();
         return node;
     }
 
@@ -2537,8 +2569,6 @@ internal sealed class MainWindow : IDisposable
     /// </summary>
     private Node CloseButton(string id, Action onClick)
     {
-        bool hot = _hoverId == id;
-
         var node = new Node().WithId(id).WithStyle(s =>
         {
             s.WidthMode       = SizeMode.Fixed; s.Width  = ChromeBtn;
@@ -2547,14 +2577,19 @@ internal sealed class MainWindow : IDisposable
             s.Padding         = new EdgeSize((ChromeBtn - ChromeGlyph) / 2f);
             s.BorderRadius    = 5;
             s.BorderWidth     = 1;
-            s.BackgroundColor = hot ? Danger.WithOpacity(0.35f) : Danger.WithOpacity(0.12f);
-            s.BorderColor     = Danger.WithOpacity(hot ? 0.85f : 0.45f);
+            s.BackgroundColor = Danger.WithOpacity(0.12f);
+            s.BorderColor     = Danger.WithOpacity(0.45f);
+
+            s.HoverBackgroundColor = Danger.WithOpacity(0.35f);
+            s.HoverBorderColor     = Danger.WithOpacity(0.85f);
         });
 
-        node.AppendChild(PUI.Icon(Ico.Close, ChromeGlyph, Danger.WithOpacity(hot ? 1f : 0.85f)));
+        // Was 0.85 rising to 1.0 on hover. The glyph is a PointerEvents.None child and so never
+        // receives hover of its own; the box behind it triples its fill and nearly doubles its
+        // border instead, which is a far louder cue than 15% on the X ever was.
+        node.AppendChild(PUI.Icon(Ico.Close, ChromeGlyph, Danger.WithOpacity(0.95f)));
 
-        node.OnClick      += _ => onClick();
-        node.OnMouseEnter += _ => _hoverNext = id;
+        node.OnClick += _ => onClick();
         return node;
     }
 
@@ -2565,8 +2600,6 @@ internal sealed class MainWindow : IDisposable
     private Node IconButton(string id, int iconId, float box, float glyph, PColor accent,
                             bool lit, Action onClick)
     {
-        bool hot = _hoverId == id;
-
         var node = new Node().WithId(id).WithStyle(s =>
         {
             s.WidthMode       = SizeMode.Fixed; s.Width  = box;
@@ -2575,16 +2608,18 @@ internal sealed class MainWindow : IDisposable
             s.Padding         = new EdgeSize((box - glyph) / 2f);
             s.BorderRadius    = box / 2f;
             s.BorderWidth     = 1;
-            s.BackgroundColor = lit ? accent.WithOpacity(hot ? 0.42f : 0.28f)
-                              : hot ? accent.WithOpacity(0.20f)
-                                    : accent.WithOpacity(0.08f);
+            s.BackgroundColor = accent.WithOpacity(lit ? 0.28f : 0.08f);
             s.BorderColor     = accent.WithOpacity(lit ? 0.75f : 0.40f);
+
+            s.HoverBackgroundColor = accent.WithOpacity(lit ? 0.42f : 0.20f);
         });
 
-        node.AppendChild(PUI.Icon(iconId, glyph, accent.WithOpacity(lit || hot ? 1f : 0.80f)));
+        // Opacity now tracks `lit` alone. It used to be `lit || hot`, which made an unlit button
+        // under the cursor indistinguishable from a lit one — the hover cue was impersonating the
+        // state cue. The box's fill carries hover on its own.
+        node.AppendChild(PUI.Icon(iconId, glyph, accent.WithOpacity(lit ? 1f : 0.85f)));
 
-        node.OnClick      += _ => onClick();
-        node.OnMouseEnter += _ => _hoverNext = id;
+        node.OnClick += _ => onClick();
         return node;
     }
 

@@ -1,8 +1,10 @@
 using System;
+using System.IO;
 using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using PanacheUI.Icons;
 
 namespace TieriChallengesFFXIV;
 
@@ -112,6 +114,16 @@ public sealed class Plugin : IDalamudPlugin
 
     public Plugin()
     {
+        // Point PanacheUI at the Icons folder shipped INSIDE this plugin, before any UI is built.
+        //
+        // Its automatic search looks at devPlugins\PanacheUI\Icons first, which exists on the dev
+        // machine and nowhere else — so every icon silently degraded to a grey placeholder for
+        // anyone who installed the plugin normally, and no amount of testing here could show it.
+        // Releases up to and including 0.81.28.0 shipped no Icons folder at all; the build now
+        // packages one and this line makes the lookup find it regardless of where Dalamud decides
+        // to load the assembly from. Harmless if the folder is absent — the old search still runs.
+        TrySetIconFolder();
+
         _config = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
         // Before anything else that could record progress or send a message. Loads the cached
@@ -255,6 +267,31 @@ public sealed class Plugin : IDalamudPlugin
         var (done, total) = ChallengeCatalog.OverallProgress(_config, _store);
         Log.Info($"TieriChallengesFFXIV {PluginVersion.DisplayLong} "
                + $"({(IsDevBuild ? "DEV" : "public")} build) — {total} challenges, {done} complete.");
+    }
+
+    /// <summary>
+    /// Tell PanacheUI to load icons from the copy this plugin ships beside its own DLL.
+    /// </summary>
+    /// <remarks>
+    /// Best-effort and deliberately silent on failure: no icon is worth failing construction over,
+    /// and PanacheUI already degrades a missing icon to a placeholder rather than throwing. If the
+    /// folder is not there, <c>FolderOverride</c> ignores the value and the framework's own search
+    /// runs exactly as before — which is what keeps dev builds working from devPlugins\PanacheUI.
+    /// </remarks>
+    private static void TrySetIconFolder()
+    {
+        try
+        {
+            string? dir = PluginInterface.AssemblyLocation.Directory?.FullName;
+            if (string.IsNullOrEmpty(dir)) return;
+
+            string icons = Path.Combine(dir!, "Icons");
+            if (Directory.Exists(icons)) PanacheIcons.FolderOverride = icons;
+        }
+        catch
+        {
+            // Nothing here is worth a crash on startup.
+        }
     }
 
     public void Dispose()

@@ -28,9 +28,9 @@
          from what was built. Bump it on EVERY change — see docs/How To Versioning.md.
          The one thing that does NOT follow automatically is the manifest's AssemblyVersion
          in ../TieriChallengesFFXIV.json; update that by hand to match. -->
-    <Version>0.81.28.0</Version>
-    <AssemblyVersion>0.81.28.0</AssemblyVersion>
-    <FileVersion>0.81.28.0</FileVersion>
+    <Version>0.81.29.0</Version>
+    <AssemblyVersion>0.81.29.0</AssemblyVersion>
+    <FileVersion>0.81.29.0</FileVersion>
   </PropertyGroup>
 
   <!-- TWO FLAVOURS OF THIS PLUGIN.
@@ -119,6 +119,26 @@
   <Target Name="CopyPanacheLibs" AfterTargets="Build">
     <Copy SourceFiles="$(PanacheUIPath)PanacheUI.dll;$(PanacheUIPath)SkiaSharp.dll;$(PanacheUIPath)libSkiaSharp.dll"
           DestinationFolder="$(PluginDeployPath)"
+          OverwriteReadOnlyFiles="true"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- PanacheUI's bundled icon PNGs, copied in beside our own DLL.
+
+       PanacheIcons finds these automatically on THIS machine (it looks in
+       devPlugins\PanacheUI\Icons first) which is exactly why their absence from the shipped zip
+       went unnoticed through several releases: an installed plugin has no devPlugins folder, so
+       every icon rendered as a grey placeholder for real users. Both the dev deploy and the
+       public payload now carry a copy, and Plugin.TrySetIconFolder points the framework at it.
+       See scripts\build-public.ps1 for the release side of the same fix. -->
+  <ItemGroup>
+    <PanacheIcon Include="$(PanacheUIPath)Icons\*.png" />
+  </ItemGroup>
+
+  <Target Name="CopyPanacheIcons" AfterTargets="Build">
+    <Copy SourceFiles="@(PanacheIcon)" DestinationFolder="$(TargetDir)Icons\"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(PanacheIcon)" DestinationFolder="$(PluginDeployPath)Icons\"
           OverwriteReadOnlyFiles="true"
           SkipUnchangedFiles="true" />
   </Target>
