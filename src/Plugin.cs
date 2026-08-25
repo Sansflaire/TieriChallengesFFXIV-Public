@@ -252,6 +252,7 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.AddHandler(CmdMain, new CommandInfo(OnCommand)
         {
             HelpMessage = "FFXIV Miscellaneous Challenges — toggle the window. "
+                        + "/tchallenges center brings a lost or locked window back on screen. "
                         + "/tchallenges reset asks before wiping progress. "
                         + "/tchallenges sfx auditions and sets the sound cues.",
         });
@@ -349,6 +350,11 @@ public sealed class Plugin : IDalamudPlugin
                     _dialogs.RequestReset();
                     break;
 
+                case "center":
+                case "centre":
+                    CenterWindow();
+                    break;
+
                 case "status":
                 {
                     var (done, total) = ChallengeCatalog.OverallProgress(_config, _store);
@@ -389,7 +395,7 @@ public sealed class Plugin : IDalamudPlugin
 #endif
 
                 default:
-                    ChatGui.PrintError("[Challenges] Usage: /tchallenges [reset|status|sync|sfx]");
+                    ChatGui.PrintError("[Challenges] Usage: /tchallenges [center|reset|status|sync|sfx]");
                     break;
             }
         }
@@ -721,6 +727,40 @@ public sealed class Plugin : IDalamudPlugin
     /// button, routed through here rather than wired to a window directly so the button keeps
     /// working when PanacheUI is off and the fallback renderer owns the list.
     /// </summary>
+    /// <summary>
+    /// Bring the window back to the middle of the screen — the recovery path for a window dragged
+    /// off-screen, or left on a monitor that is no longer attached.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Unlocks first, deliberately.</b> A locked window has
+    /// <c>ImGuiWindowFlags.NoMove</c>, and ImGui ignores <c>SetNextWindowPos</c> for it — so
+    /// centring a locked window would appear to do nothing at all. Since the most likely reason
+    /// to type this is "I cannot reach my window", silently failing in exactly that case would be
+    /// the worst possible behaviour. The unlock is announced rather than quiet, because it
+    /// changes a setting the user deliberately turned on.</para>
+    ///
+    /// <para><b>Opens the window if it is closed.</b> "Centre it" means "put it where I can see
+    /// it"; centring something invisible is not a useful outcome.</para>
+    /// </remarks>
+    private void CenterWindow()
+    {
+        _windowVisible = true;
+
+        bool wasLocked = _config.WindowLocked;
+        if (wasLocked)
+        {
+            _config.WindowLocked = false;
+            SaveConfig();
+        }
+
+        if (UsePanache) _mainWindow!.RequestCenter();
+        else            _fallbackWindow.RequestCenter();
+
+        ChatGui.Print(wasLocked
+            ? "[Challenges] Window unlocked and centred."
+            : "[Challenges] Window centred.");
+    }
+
     private void RevealChallenge(ProgressEvent e)
     {
         try

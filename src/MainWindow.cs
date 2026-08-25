@@ -638,10 +638,36 @@ internal sealed class MainWindow : IDisposable
         if (IsVisible) DrawWindow();
     }
 
+    /// <summary>
+    /// Put the window back in the middle of the screen on the next frame.
+    /// </summary>
+    /// <remarks>
+    /// A request rather than a move, because position can only be set from inside the draw loop —
+    /// <c>SetNextWindowPos</c> has to be the call immediately before <c>Begin</c>, and a chat
+    /// command runs nowhere near it. The flag is consumed on the very next frame.
+    /// </remarks>
+    public void RequestCenter() => _centerPending = true;
+
+    private bool _centerPending;
+
     private void DrawWindow()
     {
         ImGui.SetNextWindowSize(new Vector2(_config.WindowWidth, _config.WindowHeight), ImGuiCond.FirstUseEver);
         ImGui.SetNextWindowSizeConstraints(new Vector2(360, 320), new Vector2(1600, 1800));
+
+        if (_centerPending)
+        {
+            _centerPending = false;
+
+            // Centre of the main viewport, not of the display: on a multi-monitor setup the
+            // viewport is the game window, which is where the player is actually looking.
+            //
+            // Cond.Always, because Appearing/FirstUseEver would be ignored for a window that is
+            // already open — which is the only case this command is ever used in. The (0.5, 0.5)
+            // pivot centres the window on the point rather than putting its top-left there.
+            var vp = ImGui.GetMainViewport();
+            ImGui.SetNextWindowPos(vp.Pos + vp.Size * 0.5f, ImGuiCond.Always, new Vector2(0.5f, 0.5f));
+        }
 
         // NoTitleBar is mandatory — the Panache header IS the window chrome (DESIGN_SYSTEM §1.1).
         // Without a title bar ImGui still lets the body be dragged by default, which is what the

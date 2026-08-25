@@ -106,10 +106,25 @@ internal sealed class FallbackWindow
     /// <summary>Wired by Plugin. Opens the live-state popup, same as the Panache renderer's.</summary>
     public Action? OnOpenStatus;
 
+    /// <summary>
+    /// Put the window back in the middle of the screen on the next frame. Mirror of
+    /// <c>MainWindow.RequestCenter</c> — see there for why this is a deferred request.
+    /// </summary>
+    public void RequestCenter() => _centerPending = true;
+
+    private bool _centerPending;
+
     public void Draw(ref bool isVisible)
     {
         ImGui.SetNextWindowSize(new Vector2(_config.WindowWidth, _config.WindowHeight), ImGuiCond.FirstUseEver);
         ImGui.SetNextWindowSizeConstraints(new Vector2(420, 320), new Vector2(1600, 1800));
+
+        if (_centerPending)
+        {
+            _centerPending = false;
+            var vp = ImGui.GetMainViewport();
+            ImGui.SetNextWindowPos(vp.Pos + vp.Size * 0.5f, ImGuiCond.Always, new Vector2(0.5f, 0.5f));
+        }
 
         // This is the surface a player actually sees when PanacheUI is off or missing — the
         // standing rule (2026-08-24) that every public-facing surface matches the main window's
