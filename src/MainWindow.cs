@@ -307,6 +307,24 @@ internal sealed class MainWindow : IDisposable
     /// it is exact rather than nearly.
     /// </summary>
     private const float CatNameRowH  = CatIconSz;
+
+    /// <summary>
+    /// Optical drop for the completion badge, on top of geometric centring.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>This is not a centring calculation and must not be turned back into one.</b> The
+    /// 1px margin removed in 0.81.29.2 was arithmetic — someone's attempt to centre a 13px icon by
+    /// hand — and it broke the moment the size changed. This is the different thing that survives
+    /// after centring is correct: geometric centre and optical centre are not the same point, and
+    /// the eye reads this badge as sitting high next to the title's cap height. It is a constant
+    /// nudge, independent of both the icon size and the row height, so it stays right if either
+    /// changes.</para>
+    ///
+    /// <para>The badge overhangs the bottom of its band by this much, which is harmless — the band
+    /// sets no <c>ClipContent</c>, and there is a 5px gap beneath it before the progress line.
+    /// Keep this comfortably under that gap.</para>
+    /// </remarks>
+    private const float CatIconDrop  = 3f;
     /// <summary>One pip in the five-slot difficulty meter.</summary>
     private const float StarSz       = 11f;
     private const float StarGap      = 2f;
@@ -1607,9 +1625,12 @@ internal sealed class MainWindow : IDisposable
 
         if (allDone)
         {
-            // No centring margin — AlignItems above does it, and correctly at any size. The 1px
-            // nudge that used to be here was tuned for a 13px icon and silently wrong for any other.
-            nameRow.AppendChild(PUI.Icon(Ico.CategoryDone, CatIconSz, StatusOk));
+            // AlignItems does the centring; this margin is purely the optical drop on top of it.
+            // Because the badge is exactly as tall as its band there is no slack for AlignItems to
+            // distribute, so the margin translates one-for-one into pixels down — see CatIconDrop.
+            var badge = PUI.Icon(Ico.CategoryDone, CatIconSz, StatusOk);
+            badge.WithStyle(s => s.Margin = new EdgeSize(CatIconDrop, 0, 0, 0));
+            nameRow.AppendChild(badge);
         }
 
         nameRow.AppendChild(new Node().WithText(category).WithStyle(s =>
