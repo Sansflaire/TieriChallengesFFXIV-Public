@@ -125,6 +125,14 @@
     <PanacheDeployPath>$(PluginDeployPath)</PanacheDeployPath>
     <PanacheUIMinimumVersion>0.1.6</PanacheUIMinimumVersion>
   </PropertyGroup>
+  <!-- Ship only the icons the Ico registry in MainWindow.cs actually names: 23 PNGs (~550 KB)
+       instead of the whole 167-icon, 3.9 MB set. Keep this list in step with that class - a
+       declared ID with no PNG fails the build, but an icon USED and not declared here is a
+       silent grey placeholder at runtime. PanacheIcons.MissingIds reports the latter. -->
+  <ItemGroup>
+    <PanacheIcon Include="3;4;5;9;15;19;25;28;32;36;46;47;51;52;60;62;71;97;109;115;121;137;141" />
+  </ItemGroup>
+
   <Import Project="$(PanacheUIPath)PanacheUI.Consumer.props" />
 
 </Project>
