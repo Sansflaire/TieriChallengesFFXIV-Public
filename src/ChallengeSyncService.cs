@@ -59,6 +59,62 @@ public sealed class ChallengeSyncService
         RepoRawBase + path + "?t=" + DateTime.UtcNow.Ticks.ToString("x");
 
     /// <summary>
+    /// GitHub's contents API for the same repo. Serves the CURRENT bytes of a file with no CDN in
+    /// front of it, which is the only reliable way to read a file within five minutes of a push.
+    /// </summary>
+    private const string RepoApiBase =
+        "https://api.github.com/repos/Sansflaire/TieriChallengesFFXIV-Sync/contents/";
+
+    /// <summary>
+    /// Fetch a repo file, freshest source first.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Why the API comes first.</b> raw.githubusercontent sends
+    /// <c>Cache-Control: max-age=300</c> and caches by PATH — it ignores the query string, so
+    /// <see cref="Bust"/> does not actually bust anything (measured 2026-08-23, and again
+    /// 2026-08-25). The visible symptom is brutal: publish, sync, and the plugin cheerfully
+    /// reports "0 new, 0 updated" because the master list it just downloaded is the one from
+    /// before the publish. Nothing is wrong, nothing logs an error, and the change simply is not
+    /// there. That cost a long debugging session where the data was correct at every layer
+    /// except the one being read.</para>
+    ///
+    /// <para>The contents API has no such cache. It is rate-limited to 60 requests/hour for an
+    /// unauthenticated IP, which is ample here: a sync spends one request on the master list and
+    /// one per CHANGED challenge, and an unchanged sync costs exactly one. On any failure — rate
+    /// limit, outage, offline — this falls back to raw, which is what the plugin used to do
+    /// exclusively, so the worst case is the old behaviour rather than a broken sync.</para>
+    ///
+    /// <para><b>Byte-identical to raw</b>, verified against the live repo before this was written:
+    /// <c>Accept: application/vnd.github.raw</c> returns the file's exact bytes, so the SHA-256
+    /// check downstream passes unchanged. This deliberately mirrors <c>BanService</c>, which has
+    /// fetched API-first for the same reason since the relay work.</para>
+    /// </remarks>
+    private static async Task<string> FetchAsync(string path)
+    {
+        string clean = path.TrimStart('/');
+
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, RepoApiBase + clean);
+            req.Headers.Accept.ParseAdd("application/vnd.github.raw");
+
+            using var res = await Http.SendAsync(req).ConfigureAwait(false);
+            if (res.IsSuccessStatusCode)
+                return await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+            Plugin.Log.Debug($"[Sync] contents API returned {(int)res.StatusCode} for {clean}; using raw.");
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Debug($"[Sync] contents API unavailable ({ex.Message}); using raw.");
+        }
+
+        // Cache-busted raw. Kept as the fallback rather than the primary: it is free and may help
+        // on some edges, but a publish can take up to five minutes to appear through it.
+        return await Http.GetStringAsync(Bust(clean)).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Hard ceiling on downloads per sync. The master list is ours, but a bounded loop over
     /// remote-controlled input is the rule in devPlugins/CLAUDE.md, and this is one.
     /// </summary>
@@ -67,7 +123,21 @@ public sealed class ChallengeSyncService
     /// <summary>Stop after this many consecutive download failures rather than hammering a broken host.</summary>
     private const int MaxConsecutiveFailures = 5;
 
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(20) };
+    private static readonly HttpClient Http = CreateHttp();
+
+    /// <summary>
+    /// <b>The User-Agent is mandatory, not decoration.</b> GitHub's API answers 403 to any request
+    /// without one. Omit it and <see cref="FetchAsync"/>'s API branch fails on every single call,
+    /// falls silently back to the CDN-cached raw host, and the freshness fix this exists for
+    /// quietly does nothing — the exact class of silent failure that made the stale-sync bug take
+    /// so long to find.
+    /// </summary>
+    private static HttpClient CreateHttp()
+    {
+        var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("TieriChallengesFFXIV");
+        return http;
+    }
 
     private readonly OfficialCatalog _catalog;
     private readonly Configuration   _config;
@@ -114,7 +184,7 @@ public sealed class ChallengeSyncService
         string masterJson;
         try
         {
-            masterJson = await Http.GetStringAsync(Bust(MasterPath)).ConfigureAwait(false);
+            masterJson = await FetchAsync(MasterPath).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -180,16 +250,17 @@ public sealed class ChallengeSyncService
                 }
             }
 
-            // Same cache-busting: a challenge file edited in place would otherwise be served
-            // stale, and its hash would then mismatch the master list and get rejected.
-            string url = Bust(string.IsNullOrWhiteSpace(entry.File)
+            // Same freshest-source-first fetch as the master list. It matters just as much here:
+            // a file edited in place and served stale would hash-mismatch the (fresh) master
+            // entry and be REJECTED, which looks like corruption rather than a cache.
+            string path = string.IsNullOrWhiteSpace(entry.File)
                 ? $"challenges/{entry.Id}.json"
-                : entry.File.TrimStart('/'));
+                : entry.File;
 
             string body;
             try
             {
-                body = await Http.GetStringAsync(url).ConfigureAwait(false);
+                body = await FetchAsync(path).ConfigureAwait(false);
                 consecutiveFailures = 0;
             }
             catch (Exception ex)
