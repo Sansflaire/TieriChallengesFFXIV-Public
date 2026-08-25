@@ -69,8 +69,6 @@
     <Reference Include="Lumina.Excel"             HintPath="$(DalamudLibPath)Lumina.Excel.dll"             Private="false" />
     <Reference Include="Newtonsoft.Json"          HintPath="$(DalamudLibPath)Newtonsoft.Json.dll"          Private="false" />
     <Reference Include="Serilog"                  HintPath="$(DalamudLibPath)Serilog.dll"                  Private="false" />
-    <Reference Include="PanacheUI"                HintPath="$(PanacheUIPath)PanacheUI.dll"                 Private="false" />
-    <Reference Include="SkiaSharp"                HintPath="$(PanacheUIPath)SkiaSharp.dll"                 Private="false" />
   </ItemGroup>
 
   <!-- Dalamud loads the dev plugin from devPlugins\TieriChallengesFFXIV\, next to the
@@ -112,35 +110,21 @@
           SkipUnchangedFiles="true" />
   </Target>
 
-  <!-- See devPlugins/BROKEN.md §1 — each plugin's PluginLoadContext resolves DLLs only from
-       its OWN directory, never from devPlugins\PanacheUI\. PanacheUI + both SkiaSharp halves
-       must physically sit next to TieriChallengesFFXIV.dll or the plugin fails to load.
-       SkipUnchangedFiles keeps the 9.6 MB native libSkiaSharp from being recopied every build. -->
-  <Target Name="CopyPanacheLibs" AfterTargets="Build">
-    <Copy SourceFiles="$(PanacheUIPath)PanacheUI.dll;$(PanacheUIPath)SkiaSharp.dll;$(PanacheUIPath)libSkiaSharp.dll"
-          DestinationFolder="$(PluginDeployPath)"
-          OverwriteReadOnlyFiles="true"
-          SkipUnchangedFiles="true" />
-  </Target>
+  <!-- PanacheUI is VENDORED, not shared: each plugin's PluginLoadContext resolves DLLs
+       only from its OWN directory, never from devPlugins\PanacheUI\. PanacheUI + both
+       SkiaSharp halves + the icon PNGs must physically sit next to
+       TieriChallengesFFXIV.dll or the plugin fails to load / renders grey placeholders.
 
-  <!-- PanacheUI's bundled icon PNGs, copied in beside our own DLL.
-
-       PanacheIcons finds these automatically on THIS machine (it looks in
-       devPlugins\PanacheUI\Icons first) which is exactly why their absence from the shipped zip
-       went unnoticed through several releases: an installed plugin has no devPlugins folder, so
-       every icon rendered as a grey placeholder for real users. Both the dev deploy and the
-       public payload now carry a copy, and Plugin.TrySetIconFolder points the framework at it.
-       See scripts\build-public.ps1 for the release side of the same fix. -->
-  <ItemGroup>
-    <PanacheIcon Include="$(PanacheUIPath)Icons\*.png" />
-  </ItemGroup>
-
-  <Target Name="CopyPanacheIcons" AfterTargets="Build">
-    <Copy SourceFiles="@(PanacheIcon)" DestinationFolder="$(TargetDir)Icons\"
-          SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(PanacheIcon)" DestinationFolder="$(PluginDeployPath)Icons\"
-          OverwriteReadOnlyFiles="true"
-          SkipUnchangedFiles="true" />
-  </Target>
+       This import replaces the CopyPanacheLibs and CopyPanacheIcons targets that used to
+       live here. Same behaviour, one shared definition, and it now also errors the build
+       if any piece is missing instead of leaving the gap to be found in the wild.
+       PluginDeployPath is passed through as PanacheDeployPath so the dev deploy is
+       unchanged. Contract: devPlugins/PanacheUI/CONSUMERS.md
+       Release side stays in the build-public.ps1 script under scripts/. -->
+  <PropertyGroup>
+    <PanacheDeployPath>$(PluginDeployPath)</PanacheDeployPath>
+    <PanacheUIMinimumVersion>0.1.6</PanacheUIMinimumVersion>
+  </PropertyGroup>
+  <Import Project="$(PanacheUIPath)PanacheUI.Consumer.props" />
 
 </Project>
