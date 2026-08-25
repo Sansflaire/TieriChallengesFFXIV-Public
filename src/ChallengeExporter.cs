@@ -22,9 +22,60 @@ namespace TieriChallengesFFXIV;
 /// </summary>
 internal static class ChallengeExporter
 {
-    /// <summary>Default location of the public repo checkout, used to prefill the export path.</summary>
+    /// <summary>
+    /// Default location of the SYNC repo checkout, used to prefill the export path.
+    /// </summary>
+    /// <remarks>
+    /// This pointed at a <c>TieriChallengesFFXIV-Public</c> clone until 2026-08-25, left over from
+    /// before the three-way repo split. Challenge data moved to <c>-Sync</c> in that split and
+    /// <see cref="ChallengeSyncService"/> fetches from there, so every publish after it wrote to a
+    /// repo nothing reads — the files landed, the commit pushed, the release looked fine, and no
+    /// player ever saw the change. See <see cref="WrongRepo"/>, which now refuses that outright.
+    /// </remarks>
     public const string DefaultRepoPath =
-        @"C:\Users\trist\AppData\Roaming\XIVLauncher\devPlugins\TieriChallengesFFXIV\publicrepo";
+        @"C:\Users\trist\AppData\Roaming\XIVLauncher\devPlugins\TieriChallengesFFXIV\syncrepo";
+
+    /// <summary>Owner/name of the repo the plugin actually syncs challenges from.</summary>
+    private const string SyncRepoName = "TieriChallengesFFXIV-Sync";
+
+    /// <summary>
+    /// Reject an export target that is not a checkout of the sync repo, returning the reason.
+    /// Null means the path is fine.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Why this is a refusal and not a warning.</b> Publishing to the wrong repo fails
+    /// completely silently: every file writes, the hashes are correct, the commit and push
+    /// succeed, and the only symptom is that players never receive the change. It cost a
+    /// publish-and-debug cycle to notice that difficulty ratings were missing in game purely
+    /// because the data had gone to <c>-Public</c> instead of <c>-Sync</c>.</para>
+    ///
+    /// <para>Deliberately mirrors <c>BanAdmin.PointsAtPublicRepo</c>, which guards the opposite
+    /// direction for the ban ledger. Both exist because the working folder's own <c>origin</c> is
+    /// the public repo, so a hand-typed path that looks right is frequently the wrong one. A path
+    /// with no <c>.git</c> at all is allowed through — that is a plain folder, not a mis-aimed
+    /// checkout, and staging an export somewhere neutral is legitimate.</para>
+    /// </remarks>
+    private static string? WrongRepo(string repoRoot)
+    {
+        try
+        {
+            string cfg = Path.Combine(repoRoot, ".git", "config");
+            if (!File.Exists(cfg)) return null;
+
+            string text = File.ReadAllText(cfg);
+            if (text.Contains(SyncRepoName, StringComparison.OrdinalIgnoreCase)) return null;
+
+            return $"REFUSED — that folder is a git checkout, but not of {SyncRepoName}. "
+                 + "Challenges published anywhere else are never fetched by the plugin: the files "
+                 + "would write and push successfully and no player would ever see them. "
+                 + $"Point the path at a {SyncRepoName} clone.";
+        }
+        catch
+        {
+            // Unreadable .git/config is not proof of anything; let the export proceed.
+            return null;
+        }
+    }
 
     public sealed class ExportReport
     {
@@ -71,6 +122,9 @@ internal static class ChallengeExporter
         {
             if (string.IsNullOrWhiteSpace(repoRoot))
                 return new ExportReport { Ok = false, Message = "No output folder set." };
+
+            if (WrongRepo(repoRoot) is { } wrong)
+                return new ExportReport { Ok = false, Message = wrong };
 
             string dir = Path.Combine(repoRoot, "challenges");
             Directory.CreateDirectory(dir);

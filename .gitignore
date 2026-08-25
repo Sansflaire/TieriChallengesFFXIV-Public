@@ -12,7 +12,10 @@ bin/
 obj/
 dist/
 
-# Working clone of the public repo, created by the Creator's Publish button.
+# Working clones used by the Creator's Publish button. syncrepo/ is the live target — challenge
+# data lives in TieriChallengesFFXIV-Sync, which is what the plugin fetches from. publicrepo/ is
+# the pre-split leftover that publishing used to aim at; ChallengeExporter now refuses it.
+syncrepo/
 publicrepo/
 *.user
 *.suo

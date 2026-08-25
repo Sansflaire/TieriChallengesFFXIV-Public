@@ -1324,6 +1324,13 @@ internal sealed class MainWindow : IDisposable
         {
             if (_config.Grouping == mode) return;
             _config.Grouping = mode;
+
+            // Opening the Zones tab lands on where you are standing. Previously it restored
+            // whatever zone was last selected, which after a play session is almost never the
+            // one you want — and with ~150 zones, finding the current one meant expanding
+            // its expansion and scrolling to it every single time.
+            if (mode == GroupMode.Zones) SelectCurrentZone();
+
             _save();
         };
 
@@ -1331,6 +1338,38 @@ internal sealed class MainWindow : IDisposable
         tab.AppendChild(TabDivider(!active));
 
         return tab;
+    }
+
+    /// <summary>
+    /// Select the zone the player is standing in, and make sure its row is reachable.
+    /// </summary>
+    /// <remarks>
+    /// <para>Selecting is not enough on its own. The zone list is grouped under collapsible
+    /// expansion headers, so a selected zone inside a collapsed expansion is selected and
+    /// invisible at the same time — the detail pane would change with nothing in the master pane
+    /// to explain why. Uncollapsing its expansion is what makes "show it immediately" true.</para>
+    ///
+    /// <para>Does nothing outside a zone (territory 0, i.e. not logged in), rather than selecting
+    /// a bogus zone. Deliberately does NOT touch the "zones with challenges only" filter: the
+    /// detail pane shows the zone either way, and silently changing a filter the user set is a
+    /// bigger surprise than a row that is filtered out.</para>
+    /// </remarks>
+    private void SelectCurrentZone()
+    {
+        uint here = (uint)Plugin.ClientState.TerritoryType;
+        if (here == 0) return;
+
+        _config.SelectedTerritory = (int)here;
+
+        foreach (var exp in ZoneIndex.Expansions(_config))
+        {
+            foreach (var zone in exp.Zones)
+            {
+                if (zone.TerritoryId != here) continue;
+                _config.CollapsedExpansions.Remove(exp.Id);
+                return;
+            }
+        }
     }
 
     /// <summary>The 1px line along the bottom of the strip. Transparent under the selected tab.</summary>

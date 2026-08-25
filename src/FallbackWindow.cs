@@ -292,6 +292,10 @@ internal sealed class FallbackWindow
             if (ImGui.RadioButton("Zone##tc_fb_group", zones) && !zones)
             {
                 _config.Grouping = GroupMode.Zones;
+                // Land on the zone you are standing in, matching MainWindow.SelectCurrentZone.
+                // Kept in step deliberately: the two renderers differing on where a tab lands is
+                // the kind of drift that makes the fallback feel like a lesser plugin.
+                SelectCurrentZone();
                 _save();
             }
             ImGui.Separator();
@@ -476,6 +480,29 @@ internal sealed class FallbackWindow
     /// Expansions with their zones beneath, matching the Panache renderer. ImGui supplies a real
     /// tree widget, so this one gets collapsing for free rather than hand-rolling it.
     /// </summary>
+    /// <summary>
+    /// Select the zone the player is standing in and uncollapse its expansion, so switching to
+    /// the Zone tab lands somewhere useful. Mirror of <c>MainWindow.SelectCurrentZone</c> — see
+    /// that one for the reasoning; the two must not drift.
+    /// </summary>
+    private void SelectCurrentZone()
+    {
+        uint here = (uint)Plugin.ClientState.TerritoryType;
+        if (here == 0) return;
+
+        _config.SelectedTerritory = (int)here;
+
+        foreach (var exp in ZoneIndex.Expansions(_config))
+        {
+            foreach (var zone in exp.Zones)
+            {
+                if (zone.TerritoryId != here) continue;
+                _config.CollapsedExpansions.Remove(exp.Id);
+                return;
+            }
+        }
+    }
+
     private void DrawZoneMaster()
     {
         var expansions = ZoneIndex.Expansions(_config);
