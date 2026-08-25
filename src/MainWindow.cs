@@ -191,9 +191,61 @@ internal sealed class MainWindow : IDisposable
     private const float AccentBarW       = 3f;
     private const float SelBarW          = 2f;
     private const int   RowH_Master      = 46;
-    private const int   RowH_Challenge   = 46;   // deviation from the 26px detail row: our rows
-                                                     // are two-line AND clickable, which is the 46px
-                                                     // "I might click one" case in §2's taxonomy.
+    /// <summary>
+    /// Unexpanded challenge row height. Was 46 when the sub line was a single ellipsised line and
+    /// the difficulty meter sat inline with the pills.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>66 is measured, not chosen.</b> Rendering the real tree reports a 19.95px title,
+    /// a 15.96px sub line, and a 2px gap, so a full two-line row is
+    /// 19.95 + 2 + 31.92 + 2×<see cref="RowPadY"/> = 65.87. Anything less and a two-line row
+    /// silently grows past the floor while one-line rows sit at it, and the list goes ragged by a
+    /// few pixels per row — which is exactly what 62 did on the first attempt.</para>
+    ///
+    /// <para>The right-hand stack needs <see cref="RightStackH"/> (43), comfortably less. Text
+    /// sets this number; if the sub font or <see cref="SubMaxLines"/> changes, re-measure rather
+    /// than nudging it.</para>
+    /// </remarks>
+    private const int   RowH_Challenge   = 66;
+
+    /// <summary>Vertical breathing room inside a challenge row, top and bottom.</summary>
+    private const float RowPadY          = 6f;
+
+    /// <summary>
+    /// Lines the description/hint may wrap to before being ellipsised. Clicking the row lifts the
+    /// cap entirely; this is only the resting state.
+    /// </summary>
+    private const int   SubMaxLines      = 2;
+
+    /// <summary>Gap between the control row and the difficulty meter beneath it.</summary>
+    private const float RightStackGap    = 4f;
+
+    /// <summary>
+    /// Height the right-hand stack always reserves: the control row, the gap, and the difficulty
+    /// meter — <b>whether or not this challenge has a difficulty</b>.
+    /// </summary>
+    /// <remarks>
+    /// Reserving the meter's height unconditionally is what keeps the list even. Offsetting by the
+    /// stack's ACTUAL height instead would do two bad things at once: an unrated row would sit its
+    /// controls 7px higher than a rated one, and a rated row's stack would overflow
+    /// <see cref="RowH_Challenge"/> and push that row 4px taller than its neighbours. Measured
+    /// both, on the way to this number.
+    /// </remarks>
+    private const float RightStackH      = HintBtn + RightStackGap + StarSz;
+
+    /// <summary>
+    /// Top margin that centres something of <paramref name="height"/> against a challenge row's
+    /// FIRST line, rather than against the row.
+    /// </summary>
+    /// <remarks>
+    /// The distinction is the whole point. A challenge row is <c>Fit</c> height over a
+    /// <see cref="RowH_Challenge"/> floor and grows without limit when expanded, so anything
+    /// centred against its real height sinks away from the title it belongs to. Everything that
+    /// must stay level with the title — the completion mark, the right-hand stack — offsets
+    /// against the unexpanded band instead, which never changes.
+    /// </remarks>
+    private static float TopBandOffset(float height) =>
+        MathF.Max(0f, (RowH_Challenge - RowPadY * 2f - height) / 2f);
     private const int   NarrowBreakpoint = 500;
     private const float PadPaneX         = 14f;
     private const float PadPaneY         = 10f;
@@ -443,6 +495,27 @@ internal sealed class MainWindow : IDisposable
     private string? _hoverNext;
 
     /// <summary>
+    /// The single challenge row currently expanded to show its full text, by GUID, or null.
+    /// </summary>
+    /// <remarks>
+    /// One at a time by construction — it is a single field, not a set. Not persisted: expanding
+    /// is a "let me read that" gesture for right now, and a row still open on the next launch
+    /// would just look like a broken layout.
+    /// </remarks>
+    private string? _expandedId;
+
+    /// <summary>Challenge whose row body was clicked this frame; resolved in <c>DrawWindow</c>.</summary>
+    private string? _rowClickPending;
+
+    /// <summary>
+    /// True when an interactive control INSIDE a row was clicked this frame — currently only the
+    /// Hint button. Both it and the row fire on the same click (InteractionManager has no
+    /// topmost-wins rule), and the row's handler runs first, so this is the only way to tell the
+    /// two apart. Without it, pressing Hint would also toggle the row open.
+    /// </summary>
+    private bool _controlClickPending;
+
+    /// <summary>
     /// Challenges whose hint is currently revealed, by GUID. Deliberately NOT persisted: a hint
     /// is something you ask for in the moment, and a hint left open across sessions would spoil
     /// the challenge every time the window is opened.
@@ -662,6 +735,26 @@ internal sealed class MainWindow : IDisposable
         {
             ImGui.SetTooltip($"Right-click to teleport to {ZoneIndex.DisplayName(_config, hoveredZone)}");
         }
+
+        // Resolve row expansion AFTER the interaction walk.
+        //
+        // It cannot be done in the handlers: a click on the Hint button fires the button AND its
+        // row, parent first, so the row's handler has no way to know a control was about to
+        // consume the same click. Both merely record intent; the decision is made here, once the
+        // walk is over and both flags are final.
+        //
+        // Clicking a row toggles it, clicking a different row moves the expansion, and clicking
+        // anywhere that is not a row body — another pane, the header, empty space — collapses it.
+        if (mouseClick)
+        {
+            if (_rowClickPending == null)
+                _expandedId = null;
+            else if (!_controlClickPending)
+                _expandedId = _expandedId == _rowClickPending ? null : _rowClickPending;
+        }
+
+        _rowClickPending     = null;
+        _controlClickPending = false;
 
         _openMenu = _openMenuNext;
 
@@ -2236,15 +2329,31 @@ internal sealed class MainWindow : IDisposable
     }
 
     /// <summary>
-    /// One challenge. The ROW is deliberately not clickable: completion is written only by
-    /// <see cref="ChallengeTracker"/> when the conditions are actually met, so the row body
-    /// renders no hover cue — a hover on something you cannot click is a false affordance
-    /// (DESIGN_SYSTEM §1.4). The Hint pill inside it is the one interactive element.
-    ///
-    /// <para>The row therefore CANNOT set <c>PointerEvents.None</c>: InteractionManager treats it
-    /// as blocking the node and every descendant, which would make the Hint pill unclickable.
-    /// Nothing else in the row subscribes to an event, so leaving it Auto costs nothing.</para>
+    /// One challenge: a completion mark, a two-line text column, and a right-hand stack of
+    /// controls with the difficulty meter tucked underneath them.
     /// </summary>
+    /// <remarks>
+    /// <para><b>Clicking the row expands it.</b> Description and hint text are capped at
+    /// <see cref="SubMaxLines"/> lines normally; clicking lifts the cap so the whole thing wraps,
+    /// and the row grows to fit. One row at a time, and a click anywhere that is not a row
+    /// collapses it — see <c>_expandedId</c> and the resolution step in <c>DrawWindow</c>.</para>
+    ///
+    /// <para><b>Clicking still cannot complete anything.</b> Completion is written only by
+    /// <see cref="ChallengeTracker"/> when the conditions are actually met. Expansion is a
+    /// read-only disclosure, which is why it is safe for the row to take a click at all — the
+    /// old "the row is deliberately not clickable" rule was about never letting a click mark a
+    /// challenge done, and that still holds.</para>
+    ///
+    /// <para><b>A click inside the row also fires the row.</b> InteractionManager has no
+    /// topmost-wins rule: it walks every node and fires <c>OnClick</c> on each one under the
+    /// cursor, so pressing the Hint button fires the button AND the row. Neither handler can tell
+    /// which happened — the parent fires first, so a flag set by the child arrives too late. Both
+    /// therefore only record intent, and <c>DrawWindow</c> decides after the walk. Do not try to
+    /// resolve this inside the handlers.</para>
+    ///
+    /// <para>The row still cannot set <c>PointerEvents.None</c>: that blocks the node and every
+    /// descendant, which would make the Hint button unclickable.</para>
+    /// </remarks>
     private Node ChallengeRow(ChallengeDef def, int detailW)
     {
         bool done    = _store.IsComplete(def.Id);
@@ -2263,22 +2372,22 @@ internal sealed class MainWindow : IDisposable
         // for a spoilered challenge — the hint exists to help FIND something, so offering it here
         // would leak exactly what the mask is hiding.
         bool hintOpen = !spoilered && def.HasHint && _hintShown.Contains(def.Id);
+        bool expanded = _expandedId == def.Id;
 
-        // Fit height over a MinHeight floor, rather than a height this method computes. A hint
-        // that wraps to three lines makes the text column taller, the column makes the row
-        // taller, and layout works out the wrap width from the siblings that are really there.
-        // The floor is what keeps every unexpanded row the uniform RowH_Challenge the list is
-        // designed around — Fit alone would shrink rows to their text.
+        // Fit height over a MinHeight floor, rather than a height this method computes. Wrapped
+        // text makes the text column taller, the column makes the row taller, and layout works
+        // out the wrap width from the siblings that are really there. The floor is what keeps
+        // every unexpanded row the uniform RowH_Challenge the list is designed around — Fit alone
+        // would shrink a one-line row and the list would go ragged.
         var row = new Node().WithStyle(s =>
         {
             s.Flow          = Flow.Horizontal;
             s.WidthMode     = SizeMode.Fill;
             s.HeightMode    = SizeMode.Fit; s.MinHeight = RowH_Challenge;
-            s.Padding       = new EdgeSize(0, PadPaneX);
+            s.Padding       = new EdgeSize(RowPadY, PadPaneX);
             s.Gap           = 10;
 
             // A revealed row is tinted and outlined for a few seconds so the eye lands on it.
-            // This marks the row; it does not make the row itself clickable.
             if (focused)
             {
                 s.BackgroundColor = Accent.WithOpacity(0.14f);
@@ -2286,24 +2395,42 @@ internal sealed class MainWindow : IDisposable
                 s.BorderWidth     = 1;
                 s.BorderRadius    = 6f;
             }
+            else if (expanded)
+            {
+                // Held open, so it stays marked rather than reverting to flat the moment the
+                // pointer leaves — otherwise the one row you are reading is the only one with no
+                // indication of why it is three times taller than its neighbours.
+                s.BackgroundColor = PColor.White.WithOpacity(0.05f);
+                s.BorderRadius    = 6f;
+            }
+            else
+            {
+                // The row takes a click now, so it owes the mandatory hover cue of §7.2. It did
+                // not have one while it was inert, and the comment saying so is gone with it.
+                s.HoverBackgroundColor = PColor.White.WithOpacity(0.03f);
+                s.BorderRadius         = 6f;
+            }
         });
 
-        // Completion checkbox, vertically centred by margin.
+        // Records intent only. DrawWindow resolves it after the interaction walk, because a click
+        // on the Hint button fires this too — see the remarks above.
+        row.OnClick += _ => _rowClickPending = def.Id;
+
+        // Completion checkbox, pinned level with the TITLE line rather than centred.
         //
-        // This row is the ONE place that deliberately keeps a hand-computed centring margin
-        // instead of AlignItems.Center — do not "finish the job" here. AlignItems centres against
-        // the row's real height, and this row grows when a hint is revealed; every marker would
-        // then drift down to the middle of a three-line block. RowH_Challenge is the unexpanded
-        // height, so pinning to it keeps the marks level with the TITLE line whatever the row
-        // does underneath, which is the behaviour that was wanted. Same reasoning for the pin and
-        // the difficulty meter below.
+        // This row is the ONE place that deliberately keeps a hand-computed top margin instead of
+        // AlignItems.Center — do not "finish the job" here. AlignItems centres against the row's
+        // REAL height, and this row grows: two lines of description normally, unbounded when
+        // expanded. Centring would sink the mark to the middle of a tall block and leave it
+        // floating beside nothing. Pinning it to the top band keeps it beside the title at every
+        // height. Same reasoning for the right-hand stack below.
         //
         // A checkbox rather than the dot this replaced. The dot encoded done/not-done purely as a
         // colour change, which is the one distinction a colour-blind player is least likely to
         // catch; a tick versus an empty box carries the same fact in shape.
         var mark = PUI.Icon(done ? Ico.Complete : Ico.Incomplete, StatusIconSz,
                              done ? StatusOk : Accent.WithOpacity(0.45f));
-        mark.WithStyle(s => s.Margin = new EdgeSize((RowH_Challenge - StatusIconSz) / 2f, 0, 0, 0));
+        mark.WithStyle(s => s.Margin = new EdgeSize(TopBandOffset(StatusIconSz), 0, 0, 0));
         row.AppendChild(mark);
 
         var textCol = new Node().WithStyle(s =>
@@ -2311,7 +2438,6 @@ internal sealed class MainWindow : IDisposable
             s.Flow       = Flow.Vertical;
             s.WidthMode  = SizeMode.Fill;
             s.HeightMode = SizeMode.Fit;
-            s.Margin     = new EdgeSize(8, 0, 0, 0);
             s.Gap        = 2;
         });
 
@@ -2321,8 +2447,8 @@ internal sealed class MainWindow : IDisposable
         if (def.Number > 0) title = $"#{def.Number}  {title}";
 
         // Id'd so the right-click handler can tell WHICH challenge the pointer is over. Carries no
-        // click handler and no hover cue — it is not a button, and DESIGN_SYSTEM §1.4 forbids
-        // advertising an affordance that a left click does not have.
+        // hover cue of its own — the ROW owns that now, and two overlapping cues for one click
+        // target reads as a rendering fault.
         var titleNode = new Node().WithId("chal:" + def.Id).WithText(title).WithStyle(s =>
         {
             s.WidthMode    = SizeMode.Fill;
@@ -2331,7 +2457,11 @@ internal sealed class MainWindow : IDisposable
             s.Bold         = true;
             s.Italic       = spoilered;
             s.Color        = done ? StatusOk.WithOpacity(0.95f) : spoilered ? Theme.TextSubtle : TextHi;
-            s.TextOverflow = TextOverflow.Ellipsis;
+
+            // A long title is truncated like everything else until the row is opened. Expanding
+            // has to reveal ALL the cut-off text, not just the description — a clipped title is
+            // exactly as unreadable as a clipped hint.
+            s.TextOverflow = expanded ? TextOverflow.Wrap : TextOverflow.Ellipsis;
         });
 
 #if DEV_BUILD
@@ -2393,34 +2523,56 @@ internal sealed class MainWindow : IDisposable
         // The hint wins over everything above, including the completion date and the dev flags:
         // it is only ever showing because the player explicitly asked for it, and an explicit
         // request should not be silently overridden by an automatic line.
-        if (hintOpen)
+        //
+        // The sub line — description, completion date, dev flag, or a revealed hint — wraps to at
+        // most SubMaxLines and is ellipsised after that. Expanding lifts the cap entirely
+        // (MaxLines 0 = uncapped) and Fit height reports the wrapped height, which is what grows
+        // the row. One code path for both cases so the hint and the line it replaces can never
+        // wrap differently.
+        string subText = hintOpen ? "Hint: " + def.Hint.Trim() : sub;
+        PColor subInk  = hintOpen ? HintText : subColor;
+
+        textCol.AppendChild(new Node().WithText(subText).WithStyle(s =>
         {
-            // The one node in this window that wraps. Fit height reports the wrapped height, which
-            // is what grows the row — the prefix is part of the same string so it cannot push the
-            // first line over on its own.
-            textCol.AppendChild(new Node().WithText("Hint: " + def.Hint.Trim()).WithStyle(s =>
-            {
-                s.WidthMode    = SizeMode.Fill;
-                s.HeightMode   = SizeMode.Fit;
-                s.FontSize     = SubFontSize;
-                s.Color        = HintText;
-                s.TextOverflow = TextOverflow.Wrap;
-                s.MaxLines     = HintMaxLines;
-            }));
-        }
-        else
-        {
-            textCol.AppendChild(new Node().WithText(sub).WithStyle(s =>
-            {
-                s.WidthMode    = SizeMode.Fill;
-                s.HeightMode   = SizeMode.Fit;
-                s.FontSize     = SubFontSize;
-                s.Color        = subColor;
-                s.TextOverflow = TextOverflow.Ellipsis;
-            }));
-        }
+            s.WidthMode    = SizeMode.Fill;
+            s.HeightMode   = SizeMode.Fit;
+            s.FontSize     = SubFontSize;
+            s.Color        = subInk;
+            s.TextOverflow = TextOverflow.Wrap;
+            s.MaxLines     = expanded ? 0 : SubMaxLines;
+        }));
 
         row.AppendChild(textCol);
+
+        // Right-hand stack: the controls in a row, the difficulty meter tucked underneath them.
+        //
+        // The meter used to sit inline with the pills, which pushed the whole cluster wider and
+        // stole width from the text column on exactly the rows that had the most to say. Below
+        // them it costs no width at all, and the symbols read as one compact block.
+        //
+        // Pinned to the top band by margin for the same reason as the checkbox: AlignItems would
+        // centre this against a row that grows to any height when expanded.
+        var rightCol = new Node().WithStyle(s =>
+        {
+            s.Flow       = Flow.Vertical;
+            s.WidthMode  = SizeMode.Fit;
+            s.HeightMode = SizeMode.Fit;
+            s.Gap        = RightStackGap;
+            s.AlignItems = AlignItems.End;   // meter hugs the right edge, under the pills
+            s.Margin     = new EdgeSize(TopBandOffset(RightStackH), 0, 0, 0);
+        });
+
+        var controls = new Node().WithStyle(s =>
+        {
+            s.Flow       = Flow.Horizontal;
+            s.WidthMode  = SizeMode.Fit;
+            s.HeightMode = SizeMode.Fit;
+            s.Gap        = PillGap;
+            // Everything here is a different height — a 26px pin, a 28px button, a ~19px pill.
+            // AlignItems is safe in this container because it is Fit to its own contents and does
+            // not grow with the row.
+            s.AlignItems = AlignItems.Center;
+        });
 
         // "You are standing in this challenge's zone right now." Cheap to compute and the single
         // most actionable fact a row can carry — it turns a long list into "these ones, today".
@@ -2432,29 +2584,23 @@ internal sealed class MainWindow : IDisposable
         {
             uint here = (uint)Plugin.ClientState.TerritoryType;
             if (here != 0 && ZoneIndex.TerritoryOf(_config, def.Id) == here)
-            {
-                var pin = PUI.Icon(Ico.HereNow, HereIconSz, Accent);
-                pin.WithStyle(s => s.Margin = new EdgeSize((RowH_Challenge - HereIconSz) / 2f, 0, 0, 0));
-                row.AppendChild(pin);
-            }
+                controls.AppendChild(PUI.Icon(Ico.HereNow, HereIconSz, Accent));
         }
+
+        // Locally authored challenges are badged, always and in every build, so an official
+        // challenge and a homemade one are never confused.
+        if (!def.IsOfficial) controls.AppendChild(StaticPill("CUSTOM", Neutral));
+
+        controls.AppendChild(HintPillFor(def, hintOpen, spoilered));
+        controls.AppendChild(StatusPillFor(def, done, spoilered));
+        rightCol.AppendChild(controls);
 
         // Difficulty meter. Hidden entirely on a spoilered row — how hard something is is a
         // strong hint about what it involves, which is the shape of thing the mask withholds.
         if (def.HasDifficulty && !spoilered)
-            row.AppendChild(StarRow(def.Difficulty));
+            rightCol.AppendChild(StarRow(def.Difficulty));
 
-        // Locally authored challenges are badged, always and in every build, so an official
-        // challenge and a homemade one are never confused.
-        if (!def.IsOfficial)
-        {
-            var custom = StaticPill("CUSTOM", Neutral);
-            custom.WithStyle(s => s.Margin = new EdgeSize(11, 0, 0, 0));
-            row.AppendChild(custom);
-        }
-
-        row.AppendChild(HintPillFor(def, hintOpen, spoilered));
-        row.AppendChild(StatusPillFor(def, done, spoilered));
+        row.AppendChild(rightCol);
         return row;
     }
 
@@ -2473,33 +2619,34 @@ internal sealed class MainWindow : IDisposable
             // one row down — the two mean opposite things and must not rhyme.
             var masked = StaticPill("???", Neutral);
             masked.WithStyle(s => s.Opacity = 0.55f);
-            masked.WithStyle(s => s.Margin  = new EdgeSize(11, 0, 0, 0));
             return masked;
         }
 
-        float top = (RowH_Challenge - HintBtn) / 2f;
-
+        // No centring margins anywhere in here any more: the controls row that holds these is
+        // AlignItems.Center and Fit to its own contents, so it aligns a 28px button and a 19px
+        // pill correctly without any of them knowing the row height.
         if (!def.HasHint)
         {
             // A dead affordance made obviously dead: same glyph, but no button chrome and heavily
             // dimmed. The old "NO HINT" pill said this in words; the point survives the switch
             // because what makes it honest is the absence of a button, not the label
             // (DESIGN_SYSTEM §1.4 — never a hover cue on something that cannot be clicked).
-            var none = PUI.Icon(Ico.Hint, HintGlyph, Neutral.WithOpacity(0.30f));
-            none.WithStyle(s => s.Margin = new EdgeSize(top + (HintBtn - HintGlyph) / 2f, 0, 0, 0));
-            return none;
+            return PUI.Icon(Ico.Hint, HintGlyph, Neutral.WithOpacity(0.30f));
         }
 
         // Lit while the hint is open — that is the "HIDE HINT" label's job, done with fill instead
         // of words. The row underneath visibly changes at the same time, so there is no ambiguity
         // about what the lit state means.
+        //
+        // Flags the click so DrawWindow knows this was a control press, not a press on the row
+        // body — both fire, and only this distinction stops the Hint button also toggling the
+        // row's expansion.
         string id = "hint:" + def.Id;
-        var btn = IconButton(id, Ico.Hint, HintBtn, HintGlyph, HintAccent, open, () =>
+        return IconButton(id, Ico.Hint, HintBtn, HintGlyph, HintAccent, open, () =>
         {
+            _controlClickPending = true;
             if (!_hintShown.Remove(def.Id)) _hintShown.Add(def.Id);
         });
-        btn.WithStyle(s => s.Margin = new EdgeSize(top, 0, 0, 0));
-        return btn;
     }
 
 
@@ -2531,9 +2678,7 @@ internal sealed class MainWindow : IDisposable
             {
                 text  = "MISSING";
                 color = Danger;
-                var missing = StaticPill(text, color);
-                missing.WithStyle(s => s.Margin = new EdgeSize(11, 0, 0, 0));
-                return missing;
+                return StaticPill(text, color);
             }
 #endif
             // NOT gated on def.IsCustom. Once challenges became syncable, an official challenge
@@ -2560,9 +2705,7 @@ internal sealed class MainWindow : IDisposable
             }
         }
 
-        var pill = StaticPill(text, color);
-        pill.WithStyle(s => s.Margin = new EdgeSize(11, 0, 0, 0));
-        return pill;
+        return StaticPill(text, color);
     }
 
     // ── Small builders ───────────────────────────────────────────────────────
@@ -2594,7 +2737,6 @@ internal sealed class MainWindow : IDisposable
             s.WidthMode     = SizeMode.Fit;
             s.HeightMode    = SizeMode.Fit;
             s.Gap           = StarGap;
-            s.Margin        = new EdgeSize((RowH_Challenge - StarSz) / 2f, 0, 0, 0);
             s.PointerEvents = PointerEvents.None;
         });
 
