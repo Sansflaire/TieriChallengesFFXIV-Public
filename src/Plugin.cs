@@ -89,6 +89,13 @@ public sealed class Plugin : IDalamudPlugin
     private readonly FallbackProgressToast _fallbackProgressToast;
 
     /// <summary>
+    /// The race panel, split the same way as the toasts: a race must remain playable when
+    /// PanacheUI is off, because its clock is not decoration.
+    /// </summary>
+    private readonly FallbackRacePrompt _fallbackRacePrompt;
+    private          RacePromptToast?   _racePrompt;
+
+    /// <summary>
     /// Live character/zone readout, on demand. Renderer-agnostic and drawn at root scope, so both
     /// UIs open the same popup rather than each carrying its own copy of the text.
     /// </summary>
@@ -211,6 +218,7 @@ public sealed class Plugin : IDalamudPlugin
             _progressToast = new ProgressToast(TextureProvider, RevealChallenge);
             _mainWindow    = new MainWindow(_config, _store, TextureProvider, SaveConfig, _tracker,
                                             _dialogs, _sync);
+            _racePrompt    = new RacePromptToast(TextureProvider, _config, _store, _tracker, SaveConfig);
         }
         else
         {
@@ -219,6 +227,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         _fallbackProgressToast = new FallbackProgressToast(RevealChallenge);
+        _fallbackRacePrompt    = new FallbackRacePrompt(_config, _store, _tracker, SaveConfig);
         _statusWindow          = new StatusWindow(_config);
 
         if (_mainWindow != null)
@@ -229,6 +238,7 @@ public sealed class Plugin : IDalamudPlugin
         // sound request goes out first and independently, so nothing downstream can silence it.
         _tracker.Completed  += OnCompleted;
         _tracker.Progressed += OnProgressed;
+        _tracker.RaceEnded  += OnRaceEnded;
 
         _fallbackWindow = new FallbackWindow(_config, _store, _tracker, _dialogs, _sync,
                                              SaveConfig, RestoreFromPermanent);
@@ -320,6 +330,7 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler(CmdShort);
         CommandManager.RemoveHandler(CmdMain);
 
+        _tracker.RaceEnded  -= OnRaceEnded;
         _tracker.Progressed -= OnProgressed;
         _tracker.Completed  -= OnCompleted;
         _tracker.Dispose();
@@ -327,6 +338,7 @@ public sealed class Plugin : IDalamudPlugin
         Sound.Dispose();
         _toast?.Dispose();
         _progressToast?.Dispose();
+        _racePrompt?.Dispose();
 #if DEV_BUILD
         _soundTestWindow?.Dispose();
 #endif
@@ -496,6 +508,15 @@ public sealed class Plugin : IDalamudPlugin
             else            _fallbackProgressToast.Draw(_progressQueue);
         }
         catch (Exception ex) { Log.Error(ex, "Progress toast draw exception"); }
+
+        // The race panel. Not queued and not timed — it mirrors live tracker state, so it decides
+        // for itself whether there is anything to show.
+        try
+        {
+            if (UsePanache) _racePrompt!.Draw();
+            else            _fallbackRacePrompt.Draw();
+        }
+        catch (Exception ex) { Log.Error(ex, "Race prompt draw exception"); }
 
 #if DEV_BUILD
         try { _creatorWindow.Draw(); }
@@ -726,6 +747,52 @@ public sealed class Plugin : IDalamudPlugin
         Sound.Play(SoundService.Cue.ChallengeComplete);
         FlyTextService.ShowComplete(e.Title);
         _toastQueue.Enqueue(e);
+    }
+
+    /// <summary>
+    /// A race run ended. Announced in chat rather than through a popup, for two reasons: a run can
+    /// end for four different reasons and only one of them is worth celebrating, and the corner of
+    /// the screen the popup would use is the corner the race panel itself occupies.
+    ///
+    /// <para>A FIRST finish also raises <see cref="CompletionEvent"/> through the normal path, so
+    /// the fanfare and toast happen there. This handler must not duplicate them — hence no sound
+    /// on <see cref="RaceOutcome.Finished"/> unless it was a repeat run setting a new best, which
+    /// nothing else announces.</para>
+    /// </summary>
+    private void OnRaceEnded(RaceEndedEvent e)
+    {
+        string name = string.IsNullOrWhiteSpace(e.Title) ? "Race" : e.Title;
+
+        switch (e.Outcome)
+        {
+            case RaceOutcome.Finished:
+                if (e.NewBest && e.PreviousBest.HasValue)
+                {
+                    // Beat an existing time: the only case the completion path says nothing about.
+                    Sound.Play(SoundService.Cue.ObjectiveProgress);
+                    FlyTextService.ShowProgress(name, 1, 1);
+                    ChatGui.Print(
+                        $"[Challenges] {name} — NEW BEST {CompletionStore.FormatRaceTime(e.Seconds)} "
+                      + $"(was {CompletionStore.FormatRaceTime(e.PreviousBest.Value)}).");
+                }
+                else
+                {
+                    ChatGui.Print($"[Challenges] {name} — finished in {CompletionStore.FormatRaceTime(e.Seconds)}.");
+                }
+                break;
+
+            case RaceOutcome.TimedOut:
+                ChatGui.Print($"[Challenges] {name} — out of time at {CompletionStore.FormatRaceTime(e.Seconds)}.");
+                break;
+
+            case RaceOutcome.LeftArea:
+                ChatGui.Print($"[Challenges] {name} — run ended, you left the course.");
+                break;
+
+            case RaceOutcome.Abandoned:
+                ChatGui.Print($"[Challenges] {name} — run abandoned.");
+                break;
+        }
     }
 
     /// <summary>One step landed. Same ordering rule as <see cref="OnCompleted"/>.</summary>

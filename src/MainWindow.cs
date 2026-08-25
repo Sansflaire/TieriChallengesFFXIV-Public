@@ -1973,13 +1973,28 @@ internal sealed class MainWindow : IDisposable
         menus.Add(new MenuDef("Update", update));
 
         // ── Settings ─────────────────────────────────────────────────────────
-        menus.Add(new MenuDef("Settings", new List<MenuItem>
+        var settings = new List<MenuItem>
         {
             SortItem("Sort: Creation order", ChallengeSort.Created),
             SortItem("Sort: A → Z",          ChallengeSort.Alphabetical),
             SortItem("Sort: Difficulty",     ChallengeSort.Difficulty),
             new("UI Scale…", () => _dialogs.RequestUiScale(), TextHi, Ico.Scale),
-        }));
+        };
+
+        // The way back from the race prompt's "Don't show these". Shown ONLY while suppressed:
+        // an always-present toggle would be a fourth line of settings explaining a popup most
+        // players have never turned off, and the item is meaningless until they have.
+        if (_config.RacePromptSuppressed)
+        {
+            settings.Add(new MenuItem("Show race prompts again", () =>
+            {
+                _config.RacePromptSuppressed = false;
+                _save();
+                Plugin.ChatGui.Print("[Challenges] Race prompts re-enabled.");
+            }, StatusOk, Ico.None));
+        }
+
+        menus.Add(new MenuDef("Settings", settings));
 
 #if DEV_BUILD
         // Public-preview mode hides every developer affordance so the dev plugin renders exactly
@@ -2649,6 +2664,32 @@ internal sealed class MainWindow : IDisposable
         }
 #endif
 
+        // A race the player is standing at the line of stops describing itself and starts asking.
+        // This is the in-window route to starting one, and the ONLY route once the corner prompt
+        // has been suppressed — so it must not be gated on spoilers being off or on the challenge
+        // being incomplete (a finished race stays runnable for a better time).
+        bool raceArmed   = def.Kind == ChallengeKind.RaceTimer && _tracker.IsRaceArmed(def.Id);
+        bool raceRunning = def.Kind == ChallengeKind.RaceTimer && _tracker.IsRaceRunning(def.Id);
+
+        if (raceRunning)
+        {
+            sub      = $"Running — {CompletionStore.FormatRaceTime(_tracker.RunningElapsedSeconds)}";
+            subColor = StatusOk;
+        }
+        else if (raceArmed && !spoilered)
+        {
+            sub      = "Ready to start timed challenge?";
+            subColor = Accent;
+        }
+        else if (def.Kind == ChallengeKind.RaceTimer && !spoilered)
+        {
+            // Not at the line: the time to beat is the useful fact, appended rather than replacing
+            // the description so the challenge still explains itself.
+            double? best = _store.BestRaceTime(def.Id);
+            if (best.HasValue)
+                sub = $"{sub}   ·   best {CompletionStore.FormatRaceTime(best.Value)}";
+        }
+
         // Overrides everything above, including the dev-only flags — a "Missing details" or
         // "no detector" line still leaks def.Detail's content, which a spoilered row must not.
         if (spoilered)
@@ -2727,6 +2768,36 @@ internal sealed class MainWindow : IDisposable
         // Locally authored challenges are badged, always and in every build, so an official
         // challenge and a homemade one are never confused.
         if (!def.IsOfficial) controls.AppendChild(StaticPill("CUSTOM", Neutral));
+
+        // Race controls, ahead of the hint and status pills so the action sits closest to the text
+        // it belongs to. Like the Hint button these set _controlClickPending, because a click here
+        // ALSO fires the row's own handler — without the flag, starting a race would expand the
+        // row at the same time.
+        if (!spoilered)
+        {
+            if (raceRunning)
+            {
+                controls.AppendChild(Pill("raceabandon:" + def.Id, "ABANDON", Danger, () =>
+                {
+                    _controlClickPending = true;
+                    _tracker.AbandonRace();
+                }));
+            }
+            else if (raceArmed)
+            {
+                string raceId = def.Id;
+                controls.AppendChild(Pill("racestart:" + raceId, "START!", Accent, () =>
+                {
+                    _controlClickPending = true;
+
+                    // Re-tested inside the tracker against live position, not against the flag this
+                    // row was built from — a frame can pass between the draw and the click, and a
+                    // race must never start from outside its own line.
+                    if (!_tracker.TryStartRace(raceId))
+                        Plugin.ChatGui.PrintError("[Challenges] Stand in the start area to begin the run.");
+                }));
+            }
+        }
 
         controls.AppendChild(HintPillFor(def, hintOpen, spoilered));
         controls.AppendChild(StatusPillFor(def, done, spoilered));

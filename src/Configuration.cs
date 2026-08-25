@@ -155,6 +155,39 @@ public sealed class CustomChallenge
     /// </summary>
     public List<AreaRequirement> Requirements { get; set; } = new();
 
+    // ── RaceTimer ────────────────────────────────────────────────────────────
+
+    /// <summary>Volume that arms the race, and re-entering which restarts the clock.</summary>
+    public ChallengeArea? RaceStart { get; set; }
+
+    /// <summary>Volume that completes the race.</summary>
+    public ChallengeArea? RaceFinish { get; set; }
+
+    /// <summary>
+    /// Optional bounding volume the runner must stay INSIDE. Note the inverted sense: every other
+    /// area in the plugin completes something by being entered, this one ends the run by being
+    /// left. Only consulted when <see cref="RaceUseQuitArea"/> is set.
+    /// </summary>
+    public ChallengeArea? RaceQuit { get; set; }
+
+    /// <summary>
+    /// Whether leaving <see cref="RaceQuit"/> ends the run. Off by default — Trist's call: a race
+    /// with no bounding area is a perfectly good race, and a quit volume the author forgot to size
+    /// properly would end runs for reasons the player cannot see.
+    /// </summary>
+    public bool RaceUseQuitArea { get; set; }
+
+    /// <summary>Seconds allowed before the run fails. 0 = untimed (finish whenever).</summary>
+    public int RaceFailSeconds { get; set; }
+
+    /// <summary>Every race volume that exists, for the overlay and for validation.</summary>
+    public IEnumerable<ChallengeArea> RaceAreas()
+    {
+        if (RaceStart  != null) yield return RaceStart;
+        if (RaceFinish != null) yield return RaceFinish;
+        if (RaceUseQuitArea && RaceQuit != null) yield return RaceQuit;
+    }
+
     public bool IsAreaKind =>
         Kind is ChallengeKind.VisitAreas
              or ChallengeKind.VisitAreasInOrder
@@ -189,6 +222,10 @@ public sealed class CustomChallenge
                                                 ? OutfitSetId != 0
                                                 : GearItemId != 0),
         ChallengeKind.InArea            => CompositeIsWellFormed(),
+        ChallengeKind.RaceTimer         => TerritoryId != 0
+                                        && RaceStart  != null
+                                        && RaceFinish != null
+                                        && (!RaceUseQuitArea || RaceQuit != null),
         _                               => false,
     };
 
@@ -387,6 +424,18 @@ public sealed class Configuration : IPluginConfiguration
     /// version-controlled rather than living only in a config directory. Dev machines only.
     /// </summary>
     public string DevRepoPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Suppress the bottom-right "start this race?" prompt that appears while standing in a race's
+    /// start area. Set by the prompt's own "Don't show these" button; cleared from Settings.
+    ///
+    /// <para>Global rather than per-challenge, deliberately. The player dismissing it is saying
+    /// "stop popping things up at me", not "stop popping THIS up at me" — and a per-challenge
+    /// suppression list would need its own management UI to ever be undone, which is a lot of
+    /// surface for a preference with one obvious meaning. Races stay startable from the challenge
+    /// row either way, which is what makes suppressing it safe.</para>
+    /// </summary>
+    public bool RacePromptSuppressed { get; set; }
 
     /// <summary>How the challenge list is ordered. Set from Settings → Sort.</summary>
     public ChallengeSort SortMode { get; set; } = ChallengeSort.Created;

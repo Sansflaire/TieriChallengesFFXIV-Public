@@ -30,6 +30,15 @@ internal sealed class FallbackWindow
     private static readonly Vector4 ColDanger = DialogTheme.Danger;
     private static readonly Vector4 ColHint   = new(0.66f, 0.79f, 0.94f, 1.00f);
 
+    /// <summary>"  ·  best 41.20s" for a race that has been finished, else nothing.</summary>
+    private string RaceBestSuffix(ChallengeDef def)
+    {
+        if (def.Kind != ChallengeKind.RaceTimer) return string.Empty;
+
+        double? best = _store.BestRaceTime(def.Id);
+        return best.HasValue ? $"   ·   best {CompletionStore.FormatRaceTime(best.Value)}" : string.Empty;
+    }
+
     /// <summary>
     /// Challenges whose hint is revealed, by GUID. Session-only and per-renderer, for the same
     /// reason as <c>MainWindow._hintShown</c>: a hint is asked for in the moment, and one left
@@ -479,14 +488,40 @@ internal sealed class FallbackWindow
                     hintOpen = !hintOpen;
                 }
 
+                // Race controls, in parity with the Panache row. This is the only way to start a
+                // race once the corner prompt is suppressed, so it cannot be Panache-only.
+                if (!spoilered && def.Kind == ChallengeKind.RaceTimer)
+                {
+                    if (_tracker.IsRaceRunning(def.Id))
+                    {
+                        ImGui.SameLine();
+                        if (ImGui.SmallButton($"Abandon##race_{def.Id}")) _tracker.AbandonRace();
+                    }
+                    else if (_tracker.IsRaceArmed(def.Id))
+                    {
+                        ImGui.SameLine();
+                        if (ImGui.SmallButton($"Start!##race_{def.Id}")
+                            && !_tracker.TryStartRace(def.Id))
+                        {
+                            Plugin.ChatGui.PrintError(
+                                "[Challenges] Stand in the start area to begin the run.");
+                        }
+                    }
+                }
+
                 // The hint replaces the description rather than joining it — asking for a hint
                 // should not leave you reading both lines to find the new one.
                 if (spoilered)
                     ImGui.TextColored(ColMuted, "      Explore this zone to reveal this challenge.");
                 else if (hintOpen)
                     ImGui.TextColored(ColHint, $"      Hint: {def.Hint}");
+                else if (def.Kind == ChallengeKind.RaceTimer && _tracker.IsRaceRunning(def.Id))
+                    ImGui.TextColored(ColOk,
+                        $"      Running — {CompletionStore.FormatRaceTime(_tracker.RunningElapsedSeconds)}");
+                else if (def.Kind == ChallengeKind.RaceTimer && _tracker.IsRaceArmed(def.Id))
+                    ImGui.TextColored(ColAccent, "      Ready to start timed challenge?");
                 else if (!string.IsNullOrWhiteSpace(def.Detail))
-                    ImGui.TextDisabled($"      {def.Detail}");
+                    ImGui.TextDisabled($"      {def.Detail}{RaceBestSuffix(def)}");
 
 #if DEV_BUILD
                 // spoilered is unreachable here: it requires devBypass == false, i.e.

@@ -108,6 +108,10 @@ internal sealed class ChallengeCreatorWindow
     /// <summary>Draft's area mode. Only meaningful for <see cref="ChallengeKind.InArea"/>.</summary>
     private AreaMode _mode = AreaMode.Single;
 
+    // ── Race draft state ─────────────────────────────────────────────────────
+    private int  _raceFailSeconds;
+    private bool _raceUseQuit;
+
     /// <summary>
     /// Conditions per draft area, parallel to <see cref="_areas"/>.
     ///
@@ -280,6 +284,10 @@ internal sealed class ChallengeCreatorWindow
             case ChallengeKind.InArea:
                 DrawCompositeSection();
                 break;
+
+            case ChallengeKind.RaceTimer:
+                DrawRaceSection();
+                break;
         }
 
         ImGui.Separator();
@@ -301,6 +309,9 @@ internal sealed class ChallengeCreatorWindow
         (ChallengeKind.InArea, "In area — conditions per place",
             "One or more areas, each with its own conditions: emote, mount, minion, outfit, gear "
           + "pieces, target, job, time of day, carried item, game state. This is the kind to use."),
+        (ChallengeKind.RaceTimer, "Race — timed run between two points",
+            "The player arms it by standing in the start area, presses Start, and finishes by "
+          + "reaching the finish area. Best time is recorded and shown on the row."),
     };
 
     /// <summary>
@@ -509,6 +520,118 @@ internal sealed class ChallengeCreatorWindow
         }
 
         if (removeAt >= 0) _areas.RemoveAt(removeAt);
+    }
+
+    // ── Race editor ──────────────────────────────────────────────────────────
+
+    /// <summary>Fixed slot order inside <see cref="_areas"/> while authoring a race.</summary>
+    private const int RaceStartIdx  = 0;
+    private const int RaceFinishIdx = 1;
+    private const int RaceQuitIdx   = 2;
+
+    private static readonly string[] RaceSlotNames = { "Start", "Finish", "Quit area" };
+
+    /// <summary>
+    /// A race always has its three volumes, so they are pre-created rather than added by the
+    /// author.
+    ///
+    /// <para>They live in <see cref="_areas"/> at fixed indices so the whole existing apparatus —
+    /// <see cref="DrawAreaEditor"/>, <see cref="DraftAreas"/>, the in-world wireframe overlay,
+    /// <see cref="SelectedAreaIndex"/> — works on them unchanged. There is no Delete here for the
+    /// same reason: a race missing its finish line is not a state worth being able to reach, and
+    /// removing a slot would shift the indices of the ones after it.</para>
+    /// </summary>
+    private void EnsureRaceSlots()
+    {
+        while (_areas.Count < 3)
+        {
+            _areas.Add(new ChallengeArea { Name = RaceSlotNames[_areas.Count] });
+        }
+
+        // A name is what identifies the slot in the world overlay, so keep them honest even if a
+        // challenge was loaded from an older shape or the author renamed one.
+        for (int i = 0; i < 3; i++)
+            if (string.IsNullOrWhiteSpace(_areas[i].Name)) _areas[i].Name = RaceSlotNames[i];
+    }
+
+    private void DrawRaceSection()
+    {
+        EnsureRaceSlots();
+
+        ImGui.Checkbox("Draw volumes in world", ref Overlay.Enabled);
+        ImGui.SameLine();
+        ImGui.Checkbox("Also show saved challenges here", ref Overlay.ShowSaved);
+
+        ImGui.TextDisabled(
+            "The player arms the race by standing in Start, presses Start!, and finishes by "
+          + "reaching Finish. Re-entering Start restarts the clock.");
+
+        ImGui.Separator();
+
+        int fail = _raceFailSeconds;
+        ImGui.SetNextItemWidth(160);
+        if (ImGui.DragInt("Time limit, seconds (0 = untimed)##racefail", ref fail, 1f, 0, 3600))
+            _raceFailSeconds = Math.Max(0, fail);
+
+        if (_raceFailSeconds > 0)
+            ImGui.TextDisabled($"Runs longer than {CompletionStore.FormatRaceTime(_raceFailSeconds)} fail.");
+        else
+            ImGui.TextDisabled("No time limit — the run only ends by finishing, leaving, or giving up.");
+
+        ImGui.Separator();
+
+        ImGui.Checkbox("End the run if the player leaves a bounding area", ref _raceUseQuit);
+        if (!_raceUseQuit)
+        {
+            ImGui.TextDisabled(
+                "Off: the run can only end by finishing, timing out, giving up, or leaving the zone.");
+        }
+        else
+        {
+            ImGui.TextColored(Warn,
+                "Size this generously. The player cannot see it, so a run ending inside what looks "
+              + "like the course reads as a bug.");
+        }
+
+        ImGui.Separator();
+
+        var lp = Plugin.ObjectTable.LocalPlayer;
+        Vector3? playerPos = lp?.Position;
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (i == RaceQuitIdx && !_raceUseQuit) continue;
+
+            ImGui.PushID(500 + i);
+            var a = _areas[i];
+
+            string role = i switch
+            {
+                RaceStartIdx  => "Start line",
+                RaceFinishIdx => "Finish line",
+                _             => "Bounding area (stay inside)",
+            };
+
+            if (ImGui.CollapsingHeader($"{role} — {a.Describe()}###raceslot{i}",
+                                       ImGuiTreeNodeFlags.DefaultOpen))
+            {
+                SelectedAreaIndex = i;
+                DrawAreaEditor(a, playerPos);
+            }
+
+            ImGui.PopID();
+        }
+
+        // Overlapping start and finish would complete the race the instant it began. Cheap centre
+        // test rather than a real volume intersection — close centres is the mistake that actually
+        // happens (capturing both from the same standing position).
+        float gap = Vector3.Distance(_areas[RaceStartIdx].Center, _areas[RaceFinishIdx].Center);
+        if (gap < _areas[RaceStartIdx].EffectiveRadius + _areas[RaceFinishIdx].EffectiveRadius)
+        {
+            ImGui.TextColored(Warn,
+                $"Start and finish are {gap:0.#}y apart and may overlap — the race could complete "
+              + "the moment it starts.");
+        }
     }
 
     // ── Composite (InArea) editor ────────────────────────────────────────────
@@ -1512,6 +1635,23 @@ internal sealed class ChallengeCreatorWindow
             }
         }
 
+        if (_kind == ChallengeKind.RaceTimer)
+        {
+            EnsureRaceSlots();
+
+            // Cloned out of the fixed draft slots into their named roles. Deep copies for the same
+            // reason as everywhere else here: the draft must stay independent of what is stored.
+            draft.RaceStart       = _areas[RaceStartIdx].Clone();
+            draft.RaceFinish      = _areas[RaceFinishIdx].Clone();
+            draft.RaceUseQuitArea = _raceUseQuit;
+            draft.RaceQuit        = _raceUseQuit ? _areas[RaceQuitIdx].Clone() : null;
+            draft.RaceFailSeconds = _raceFailSeconds;
+
+            // The role properties are the truth for a race; Areas would otherwise ship three
+            // duplicate volumes with no meaning attached to their order.
+            draft.Areas.Clear();
+        }
+
         return draft;
     }
 
@@ -1526,6 +1666,10 @@ internal sealed class ChallengeCreatorWindow
                                          : d.GearMode == GearRequirement.SingleItem && d.GearItemId == 0 ? "Choose an item."
                                          : "Add an area, or tick Whole zone.",
         ChallengeKind.InArea            => WhyCompositeIncomplete(d),
+        ChallengeKind.RaceTimer         => d.TerritoryId == 0 ? "Log in so the zone can be captured."
+                                         : d.RaceStart  == null ? "Place the start line."
+                                         : d.RaceFinish == null ? "Place the finish line."
+                                         : "Place the bounding area, or turn it off.",
         _                               => "Incomplete.",
     };
 
@@ -1595,6 +1739,16 @@ internal sealed class ChallengeCreatorWindow
                 _within.Add(r.WithinSeconds);
             }
         }
+        else if (c.Kind == ChallengeKind.RaceTimer)
+        {
+            // Unpack the named roles back into the fixed draft slots the editor works on.
+            _areas.Add(c.RaceStart?.Clone()  ?? new ChallengeArea { Name = RaceSlotNames[0] });
+            _areas.Add(c.RaceFinish?.Clone() ?? new ChallengeArea { Name = RaceSlotNames[1] });
+            _areas.Add(c.RaceQuit?.Clone()   ?? new ChallengeArea { Name = RaceSlotNames[2] });
+
+            _raceUseQuit     = c.RaceUseQuitArea;
+            _raceFailSeconds = c.RaceFailSeconds;
+        }
         else
         {
             foreach (var a in c.Areas) _areas.Add(a.Clone());
@@ -1635,6 +1789,8 @@ internal sealed class ChallengeCreatorWindow
         _condFilter.Clear();
         _condCache.Clear();
         _mode = AreaMode.Single;
+        _raceFailSeconds = 0;
+        _raceUseQuit     = false;
         _emoteId = 0; _emoteName = string.Empty;
         _mountId = 0; _mountName = string.Empty;
         _outfitId = 0; _outfitName = string.Empty;
@@ -1826,6 +1982,19 @@ internal sealed class ChallengeCreatorWindow
                     : string.Empty;
                 ImGui.TextDisabled($"   {i + 1}. {r.Describe()}{timing}");
             }
+        }
+
+        if (c.Kind == ChallengeKind.RaceTimer)
+        {
+            string limit = c.RaceFailSeconds > 0
+                ? CompletionStore.FormatRaceTime(c.RaceFailSeconds)
+                : "untimed";
+            string bounded = c.RaceUseQuitArea ? "bounded" : "unbounded";
+            ImGui.TextDisabled($"limit: {limit} · {bounded}");
+
+            double? best = _store.BestRaceTime(c.Id);
+            if (best.HasValue)
+                ImGui.TextDisabled($"your best: {CompletionStore.FormatRaceTime(best.Value)}");
         }
 
         // Spelled out here rather than left to the pips alone: difficulty is optional, so
@@ -2302,6 +2471,7 @@ internal sealed class ChallengeCreatorWindow
         ChallengeKind.MountInArea       => "Mount in area",
         ChallengeKind.GearInArea        => "Outfit / gear",
         ChallengeKind.InArea            => "In area",
+        ChallengeKind.RaceTimer         => "Race",
         _                               => kind.ToString(),
     };
 }

@@ -292,6 +292,10 @@ public static class ChallengeCatalog
         // ChallengeKind.InArea.
         ChallengeKind.InArea => new Version(0, 81, 33, 0),
 
+        // The race kind. Same reasoning as InArea: an older build has no state machine for it and
+        // would load a challenge it can never advance.
+        ChallengeKind.RaceTimer => new Version(0, 81, 34, 0),
+
         _ => PluginVersion.Current,
     };
 

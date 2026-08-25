@@ -109,6 +109,107 @@ internal sealed class ChallengeTracker : IDisposable
     /// </summary>
     private readonly TickState _tick = new();
 
+    // ── Race state ───────────────────────────────────────────────────────────
+
+    /// <summary>The one race currently running, or null. See <see cref="RaceRun"/> for why one.</summary>
+    private RaceRun? _run;
+
+    /// <summary>
+    /// Races whose start volume contains the player RIGHT NOW. Rebuilt every tick and read by the
+    /// prompt and the challenge row, so neither has to do any position testing of its own.
+    /// </summary>
+    private readonly List<string> _armed = new();
+
+    /// <summary>Raised when a run ends for any reason, including a successful finish.</summary>
+    public event Action<RaceEndedEvent>? RaceEnded;
+
+    /// <summary>Raised when a run starts or restarts, so the UI can acknowledge the press.</summary>
+    public event Action<string>? RaceStarted;
+
+    /// <summary>Races the player could start this instant.</summary>
+    public IReadOnlyList<string> ArmedRaces => _armed;
+
+    /// <summary>Id of the running race, or null.</summary>
+    public string? RunningRaceId => _run?.Id;
+
+    /// <summary>
+    /// Elapsed time of the running race. Computed from the clock on demand rather than sampled by
+    /// the 5 Hz tick, so the on-screen timer moves smoothly at frame rate instead of in visible
+    /// 200 ms steps.
+    /// </summary>
+    public double RunningElapsedSeconds => _run?.ElapsedSeconds ?? 0;
+
+    public bool IsRaceRunning(string id) =>
+        _run != null && string.Equals(_run.Id, id, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsRaceArmed(string id)
+    {
+        for (int i = 0; i < _armed.Count; i++)
+            if (string.Equals(_armed[i], id, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Begin a run. Refuses unless the player is standing in that race's start volume right now —
+    /// the arming test is the same one the prompt uses, so the button can never start a race the
+    /// player has already walked away from.
+    /// </summary>
+    public bool TryStartRace(string id)
+    {
+        if (string.IsNullOrEmpty(id) || !IsRaceArmed(id)) return false;
+
+        // Starting a race while another is running abandons the first. Silently dropping it would
+        // leave a clock running for something the player has clearly stopped doing.
+        if (_run != null && !string.Equals(_run.Id, id, StringComparison.OrdinalIgnoreCase))
+            EndRun(RaceOutcome.Abandoned);
+
+        _run = new RaceRun { Id = id, StartedAtMs = Environment.TickCount64, LeftStart = false };
+
+        Plugin.Log.Information($"[Race] started {id}");
+        try { RaceStarted?.Invoke(id); }
+        catch (Exception ex) { Plugin.Log.Error(ex, "Race start handler threw"); }
+
+        return true;
+    }
+
+    /// <summary>Give up on the running race, if any.</summary>
+    public void AbandonRace() => EndRun(RaceOutcome.Abandoned);
+
+    /// <summary>
+    /// Close out the running race. Every exit from a run goes through here so the event is raised
+    /// exactly once and <see cref="_run"/> is always cleared — a run left dangling would keep
+    /// failing its own time limit every tick forever.
+    /// </summary>
+    private void EndRun(RaceOutcome outcome, bool newBest = false, double? previousBest = null)
+    {
+        if (_run == null) return;
+
+        var run = _run;
+        _run = null;   // cleared BEFORE the event, so a handler that starts another race works
+
+        string title = ChallengeCatalog.FindCustom(_config, run.Id)?.Title ?? string.Empty;
+
+        Plugin.Log.Information(
+            $"[Race] {run.Id} ended: {outcome} at {run.ElapsedSeconds:0.00}s");
+
+        try
+        {
+            RaceEnded?.Invoke(new RaceEndedEvent
+            {
+                Id           = run.Id,
+                Title        = title,
+                Outcome      = outcome,
+                Seconds      = run.ElapsedSeconds,
+                NewBest      = newBest,
+                PreviousBest = previousBest,
+            });
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, "Race end handler threw");
+        }
+    }
+
     public ChallengeTracker(Configuration config, CompletionStore store, Action save)
     {
         _config = config;
@@ -194,6 +295,11 @@ internal sealed class ChallengeTracker : IDisposable
             if (now - _lastTickMs < TickIntervalMs) return;
             _lastTickMs = now;
 
+            // Cleared here rather than inside Evaluate so it is emptied on EVERY path — including
+            // the "no challenges in this zone" bail below. Left stale, the prompt would keep
+            // offering a race the player has walked out of, or out of the zone entirely.
+            _armed.Clear();
+
             // (3) Rebuild the active set only when something that affects it changed.
             ushort territory = (ushort)Plugin.ClientState.TerritoryType;
             if (territory != _cachedTerritory || _config.StateVersion != _cachedVersion)
@@ -203,6 +309,12 @@ internal sealed class ChallengeTracker : IDisposable
                     // Changing zone teleports the player as far as coordinates are concerned; a
                     // sweep across that gap would be meaningless.
                     _lastPos = null;
+
+                    // Races are same-zone by construction, so leaving the zone IS leaving the
+                    // course. Ending it here rather than letting the quit-area test catch it means
+                    // a race with no quit area still terminates instead of leaving a clock running
+                    // across the whole game world.
+                    if (_run != null) EndRun(RaceOutcome.LeftArea);
 
                     // Spoiler-mask unlocking. Deliberately NOT gated behind "does this zone have
                     // any challenges" the way the rest of this method is — a player wandering
@@ -227,9 +339,13 @@ internal sealed class ChallengeTracker : IDisposable
 
     private void ClearSession()
     {
+        // Before the clears, so the UI is told the run is over rather than watching it vanish.
+        if (_run != null) EndRun(RaceOutcome.Abandoned);
+
         _visited.Clear();
         _sequence.Clear();
         _stepStamp.Clear();
+        _armed.Clear();
         _lastPos = null;
 
         // The inventory map describes the PREVIOUS character's bags; its change events only ever
@@ -252,8 +368,13 @@ internal sealed class ChallengeTracker : IDisposable
         foreach (var ch in ChallengeCatalog.AllTrackable(_config))
         {
             if (ch.Kind == ChallengeKind.Manual) continue;      // no detector, never fires
-            if (_store.IsComplete(ch.Id))        continue;      // already done
             if (!ch.IsWellFormed())              continue;      // half-authored
+
+            // Completed challenges drop out — EXCEPT races, which stay runnable forever so a
+            // personal best can be improved. That is the whole point of recording a time: a number
+            // you can never beat again is a trophy, not a target. Finishing an already-completed
+            // race records the time and does NOT re-fire the completion fanfare (see EvalRace).
+            if (_store.IsComplete(ch.Id) && ch.Kind != ChallengeKind.RaceTimer) continue;
             if (ch.TerritoryId != 0 && ch.TerritoryId != territory) continue;  // wrong zone
 
             _active.Add(ch);
@@ -335,6 +456,10 @@ internal sealed class ChallengeTracker : IDisposable
 
                 case ChallengeKind.InArea:
                     done = EvalComposite(ch, pos);
+                    break;
+
+                case ChallengeKind.RaceTimer:
+                    done = EvalRace(ch, pos);
                     break;
 
                 default:
@@ -446,6 +571,89 @@ internal sealed class ChallengeTracker : IDisposable
     /// Announce partial progress. Never throws into the tick loop — a subscriber blowing up must
     /// not cost the player the progress that was just recorded.
     /// </summary>
+    // ── Race ─────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// One tick of a race challenge: keep the armed list current, and if this is the race being
+    /// run, advance its state machine.
+    ///
+    /// <para><b>Volumes are swept, not point-tested.</b> A race is the one place in this plugin
+    /// where the player is deliberately moving as fast as the game allows — mounted, sprinting,
+    /// falling — and a finish line is exactly the kind of thin volume that a 5 Hz point sample
+    /// steps clean over. Unlike a composite stop there is no state to mispair: crossing the line
+    /// at any point during the last 200 ms genuinely is a finish.</para>
+    ///
+    /// <para>Returns true only on a FIRST completion. A repeat run of an already-completed race
+    /// records its time and returns false, so the completion fanfare does not fire again for
+    /// something the player has already done.</para>
+    /// </summary>
+    private bool EvalRace(CustomChallenge ch, Vector3 pos)
+    {
+        var start = ch.RaceStart;
+        var finish = ch.RaceFinish;
+        if (start == null || finish == null) return false;
+
+        Vector3 from = _lastPos ?? pos;
+
+        // Arming is independent of running: the prompt needs to know the player is standing at the
+        // line whether or not a clock is going. Point test, not swept — "you are here now" is the
+        // question, and a sweep would arm a race the player has already run past.
+        bool atStartNow = start.Contains(pos);
+        if (atStartNow && !IsRaceRunning(ch.Id)) _armed.Add(ch.Id);
+
+        if (_run == null || !string.Equals(_run.Id, ch.Id, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // (1) Restart on re-entry. Checked before everything else so a runner doubling back to the
+        // line gets a clean clock rather than being failed by the old one on the same tick.
+        if (!atStartNow && !PassedThrough(start, from, pos))
+        {
+            _run.LeftStart = true;
+        }
+        else if (_run.LeftStart)
+        {
+            _run.StartedAtMs = Environment.TickCount64;
+            _run.LeftStart   = false;
+
+            Plugin.Log.Debug($"[Race] {ch.Id} restarted at the line.");
+            try { RaceStarted?.Invoke(ch.Id); }
+            catch (Exception ex) { Plugin.Log.Error(ex, "Race start handler threw"); }
+
+            return false;
+        }
+
+        // (2) Finish. Ahead of the failure checks on purpose: a runner who crosses the line on the
+        // very tick their time expires has finished, not failed.
+        if (PassedThrough(finish, from, pos))
+        {
+            double seconds = _run.ElapsedSeconds;
+            double? previous = _store.BestRaceTime(ch.Id);
+            bool newBest = _store.RecordRaceTime(ch.Id, seconds);
+            bool firstTime = !_store.IsComplete(ch.Id);
+
+            EndRun(RaceOutcome.Finished, newBest, previous);
+
+            // Only a first finish is a completion. A repeat run has already been recorded above.
+            return firstTime;
+        }
+
+        // (3) Out of time.
+        if (ch.RaceFailSeconds > 0 && _run.ElapsedSeconds > ch.RaceFailSeconds)
+        {
+            EndRun(RaceOutcome.TimedOut);
+            return false;
+        }
+
+        // (4) Left the course. Inverted sense — this volume ends the run by being LEFT.
+        if (ch.RaceUseQuitArea && ch.RaceQuit != null && !ch.RaceQuit.Contains(pos))
+        {
+            EndRun(RaceOutcome.LeftArea);
+            return false;
+        }
+
+        return false;
+    }
+
     // ── Composite (InArea) ───────────────────────────────────────────────────
 
     /// <summary>

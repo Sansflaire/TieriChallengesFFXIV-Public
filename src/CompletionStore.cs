@@ -28,10 +28,22 @@ public sealed class CompletionStore
 {
     private const string CurrentFileName   = "completions-current.json";
     private const string PermanentFileName = "completions-permanent.json";
+    private const string RaceTimeFileName  = "race-times.json";
 
     private readonly string _dir;
     private readonly string _currentPath;
     private readonly string _permanentPath;
+    private readonly string _raceTimePath;
+
+    /// <summary>
+    /// GUID → best (lowest) time in seconds for a <see cref="ChallengeKind.RaceTimer"/> challenge.
+    ///
+    /// <para><b>Reset does not touch this, by the same reasoning as the permanent ledger.</b>
+    /// A personal best is a record of something that happened, not progress toward something.
+    /// Wiping progress means "let me do these again", which is precisely when a player would most
+    /// want the time to beat still on screen.</para>
+    /// </summary>
+    private Dictionary<string, double> _raceTimes = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>GUID → when it was completed, this run of the data. Reset clears this.</summary>
     private Dictionary<string, DateTime> _current = new(StringComparer.OrdinalIgnoreCase);
@@ -44,6 +56,7 @@ public sealed class CompletionStore
         _dir           = configDirectory;
         _currentPath   = Path.Combine(_dir, CurrentFileName);
         _permanentPath = Path.Combine(_dir, PermanentFileName);
+        _raceTimePath  = Path.Combine(_dir, RaceTimeFileName);
     }
 
     public int CurrentCount   => _current.Count;
@@ -61,9 +74,52 @@ public sealed class CompletionStore
 
         _permanent = ReadFile(_permanentPath) ?? new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         _current   = ReadFile(_currentPath)   ?? new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+        _raceTimes = ReadTimes(_raceTimePath) ?? new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
 
         Plugin.Log.Information(
-            $"[Completions] loaded {_current.Count} current, {_permanent.Count} permanent.");
+            $"[Completions] loaded {_current.Count} current, {_permanent.Count} permanent, "
+          + $"{_raceTimes.Count} race time(s).");
+    }
+
+    private static Dictionary<string, double>? ReadTimes(string path)
+    {
+        try
+        {
+            if (!File.Exists(path)) return null;
+
+            string json = File.ReadAllText(path);
+            if (string.IsNullOrWhiteSpace(json)) return null;
+
+            var parsed = JsonConvert.DeserializeObject<Dictionary<string, double>>(json);
+            if (parsed == null) return null;
+
+            var result = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kv in parsed) result[kv.Key] = kv.Value;
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, $"Failed to read {path}");
+            return null;
+        }
+    }
+
+    private static void WriteTimes(string path, Dictionary<string, double> data)
+    {
+        try
+        {
+            string json = JsonConvert.SerializeObject(data, Formatting.Indented);
+            string tmp  = path + ".tmp";
+
+            File.WriteAllText(tmp, json);
+
+            if (File.Exists(path)) File.Replace(tmp, path, null);
+            else                   File.Move(tmp, path);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, $"Failed to write {path}");
+        }
     }
 
     private static Dictionary<string, DateTime>? ReadFile(string path)
@@ -139,6 +195,43 @@ public sealed class CompletionStore
     /// <summary>Formatted for display: "Aug 22, 2026 at 11:04 PM". Stored UTC, shown local.</summary>
     public static string FormatDate(DateTime utc) =>
         utc.ToLocalTime().ToString("MMM d, yyyy 'at' h:mm tt");
+
+    // ── Race times ───────────────────────────────────────────────────────────
+
+    /// <summary>Best recorded time in seconds for a race, or null if it has never been finished.</summary>
+    public double? BestRaceTime(string guid) =>
+        !string.IsNullOrEmpty(guid) && _raceTimes.TryGetValue(guid, out var t) ? t : null;
+
+    /// <summary>
+    /// Record a finishing time, keeping only the best. Returns true when this run beat the stored
+    /// time (or was the first), which is what the UI uses to say "new best" rather than "finished".
+    /// </summary>
+    public bool RecordRaceTime(string guid, double seconds)
+    {
+        if (string.IsNullOrEmpty(guid) || seconds <= 0) return false;
+
+        if (_raceTimes.TryGetValue(guid, out var best) && best <= seconds) return false;
+
+        _raceTimes[guid] = seconds;
+        WriteTimes(_raceTimePath, _raceTimes);
+        return true;
+    }
+
+    /// <summary>
+    /// "1:23.45" for anything over a minute, "23.45s" below it. Two decimals throughout: a race
+    /// decided by a tenth is exactly the race a player wants the tenths for.
+    /// </summary>
+    public static string FormatRaceTime(double seconds)
+    {
+        if (seconds < 0) seconds = 0;
+
+        int minutes = (int)(seconds / 60);
+        double rest = seconds - minutes * 60;
+
+        return minutes > 0
+            ? $"{minutes}:{rest:00.00}"
+            : $"{rest:0.00}s";
+    }
 
     // ── Mutations ────────────────────────────────────────────────────────────
 

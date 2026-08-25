@@ -57,6 +57,36 @@ public enum ChallengeKind
     /// every already-published challenge from the list of anyone who has not updated yet.</para>
     /// </summary>
     InArea = 7,
+
+    /// <summary>
+    /// A timed run between two volumes. The player arms it by standing in the start area, starts
+    /// it deliberately, and completes it by reaching the finish area before the fail time — while
+    /// staying inside an optional bounding "quit" area.
+    ///
+    /// <para>Its own kind rather than a composite condition because it is the only thing in the
+    /// plugin with a STATE MACHINE. Every other challenge is a pure function of the current frame:
+    /// stand in the right place under the right conditions and it completes, and nothing is
+    /// remembered between ticks except which stops are already done. A race has a running clock, a
+    /// deliberate start, and three distinct ways to end — none of which a stateless condition can
+    /// express.</para>
+    /// </summary>
+    RaceTimer = 8,
+}
+
+/// <summary>Why a race stopped. Drives the message the player sees.</summary>
+public enum RaceOutcome
+{
+    /// <summary>Reached the finish area in time.</summary>
+    Finished = 0,
+
+    /// <summary>Ran out of time.</summary>
+    TimedOut = 1,
+
+    /// <summary>Left the bounding area.</summary>
+    LeftArea = 2,
+
+    /// <summary>Gave up, or the run was interrupted (logout, zone change).</summary>
+    Abandoned = 3,
 }
 
 /// <summary>What <see cref="ChallengeKind.GearInArea"/> requires the player to be wearing.</summary>

@@ -52,20 +52,45 @@ internal sealed class AreaOverlay
                 foreach (var ch in config.CustomChallenges)
                 {
                     if (ch.TerritoryId != territory) continue;
-                    if (ch.Areas.Count == 0) continue;
 
                     bool complete = store.IsComplete(ch.Id);
                     // Completed challenges dim right down — they are context, not the subject.
                     float alpha = complete ? 0.20f : 0.45f;
+                    uint c = complete
+                        ? Col(0.50f, 0.84f, 0.66f, alpha)
+                        : Col(0.55f, 0.55f, 0.70f, alpha);
+                    uint labelCol = Col(0.75f, 0.75f, 0.85f, alpha + 0.25f);
 
+                    // Each kind keeps its volumes somewhere different: the legacy kinds in Areas,
+                    // the composite kind inside its Requirements, a race in its three named roles.
+                    // All three are drawn — a saved volume invisible while authoring next to it is
+                    // exactly the context this overlay exists to give.
                     for (int i = 0; i < ch.Areas.Count; i++)
                     {
-                        var a = ch.Areas[i];
-                        uint c = complete
-                            ? Col(0.50f, 0.84f, 0.66f, alpha)
-                            : Col(0.55f, 0.55f, 0.70f, alpha);
-                        DrawArea(a, c, 1.5f);
-                        DrawLabel(a, $"{ch.Title} · {i + 1}", Col(0.75f, 0.75f, 0.85f, alpha + 0.25f));
+                        DrawArea(ch.Areas[i], c, 1.5f);
+                        DrawLabel(ch.Areas[i], $"{ch.Title} · {i + 1}", labelCol);
+                    }
+
+                    if (ch.Requirements != null)
+                    {
+                        for (int i = 0; i < ch.Requirements.Count; i++)
+                        {
+                            var area = ch.Requirements[i].Area;
+                            if (area == null) continue;
+                            DrawArea(area, c, 1.5f);
+                            DrawLabel(area, $"{ch.Title} · {i + 1}", labelCol);
+                        }
+                    }
+
+                    if (ch.Kind == ChallengeKind.RaceTimer)
+                    {
+                        if (ch.RaceStart  != null) { DrawArea(ch.RaceStart,  c, 1.5f); DrawLabel(ch.RaceStart,  $"{ch.Title} · start",  labelCol); }
+                        if (ch.RaceFinish != null) { DrawArea(ch.RaceFinish, c, 1.5f); DrawLabel(ch.RaceFinish, $"{ch.Title} · finish", labelCol); }
+                        if (ch.RaceUseQuitArea && ch.RaceQuit != null)
+                        {
+                            DrawArea(ch.RaceQuit, c, 1.0f);
+                            DrawLabel(ch.RaceQuit, $"{ch.Title} · bounds", labelCol);
+                        }
                     }
                 }
             }
