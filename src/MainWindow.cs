@@ -290,8 +290,23 @@ internal sealed class MainWindow : IDisposable
     private const float MenuIconSz   = 13f;
     /// <summary>Gap from a menu item's icon to its label.</summary>
     private const float MenuIconGap  = 8f;
-    /// <summary>Category-complete flourish, left of the category name.</summary>
-    private const float CatIconSz    = 13f;
+    /// <summary>
+    /// Category-complete flourish, left of the category name. Was 13, which read as smaller than
+    /// the 12.5px bold title it sits beside rather than as a mark on it.
+    ///
+    /// <para>About 20 is the ceiling before <see cref="RowH_Master"/> has to grow: the row's
+    /// vertical budget is 46 − 7 top padding − 5 gap − ~12 for the progress/counter line.</para>
+    /// </summary>
+    private const float CatIconSz    = 18f;
+
+    /// <summary>
+    /// Height of the category-name band. Fixed, and identical whether or not the badge is
+    /// present — with a Fit height the taller badge would set the row's height and drop the
+    /// title of every FINISHED category ~1.5px below the unfinished ones, which reads as
+    /// broken alignment while scanning the list. Matching the icon exactly also means centring
+    /// it is exact rather than nearly.
+    /// </summary>
+    private const float CatNameRowH  = CatIconSz;
     /// <summary>One pip in the five-slot difficulty meter.</summary>
     private const float StarSz       = 11f;
     private const float StarGap      = 2f;
@@ -1581,16 +1596,20 @@ internal sealed class MainWindow : IDisposable
         {
             s.Flow          = Flow.Horizontal;
             s.WidthMode     = SizeMode.Fill;
-            s.HeightMode    = SizeMode.Fit;
+            s.HeightMode    = SizeMode.Fixed; s.Height = CatNameRowH;
             s.Gap           = 6;
+            // Centres the badge against the title instead of both hanging from the top. This is
+            // the AlignItems case the challenge row cannot use: that row grows when a hint opens,
+            // this one is a fixed band, so centring here means what it says.
+            s.AlignItems    = AlignItems.Center;
             s.PointerEvents = PointerEvents.None;
         });
 
         if (allDone)
         {
-            var badge = PUI.Icon(Ico.CategoryDone, CatIconSz, StatusOk);
-            badge.WithStyle(s => s.Margin = new EdgeSize(1f, 0, 0, 0));
-            nameRow.AppendChild(badge);
+            // No centring margin — AlignItems above does it, and correctly at any size. The 1px
+            // nudge that used to be here was tuned for a 13px icon and silently wrong for any other.
+            nameRow.AppendChild(PUI.Icon(Ico.CategoryDone, CatIconSz, StatusOk));
         }
 
         nameRow.AppendChild(new Node().WithText(category).WithStyle(s =>
