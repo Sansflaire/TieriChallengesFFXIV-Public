@@ -580,6 +580,16 @@ internal sealed class MainWindow : IDisposable
         // file; everything below is back to plain unscaled numbers.
         _surface.Scale = ScaleFactor;
 
+        // MUST be reset every frame. PanacheUI rebuilds a fresh Node object for every element
+        // every frame (see class remark), so a row's OnMouseLeave can never fire — the check that
+        // would let it fire (`node.AnimOrNull != null`) is only ever true in the SAME tick
+        // `isHovered` is also true, which is a direct contradiction with "the mouse just left."
+        // Verified against the current InteractionManager.UpdateNode, not assumed. Without this
+        // reset, _hoverNext sticks to whatever row was last touched and never clears — see
+        // BROKEN.md for the incident this caused (a right-click tooltip that followed the cursor
+        // off the plugin window and intermittently ate clicks on Close).
+        _hoverNext = null;
+
         _openMenuNext = _openMenu;
         var root = BuildTree((int)_surface.LogicalWidth, (int)_surface.LogicalHeight);
 
@@ -616,10 +626,9 @@ internal sealed class MainWindow : IDisposable
             ImGui.Image(tex.Value, new Vector2(w, h));
 
         // _hoverNext was updated during the Render call just above, so it reflects what is under
-        // the cursor THIS frame rather than last frame's row. It is maintained by an
-        // enter/leave pair (see ZoneRow) instead of the enter-only handler it used to have —
-        // that alone never cleared, so moving off the last zone row you touched and right-
-        // clicking empty space would teleport you to it.
+        // the cursor THIS frame: null by the reset at the top of this method unless some row's
+        // OnMouseEnter fired again during Render, which only happens while the mouse is actually
+        // over that row. Right-clicking empty space therefore correctly does nothing.
         if (rightClick) HandleZoneRightClick(_hoverNext);
 
 #if DEV_BUILD
@@ -1532,11 +1541,12 @@ internal sealed class MainWindow : IDisposable
 
         // Not a hover cue — the renderer paints that now — but the answer to "which zone is under
         // the cursor" for right-click-to-teleport and its tooltip, neither of which Panache's own
-        // events cover from here. Paired with a leave handler: enter fires only on the transition,
-        // so an enter-only handler would hold the last row touched forever and let a right-click
-        // on empty space teleport you somewhere you were no longer pointing at.
+        // events cover from here. Enter-only IS correct: it fires every frame the row is actually
+        // hovered (fresh Node object each frame means "was I hovered" is always false, so the
+        // enter condition is met on every hovered frame, not just the transition), and DrawWindow
+        // resets _hoverNext to null before the tree is even built — see that reset's comment for
+        // why an OnMouseLeave pairing here cannot work and must not be reintroduced.
         row.OnMouseEnter += _ => _hoverNext = rowId;
-        row.OnMouseLeave += _ => { if (_hoverNext == rowId) _hoverNext = null; };
         row.OnClick      += _ => { _config.SelectedTerritory = (int)territoryId; _save(); };
 
         row.AppendChild(new Node().WithStyle(s =>
@@ -2327,13 +2337,13 @@ internal sealed class MainWindow : IDisposable
 #if DEV_BUILD
         // Hover is tracked ONLY to answer "what is the pointer over?" for the right-click menu, so
         // it is wired in dev builds alone. No visual change: the style declares no Hover* colours,
-        // which keeps a non-clickable title from growing a cue it has not earned. Enter/leave
-        // pair for the same reason ZoneRow uses one — enter alone never clears.
+        // which keeps a non-clickable title from growing a cue it has not earned. Enter-only,
+        // same as ZoneRow — see DrawWindow's per-frame _hoverNext reset for why a leave handler
+        // cannot fire here and must not be added back.
         if (!_config.PublicPreview)
         {
             string hoverKey = "chal:" + def.Id;
             titleNode.OnMouseEnter += _ => _hoverNext = hoverKey;
-            titleNode.OnMouseLeave += _ => { if (_hoverNext == hoverKey) _hoverNext = null; };
         }
 #endif
 
