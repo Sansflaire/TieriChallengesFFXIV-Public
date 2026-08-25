@@ -105,6 +105,29 @@ internal sealed class ChallengeCreatorWindow
 
     private const string NewCategorySentinel = "＋ New category…";
 
+    // ── Existing tab: search + collapse state ────────────────────────────────
+
+    /// <summary>
+    /// Filter for the Existing list. Matches title, category, zone, description, hint and GUID,
+    /// so pasting a GUID out of the main window's right-click menu finds its challenge.
+    /// </summary>
+    private string _existingSearch = string.Empty;
+
+    /// <summary>
+    /// One-frame instruction from the Expand all / Collapse all buttons: 1 opens, −1 closes,
+    /// 0 leaves every header alone.
+    /// </summary>
+    /// <remarks>
+    /// ImGui owns tree open/closed state, keyed by node ID, which is exactly what makes it survive
+    /// the list being rebuilt every frame. The only way to override it in bulk is to call
+    /// <c>SetNextItemOpen</c> on each node for one frame, so this is consumed at the end of the
+    /// draw rather than being persistent state of our own.
+    /// </remarks>
+    private int _existingSetOpen;
+
+    /// <summary>Placeholder for a challenge whose Category is blank, so it can still be grouped.</summary>
+    private const string UncategorisedLabel = "(uncategorised)";
+
     public ChallengeCreatorWindow(Configuration config, CompletionStore store, Action save,
                                   ChallengeTracker tracker, ToastQueue toastQueue)
     {
@@ -893,6 +916,19 @@ internal sealed class ChallengeCreatorWindow
 
     // ── Existing ─────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// The authored catalogue, grouped by category and collapsed by default.
+    /// </summary>
+    /// <remarks>
+    /// <para>This list used to print every field of every challenge unconditionally — roughly eight
+    /// lines each — so at twenty challenges it was several screens of scrolling with no way to see
+    /// the shape of the catalogue. Now a challenge is one line until it is opened, and categories
+    /// collapse too, so the default view is a table of contents.</para>
+    ///
+    /// <para>Open/closed state belongs to ImGui, keyed by node ID. That is deliberate: it survives
+    /// the per-frame rebuild for free, and it means an open challenge stays open across a save,
+    /// an edit, or a switch to another tab and back.</para>
+    /// </remarks>
     private void DrawExistingTab()
     {
         DrawCategoryManager();
@@ -904,59 +940,52 @@ internal sealed class ChallengeCreatorWindow
             return;
         }
 
+        DrawExistingSearchBar();
+
+        // Real indices are carried alongside, because deletion has to index the config list and
+        // the grouped view no longer walks it in order.
+        var groups   = GroupExisting(out int matched);
         int removeAt = -1;
 
-        for (int i = 0; i < _config.CustomChallenges.Count; i++)
+        if (!string.IsNullOrWhiteSpace(_existingSearch))
         {
-            var c = _config.CustomChallenges[i];
-            ImGui.PushID(i);
-
-            bool missingDetails = string.IsNullOrWhiteSpace(c.Title) || string.IsNullOrWhiteSpace(c.Detail);
-
-            string label = string.IsNullOrWhiteSpace(c.Title) ? "(unnamed)" : c.Title;
-            ImGui.TextColored(new Vector4(0.89f, 0.70f, 0.25f, 1f), c.Category);
-            ImGui.SameLine();
-            ImGui.TextUnformatted(label);
-
-            if (missingDetails) MissingLabel("Missing details");
-
-            ImGui.TextDisabled($"   {KindLabel(c.Kind)} · {c.TerritoryName} · "
-                             + $"#{c.SortOrder} · {c.Areas.Count} area(s) · "
-                             + $"{(_store.IsComplete(c.Id) ? "COMPLETE" : "incomplete")}");
-            ImGui.TextDisabled($"   guid {c.Id}");
-
-            // The main window shows the PUBLISHED copy of a synced challenge — official wins on
-            // a GUID collision — so a local edit looks like it did nothing until it is published
-            // and re-synced. Say so here, where the edit was made.
-            switch (PublishState(c))
-            {
-                case PublishStatus.Edited:
-                    ImGui.TextColored(new Vector4(0.89f, 0.70f, 0.25f, 1f),
-                        "   edited locally — publish to replace the live copy");
-                    break;
-                case PublishStatus.Matches:
-                    ImGui.TextDisabled("   published, and identical to the live copy");
-                    break;
-                case PublishStatus.Unpublished:
-                    ImGui.TextDisabled("   not published yet");
-                    break;
-            }
-
-            if (!string.IsNullOrWhiteSpace(c.Detail)) ImGui.TextDisabled($"   {c.Detail}");
-
-            // Not flagged red when absent — a missing hint is a choice, not a defect.
-            if (!string.IsNullOrWhiteSpace(c.Hint))
-                ImGui.TextColored(new Vector4(0.66f, 0.79f, 0.94f, 1f), $"   Hint: {c.Hint}");
-            else
-                ImGui.TextDisabled("   no hint");
-
-            if (ImGui.Button("Edit", new Vector2(80, 22))) LoadDraft(c);
-            ImGui.SameLine();
-            if (ImGui.Button("Delete", new Vector2(80, 22))) removeAt = i;
-
-            ImGui.PopID();
-            ImGui.Separator();
+            ImGui.TextDisabled($"{matched} of {_config.CustomChallenges.Count} shown");
+            ImGui.Spacing();
         }
+
+        if (groups.Count == 0)
+        {
+            ImGui.Spacing();
+            ImGui.TextDisabled($"Nothing matches \"{_existingSearch}\".");
+            return;
+        }
+
+        foreach (var group in groups)
+        {
+            // A search should show its results, not make you open boxes to find them. With no
+            // search this passes 0 and ImGui keeps whatever the user last set.
+            if (_existingSetOpen != 0)                 ImGui.SetNextItemOpen(_existingSetOpen > 0);
+            else if (!string.IsNullOrEmpty(_existingSearch)) ImGui.SetNextItemOpen(true);
+
+            int flagged = 0;
+            foreach (var (c, _) in group.Items)
+                if (string.IsNullOrWhiteSpace(c.Title) || string.IsNullOrWhiteSpace(c.Detail)) flagged++;
+
+            // The count is on the header so the shape of the catalogue is readable while closed.
+            string header = $"{group.Name}  ({group.Items.Count})";
+            if (flagged > 0) header += $"  ·  {flagged} incomplete";
+
+            // ### keeps the ImGui ID stable while the visible label changes with the counts —
+            // without it, every header would forget its open state as soon as a count moved.
+            if (!ImGui.CollapsingHeader($"{header}###tc_exgrp_{group.Name}")) continue;
+
+            ImGui.Indent(10f);
+            foreach (var (c, index) in group.Items)
+                if (DrawExistingRow(c, index)) removeAt = index;
+            ImGui.Unindent(10f);
+        }
+
+        _existingSetOpen = 0;   // one-frame instruction, consumed
 
         if (removeAt >= 0)
         {
@@ -970,6 +999,193 @@ internal sealed class ChallengeCreatorWindow
             _tracker.Invalidate();
             _feedback = $"Deleted \"{gone.Title}\".";
         }
+    }
+
+    private void DrawExistingSearchBar()
+    {
+        ImGui.Spacing();
+        ImGui.SetNextItemWidth(260f);
+        ImGui.InputTextWithHint("##tc_existing_search", "Search name, category, zone, hint, GUID…",
+                                ref _existingSearch, 128);
+
+        ImGui.SameLine();
+        if (ImGui.Button("Clear##tc_existing_clear")) _existingSearch = string.Empty;
+
+        ImGui.SameLine();
+        if (ImGui.Button("Expand all"))   _existingSetOpen =  1;
+        ImGui.SameLine();
+        if (ImGui.Button("Collapse all")) _existingSetOpen = -1;
+
+        ImGui.Spacing();
+    }
+
+    /// <summary>
+    /// One collapsed challenge. Returns true if its Delete was pressed this frame.
+    /// </summary>
+    /// <remarks>
+    /// The closed line carries only what is needed to FIND a challenge — its number, its name, and
+    /// a mark if something is wrong with it. Everything that was previously always on screen moved
+    /// inside. A defect flag stays visible while closed on purpose: a broken challenge you have to
+    /// open to notice is one you will not notice.
+    /// </remarks>
+    private bool DrawExistingRow(CustomChallenge c, int index)
+    {
+        bool missingDetails = string.IsNullOrWhiteSpace(c.Title) || string.IsNullOrWhiteSpace(c.Detail);
+        var  publish        = PublishState(c);
+
+        string title = string.IsNullOrWhiteSpace(c.Title) ? "(unnamed)" : c.Title;
+        string label = $"#{c.SortOrder}  {title}";
+
+        // Same meter the main window draws, and absent for the same reason when unrated — an
+        // all-hollow row would read as "rated zero" rather than "not rated".
+        string meter = ChallengeDef.DifficultyMeterFor(c.Difficulty);
+        if (meter.Length > 0) label += $"   {meter}";
+
+        if (missingDetails)                     label += "   [!]";
+        else if (publish == PublishStatus.Edited) label += "   *";
+
+        if (_existingSetOpen != 0) ImGui.SetNextItemOpen(_existingSetOpen > 0);
+
+        // Keyed by GUID, not by list position: an index-keyed node would hand its open state to a
+        // different challenge the moment one above it was deleted or the sort order changed.
+        bool open = ImGui.TreeNodeEx($"{label}###tc_ex_{c.Id}",
+                                     ImGuiTreeNodeFlags.SpanAvailWidth);
+
+        if (missingDetails && ImGui.IsItemHovered())
+            ImGui.SetTooltip("Missing a name or a description — this cannot be published.");
+
+        if (!open) return false;
+
+        bool delete = false;
+        ImGui.PushID(c.Id);
+
+        if (missingDetails) MissingLabel("Missing details");
+
+        ImGui.TextDisabled($"{KindLabel(c.Kind)} · {c.TerritoryName} · "
+                         + $"#{c.SortOrder} · {c.Areas.Count} area(s) · "
+                         + $"{(_store.IsComplete(c.Id) ? "COMPLETE" : "incomplete")}");
+
+        // Spelled out here rather than left to the pips alone: difficulty is optional, so
+        // "not set" is a real authoring state worth naming while editing.
+        if (meter.Length > 0)
+            ImGui.TextDisabled($"difficulty {meter}  ({c.Difficulty}/5)");
+        else
+            ImGui.TextDisabled("difficulty not set");
+
+        ImGui.TextDisabled($"guid {c.Id}");
+
+        // The main window shows the PUBLISHED copy of a synced challenge — official wins on
+        // a GUID collision — so a local edit looks like it did nothing until it is published
+        // and re-synced. Say so here, where the edit was made.
+        switch (publish)
+        {
+            case PublishStatus.Edited:
+                ImGui.TextColored(new Vector4(0.89f, 0.70f, 0.25f, 1f),
+                    "edited locally — publish to replace the live copy");
+                break;
+            case PublishStatus.Matches:
+                ImGui.TextDisabled("published, and identical to the live copy");
+                break;
+            case PublishStatus.Unpublished:
+                ImGui.TextDisabled("not published yet");
+                break;
+        }
+
+        if (!string.IsNullOrWhiteSpace(c.Detail)) ImGui.TextDisabled(c.Detail);
+
+        // Not flagged red when absent — a missing hint is a choice, not a defect.
+        if (!string.IsNullOrWhiteSpace(c.Hint))
+            ImGui.TextColored(new Vector4(0.66f, 0.79f, 0.94f, 1f), $"Hint: {c.Hint}");
+        else
+            ImGui.TextDisabled("no hint");
+
+        if (ImGui.Button("Edit", new Vector2(80, 22))) LoadDraft(c);
+        ImGui.SameLine();
+        if (ImGui.Button("Delete", new Vector2(80, 22))) delete = true;
+
+        ImGui.PopID();
+        ImGui.TreePop();
+        ImGui.Spacing();
+        return delete;
+    }
+
+    private sealed class ExistingGroup
+    {
+        public string Name = string.Empty;
+        public readonly List<(CustomChallenge Challenge, int Index)> Items = new();
+    }
+
+    /// <summary>
+    /// Bucket the authored challenges by category, in the catalogue's own category order, keeping
+    /// each one's index into <see cref="Configuration.CustomChallenges"/> so Delete still works.
+    /// </summary>
+    /// <remarks>
+    /// Categories are ordered by <see cref="ChallengeCatalog.Categories"/> rather than
+    /// alphabetically, so this list reads in the same order as the main window's master pane.
+    /// Anything whose category is blank, or names a category that no longer exists, still gets a
+    /// group — losing a challenge from this list because its category was deleted would make it
+    /// uneditable and invisible at the same time.
+    /// </remarks>
+    private List<ExistingGroup> GroupExisting(out int matched)
+    {
+        var order = ChallengeCatalog.Categories(_config, includeEmpty: true);
+        var byName = new Dictionary<string, ExistingGroup>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<ExistingGroup>();
+
+        ExistingGroup For(string name)
+        {
+            if (byName.TryGetValue(name, out var g)) return g;
+            g = new ExistingGroup { Name = name };
+            byName[name] = g;
+            result.Add(g);
+            return g;
+        }
+
+        // Seed in catalogue order first so the groups appear in that order regardless of the
+        // order challenges happen to sit in the config list.
+        foreach (var name in order) For(name);
+
+        matched = 0;
+        for (int i = 0; i < _config.CustomChallenges.Count; i++)
+        {
+            var c = _config.CustomChallenges[i];
+            if (!MatchesExistingSearch(c)) continue;
+
+            matched++;
+            string cat = string.IsNullOrWhiteSpace(c.Category) ? UncategorisedLabel : c.Category;
+            For(cat).Items.Add((c, i));
+        }
+
+        // Sorted the way the main window sorts, so "#3" here is "#3" there.
+        foreach (var g in result)
+            g.Items.Sort(static (a, b) =>
+            {
+                int bySort = a.Challenge.SortOrder.CompareTo(b.Challenge.SortOrder);
+                return bySort != 0
+                    ? bySort
+                    : string.Compare(a.Challenge.Title, b.Challenge.Title, StringComparison.CurrentCultureIgnoreCase);
+            });
+
+        result.RemoveAll(g => g.Items.Count == 0);
+        return result;
+    }
+
+    /// <summary>
+    /// Case-insensitive substring match across every field that could plausibly identify a
+    /// challenge, GUID included — pasting one from the main window's Copy GUID lands here.
+    /// </summary>
+    private bool MatchesExistingSearch(CustomChallenge c)
+    {
+        string q = _existingSearch.Trim();
+        if (q.Length == 0) return true;
+
+        return Contains(c.Title) || Contains(c.Category) || Contains(c.TerritoryName)
+            || Contains(c.Detail) || Contains(c.Hint) || Contains(c.Id)
+            || Contains(KindLabel(c.Kind));
+
+        bool Contains(string? field) =>
+            !string.IsNullOrEmpty(field) &&
+            field.Contains(q, StringComparison.OrdinalIgnoreCase);
     }
 
     private enum PublishStatus

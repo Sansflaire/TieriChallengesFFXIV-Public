@@ -375,6 +375,20 @@ internal sealed class FallbackWindow
                     }
                 }
 
+                // Difficulty meter. This renderer previously showed none at all, so turning
+                // PanacheUI off silently dropped the rating the same way it once dropped the step
+                // count above. Text pips rather than icons because this path exists precisely for
+                // when the icon renderer is unavailable — see ChallengeDef.DifficultyMeter for why
+                // they are circles and not stars.
+                //
+                // Hidden when spoilered, matching MainWindow.ChallengeRow: how hard something is
+                // is a strong hint about what it involves.
+                if (def.HasDifficulty && !spoilered)
+                {
+                    ImGui.SameLine();
+                    ImGui.TextColored(ColAccent, def.DifficultyMeter());
+                }
+
                 if (!def.IsOfficial)
                 {
                     ImGui.SameLine();

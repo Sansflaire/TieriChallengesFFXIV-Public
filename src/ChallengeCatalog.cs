@@ -44,6 +44,34 @@ public sealed record ChallengeDef(
     public bool HasDifficulty => Difficulty is >= 1 and <= 5;
 
     /// <summary>
+    /// The five-slot difficulty meter as text, for the surfaces that cannot draw a bitmap icon —
+    /// the plain-ImGui <c>FallbackWindow</c> and the dev-only Challenge Creator.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Circles, not stars, and deliberately so.</b> These match what the PanacheUI meter
+    /// actually renders today: the bundled icon set has no five-point star pair, so
+    /// <c>MainWindow.Ico.StarFull/StarEmpty</c> are a filled dot in a ring and a hollow circle.
+    /// Using ★/☆ here would make the two surfaces disagree about what the same challenge looks
+    /// like, and would promise artwork that does not exist yet. When a real star pair lands,
+    /// change the two characters here and the two icon numbers there together.</para>
+    ///
+    /// <para>Always five slots, never just the earned ones — a proportion is read at a glance,
+    /// where a bare count has to be compared against a maximum the row never states. Returns
+    /// empty for an unrated challenge, which is the same "no meter at all" the main window shows.</para>
+    /// </remarks>
+    public string DifficultyMeter() => DifficultyMeterFor(Difficulty);
+
+    /// <inheritdoc cref="DifficultyMeter"/>
+    public static string DifficultyMeterFor(int difficulty)
+    {
+        if (difficulty is < 1 or > 5) return string.Empty;
+
+        Span<char> pips = stackalloc char[5];
+        for (int i = 0; i < 5; i++) pips[i] = i < difficulty ? '●' : '○';   // ● / ○
+        return new string(pips);
+    }
+
+    /// <summary>
     /// A hint was authored for this challenge. Drives whether the row's Hint button is offered
     /// or shown as unavailable — an enabled button that reveals nothing is a false affordance.
     /// </summary>

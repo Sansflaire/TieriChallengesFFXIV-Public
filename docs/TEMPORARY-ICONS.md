@@ -14,6 +14,18 @@ glyph. `0049` is a sparkle cluster and `0058` is a star *medal* — neither tile
 **To swap one in: change the single constant in `MainWindow.Ico` and delete its row here.**
 Nothing else references these numbers.
 
+**One exception, added 2026-08-25 — the difficulty meter now has a TEXT stand-in as well.**
+`FallbackWindow` and the dev-only Challenge Creator cannot draw a bundled bitmap: the fallback
+exists precisely for when the icon renderer is unavailable, and the Creator is plain ImGui. Both
+call `ChallengeDef.DifficultyMeterFor`, which builds the meter from `●` and `○`.
+
+Those two characters were chosen to match what `StarFull` / `StarEmpty` actually render *today* —
+a filled dot in a ring and a hollow circle. They are deliberately **not** `★` / `☆`, which would
+make the two renderers disagree about what the same challenge looks like and would promise artwork
+that does not exist. **When a real star pair lands, change the two characters in
+`DifficultyMeterFor` in the same commit as the two icon numbers below** — otherwise PanacheUI shows
+stars and the fallback still shows circles.
+
 ---
 
 ## In use now
