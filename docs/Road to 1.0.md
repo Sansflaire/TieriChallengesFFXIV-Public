@@ -8,15 +8,21 @@ the generic [How To Versioning](How%20To%20Versioning.md); this document supplie
 ## Current version
 
 ```
-0.81.21.0    beta · 81% toward 1.0 · 21 major updates · 1 minor update
+0.81.29.4    beta · 81% toward 1.0 · 29 major updates · 4 minor updates
 ```
 
-**Repositories**
+**Repositories — three of them since the 2026-08-24 split. This table was wrong for a while;
+the old two-repo description had the source in the PRIVATE repo, which is now backwards.**
 
 | Repo | Visibility | Holds |
 |------|-----------|-------|
-| [Sansflaire/TieriChallengesFFXIV](https://github.com/Sansflaire/TieriChallengesFFXIV) | private | The full project — all source including dev-only tooling, docs, Issues, research |
-| [Sansflaire/TieriChallengesFFXIV-Public](https://github.com/Sansflaire/TieriChallengesFFXIV-Public) | public | Distribution only: `pluginmaster.json`, README, and the signed release zips. **No source.** |
+| [Sansflaire/TieriChallengesFFXIV-Public](https://github.com/Sansflaire/TieriChallengesFFXIV-Public) | public | **The plugin SOURCE**, `pluginmaster.json`, README, signed release zips. The local dev folder has this as `origin`, so this is what a normal `git push` writes to. |
+| [Sansflaire/TieriChallengesFFXIV](https://github.com/Sansflaire/TieriChallengesFFXIV) | private | **Vault — moderation data only.** `backup/bans-private.json` plus dated history. Kept as the `vault` remote. The only readable record of who is banned and why, and the only way to lift a ban, since published hashes are one-way. |
+| [Sansflaire/TieriChallengesFFXIV-Sync](https://github.com/Sansflaire/TieriChallengesFFXIV-Sync) | public | Challenge data (`challenges/<guid>.json` + `master.json`) and the hashed, one-way `bans.json` the plugin and the Cloudflare relay both read. |
+
+**Because the working folder now pushes to a PUBLIC repo,** anything sensitive must stay
+gitignored (`CLAUDE.md`, `src/Secrets.props`, `SECRETS.local.md`) and the ban ledger's mirror path
+must point at a vault checkout — `BanAdmin.PointsAtPublicRepo` hard-refuses the alternative.
 
 Share this URL for users to add in `/xlsettings` → Experimental → Custom Plugin Repositories:
 
