@@ -381,6 +381,20 @@ internal sealed class MainWindow : IDisposable
     private const float StarSz       = 11f;
     private const float StarGap      = 2f;
 
+    /// <summary>Dropdown chevron on a menu-bar title, and its gap from the label.</summary>
+    private const float MenuChevronSz  = 9f;
+    private const float MenuChevronGap = 5f;
+
+    /// <summary>Warning triangle on the "needs a newer plugin" banner.</summary>
+    private const float WarnIconSz     = 13f;
+
+    /// <summary>
+    /// One star in the detail-pane difficulty filter. Larger than <see cref="StarSz"/> because
+    /// these are click targets, not a readout — five 11px stars would be a row of 11px buttons.
+    /// </summary>
+    private const float FilterStarSz  = 15f;
+    private const float FilterStarGap = 3f;
+
 
     // Both of the estimate-a-width helpers that used to live here are gone: the challenge row's
     // hint wrapper (layout measures it now) and the star block's contribution to it. PanacheUI
@@ -449,14 +463,21 @@ internal sealed class MainWindow : IDisposable
         public const int Scale        = 25;
 
         /// <summary>
-        /// Difficulty pips. NOT stars — the bundled set has no five-point star, filled or empty
-        /// (0049 is a sparkle cluster and 0058 is a medal, neither of which tiles into a rating
-        /// row). These are the filled/hollow circle pair, which reads correctly as "2 of 5" while
-        /// being honestly not what was asked for. When a star pair lands, changing these two
-        /// numbers is the entire migration.
+        /// Difficulty stars — real ones since the set grew to 167 icons on 2026-08-25. This is
+        /// the "softly rounded points" pair (`star-solid-1` / `star-outline-1`), chosen by
+        /// rendering all three candidate pairs at the 11px this actually draws at: the sharp pair
+        /// (0138/0142) has an outline that goes faint at that size, and the blob pair (0139/0143)
+        /// reads heavy. The migration off the old filled-dot/hollow-circle stand-in was exactly
+        /// what its comment promised — these two numbers.
         /// </summary>
-        public const int StarFull     = 24;   // filled dot in a ring
-        public const int StarEmpty    = 37;   // hollow circle
+        public const int StarFull     = 137;  // solid star, rounded points
+        public const int StarEmpty    = 141;  // star outline, rounded points
+
+        /// <summary>Dropdown affordance on a menu-bar title.</summary>
+        public const int MenuChevron  = 97;   // chevron-down, solid
+
+        /// <summary>The "these challenges need a newer plugin" banner.</summary>
+        public const int Warning      = 121;  // rounded triangle outline, exclamation inside
 
         /// <summary>
         /// No icon assigned yet. The menu row still reserves the column so labels stay aligned
@@ -1022,19 +1043,33 @@ internal sealed class MainWindow : IDisposable
         // Challenges withheld because they need a newer plugin than this one.
         if (ChallengeCatalog.IncompatibleCount > 0)
         {
-            body.AppendChild(new Node()
+            // Was a bare red sentence — the icon set had no warning triangle and 0046 was
+            // rejected for reading as "forbidden" rather than "heads up". It has one now.
+            var warn = new Node().WithStyle(s =>
+            {
+                s.Flow          = Flow.Horizontal;
+                s.WidthMode     = SizeMode.Fill;
+                s.HeightMode    = SizeMode.Fit;
+                s.Gap           = 6;
+                s.AlignItems    = AlignItems.Center;
+                s.PointerEvents = PointerEvents.None;
+            });
+
+            warn.AppendChild(PUI.Icon(Ico.Warning, WarnIconSz, Danger));
+            warn.AppendChild(new Node()
                 .WithText($"{ChallengeCatalog.IncompatibleCount} challenge(s) need plugin "
                         + $"v{ChallengeCatalog.HighestRequired} or newer — update to see them.")
                 .WithStyle(s =>
                 {
-                    s.WidthMode     = SizeMode.Fill;
-                    s.HeightMode    = SizeMode.Fit;
-                    s.FontSize      = 10.5f;
-                    s.Bold          = true;
-                    s.Color         = Danger;
-                    s.TextOverflow  = TextOverflow.Ellipsis;
-                    s.PointerEvents = PointerEvents.None;
+                    s.WidthMode    = SizeMode.Fill;
+                    s.HeightMode   = SizeMode.Fit;
+                    s.FontSize     = 10.5f;
+                    s.Bold         = true;
+                    s.Color        = Danger;
+                    s.TextOverflow = TextOverflow.Ellipsis;
                 }));
+
+            body.AppendChild(warn);
         }
 
         // Live game state used to sit here as two to six permanent rows. It is behind the Info
@@ -1972,14 +2007,16 @@ internal sealed class MainWindow : IDisposable
             string id   = "menu_" + menu.Title;
             bool   open = _openMenu == menu.Title;
 
-            var title = new Node().WithId(id).WithText(menu.Title).WithStyle(s =>
+            // Horizontal so the chevron can sit beside the label. The label keeps the text; a
+            // container with text AND children is not something this renderer promises.
+            var title = new Node().WithId(id).WithStyle(s =>
             {
+                s.Flow            = Flow.Horizontal;
                 s.WidthMode       = SizeMode.Fit;
                 s.HeightMode      = SizeMode.Fill;
                 s.Padding         = new EdgeSize(0, MenuTitlePadX);
-                s.FontSize        = MenuTitleFontSize;
-                s.Bold            = open;
-                s.TextAlign       = TextAlign.Center;
+                s.Gap             = MenuChevronGap;
+                s.AlignItems      = AlignItems.Center;
                 s.BorderRadius    = 4f;
 
                 // An open title is already at the hover appearance and beyond, so it declares no
@@ -1988,12 +2025,27 @@ internal sealed class MainWindow : IDisposable
                 s.Color           = open ? Accent : TextHi;
                 s.BackgroundColor = open ? Accent.WithOpacity(0.16f) : PColor.Transparent;
 
-                if (!open)
-                {
-                    s.HoverColor           = Accent;
-                    s.HoverBackgroundColor = PColor.White.WithOpacity(0.05f);
-                }
+                // Background only. The label and chevron are inert children, and hover does not
+                // reach a PointerEvents.None child, so a HoverColor here would never paint —
+                // the wash is the cue, exactly as the dropdown item rows already work.
+                if (!open) s.HoverBackgroundColor = PColor.White.WithOpacity(0.05f);
             });
+
+            title.AppendChild(new Node().WithText(menu.Title).WithStyle(s =>
+            {
+                s.WidthMode     = SizeMode.Fit;
+                s.HeightMode    = SizeMode.Fill;
+                s.FontSize      = MenuTitleFontSize;
+                s.Bold          = open;
+                s.TextAlign     = TextAlign.Center;
+                s.Color         = open ? Accent : TextHi;
+                s.PointerEvents = PointerEvents.None;
+            }));
+
+            // The affordance the menu bar never had: nothing about a bare word said it opened
+            // anything. Dimmer than the label so it reads as punctuation, not as a second word.
+            title.AppendChild(PUI.Icon(Ico.MenuChevron, MenuChevronSz,
+                                       (open ? Accent : TextHi).WithOpacity(0.55f)));
 
             var captured = menu.Title;
             title.OnMouseEnter += _ =>
@@ -2221,9 +2273,14 @@ internal sealed class MainWindow : IDisposable
     // Bold matters: an open menu title is bold (see BuildMenuBar), and bold is wider. Measuring
     // the regular weight would drift every title after an open one leftward.
 
-    /// <summary>Width of a menu-bar title, at the weight it will actually be drawn in.</summary>
+    /// <summary>
+    /// Width of a menu-bar title, at the weight it will actually be drawn in — padding, the
+    /// measured label, and the chevron beside it. All three, or the dropdown lands left of where
+    /// its title now sits.
+    /// </summary>
     private float MenuTitleWidth(string label, bool open) =>
-        MenuTitlePadX * 2f + PUI.MeasureText(label, MenuTitleFontSize, bold: open);
+        MenuTitlePadX * 2f + PUI.MeasureText(label, MenuTitleFontSize, bold: open)
+        + MenuChevronGap + MenuChevronSz;
 
     /// <summary>Width a dropdown item needs: padding, icon column, gap, then the label itself.</summary>
     private float MenuItemWidth(string label) =>
@@ -2260,29 +2317,61 @@ internal sealed class MainWindow : IDisposable
         bool  all   = total > 0 && done == total;
         string category = title;
 
-        // Detail header — category name + this category's own x-of-y and percent.
+        // Rows the difficulty ceiling actually lets through. Counted separately from done/total
+        // above, which deliberately stay whole-category: "3 of 12 done · 25% of this category" is
+        // a fact about the category, and having it lurch every time a filter moves would make the
+        // progress line useless for the thing it exists to report.
+        var shown = new List<ChallengeDef>(list.Count);
+        foreach (var d in list)
+            if (!d.HasDifficulty || d.Difficulty <= _config.MaxDifficulty) shown.Add(d);
+        int hidden = list.Count - shown.Count;
+
+        // Detail header — category name, difficulty filter, and this category's own x-of-y.
+        //
+        // NOT PointerEvents.None any more. It was, back when nothing in here could be clicked,
+        // and None blocks the node AND every descendant — leaving it set would have made the
+        // filter stars below silently unclickable (see CLAUDE.md §8A; this is the second time
+        // that trap has come up).
         var head = new Node().WithStyle(s =>
         {
-            s.Flow          = Flow.Vertical;
-            s.WidthMode     = SizeMode.Fill;
-            s.HeightMode    = SizeMode.Fixed; s.Height = DetailHeaderH;
-            s.Padding       = new EdgeSize(PadPaneY, PadPaneX);
-            s.Gap           = 6;
-            s.PointerEvents = PointerEvents.None;
+            s.Flow       = Flow.Vertical;
+            s.WidthMode  = SizeMode.Fill;
+            s.HeightMode = SizeMode.Fixed; s.Height = DetailHeaderH;
+            s.Padding    = new EdgeSize(PadPaneY, PadPaneX);
+            s.Gap        = 6;
         });
 
-        head.AppendChild(new Node().WithText(category).WithStyle(s =>
+        var titleRow = new Node().WithStyle(s =>
         {
-            s.WidthMode    = SizeMode.Fill;
-            s.HeightMode   = SizeMode.Fit;
-            s.FontSize     = 16f;
-            s.Bold         = true;
-            s.Color        = Accent;
-            s.TextOverflow = TextOverflow.Ellipsis;
+            s.Flow       = Flow.Horizontal;
+            s.WidthMode  = SizeMode.Fill;
+            s.HeightMode = SizeMode.Fit;
+            s.Gap        = 10;
+            s.AlignItems = AlignItems.Center;
+        });
+
+        titleRow.AppendChild(new Node().WithText(category).WithStyle(s =>
+        {
+            s.WidthMode     = SizeMode.Fill;
+            s.HeightMode    = SizeMode.Fit;
+            s.FontSize      = 16f;
+            s.Bold          = true;
+            s.Color         = Accent;
+            s.TextOverflow  = TextOverflow.Ellipsis;
+            s.PointerEvents = PointerEvents.None;
         }));
 
+        titleRow.AppendChild(BuildDifficultyFilter());
+        head.AppendChild(titleRow);
+
         string scopeWord = _config.Grouping == GroupMode.Zones ? "zone" : "category";
-        head.AppendChild(new Node().WithText($"{done} of {total} done  ·  {frac * 100f:0}% of this {scopeWord}").WithStyle(s =>
+        string progressLine = $"{done} of {total} done  ·  {frac * 100f:0}% of this {scopeWord}";
+
+        // Says so when the filter is doing something. A list that is quietly shorter than the
+        // count beside it reads as a bug, and the filter that caused it is easy to forget about.
+        if (hidden > 0) progressLine += $"  ·  {hidden} hidden by filter";
+
+        head.AppendChild(new Node().WithText(progressLine).WithStyle(s =>
         {
             s.WidthMode  = SizeMode.Fill;
             s.HeightMode = SizeMode.Fit;
@@ -2307,19 +2396,28 @@ internal sealed class MainWindow : IDisposable
             s.Gap         = 0;
         });
 
-        if (list.Count == 0)
+        if (shown.Count == 0)
         {
-            scroll.AppendChild(EmptyNote(emptyCopy.Head, emptyCopy.Body));
+            // Distinguish "nothing here" from "you filtered it all away" — the second has an
+            // obvious fix and the first does not, and offering the wrong advice for either is
+            // worse than saying nothing.
+            if (hidden > 0)
+                scroll.AppendChild(EmptyNote(
+                    "Everything here is above your difficulty filter.",
+                    $"{hidden} challenge(s) are hidden. Raise the stars beside the title to see them."));
+            else
+                scroll.AppendChild(EmptyNote(emptyCopy.Head, emptyCopy.Body));
         }
         else
         {
-            for (int i = 0; i < list.Count; i++)
+            for (int i = 0; i < shown.Count; i++)
             {
                 // Numbered against THIS list, not the catalog. Whatever the pane is showing — a
                 // category, a zone, a filtered set — the rows read 1, 2, 3 from the top. A number
-                // carried in from the full catalog would start a category at #7 and skip.
-                scroll.AppendChild(ChallengeRow(list[i] with { Number = i + 1 }, detailW));
-                if (i < list.Count - 1)
+                // carried in from the full catalog would start a category at #7 and skip, and one
+                // carried from the unfiltered list would leave gaps as the filter moves.
+                scroll.AppendChild(ChallengeRow(shown[i] with { Number = i + 1 }, detailW));
+                if (i < shown.Count - 1)
                     scroll.AppendChild(Hairline(PColor.White.WithOpacity(0.05f)));
             }
         }
@@ -2720,6 +2818,60 @@ internal sealed class MainWindow : IDisposable
         node.WithStyle(s => s.HoverBackgroundColor = accent.WithOpacity(0.32f));
         node.OnClick += _ => onClick();
         return node;
+    }
+
+    /// <summary>
+    /// The difficulty filter: five clickable stars beside the detail-pane title. Clicking the Nth
+    /// sets the ceiling to N, hiding everything harder.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>A ceiling, not a selection.</b> Four stars lit means "nothing harder than four",
+    /// which is why the lit ones are contiguous from the left rather than a set of independent
+    /// toggles. Five lit — the default — filters nothing.</para>
+    ///
+    /// <para>Clicking the star that is already the ceiling resets to 5. Without that, dropping to
+    /// 1 and wanting everything back means finding and hitting the fifth star exactly; with it,
+    /// the star you just pressed is also the way out.</para>
+    ///
+    /// <para>Deliberately not hidden when a category has no rated challenges. It is a persistent
+    /// setting that affects every category, so a control that vanished in some of them would
+    /// leave a filter running with nothing on screen to explain it — the "hidden by filter" note
+    /// on the progress line covers the case where it bites.</para>
+    /// </remarks>
+    private Node BuildDifficultyFilter()
+    {
+        int ceiling = Math.Clamp(_config.MaxDifficulty, 1, 5);
+
+        var row = new Node().WithStyle(s =>
+        {
+            s.Flow       = Flow.Horizontal;
+            s.WidthMode  = SizeMode.Fit;
+            s.HeightMode = SizeMode.Fit;
+            s.Gap        = FilterStarGap;
+            s.AlignItems = AlignItems.Center;
+        });
+
+        for (int i = 1; i <= 5; i++)
+        {
+            bool lit = i <= ceiling;
+            int  step = i;
+
+            // Interactive, with its own Id: PUI.Icon is inert by default, and an icon with no Id
+            // cannot carry hover state of its own — five stars sharing one Id would light as one.
+            var star = PUI.Icon(lit ? Ico.StarFull : Ico.StarEmpty, FilterStarSz,
+                                lit ? Accent : Neutral.WithOpacity(0.40f),
+                                interactive: true, nodeId: $"dfilter_{i}");
+
+            star.OnClick += _ =>
+            {
+                _config.MaxDifficulty = _config.MaxDifficulty == step ? 5 : step;
+                _save();
+            };
+
+            row.AppendChild(star);
+        }
+
+        return row;
     }
 
     /// <summary>

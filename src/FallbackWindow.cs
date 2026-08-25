@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 using Dalamud.Bindings.ImGui;
@@ -318,13 +319,46 @@ internal sealed class FallbackWindow
             foreach (var d in list) if (_store.IsComplete(d.Id)) dd++;
             int dt = list.Count;
 
+            // Same difficulty ceiling the Panache renderer applies, and the same rule: unrated
+            // challenges are never filtered out, and the done/total counts stay whole-category so
+            // the progress line does not lurch when the filter moves. Turning PanacheUI off must
+            // not silently change which challenges exist.
+            var shown = new List<ChallengeDef>(list.Count);
+            foreach (var d in list)
+                if (!d.HasDifficulty || d.Difficulty <= _config.MaxDifficulty) shown.Add(d);
+            int hiddenByFilter = list.Count - shown.Count;
+
             if (!string.IsNullOrEmpty(title))
             {
                 ImGui.TextColored(ColAccent, title);
-                ImGui.TextUnformatted($"{dd} of {dt} done  ·  {ChallengeCatalog.Percent(dd, dt) * 100f:0}% "
-                                    + $"of this {(zones ? "zone" : "category")}");
+
+                // The control, in the plainest form ImGui has. Text pips rather than icons for
+                // the same reason the difficulty meter uses them here — this path exists for when
+                // the icon renderer is unavailable.
+                ImGui.SameLine();
+                for (int i = 1; i <= 5; i++)
+                {
+                    bool lit = i <= _config.MaxDifficulty;
+                    if (ImGui.SmallButton($"{(lit ? '●' : '○')}##tc_fb_df{i}"))
+                    {
+                        _config.MaxDifficulty = _config.MaxDifficulty == i ? 5 : i;
+                        _save();
+                    }
+                    if (ImGui.IsItemHovered())
+                        ImGui.SetTooltip(i == 5
+                            ? "Show every difficulty."
+                            : $"Show difficulty {i} and below; hide anything harder.");
+                    if (i < 5) ImGui.SameLine();
+                }
+
+                string line = $"{dd} of {dt} done  ·  {ChallengeCatalog.Percent(dd, dt) * 100f:0}% "
+                            + $"of this {(zones ? "zone" : "category")}";
+                if (hiddenByFilter > 0) line += $"  ·  {hiddenByFilter} hidden by filter";
+                ImGui.TextUnformatted(line);
                 ImGui.Separator();
             }
+
+            list = shown;
 
             // Numbered against THIS list, exactly as MainWindow does it: whatever the pane is
             // showing, rows read 1, 2, 3 from the top. Keep the two in step — a player switching

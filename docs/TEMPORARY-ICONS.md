@@ -7,9 +7,23 @@ They are listed here rather than left as a `// TODO` because a stand-in that rea
 the kind of thing that quietly becomes permanent — nobody files a bug about an icon that is merely
 slightly wrong.
 
-Verified against `devPlugins/PanacheUI/ICONS.md` and its committed contact sheet on 2026-08-24:
-the set genuinely contains no star, no chevron, no warning triangle, and no apparel/mount/pose
-glyph. `0049` is a sparkle cluster and `0058` is a star *medal* — neither tiles into a rating row.
+**Updated 2026-08-25 — the set grew from ~78 to 167 icons and three of the entries below went
+away.** Stars, chevrons and warning triangles all exist now:
+
+- **Difficulty meter** — `StarFull`/`StarEmpty` are `0137`/`0141` (`star-solid-1` /
+  `star-outline-1`, softly rounded points). Chosen by rendering all three candidate pairs at the
+  11px this actually draws at: the sharp pair `0138`/`0142` has an outline that goes faint at that
+  size, and `0139`/`0143` reads heavy. The stand-in comment promised the migration would be "two
+  numbers", and it was.
+- **Menu dropdown indicator** — `0097` `chevron-down`, beside each menu-bar title.
+- **"Needs a newer plugin" banner** — `0121` `warning-triangle-1`, a rounded triangle outline with
+  an exclamation inside. `0046` was rejected long ago for reading as *forbidden* rather than
+  *heads up*; this one does not have that problem.
+
+The text pips in `ChallengeDef.DifficultyMeterFor` are a separate stand-in and are STILL circles —
+see the note above. They serve the fallback renderer and the Creator, neither of which can draw a
+bitmap, so a star pair landing in the icon set does not retire them. They should track whatever
+`StarFull`/`StarEmpty` look like.
 
 **To swap one in: change the single constant in `MainWindow.Ico` and delete its row here.**
 Nothing else references these numbers.
@@ -32,8 +46,6 @@ stars and the fallback still shows circles.
 
 | Slot | `Ico` constant | Using | Should be | Why the stand-in is wrong |
 |------|----------------|-------|-----------|---------------------------|
-| Difficulty, filled | `StarFull` | `0024` filled dot in a ring | Filled 5-point star | Reads as a radio button or a bullet, not an earned rating |
-| Difficulty, empty | `StarEmpty` | `0037` hollow circle | Hollow 5-point star | Same — and paired with the above it looks like a progress dot row |
 | UI Scale menu item | `Scale` | `0025` concentric rings | Magnifier, or arrows expanding a box | Reads as a target; nothing about it suggests size |
 
 ## Slots with no icon at all
@@ -43,8 +55,7 @@ is drawn.
 
 | Slot | Should be | Impact today |
 |------|-----------|--------------|
-| Menu bar dropdown indicator | Chevron down | The menu bar has no affordance showing it opens |
-| "Needs a newer plugin" banner | Warning triangle with `!` | A bare red sentence. `0046` was rejected — it reads as *forbidden*, not *heads up* |
+| _(none)_ | | |
 | "Report a bug…" menu item | Bug | Only unillustrated item in the Help menu |
 | `EmoteAtArea` challenge rows | Person in a pose | Challenge rows carry no kind icon yet |
 | `MountInArea` challenge rows | Mount | ” |

@@ -310,6 +310,24 @@ public sealed class Configuration : IPluginConfiguration
     public int UiScale { get; set; } = 1;
 
     /// <summary>
+    /// Highest difficulty shown in the challenge list, 1–5. 5 (the default) shows everything.
+    /// </summary>
+    /// <remarks>
+    /// <para>A ceiling, not a selection: 3 shows difficulty 1, 2 and 3 and hides 4 and 5. The
+    /// control that sets it is a five-star row, so "four stars lit" reads directly as "nothing
+    /// harder than four".</para>
+    ///
+    /// <para><b>Unrated challenges are never filtered out.</b> Difficulty 0 means "no rating was
+    /// authored", not "trivial" — hiding those behind a difficulty ceiling would make a
+    /// half-rated catalogue look broken, and there is no value of this setting that would bring
+    /// them back except the one that disables filtering entirely.</para>
+    ///
+    /// <para>Clamped by <see cref="MigrateIfNeeded"/>: a hand-edited 0 here would empty the list
+    /// with no visible cause.</para>
+    /// </remarks>
+    public int MaxDifficulty { get; set; } = 5;
+
+    /// <summary>
     /// Local checkout of the public sync repo, used by the dev-only ban publisher. Dev machines
     /// only — a public build never reads it.
     /// </summary>
@@ -421,6 +439,10 @@ public sealed class Configuration : IPluginConfiguration
         CollapsedExpansions ??= new List<uint>();
         CustomCategories    ??= new List<string>();
         VisitedTerritories  ??= new List<uint>();
+
+        // A 0 here — from a hand edit, or from a config written before the field existed —
+        // would hide every rated challenge with nothing on screen explaining why.
+        MaxDifficulty = Math.Clamp(MaxDifficulty == 0 ? 5 : MaxDifficulty, 1, 5);
 
         bool changed = false;
 
