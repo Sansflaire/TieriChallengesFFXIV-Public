@@ -31,6 +31,17 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IFramework              Framework       { get; private set; } = null!;
     [PluginService] internal static IGameGui                GameGui         { get; private set; } = null!;
     [PluginService] internal static IFlyTextGui             FlyTextGui      { get; private set; } = null!;
+    [PluginService] internal static ITargetManager          TargetManager   { get; private set; } = null!;
+    [PluginService] internal static ICondition              Condition       { get; private set; } = null!;
+    [PluginService] internal static IGameInventory          GameInventory   { get; private set; } = null!;
+
+    /// <summary>
+    /// Event-driven "do I hold item X?" map. Static because <see cref="ConditionEvaluator"/> is
+    /// static and is reached from the tracker tick, the creator preview and the dev status block —
+    /// threading an instance through all three would buy nothing, since there is exactly one
+    /// inventory and it belongs to the process, not to any one window.
+    /// </summary>
+    internal static InventoryWatcher Inventory { get; private set; } = null!;
 
     /// <summary>
     /// True in Trist's developer build, false in the public artifact. Set from the DEV_BUILD
@@ -182,6 +193,11 @@ public sealed class Plugin : IDalamudPlugin
         Sound = new SoundService();
         Sound.Attach();
 
+        // Stood up before the tracker: an item condition evaluated on the first tick must find a
+        // watcher, not a null. It starts dirty, so the first read builds the map.
+        Inventory = new InventoryWatcher();
+        Inventory.Attach();
+
         _tracker = new ChallengeTracker(_config, _store, SaveConfig);
         _sync    = new ChallengeSyncService(_official, _config);
         _dialogs = new Dialogs(_config, _store, _tracker, SaveConfig);
@@ -307,6 +323,7 @@ public sealed class Plugin : IDalamudPlugin
         _tracker.Progressed -= OnProgressed;
         _tracker.Completed  -= OnCompleted;
         _tracker.Dispose();
+        Inventory.Dispose();
         Sound.Dispose();
         _toast?.Dispose();
         _progressToast?.Dispose();

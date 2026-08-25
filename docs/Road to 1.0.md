@@ -84,7 +84,7 @@ Weights total exactly 100. **B = sum of the weights of completed milestones.**
 | 3 | Durable completion storage — current + permanent files, atomic writes, migration that never loses data | 8 | ✅ done |
 | 4 | Auto-completion tracker — condition evaluation with zone/completion gating and throttling | 8 | ✅ done |
 | 5 | Trigger volumes — sphere/box, position/size/scale/yaw editing, in-world wireframe overlay (dev aid) | 8 | ✅ done |
-| 6 | Challenge types — visit-any, visit-ordered, emote-at-location (+facing), mount-in-area, outfit/gear-in-zone | 10 | ✅ done |
+| 6 | Challenge types — the composite `InArea` kind: one or more areas, each with its own condition set (emote, mount, minion, full outfit, gear pieces N-of-M, NPC target, facing, game state, job+level, Eorzean time, carried item), in Single / any-order / in-order modes with per-step time budgets. The five original kinds are retired but still evaluate forever. | 10 | ✅ done |
 | 7 | Completion popup — headline, number, descriptor, queueing, fade | 3 | ✅ done |
 | 8 | Dev/public build split + Challenge Creator with in-place editing | 6 | ✅ done |
 | 9 | Versioning scheme, version surfaced in UI, generic versioning doc | 2 | ✅ done |

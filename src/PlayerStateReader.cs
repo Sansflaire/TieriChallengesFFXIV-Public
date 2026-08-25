@@ -7,6 +7,10 @@ using LSheets = Lumina.Excel.Sheets;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 
+// Aliased because the plugin already has a `Framework` in scope (Dalamud's IFramework, held as
+// Plugin.Framework) and an unqualified `Framework.Instance()` reads as that one.
+using CSFramework = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework;
+
 namespace TieriChallengesFFXIV;
 
 /// <summary>One equipped slot, reduced to what this plugin actually needs.</summary>
@@ -265,6 +269,163 @@ internal static unsafe class PlayerStateReader
 
     // ── Minion (companion) ───────────────────────────────────────────────────
 
+    /// <summary>
+    /// Base id of the minion currently summoned, 0 when none. Same read
+    /// <see cref="DescribeMinion"/> uses — <c>CompanionObject</c> is obsolete in current
+    /// FFXIVClientStructs and <c>ChildObject</c> is its replacement.
+    /// </summary>
+    public static uint CurrentMinionId()
+    {
+        try
+        {
+            var chara = LocalChara();
+            if (chara == null) return 0;
+
+            var companion = chara->ChildObject;
+            return companion == null ? 0u : companion->BaseId;
+        }
+        catch { return 0; }
+    }
+
+    public static string MinionName(uint minionId)
+    {
+        if (minionId == 0) return string.Empty;
+        try
+        {
+            _companionSheet ??= Plugin.DataManager.GetExcelSheet<LSheets.Companion>();
+            return _companionSheet?.GetRowOrDefault(minionId)?.Singular.ToString() ?? string.Empty;
+        }
+        catch { return string.Empty; }
+    }
+
+    /// <summary>Every named minion, for the creator's picker.</summary>
+    public static List<(uint Id, string Name)> AllMinions()
+    {
+        var list = new List<(uint, string)>();
+        try
+        {
+            _companionSheet ??= Plugin.DataManager.GetExcelSheet<LSheets.Companion>();
+            if (_companionSheet == null) return list;
+
+            foreach (var row in _companionSheet)
+            {
+                string name = row.Singular.ToString();
+                if (!string.IsNullOrWhiteSpace(name)) list.Add((row.RowId, name));
+            }
+            list.Sort((a, b) => string.CompareOrdinal(a.Item2, b.Item2));
+        }
+        catch { }
+        return list;
+    }
+
+    // ── Target ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// <c>DataId</c> of whatever the player currently targets, 0 when nothing is targeted.
+    ///
+    /// <para><b>BaseId, not EntityId.</b> EntityId identifies one live spawn and is different every
+    /// time the NPC repopulates, so a challenge keyed on it would work exactly once. BaseId is the
+    /// NPC's row identity and is the same for every instance of "Mother Miounne" everywhere.
+    /// (Dalamud renamed this property from <c>DataId</c>; the persisted field is still called
+    /// TargetDataId because that is the name the rest of the FFXIV ecosystem uses, and renaming a
+    /// serialised property gains nothing but a migration.)</para>
+    /// </summary>
+    public static uint CurrentTargetDataId()
+    {
+        try
+        {
+            return Plugin.TargetManager.Target?.BaseId ?? 0u;
+        }
+        catch { return 0; }
+    }
+
+    /// <summary>Display name of the current target, for capture-what-I-am-looking-at in the creator.</summary>
+    public static string CurrentTargetName()
+    {
+        try
+        {
+            return Plugin.TargetManager.Target?.Name.ToString() ?? string.Empty;
+        }
+        catch { return string.Empty; }
+    }
+
+    // ── Job / level ──────────────────────────────────────────────────────────
+
+    private static ExcelSheet<LSheets.ClassJob>? _classJobSheet;
+
+    public static uint CurrentJobId()
+    {
+        try { return Plugin.ObjectTable.LocalPlayer?.ClassJob.RowId ?? 0u; }
+        catch { return 0; }
+    }
+
+    public static int CurrentLevel()
+    {
+        try { return Plugin.ObjectTable.LocalPlayer?.Level ?? 0; }
+        catch { return 0; }
+    }
+
+    public static string JobName(uint jobId)
+    {
+        if (jobId == 0) return string.Empty;
+        try
+        {
+            _classJobSheet ??= Plugin.DataManager.GetExcelSheet<LSheets.ClassJob>();
+            return _classJobSheet?.GetRowOrDefault(jobId)?.Name.ToString() ?? string.Empty;
+        }
+        catch { return string.Empty; }
+    }
+
+    public static List<(uint Id, string Name)> AllJobs()
+    {
+        var list = new List<(uint, string)>();
+        try
+        {
+            _classJobSheet ??= Plugin.DataManager.GetExcelSheet<LSheets.ClassJob>();
+            if (_classJobSheet == null) return list;
+
+            foreach (var row in _classJobSheet)
+            {
+                if (row.RowId == 0) continue;   // row 0 is "adventurer", not a real job
+                string name = row.Name.ToString();
+                if (!string.IsNullOrWhiteSpace(name)) list.Add((row.RowId, name));
+            }
+            list.Sort((a, b) => string.CompareOrdinal(a.Item2, b.Item2));
+        }
+        catch { }
+        return list;
+    }
+
+    // ── Eorzean clock ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Current Eorzean hour, 0–23, or -1 when the clock cannot be read.
+    ///
+    /// <para><c>ClientTime.EorzeaTime</c> is seconds since the Eorzean epoch. The double modulo is
+    /// not redundant: the value is signed, and C#'s <c>%</c> keeps the sign of the dividend, so a
+    /// negative timestamp (which does occur briefly during a zone transition) would otherwise
+    /// produce a negative hour and silently fail every time-of-day window.</para>
+    /// </summary>
+    public static int EorzeaHour()
+    {
+        try
+        {
+            var fw = CSFramework.Instance();
+            if (fw == null) return -1;
+
+            long ts      = fw->ClientTime.EorzeaTime;
+            long seconds = ((ts % 86400) + 86400) % 86400;
+            return (int)(seconds / 3600);
+        }
+        catch { return -1; }
+    }
+
+    public static string DescribeEorzeaTime()
+    {
+        int h = EorzeaHour();
+        return h < 0 ? "unavailable" : $"{h:00}:00 Eorzean";
+    }
+
     public static string DescribeMinion()
     {
         try
@@ -336,6 +497,41 @@ internal static unsafe class PlayerStateReader
             return _itemSheet?.GetRowOrDefault(itemId)?.Name.ToString() ?? string.Empty;
         }
         catch { return string.Empty; }
+    }
+
+    /// <summary>
+    /// Items whose name contains <paramref name="query"/>, capped at <paramref name="limit"/>.
+    ///
+    /// <para>A search rather than an <c>AllItems()</c> list on purpose: the Item sheet is ~45,000
+    /// rows, and materialising all of them just so a picker can filter them would allocate a
+    /// multi-megabyte list on every keystroke. This walks the sheet and stops early instead, so the
+    /// cost is bounded by the cap and not by the sheet.</para>
+    ///
+    /// <para>An empty query returns nothing rather than everything — "show me all 45,000 items" is
+    /// never what the author meant, and rendering it would hitch the window.</para>
+    /// </summary>
+    public static List<(uint Id, string Name)> SearchItems(string query, int limit = 200)
+    {
+        var list = new List<(uint, string)>();
+        if (string.IsNullOrWhiteSpace(query)) return list;
+
+        try
+        {
+            _itemSheet ??= Plugin.DataManager.GetExcelSheet<LSheets.Item>();
+            if (_itemSheet == null) return list;
+
+            foreach (var row in _itemSheet)
+            {
+                string name = row.Name.ToString();
+                if (string.IsNullOrWhiteSpace(name)) continue;
+                if (!name.Contains(query, StringComparison.OrdinalIgnoreCase)) continue;
+
+                list.Add((row.RowId, name));
+                if (list.Count >= limit) break;
+            }
+        }
+        catch { }
+        return list;
     }
 
     /// <summary>True when the given item id is equipped in any slot, glamour included.</summary>

@@ -135,12 +135,41 @@ public sealed class CustomChallenge
     /// </summary>
     public bool WholeZone { get; set; }
 
+    // ── InArea (the composite kind) ──────────────────────────────────────────
+
+    /// <summary>
+    /// <see cref="ChallengeKind.InArea"/> only: how many stops there are and whether their order
+    /// matters. Ignored by every legacy kind.
+    /// </summary>
+    public AreaMode Mode { get; set; } = AreaMode.Single;
+
+    /// <summary>
+    /// <see cref="ChallengeKind.InArea"/> only: the stops, each an area plus the conditions that
+    /// must hold inside it.
+    ///
+    /// <para>Deliberately a SEPARATE list from <see cref="Areas"/> rather than a richer element
+    /// type on it. <see cref="Areas"/> is loaded with meaning for five shipped kinds and is written
+    /// into every published challenge file; changing its element type would rewrite the on-disk
+    /// shape of challenges that older builds still need to read. A new list is invisible to them —
+    /// Newtonsoft drops properties it does not know — so both shapes coexist with no migration.</para>
+    /// </summary>
+    public List<AreaRequirement> Requirements { get; set; } = new();
+
     public bool IsAreaKind =>
         Kind is ChallengeKind.VisitAreas
              or ChallengeKind.VisitAreasInOrder
              or ChallengeKind.EmoteAtArea
              or ChallengeKind.MountInArea
-             or ChallengeKind.GearInArea;
+             or ChallengeKind.GearInArea
+             or ChallengeKind.InArea;
+
+    /// <summary>
+    /// How many stops this challenge actually has, whichever kind it is. Used by the progress
+    /// readout so a composite challenge reports "2/4" the same way VisitAreas always has.
+    /// </summary>
+    public int StopCount => Kind == ChallengeKind.InArea
+        ? (Requirements?.Count ?? 0)
+        : (Areas?.Count ?? 0);
 
     /// <summary>
     /// Everything the tracker needs is present. Half-authored entries are skipped rather than
@@ -159,8 +188,27 @@ public sealed class CustomChallenge
                                         && (GearMode == GearRequirement.FullOutfit
                                                 ? OutfitSetId != 0
                                                 : GearItemId != 0),
+        ChallengeKind.InArea            => CompositeIsWellFormed(),
         _                               => false,
     };
+
+    /// <summary>
+    /// A composite challenge needs a zone, at least one stop, and every stop well-formed.
+    /// <see cref="AreaMode.Single"/> additionally means exactly one — an author who adds a second
+    /// stop without switching mode would otherwise silently ship a challenge where stops 2..N are
+    /// never evaluated.
+    /// </summary>
+    private bool CompositeIsWellFormed()
+    {
+        if (TerritoryId == 0) return false;
+        if (Requirements == null || Requirements.Count == 0) return false;
+        if (Mode == AreaMode.Single && Requirements.Count != 1) return false;
+
+        foreach (var r in Requirements)
+            if (r == null || !r.IsWellFormed()) return false;
+
+        return true;
+    }
 }
 
 /// <summary>

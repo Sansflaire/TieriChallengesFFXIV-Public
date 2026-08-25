@@ -44,6 +44,19 @@ public enum ChallengeKind
     /// Glamour Dresser outfit or one specific piece of gear / weapon.
     /// </summary>
     GearInArea = 6,
+
+    /// <summary>
+    /// <b>The composite kind, and the only one the Creator offers.</b> One or more areas
+    /// (<see cref="CustomChallenge.Mode"/> decides how many and whether order matters), each
+    /// carrying its own list of <see cref="ChallengeCondition"/>s that must all hold while the
+    /// player is inside it.
+    ///
+    /// <para>Kinds 1–6 above are LEGACY. They keep their detectors and keep firing forever, but
+    /// nothing new is authored as one. They are deliberately NOT migrated to this kind: doing so
+    /// would raise each challenge's <see cref="ChallengeCatalog.RequiredFor"/> baseline and delete
+    /// every already-published challenge from the list of anyone who has not updated yet.</para>
+    /// </summary>
+    InArea = 7,
 }
 
 /// <summary>What <see cref="ChallengeKind.GearInArea"/> requires the player to be wearing.</summary>

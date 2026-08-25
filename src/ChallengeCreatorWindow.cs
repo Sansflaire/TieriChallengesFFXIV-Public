@@ -103,6 +103,34 @@ internal sealed class ChallengeCreatorWindow
     private List<(uint Id, string Name)>? _emoteCache, _mountCache, _outfitCache;
     private string _emoteCacheKey = "\0", _mountCacheKey = "\0", _outfitCacheKey = "\0";
 
+    // ── Composite (InArea) draft state ───────────────────────────────────────
+
+    /// <summary>Draft's area mode. Only meaningful for <see cref="ChallengeKind.InArea"/>.</summary>
+    private AreaMode _mode = AreaMode.Single;
+
+    /// <summary>
+    /// Conditions per draft area, parallel to <see cref="_areas"/>.
+    ///
+    /// <para>Parallel lists rather than a list of <see cref="AreaRequirement"/> so that
+    /// <see cref="DrawAreaEditor"/>, <see cref="AddAreaAtPlayer"/>, <see cref="DraftAreas"/> and the
+    /// in-world overlay all keep working on <c>_areas</c> unchanged. The two are kept the same
+    /// length by <see cref="SyncConditionSlots"/>, which runs at the top of the composite editor —
+    /// so a missed add site self-heals on the next frame instead of throwing.</para>
+    /// </summary>
+    private readonly List<List<ChallengeCondition>> _conditions = new();
+
+    /// <summary>Per-area step budget, parallel to <see cref="_areas"/>. InOrder mode only.</summary>
+    private readonly List<int> _within = new();
+
+    /// <summary>
+    /// Filter text and cached results for the pickers inside condition editors, keyed by a string
+    /// built from the area and condition index. The shared <see cref="DrawFilteredPicker"/> takes
+    /// <c>ref</c> fields, which cannot work for a list whose length changes at runtime.
+    /// </summary>
+    private readonly Dictionary<string, string> _condFilter = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (string Key, List<(uint Id, string Name)> List)> _condCache =
+        new(StringComparer.Ordinal);
+
     private const string NewCategorySentinel = "＋ New category…";
 
     // ── Existing tab: search + collapse state ────────────────────────────────
@@ -248,23 +276,48 @@ internal sealed class ChallengeCreatorWindow
                 ImGui.Checkbox("Whole zone (no area needed)", ref _wholeZone);
                 if (!_wholeZone) DrawAreaList(multiple: true);
                 break;
+
+            case ChallengeKind.InArea:
+                DrawCompositeSection();
+                break;
         }
 
         ImGui.Separator();
         DrawAddButton();
     }
 
+    /// <summary>
+    /// What the kind picker offers.
+    ///
+    /// <para><b>Only the composite kind is here.</b> Kinds 1–6 still evaluate, and every challenge
+    /// already authored as one keeps working forever, but nothing new is authored that way —
+    /// everything they could express is a condition on an area now, and several of them
+    /// (emote + target, gear per stop) could not be expressed at all. Existing challenges of the
+    /// legacy kinds still load into the editor and still show their own sections; see
+    /// <see cref="LegacyKinds"/>.</para>
+    /// </summary>
     private static readonly (ChallengeKind Kind, string Label, string Blurb)[] Kinds =
     {
-        (ChallengeKind.VisitAreas,        "Visit all areas (any order)",
+        (ChallengeKind.InArea, "In area — conditions per place",
+            "One or more areas, each with its own conditions: emote, mount, minion, outfit, gear "
+          + "pieces, target, job, time of day, carried item, game state. This is the kind to use."),
+    };
+
+    /// <summary>
+    /// Retired kinds, shown only when an existing challenge of that kind is loaded for editing so
+    /// the picker can display its name instead of "?".
+    /// </summary>
+    private static readonly (ChallengeKind Kind, string Label, string Blurb)[] LegacyKinds =
+    {
+        (ChallengeKind.VisitAreas,        "Visit all areas (any order) [legacy]",
             "Enter every area at least once within one login session."),
-        (ChallengeKind.VisitAreasInOrder, "Visit all areas (in order)",
+        (ChallengeKind.VisitAreasInOrder, "Visit all areas (in order) [legacy]",
             "Enter the areas in the listed order. Entering a later one early does nothing."),
-        (ChallengeKind.EmoteAtArea,       "Emote at a location",
+        (ChallengeKind.EmoteAtArea,       "Emote at a location [legacy]",
             "Perform a chosen emote inside the area. Optionally while facing a captured direction."),
-        (ChallengeKind.MountInArea,       "Specific mount in an area",
+        (ChallengeKind.MountInArea,       "Specific mount in an area [legacy]",
             "Be riding a chosen mount while inside the area."),
-        (ChallengeKind.GearInArea,        "Outfit / gear in a zone or area",
+        (ChallengeKind.GearInArea,        "Outfit / gear in a zone or area [legacy]",
             "Wear a complete Glamour Dresser outfit, or one specific item, in a zone or area."),
     };
 
@@ -274,8 +327,13 @@ internal sealed class ChallengeCreatorWindow
 
         string current = "?";
         string blurb   = string.Empty;
+        bool   legacy  = false;
+
         foreach (var (k, label, b) in Kinds)
             if (k == _kind) { current = label; blurb = b; }
+
+        foreach (var (k, label, b) in LegacyKinds)
+            if (k == _kind) { current = label; blurb = b; legacy = true; }
 
         ImGui.SetNextItemWidth(-1);
         if (ImGui.BeginCombo("##tc_kind", current))
@@ -285,10 +343,32 @@ internal sealed class ChallengeCreatorWindow
                 if (ImGui.Selectable(label, k == _kind)) _kind = k;
                 if (ImGui.IsItemHovered()) ImGui.SetTooltip(b);
             }
+
+            // A legacy challenge being edited keeps its own kind selectable, so an edit does not
+            // silently convert it. Converting would raise its version floor and drop it out of the
+            // list for every player still on an older build — see ChallengeKind.InArea.
+            if (legacy)
+            {
+                ImGui.Separator();
+                foreach (var (k, label, b) in LegacyKinds)
+                {
+                    if (k != _kind) continue;
+                    if (ImGui.Selectable(label, true)) _kind = k;
+                    if (ImGui.IsItemHovered()) ImGui.SetTooltip(b);
+                }
+            }
+
             ImGui.EndCombo();
         }
 
         ImGui.TextDisabled(blurb);
+
+        if (legacy)
+        {
+            ImGui.TextColored(Warn,
+                "This is a retired type. It still works and will keep working — but switching it to "
+              + "\"In area\" republishes it as a newer challenge that older plugins cannot load.");
+        }
     }
 
     private void DrawIdentity()
@@ -430,6 +510,583 @@ internal sealed class ChallengeCreatorWindow
 
         if (removeAt >= 0) _areas.RemoveAt(removeAt);
     }
+
+    // ── Composite (InArea) editor ────────────────────────────────────────────
+
+    /// <summary>
+    /// Keep the per-area condition and timing lists the same length as <see cref="_areas"/>.
+    /// Called at the top of the composite editor so a drift is corrected before anything indexes
+    /// into them — cheaper than trusting every add/remove site to stay in step forever.
+    /// </summary>
+    private void SyncConditionSlots()
+    {
+        while (_conditions.Count < _areas.Count) _conditions.Add(new List<ChallengeCondition>());
+        while (_conditions.Count > _areas.Count) _conditions.RemoveAt(_conditions.Count - 1);
+
+        while (_within.Count < _areas.Count) _within.Add(0);
+        while (_within.Count > _areas.Count) _within.RemoveAt(_within.Count - 1);
+    }
+
+    private static readonly (AreaMode Mode, string Label, string Blurb)[] Modes =
+    {
+        (AreaMode.Single,   "Single area",
+            "One place, one set of conditions."),
+        (AreaMode.AnyOrder, "Multiple areas — any order",
+            "Every area must be satisfied at least once, in whatever order, within one login session."),
+        (AreaMode.InOrder,  "Multiple areas — in order",
+            "Areas must be satisfied in the listed order. A later one reached early does nothing. "
+          + "Each step after the first can carry its own time limit."),
+    };
+
+    private void DrawCompositeSection()
+    {
+        SyncConditionSlots();
+
+        ImGui.TextUnformatted("How many places?");
+
+        string current = "?", blurb = string.Empty;
+        foreach (var (m, label, b) in Modes)
+            if (m == _mode) { current = label; blurb = b; }
+
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.BeginCombo("##tc_mode", current))
+        {
+            foreach (var (m, label, b) in Modes)
+            {
+                if (ImGui.Selectable(label, m == _mode)) _mode = m;
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip(b);
+            }
+            ImGui.EndCombo();
+        }
+        if (!string.IsNullOrEmpty(blurb)) ImGui.TextDisabled(blurb);
+
+        // Switching back to Single with several areas already placed would silently orphan
+        // everything past the first — say so rather than dropping them at save time.
+        if (_mode == AreaMode.Single && _areas.Count > 1)
+        {
+            ImGui.TextColored(Warn,
+                $"Single mode uses one area, but {_areas.Count} are placed. "
+              + "Delete the extras or switch to a multiple mode.");
+        }
+
+        ImGui.Separator();
+        DrawRequirementList();
+    }
+
+    /// <summary>
+    /// The area list, with each area's condition set nested inside it. Deliberately a near-twin of
+    /// <see cref="DrawAreaList"/> rather than a parameterised version of it: that method serves the
+    /// five legacy kinds and is not worth destabilising for a kind with a different shape.
+    /// </summary>
+    private void DrawRequirementList()
+    {
+        ImGui.Checkbox("Draw volumes in world", ref Overlay.Enabled);
+        ImGui.SameLine();
+        ImGui.Checkbox("Also show saved challenges here", ref Overlay.ShowSaved);
+
+        bool canAdd = _mode != AreaMode.Single || _areas.Count == 0;
+        if (!canAdd) ImGui.BeginDisabled();
+        if (ImGui.Button("＋ Add area at my position", new Vector2(210, 26)))
+        {
+            AddAreaAtPlayer();
+            SyncConditionSlots();
+        }
+        if (!canAdd) ImGui.EndDisabled();
+
+        if (_areas.Count == 0)
+        {
+            ImGui.TextDisabled("No areas yet. Stand where you want the trigger and press the button.");
+            return;
+        }
+
+        var lp = Plugin.ObjectTable.LocalPlayer;
+        Vector3? playerPos = lp?.Position;
+
+        int removeAt = -1;
+        for (int i = 0; i < _areas.Count; i++)
+        {
+            ImGui.PushID(i);
+            var a = _areas[i];
+            var conds = _conditions[i];
+
+            string summary = conds.Count == 0
+                ? "just be here"
+                : $"{conds.Count} condition{(conds.Count == 1 ? "" : "s")}";
+
+            if (ImGui.CollapsingHeader($"{i + 1}. {a.Name} — {summary}###area{i}",
+                                       ImGuiTreeNodeFlags.DefaultOpen))
+            {
+                SelectedAreaIndex = i;   // highlighted in the world overlay
+
+                DrawAreaEditor(a, playerPos);
+
+                // Step budget — the "within X seconds of Y" relation. Only offered where it has a
+                // meaning: the first step has no previous step to be measured from.
+                if (_mode == AreaMode.InOrder && i > 0)
+                {
+                    ImGui.Separator();
+                    int secs = _within[i];
+                    ImGui.SetNextItemWidth(160);
+                    if (ImGui.DragInt("Seconds allowed since the previous area##within", ref secs, 1f, 0, 3600))
+                        _within[i] = Math.Max(0, secs);
+
+                    ImGui.TextDisabled(_within[i] == 0
+                        ? "0 = untimed."
+                        : $"Miss it by more than {_within[i]}s and the whole sequence restarts.");
+                }
+
+                ImGui.Separator();
+                DrawConditionList(i, conds);
+
+                ImGui.Separator();
+                if (ImGui.Button("Delete area", new Vector2(110, 22))) removeAt = i;
+            }
+
+            ImGui.PopID();
+        }
+
+        if (removeAt >= 0)
+        {
+            _areas.RemoveAt(removeAt);
+            _conditions.RemoveAt(removeAt);
+            _within.RemoveAt(removeAt);
+        }
+    }
+
+    /// <summary>Every condition attached to one area, plus the add button.</summary>
+    private void DrawConditionList(int areaIndex, List<ChallengeCondition> conds)
+    {
+        ImGui.TextUnformatted("Conditions while inside this area");
+        ImGui.TextDisabled("All of them must hold at the same time. No conditions = just be here.");
+
+        if (ImGui.Button("＋ Add condition", new Vector2(150, 24)))
+            conds.Add(new ChallengeCondition { Type = ConditionType.Emote });
+
+        int removeAt = -1;
+        for (int c = 0; c < conds.Count; c++)
+        {
+            ImGui.PushID(1000 + c);
+            var cond = conds[c];
+
+            // Indent + separator rather than a child window: this binding has no AutoResizeY, and a
+            // fixed-height child would either clip the taller editors (gear pieces) or leave a
+            // wasteland under the short ones.
+            ImGui.Separator();
+            ImGui.Indent(12f);
+            {
+                ImGui.SetNextItemWidth(220);
+                if (ImGui.BeginCombo("##ctype", ConditionLabel(cond.Type)))
+                {
+                    foreach (ConditionType t in Enum.GetValues<ConditionType>())
+                    {
+                        if (ImGui.Selectable(ConditionLabel(t), t == cond.Type))
+                        {
+                            cond.Type = t;
+                            SeedCondition(cond);
+                        }
+                    }
+                    ImGui.EndCombo();
+                }
+
+                if (cond.Type != ConditionType.Presence)
+                {
+                    ImGui.SameLine();
+                    bool neg = cond.Negate;
+                    if (ImGui.Checkbox("NOT##neg", ref neg)) cond.Negate = neg;
+                    if (ImGui.IsItemHovered())
+                        ImGui.SetTooltip("Invert this condition — e.g. \"while NOT mounted\".");
+                }
+
+                ImGui.SameLine();
+                if (ImGui.Button("Remove##cond", new Vector2(80, 22))) removeAt = c;
+
+                DrawConditionFields(areaIndex, c, cond);
+
+                // Live truth. The single most useful thing an authoring tool can show — placing a
+                // condition is guesswork otherwise, exactly like the area containment readout.
+                if (cond.IsWellFormed() && Plugin.ClientState.IsLoggedIn)
+                {
+                    bool now = ConditionEvaluator.HoldsNow(cond);
+                    ImGui.TextColored(now ? Good : Warn,
+                                      now ? "TRUE right now" : "false right now");
+                }
+                else if (!cond.IsWellFormed())
+                {
+                    ImGui.TextColored(Warn, "Incomplete — this condition needs a value.");
+                }
+            }
+            ImGui.Unindent(12f);
+
+            ImGui.PopID();
+        }
+
+        if (removeAt >= 0) conds.RemoveAt(removeAt);
+
+        // A set that is nothing but modifiers can never stand up on its own — see
+        // ChallengeCondition.IsWellFormed for why facing alone is not a requirement.
+        if (conds.Count > 0)
+        {
+            bool anyReal = false;
+            foreach (var c2 in conds) if (c2.Type != ConditionType.Facing) anyReal = true;
+            if (!anyReal)
+                ImGui.TextColored(Warn,
+                    "Facing on its own cannot complete a challenge — add something for it to qualify.");
+        }
+    }
+
+    /// <summary>Fresh defaults when the author switches a condition to a different type.</summary>
+    private static void SeedCondition(ChallengeCondition c)
+    {
+        switch (c.Type)
+        {
+            case ConditionType.Facing:
+                var lp = Plugin.ObjectTable.LocalPlayer;
+                if (lp != null) c.FacingRadians = lp.Rotation;
+                if (c.FacingToleranceDeg <= 0f) c.FacingToleranceDeg = 30f;
+                break;
+
+            case ConditionType.TimeOfDay:
+                if (c.StartHour == c.EndHour) { c.StartHour = 18; c.EndHour = 6; }
+                break;
+
+            case ConditionType.HasItem:
+                if (c.ItemCount <= 0) c.ItemCount = 1;
+                break;
+        }
+    }
+
+    private void DrawConditionFields(int areaIndex, int condIndex, ChallengeCondition c)
+    {
+        string key = $"{areaIndex}_{condIndex}";
+
+        switch (c.Type)
+        {
+            case ConditionType.Presence:
+                ImGui.TextDisabled("Nothing to configure — the area itself is the condition.");
+                break;
+
+            case ConditionType.Emote:
+                ImGui.TextUnformatted(c.EmoteId == 0 ? "(no emote chosen)" : $"{c.EmoteName} (#{c.EmoteId})");
+                if (ImGui.Button("Use my current emote", new Vector2(180, 22)))
+                {
+                    uint id = PlayerStateReader.CurrentEmoteId();
+                    if (id != 0) { c.EmoteId = id; c.EmoteName = PlayerStateReader.EmoteName(id); }
+                    else _feedback = "No emote is running right now.";
+                }
+                DrawCondPicker(key, PlayerStateReader.AllEmotes,
+                               (id, n) => { c.EmoteId = id; c.EmoteName = n; });
+                break;
+
+            case ConditionType.Mount:
+                ImGui.TextUnformatted(c.MountId == 0 ? "(no mount chosen)" : $"{c.MountName} (#{c.MountId})");
+                if (ImGui.Button("Use my current mount", new Vector2(180, 22)))
+                {
+                    uint id = PlayerStateReader.CurrentMountId();
+                    if (id != 0) { c.MountId = id; c.MountName = PlayerStateReader.MountName(id); }
+                    else _feedback = "You are not mounted.";
+                }
+                DrawCondPicker(key, PlayerStateReader.AllMounts,
+                               (id, n) => { c.MountId = id; c.MountName = n; });
+                break;
+
+            case ConditionType.Minion:
+                ImGui.TextUnformatted(c.MinionId == 0 ? "(no minion chosen)" : $"{c.MinionName} (#{c.MinionId})");
+                if (ImGui.Button("Use my current minion", new Vector2(180, 22)))
+                {
+                    uint id = PlayerStateReader.CurrentMinionId();
+                    if (id != 0) { c.MinionId = id; c.MinionName = PlayerStateReader.MinionName(id); }
+                    else _feedback = "You have no minion out.";
+                }
+                DrawCondPicker(key, PlayerStateReader.AllMinions,
+                               (id, n) => { c.MinionId = id; c.MinionName = n; });
+                break;
+
+            case ConditionType.FullOutfit:
+                ImGui.TextUnformatted(c.OutfitSetId == 0 ? "(no outfit chosen)" : $"{c.OutfitName} (#{c.OutfitSetId})");
+                DrawCondPicker(key, PlayerStateReader.AllOutfits,
+                               (id, n) => { c.OutfitSetId = id; c.OutfitName = n; });
+                break;
+
+            case ConditionType.GearPieces:
+                DrawGearPieces(key, c);
+                break;
+
+            case ConditionType.Target:
+                ImGui.TextUnformatted(c.TargetDataId == 0
+                    ? "(no target chosen)"
+                    : $"{c.TargetName} (#{c.TargetDataId})");
+                if (ImGui.Button("Use my current target", new Vector2(180, 22)))
+                {
+                    uint id = PlayerStateReader.CurrentTargetDataId();
+                    if (id != 0)
+                    {
+                        c.TargetDataId = id;
+                        c.TargetName   = PlayerStateReader.CurrentTargetName();
+                    }
+                    else _feedback = "You are not targeting anything.";
+                }
+                ImGui.TextDisabled("Stored by NPC identity, so it matches that NPC anywhere it appears.");
+                break;
+
+            case ConditionType.Facing:
+            {
+                if (ImGui.Button("Capture my facing", new Vector2(150, 22)))
+                {
+                    var lp = Plugin.ObjectTable.LocalPlayer;
+                    if (lp != null) c.FacingRadians = lp.Rotation;
+                }
+                ImGui.SameLine();
+                ImGui.TextUnformatted($"{Facing.ToDegrees(c.FacingRadians):0.#}°");
+
+                float tol = c.FacingToleranceDeg;
+                ImGui.SetNextItemWidth(200);
+                if (ImGui.DragFloat("Tolerance (± deg)##ftol", ref tol, 1f, 1f, 180f))
+                    c.FacingToleranceDeg = tol;
+
+                ImGui.TextDisabled("A modifier — it qualifies the other conditions on this area.");
+                break;
+            }
+
+            case ConditionType.GameState:
+            {
+                ImGui.SetNextItemWidth(220);
+                if (ImGui.BeginCombo("##gs", ChallengeCondition.FlagLabel(c.Flag)))
+                {
+                    foreach (GameStateFlag f in Enum.GetValues<GameStateFlag>())
+                        if (ImGui.Selectable(ChallengeCondition.FlagLabel(f), f == c.Flag)) c.Flag = f;
+                    ImGui.EndCombo();
+                }
+                break;
+            }
+
+            case ConditionType.Job:
+            {
+                ImGui.TextUnformatted(c.JobId == 0 ? "(no job chosen)" : $"{c.JobName} (#{c.JobId})");
+                if (ImGui.Button("Use my current job", new Vector2(160, 22)))
+                {
+                    uint id = PlayerStateReader.CurrentJobId();
+                    if (id != 0) { c.JobId = id; c.JobName = PlayerStateReader.JobName(id); }
+                }
+
+                int lvl = c.MaxLevel;
+                ImGui.SetNextItemWidth(160);
+                if (ImGui.DragInt("Level ceiling (0 = any)##jl", ref lvl, 1f, 0, 100))
+                    c.MaxLevel = Math.Clamp(lvl, 0, 100);
+
+                DrawCondPicker(key, PlayerStateReader.AllJobs,
+                               (id, n) => { c.JobId = id; c.JobName = n; });
+                break;
+            }
+
+            case ConditionType.TimeOfDay:
+            {
+                int s = c.StartHour, e = c.EndHour;
+                ImGui.SetNextItemWidth(120);
+                if (ImGui.DragInt("From (Eorzean hour)##ts", ref s, 0.2f, 0, 23)) c.StartHour = Math.Clamp(s, 0, 23);
+                ImGui.SetNextItemWidth(120);
+                if (ImGui.DragInt("To (exclusive)##te", ref e, 0.2f, 0, 24)) c.EndHour = Math.Clamp(e, 0, 24);
+
+                ImGui.TextDisabled($"Wraps past midnight. It is {PlayerStateReader.DescribeEorzeaTime()} now.");
+                break;
+            }
+
+            case ConditionType.HasItem:
+            {
+                ImGui.TextUnformatted(c.ItemId == 0 ? "(no item chosen)" : $"{c.ItemName} (#{c.ItemId})");
+
+                int n2 = c.ItemCount;
+                ImGui.SetNextItemWidth(120);
+                if (ImGui.DragInt("How many##hic", ref n2, 0.2f, 1, 999)) c.ItemCount = Math.Max(1, n2);
+
+                if (c.ItemId != 0)
+                    ImGui.TextDisabled($"You are carrying {Plugin.Inventory.Count(c.ItemId)}.");
+
+                DrawItemSearch(key, (id, n) => { c.ItemId = id; c.ItemName = n; });
+                break;
+            }
+        }
+    }
+
+    private void DrawGearPieces(string key, ChallengeCondition c)
+    {
+        c.Pieces ??= new List<GearPiece>();
+
+        ImGui.TextDisabled("Glamour counts — this matches what the player is SEEN wearing.");
+
+        if (ImGui.Button("＋ Add slot", new Vector2(110, 22)))
+            c.Pieces.Add(new GearPiece());
+
+        ImGui.SameLine();
+        if (ImGui.Button("＋ Add everything I'm wearing", new Vector2(220, 22)))
+        {
+            var eq = PlayerStateReader.ReadEquipment();
+            for (int i = 0; i < eq.Length; i++)
+            {
+                uint vis = eq[i].VisibleId;
+                if (vis == 0) continue;
+                c.Pieces.Add(new GearPiece
+                {
+                    Slot = i, ItemId = vis, ItemName = PlayerStateReader.ItemName(vis),
+                });
+            }
+        }
+
+        int removeAt = -1;
+        for (int p = 0; p < c.Pieces.Count; p++)
+        {
+            ImGui.PushID(2000 + p);
+            var piece = c.Pieces[p];
+
+            int slot = Math.Clamp(piece.Slot, 0, PlayerStateReader.SlotNames.Length - 1);
+            ImGui.SetNextItemWidth(140);
+            if (ImGui.BeginCombo("##slot", PlayerStateReader.SlotNames[slot]))
+            {
+                for (int s = 0; s < PlayerStateReader.SlotNames.Length; s++)
+                    if (ImGui.Selectable(PlayerStateReader.SlotNames[s], s == slot)) piece.Slot = s;
+                ImGui.EndCombo();
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Use what I'm wearing here", new Vector2(200, 22)))
+            {
+                var eq = PlayerStateReader.ReadEquipment();
+                if (piece.Slot < eq.Length && eq[piece.Slot].VisibleId != 0)
+                {
+                    piece.ItemId   = eq[piece.Slot].VisibleId;
+                    piece.ItemName = PlayerStateReader.ItemName(piece.ItemId);
+                }
+                else _feedback = "Nothing equipped in that slot.";
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Remove##piece", new Vector2(80, 22))) removeAt = p;
+
+            ImGui.TextUnformatted(piece.ItemId == 0
+                ? "   (no item chosen)"
+                : $"   {piece.ItemName} (#{piece.ItemId})");
+
+            DrawItemSearch($"{key}_p{p}", (id, n) => { piece.ItemId = id; piece.ItemName = n; });
+
+            ImGui.PopID();
+        }
+
+        if (removeAt >= 0) c.Pieces.RemoveAt(removeAt);
+
+        if (c.Pieces.Count > 1)
+        {
+            int need = c.RequiredCount;
+            ImGui.SetNextItemWidth(160);
+            if (ImGui.DragInt("How many must match (0 = all)##req", ref need, 0.2f, 0, c.Pieces.Count))
+                c.RequiredCount = Math.Clamp(need, 0, c.Pieces.Count);
+
+            ImGui.TextDisabled($"Requires {c.EffectiveRequiredCount} of {c.Pieces.Count}.");
+        }
+    }
+
+    /// <summary>
+    /// Filter + result list for a condition's picker. Same idea as
+    /// <see cref="DrawFilteredPicker"/>, but keyed by string because a condition's position is not
+    /// a field that can be passed by reference.
+    /// </summary>
+    private void DrawCondPicker(string key, Func<List<(uint Id, string Name)>> source,
+                                Action<uint, string> onPick)
+    {
+        string filter = _condFilter.TryGetValue(key, out var f) ? f : string.Empty;
+
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.InputTextWithHint($"##filter_{key}", "type to filter…", ref filter, 64))
+            _condFilter[key] = filter;
+
+        if (!_condCache.TryGetValue(key, out var cached)
+            || !string.Equals(cached.Key, filter, StringComparison.Ordinal))
+        {
+            var all = source();
+            List<(uint Id, string Name)> shown;
+
+            if (string.IsNullOrWhiteSpace(filter))
+            {
+                shown = all;
+            }
+            else
+            {
+                shown = new List<(uint, string)>();
+                foreach (var e in all)
+                    if (e.Name.Contains(filter, StringComparison.OrdinalIgnoreCase)) shown.Add(e);
+            }
+
+            cached = (filter, shown);
+            _condCache[key] = cached;
+        }
+
+        if (ImGui.BeginChild($"##list_{key}", new Vector2(0, 130), true))
+        {
+            int count = 0;
+            foreach (var (id, name) in cached.List)
+            {
+                if (count++ > 300)
+                {
+                    ImGui.TextDisabled($"… {cached.List.Count - 300} more, narrow the filter");
+                    break;
+                }
+                if (ImGui.Selectable($"{name}##{key}_{id}")) onPick(id, name);
+            }
+        }
+        ImGui.EndChild();
+    }
+
+    /// <summary>
+    /// Item picker. Separate from <see cref="DrawCondPicker"/> because the Item sheet is far too
+    /// large to materialise — see <c>PlayerStateReader.SearchItems</c>. An empty query shows
+    /// nothing rather than 45,000 rows.
+    /// </summary>
+    private void DrawItemSearch(string key, Action<uint, string> onPick)
+    {
+        string filter = _condFilter.TryGetValue(key, out var f) ? f : string.Empty;
+
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.InputTextWithHint($"##isearch_{key}", "search items…", ref filter, 64))
+            _condFilter[key] = filter;
+
+        if (!_condCache.TryGetValue(key, out var cached)
+            || !string.Equals(cached.Key, filter, StringComparison.Ordinal))
+        {
+            cached = (filter, PlayerStateReader.SearchItems(filter));
+            _condCache[key] = cached;
+        }
+
+        if (cached.List.Count == 0)
+        {
+            if (!string.IsNullOrWhiteSpace(filter)) ImGui.TextDisabled("No matches.");
+            return;
+        }
+
+        if (ImGui.BeginChild($"##ilist_{key}", new Vector2(0, 130), true))
+        {
+            foreach (var (id, name) in cached.List)
+                if (ImGui.Selectable($"{name}##{key}_{id}")) onPick(id, name);
+        }
+        ImGui.EndChild();
+    }
+
+    private static string ConditionLabel(ConditionType t) => t switch
+    {
+        ConditionType.Presence   => "Just be here",
+        ConditionType.Emote      => "Performing an emote",
+        ConditionType.Mount      => "Riding a mount",
+        ConditionType.Minion     => "Minion summoned",
+        ConditionType.FullOutfit => "Wearing a full outfit",
+        ConditionType.GearPieces => "Wearing specific gear piece(s)",
+        ConditionType.Target     => "Targeting an NPC",
+        ConditionType.Facing     => "Facing a direction",
+        ConditionType.GameState  => "Game state (mounted, swimming…)",
+        ConditionType.Job        => "Playing a job",
+        ConditionType.TimeOfDay  => "Eorzean time of day",
+        ConditionType.HasItem    => "Carrying an item",
+        _                        => t.ToString(),
+    };
+
+    private static readonly Vector4 Good = new(0.50f, 0.84f, 0.66f, 1f);
+    private static readonly Vector4 Warn = new(0.85f, 0.60f, 0.35f, 1f);
 
     /// <summary>Zone the draft is bound to, with an explicit re-capture rather than an implicit one.</summary>
     private void DrawZoneRow()
@@ -825,9 +1482,36 @@ internal sealed class ChallengeCreatorWindow
             GearItemName  = _gearItemName,
             WholeZone     = _wholeZone,
             ShowProgress  = _showProgress,
+            Mode          = _mode,
         };
 
         foreach (var a in _areas) draft.Areas.Add(a.Clone());
+
+        // Composite stops are assembled from the parallel draft lists. Deep-copied for the same
+        // reason LoadDraft deep-copies areas: the draft must stay independent of what is stored,
+        // or every keystroke would edit the saved challenge live with no way to cancel.
+        if (_kind == ChallengeKind.InArea)
+        {
+            SyncConditionSlots();
+
+            for (int i = 0; i < _areas.Count; i++)
+            {
+                var req = new AreaRequirement
+                {
+                    Area          = _areas[i].Clone(),
+                    Label         = _areas[i].Name,
+                    WithinSeconds = _mode == AreaMode.InOrder ? _within[i] : 0,
+                };
+
+                foreach (var c in _conditions[i]) req.Conditions.Add(c.Clone());
+                draft.Requirements.Add(req);
+
+                // Single means exactly one stop; anything further would be saved and never
+                // evaluated, so stop rather than write a challenge that lies about itself.
+                if (_mode == AreaMode.Single) break;
+            }
+        }
+
         return draft;
     }
 
@@ -841,8 +1525,32 @@ internal sealed class ChallengeCreatorWindow
                                          : d.GearMode == GearRequirement.FullOutfit && d.OutfitSetId == 0 ? "Choose an outfit."
                                          : d.GearMode == GearRequirement.SingleItem && d.GearItemId == 0 ? "Choose an item."
                                          : "Add an area, or tick Whole zone.",
+        ChallengeKind.InArea            => WhyCompositeIncomplete(d),
         _                               => "Incomplete.",
     };
+
+    private static string WhyCompositeIncomplete(CustomChallenge d)
+    {
+        if (d.TerritoryId == 0)          return "Log in so the zone can be captured.";
+        if (d.Requirements.Count == 0)   return "Add at least one area.";
+
+        if (d.Mode == AreaMode.Single && d.Requirements.Count != 1)
+            return "Single mode allows exactly one area — delete the extras or switch mode.";
+
+        for (int i = 0; i < d.Requirements.Count; i++)
+        {
+            var r = d.Requirements[i];
+            if (r.IsWellFormed()) continue;
+
+            foreach (var c in r.Conditions)
+                if (!c.IsWellFormed())
+                    return $"Area {i + 1}: \"{ConditionLabel(c.Type)}\" still needs a value.";
+
+            return $"Area {i + 1}: facing on its own cannot complete a challenge.";
+        }
+
+        return "Incomplete.";
+    }
 
     /// <summary>Load an existing challenge into the draft for in-place editing.</summary>
     private void LoadDraft(CustomChallenge c)
@@ -865,7 +1573,34 @@ internal sealed class ChallengeCreatorWindow
         // Deep-copy the areas so editing is cancellable — mutating the stored objects directly
         // would apply every drag of a slider immediately, with no way back.
         _areas.Clear();
-        foreach (var a in c.Areas) _areas.Add(a.Clone());
+        _conditions.Clear();
+        _within.Clear();
+
+        _mode = c.Mode;
+
+        if (c.Kind == ChallengeKind.InArea)
+        {
+            // Composite challenges keep their areas in Requirements, so unpack them back into the
+            // parallel draft lists the editor works on. Same deep-copy rule for the conditions.
+            foreach (var r in c.Requirements ?? new List<AreaRequirement>())
+            {
+                var area = r.Area?.Clone() ?? new ChallengeArea();
+                if (!string.IsNullOrWhiteSpace(r.Label)) area.Name = r.Label;
+                _areas.Add(area);
+
+                var conds = new List<ChallengeCondition>();
+                foreach (var cd in r.Conditions ?? new List<ChallengeCondition>()) conds.Add(cd.Clone());
+                _conditions.Add(conds);
+
+                _within.Add(r.WithinSeconds);
+            }
+        }
+        else
+        {
+            foreach (var a in c.Areas) _areas.Add(a.Clone());
+        }
+
+        SyncConditionSlots();
 
         _emoteId         = c.EmoteId;
         _emoteName       = c.EmoteName ?? string.Empty;
@@ -895,6 +1630,11 @@ internal sealed class ChallengeCreatorWindow
         _hint   = string.Empty;
         _difficulty = 0;
         _areas.Clear();
+        _conditions.Clear();
+        _within.Clear();
+        _condFilter.Clear();
+        _condCache.Clear();
+        _mode = AreaMode.Single;
         _emoteId = 0; _emoteName = string.Empty;
         _mountId = 0; _mountName = string.Empty;
         _outfitId = 0; _outfitName = string.Empty;
@@ -1062,8 +1802,31 @@ internal sealed class ChallengeCreatorWindow
         if (missingDetails) MissingLabel("Missing details");
 
         ImGui.TextDisabled($"{KindLabel(c.Kind)} · {c.TerritoryName} · "
-                         + $"#{c.SortOrder} · {c.Areas.Count} area(s) · "
+                         + $"#{c.SortOrder} · {c.StopCount} area(s) · "
                          + $"{(_store.IsComplete(c.Id) ? "COMPLETE" : "incomplete")}");
+
+        // Composite challenges carry their meaning in the conditions, not in the kind label, so
+        // spell the stops out — otherwise the list says "In area" for every one of them and there
+        // is no way to tell two apart without opening the editor.
+        if (c.Kind == ChallengeKind.InArea && c.Requirements is { Count: > 0 })
+        {
+            string modeLabel = c.Mode switch
+            {
+                AreaMode.AnyOrder => "any order",
+                AreaMode.InOrder  => "in order",
+                _                 => "single",
+            };
+            ImGui.TextDisabled($"mode: {modeLabel}");
+
+            for (int i = 0; i < c.Requirements.Count; i++)
+            {
+                var r = c.Requirements[i];
+                string timing = c.Mode == AreaMode.InOrder && r.WithinSeconds > 0
+                    ? $"  (within {r.WithinSeconds}s)"
+                    : string.Empty;
+                ImGui.TextDisabled($"   {i + 1}. {r.Describe()}{timing}");
+            }
+        }
 
         // Spelled out here rather than left to the pips alone: difficulty is optional, so
         // "not set" is a real authoring state worth naming while editing.
@@ -1538,6 +2301,7 @@ internal sealed class ChallengeCreatorWindow
         ChallengeKind.EmoteAtArea       => "Emote at location",
         ChallengeKind.MountInArea       => "Mount in area",
         ChallengeKind.GearInArea        => "Outfit / gear",
+        ChallengeKind.InArea            => "In area",
         _                               => kind.ToString(),
     };
 }

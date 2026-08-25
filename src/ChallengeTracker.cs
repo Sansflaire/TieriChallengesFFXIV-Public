@@ -96,6 +96,19 @@ internal sealed class ChallengeTracker : IDisposable
     private readonly Dictionary<string, HashSet<int>> _visited = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int>          _sequence = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// When the last ordered step of a composite challenge was satisfied, per challenge id, as a
+    /// <see cref="Environment.TickCount64"/> stamp. Only consulted by stops that declare a
+    /// <see cref="AreaRequirement.WithinSeconds"/> budget; session-scoped like everything else here.
+    /// </summary>
+    private readonly Dictionary<string, long> _stepStamp = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Shared per-tick player state. One instance, reused, so twelve challenges asking the same
+    /// question produce one read — see <see cref="TickState"/>.
+    /// </summary>
+    private readonly TickState _tick = new();
+
     public ChallengeTracker(Configuration config, CompletionStore store, Action save)
     {
         _config = config;
@@ -130,6 +143,17 @@ internal sealed class ChallengeTracker : IDisposable
             case ChallengeKind.VisitAreasInOrder:
                 total = ch.Areas.Count;
                 done  = _sequence.TryGetValue(ch.Id, out var idx) ? idx : 0;
+                return total > 0;
+
+            case ChallengeKind.InArea:
+                // Single is one condition set — "1/1" is noise, so it reports no progress at all,
+                // exactly like the other single-condition kinds.
+                if (!ChallengeCatalog.HasStepProgress(ch)) return false;
+
+                total = ch.StopCount;
+                done  = ch.Mode == AreaMode.InOrder
+                    ? (_sequence.TryGetValue(ch.Id, out var cidx) ? cidx : 0)
+                    : (_visited.TryGetValue(ch.Id, out var cset) ? cset.Count : 0);
                 return total > 0;
 
             default:
@@ -205,7 +229,12 @@ internal sealed class ChallengeTracker : IDisposable
     {
         _visited.Clear();
         _sequence.Clear();
+        _stepStamp.Clear();
         _lastPos = null;
+
+        // The inventory map describes the PREVIOUS character's bags; its change events only ever
+        // report deltas, so nothing else would ever correct it.
+        Plugin.Inventory.Invalidate();
     }
 
     /// <summary>
@@ -243,7 +272,11 @@ internal sealed class ChallengeTracker : IDisposable
         float   rotation = lp.Rotation;
 
         // Lazy expensive state — read at most once per tick, and only when a challenge that has
-        // already passed its position gate actually asks for it.
+        // already passed its position gate actually asks for it. The legacy kinds below use the
+        // three locals; the composite kind uses _tick, which generalises the same discipline to
+        // every condition type. Both are latched per tick, neither reads anything speculatively.
+        _tick.Begin(pos, rotation);
+
         EquippedSlot[]? equipment = null;
         uint emoteId = 0; bool emoteRead = false;
         uint mountId = 0; bool mountRead = false;
@@ -298,6 +331,10 @@ internal sealed class ChallengeTracker : IDisposable
                                  : WearsItem(equipment, ch.GearItemId);
                         }
                     }
+                    break;
+
+                case ChallengeKind.InArea:
+                    done = EvalComposite(ch, pos);
                     break;
 
                 default:
@@ -409,6 +446,119 @@ internal sealed class ChallengeTracker : IDisposable
     /// Announce partial progress. Never throws into the tick loop — a subscriber blowing up must
     /// not cost the player the progress that was just recorded.
     /// </summary>
+    // ── Composite (InArea) ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Evaluate a composite challenge: one or more stops, each an area plus the conditions that
+    /// must hold inside it.
+    ///
+    /// <para><b>Why a stop is tested at the point and not swept.</b> The plain visit kinds sweep the
+    /// movement since the last tick so a small volume cannot be run past. That is right for "did I
+    /// pass through here" and wrong for "was I here WHILE mounted on a Fat Chocobo" — a swept
+    /// sample says the player was at that coordinate 40 ms ago, but every condition is read as of
+    /// NOW, so a sweep hit would pair an old position with current state and could complete a
+    /// challenge for a spot the player was never actually standing in under those conditions.
+    ///
+    /// A presence-only stop has no such pairing to get wrong, so it keeps the sweep and stays as
+    /// forgiving as VisitAreas always was.</para>
+    /// </summary>
+    private bool EvalComposite(CustomChallenge ch, Vector3 pos)
+    {
+        var reqs = ch.Requirements;
+        if (reqs == null || reqs.Count == 0) return false;
+
+        return ch.Mode == AreaMode.InOrder
+            ? EvalCompositeOrdered(ch, reqs, pos)
+            : EvalCompositeAny(ch, reqs, pos);
+    }
+
+    /// <summary>True when the player is in this stop's area AND all its conditions hold.</summary>
+    private bool StopSatisfied(AreaRequirement req, Vector3 pos)
+    {
+        if (req?.Area == null) return false;
+
+        bool inside = req.Conditions == null || req.Conditions.Count == 0
+            ? PassedThrough(req.Area, _lastPos ?? pos, pos)   // presence-only: keep the sweep
+            : req.Area.Contains(pos);                          // conditional: must be here NOW
+
+        return inside && ConditionEvaluator.AllHold(req, _tick);
+    }
+
+    /// <summary>
+    /// <see cref="AreaMode.Single"/> and <see cref="AreaMode.AnyOrder"/>. Single is just the
+    /// one-element case of AnyOrder, so it needs no separate path — the set fills to 1 and the
+    /// challenge completes.
+    /// </summary>
+    private bool EvalCompositeAny(CustomChallenge ch, List<AreaRequirement> reqs, Vector3 pos)
+    {
+        if (!_visited.TryGetValue(ch.Id, out var set))
+        {
+            set = new HashSet<int>();
+            _visited[ch.Id] = set;
+        }
+
+        int before = set.Count;
+
+        for (int a = 0; a < reqs.Count; a++)
+        {
+            if (set.Contains(a)) continue;
+            if (StopSatisfied(reqs[a], pos)) set.Add(a);
+        }
+
+        bool complete = set.Count >= reqs.Count;
+
+        // Same rule as every other kind: the finishing step is announced by MarkComplete, so
+        // announcing it here too would double the sound and the popup. Single-stop challenges
+        // report no partial progress at all — there is none to report.
+        if (set.Count > before && !complete && ChallengeCatalog.HasStepProgress(ch))
+            RaiseProgress(ch, set.Count, reqs.Count);
+
+        return complete;
+    }
+
+    /// <summary>
+    /// <see cref="AreaMode.InOrder"/>. Only the NEXT stop is tested, which is what "in order"
+    /// means, and a stop may carry a <see cref="AreaRequirement.WithinSeconds"/> budget measured
+    /// from the moment the previous one was satisfied — the "within X seconds of Y" relation.
+    /// </summary>
+    private bool EvalCompositeOrdered(CustomChallenge ch, List<AreaRequirement> reqs, Vector3 pos)
+    {
+        int idx = _sequence.TryGetValue(ch.Id, out var v) ? v : 0;
+        if (idx >= reqs.Count) return true;
+
+        var next = reqs[idx];
+        if (!StopSatisfied(next, pos)) return false;
+
+        // Timed step: the clock runs from when the PREVIOUS stop landed. Blowing the budget resets
+        // the whole sequence rather than merely failing this step — a partially-run ordered
+        // challenge that stayed half-complete would let the player stroll the remainder untimed.
+        if (idx > 0 && next.WithinSeconds > 0)
+        {
+            long since = Environment.TickCount64 - (_stepStamp.TryGetValue(ch.Id, out var t) ? t : 0);
+            if (since > next.WithinSeconds * 1000L)
+            {
+                Plugin.Log.Debug(
+                    $"[Tracker] \"{ch.Title}\" step {idx + 1} missed its {next.WithinSeconds}s window "
+                  + $"({since / 1000f:0.#}s) — sequence reset.");
+
+                _sequence[ch.Id]  = 0;
+                _stepStamp.Remove(ch.Id);
+                return false;
+            }
+        }
+
+        idx++;
+        _sequence[ch.Id]  = idx;
+        _stepStamp[ch.Id] = Environment.TickCount64;
+
+        bool complete = idx >= reqs.Count;
+
+        if (!complete && ChallengeCatalog.HasStepProgress(ch))
+            RaiseProgress(ch, idx, reqs.Count);
+
+        return complete;
+    }
+
     private void RaiseProgress(CustomChallenge ch, int done, int total)
     {
         int number = ChallengeCatalog.DisplayNumber(_config, ch.Id);
@@ -461,6 +611,7 @@ internal sealed class ChallengeTracker : IDisposable
 
         _visited.Remove(ch.Id);
         _sequence.Remove(ch.Id);
+        _stepStamp.Remove(ch.Id);
 
         int number = ChallengeCatalog.DisplayNumber(_config, ch.Id);
         Plugin.Log.Information($"[Tracker] Challenge #{number} \"{ch.Title}\" auto-completed.");

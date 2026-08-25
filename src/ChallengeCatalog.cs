@@ -247,7 +247,16 @@ public static class ChallengeCatalog
     /// everything else is a single condition that is either met or not.
     /// </summary>
     public static bool HasStepProgress(ChallengeKind kind) =>
-        kind is ChallengeKind.VisitAreas or ChallengeKind.VisitAreasInOrder;
+        kind is ChallengeKind.VisitAreas or ChallengeKind.VisitAreasInOrder or ChallengeKind.InArea;
+
+    /// <summary>
+    /// Does this composite mode actually have several stops to count through? A
+    /// <see cref="AreaMode.Single"/> challenge is one condition set — "1/1" is noise, not progress.
+    /// </summary>
+    public static bool HasStepProgress(CustomChallenge c) =>
+        c.Kind == ChallengeKind.InArea
+            ? c.Mode != AreaMode.Single && c.StopCount > 1
+            : HasStepProgress(c.Kind);
 
     /// <summary>
     /// The plugin version a challenge genuinely REQUIRES, derived from its content.
@@ -276,6 +285,12 @@ public static class ChallengeCatalog
             or ChallengeKind.EmoteAtArea
             or ChallengeKind.MountInArea
             or ChallengeKind.GearInArea => new Version(0, 1, 0, 0),
+
+        // The composite kind. An older build has no evaluator for it, so a challenge authored as
+        // InArea must be withheld from that build rather than loaded and silently never fired.
+        // This is also why legacy challenges are NOT rewritten into this kind — see the remarks on
+        // ChallengeKind.InArea.
+        ChallengeKind.InArea => new Version(0, 81, 33, 0),
 
         _ => PluginVersion.Current,
     };
