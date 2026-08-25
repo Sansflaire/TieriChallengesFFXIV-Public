@@ -1,0 +1,50 @@
+{
+  "Id": "dead4e45-fe31-4425-955a-b72ade573b26",
+  "SortOrder": 14,
+  "MinPluginVersion": "0.1.0.0",
+  "Category": "Debug",
+  "Title": "Test Cheer on Pillar",
+  "Detail": "Test Cheer on Pillar",
+  "Hint": "",
+  "Difficulty": 1,
+  "Kind": 3,
+  "TerritoryId": 979,
+  "TerritoryName": "Empyreum",
+  "Areas": [
+    {
+      "Name": "Area 1",
+      "Shape": 0,
+      "X": -863.41406,
+      "Y": -7.9883194,
+      "Z": -789.47455,
+      "Radius": 0.5,
+      "SizeX": 6.0,
+      "SizeY": 6.0,
+      "SizeZ": 6.0,
+      "Scale": 1.0,
+      "RotationY": 0.0,
+      "Center": {
+        "X": -863.41406,
+        "Y": -7.9883194,
+        "Z": -789.47455
+      },
+      "EffectiveRadius": 0.5,
+      "MinExtent": 0.5
+    }
+  ],
+  "ShowProgress": true,
+  "EmoteId": 6,
+  "EmoteName": "Cheer",
+  "RequireFacing": false,
+  "FacingRadians": 0.0,
+  "FacingToleranceDeg": 30.0,
+  "MountId": 0,
+  "MountName": "",
+  "GearMode": 0,
+  "OutfitSetId": 0,
+  "OutfitName": "",
+  "GearItemId": 0,
+  "GearItemName": "",
+  "WholeZone": false,
+  "IsAreaKind": true
+}
