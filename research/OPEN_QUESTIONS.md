@@ -22,7 +22,12 @@ that adds the Answered row.
 
 | # | Question | Status | Raised | Blocks |
 |---|----------|--------|--------|--------|
-| _(none)_ | | | | |
+| Q11 | Are mob drop tables absent from the client sheets? | ❓ OPEN | 2026-08-26 | **Blocks quest generation.** Highest priority. If loot is server-side only (~85% expected), Hunt routes cannot chain into Craft routes and must be kill-count only. Decides the generator's shape, not just its implementation. |
+| Q12 | Does `MonsterNote` (Hunting Log) carry a usable mob → zone → count → class/level mapping? | ❓ OPEN | 2026-08-26 | Hunt-route authoring. The likely fallback source if Q11 confirms no drop tables. |
+| Q13 | Does `ItemAdded` + `ICondition` actually distinguish gathered / crafted / bought in practice? | ❓ OPEN | 2026-08-26 | Gather and Craft routes. **APIs confirmed present in installed API 15; behaviour not yet observed.** Needs an in-game session. Without provenance, "gather 20 copper ore" is satisfied by buying it. |
+| Q14 | What is the full quest step structure? | ❓ OPEN | 2026-08-26 | Deferred by Trist — "we'll go over what the quest structure should be later". |
+| Q15 | Bracket boundaries and per-expansion coverage? | ❓ OPEN | 2026-08-26 | Deferred by Trist — "we'll discuss this later, remind me". |
+| Q16 | Drop IP from the account identity model? | ❓ OPEN | 2026-08-26 | Account design. A recommended change to Trist's stated proposal — dynamic IPs would fire the discrepancy popup constantly, IP is GDPR personal data, and it authenticates nothing. See `docs/Challenge Tokens and Quests.md` §3. **Needs Trist's confirmation.** |
 
 Q3 (live game-state hooks vs. manual check-off) is answered by construction rather than by a
 decision: `ChallengeTracker` evaluates conditions against live state every tick, manual marking was
@@ -43,7 +48,7 @@ removed entirely, and `MarkComplete` is the only writer. Recorded below.
 | Q7 | Enemy challenge type — accept the coarse taxonomy and approve a hook? | **Yes to both. Required for 1.0.** `ActionEffectHandler.Receive` hook following DamageMeter's pattern; creature filtering by `ModelChara.Type`, specific `BNpcName`, and name matching, since no plant/beast taxonomy exists. Milestone 10. | 2026-08-22 |
 | Q8 | What happens to the 12 detector-less built-ins? | **Replaced.** 1.0 ships ~15–20 real curated challenges that each have a working detector; the current placeholders are not shippable. Catalogue starts small and grows in point releases. Milestone 12. | 2026-08-22 |
 | Q9 | How does a player find a challenge's location? | **Zone name + written hint only.** Finding the exact spot is part of the challenge. No player-facing in-world markers — the overlay stays a dev placement aid. | 2026-08-22 |
-| Q10 | Any reward beyond a checkmark? | **No** — completion plus its date is the whole reward. No points, ranks, or badges. | 2026-08-22 |
+| Q10 | Any reward beyond a checkmark? | ~~**No** — completion plus its date is the whole reward. No points, ranks, or badges.~~ **SUPERSEDED 2026-08-26.** Reversed in design: **Challenge Tokens** are a point currency earned from seeded Hourly/Daily/Weekly randomized quests, with Lifetime (score, never decreases) tracked separately from Balance (spendable on plugin-side cosmetics). Nothing is built yet — see [`../docs/Challenge Tokens and Quests.md`](../docs/Challenge%20Tokens%20and%20Quests.md). The original answer still holds for the **curated** challenge catalogue: those remain checkmark-only. | 2026-08-22, reversed 2026-08-26 |
 
 ---
 
