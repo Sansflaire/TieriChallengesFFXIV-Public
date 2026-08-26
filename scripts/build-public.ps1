@@ -126,16 +126,35 @@ foreach ($lib in 'PanacheUI.dll','SkiaSharp.dll','libSkiaSharp.dll') {
 #
 # Fails the build rather than warning: a silent recurrence looks like a broken UI, not a missing
 # asset, and that is precisely how it went unnoticed the first time.
-$iconsSrc = Join-Path $env:APPDATA 'XIVLauncher\devPlugins\PanacheUI\Icons'
-if (-not (Test-Path $iconsSrc)) { Fail "Missing PanacheUI icon folder: $iconsSrc" }
+#
+# TAKEN FROM THE BUILD OUTPUT, NOT FROM devPlugins\PanacheUI\Icons.
+#
+# That distinction is the whole point of the PanacheIcon subset declared in the csproj.
+# PanacheUI.Consumer.props copies exactly the 23 icons this plugin's Ico registry names into
+# $(TargetDir)\Icons; the shared PanacheUI folder holds the full framework set of 167 (3.9 MB).
+# Copying from the shared folder shipped 144 icons the plugin never renders in every public zip -
+# roughly 3.5 MB of dead weight per download - while the csproj comment and devPlugins/CLAUDE.md
+# both stated the set was subsetted. It was, in the build output nobody was reading from.
+$iconsSrc = Join-Path (Split-Path $Dll -Parent) 'Icons'
+if (-not (Test-Path $iconsSrc)) {
+    Fail "Missing subsetted icon folder: $iconsSrc - PanacheUI.Consumer.props should have created it during the Release build."
+}
 
 $icons = @(Get-ChildItem (Join-Path $iconsSrc '*.png'))
 if ($icons.Count -eq 0) { Fail "No icons in $iconsSrc - every icon in the UI would be a placeholder." }
 
+# A sanity bound, not an exact count: the declared list is free to grow, but silently reverting to
+# the whole framework set is the specific regression this is here to catch.
+$sharedIcons = @(Get-ChildItem (Join-Path $env:APPDATA 'XIVLauncher\devPlugins\PanacheUI\Icons\*.png'))
+if ($sharedIcons.Count -gt 0 -and $icons.Count -eq $sharedIcons.Count) {
+    Fail "Packaging all $($icons.Count) framework icons - the PanacheIcon subset in the csproj is not being applied."
+}
+
 $iconsDst = Join-Path $payload 'Icons'
 New-Item -ItemType Directory -Path $iconsDst | Out-Null
 Copy-Item $icons $iconsDst
-Ok "bundled $($icons.Count) icon(s)"
+$iconKB = [math]::Round((($icons | Measure-Object Length -Sum).Sum) / 1KB)
+Ok "bundled $($icons.Count) of $($sharedIcons.Count) icon(s), $iconKB KB"
 
 # Cue audio. Shipped rather than read from the game's archives: the game's own copies of these
 # sounds load correctly and are silenced somewhere in its mixer that no volume, category or bus
