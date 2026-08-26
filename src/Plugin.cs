@@ -136,6 +136,9 @@ public sealed class Plugin : IDalamudPlugin
     private bool UsePanache => _mainWindow != null && _config.UsePanacheUI;
 
 #if DEV_BUILD
+    /// <summary>One-shot latch for the map geometry dump — see DrawUI.</summary>
+    private bool _mapDiagDone;
+
     private readonly ChallengeCreatorWindow _creatorWindow;
 
     /// <summary>
@@ -476,6 +479,16 @@ public sealed class Plugin : IDalamudPlugin
 
         // One place converts the step to a multiplier; every surface reads it.
         UiScale.Set(_config.UiScale);
+
+#if DEV_BUILD
+        // One-shot map geometry dump for the zone we are in. Fired from the DRAW loop, not the
+        // constructor: the ctor runs off the main thread and ObjectTable.LocalPlayer throws there.
+        if (!_mapDiagDone && ClientState.IsLoggedIn)
+        {
+            _mapDiagDone = true;
+            MapPinService.LogZoneDiagnostics();
+        }
+#endif
 
         // Ban check, every frame. Cheap by construction: Evaluate short-circuits unless the
         // logged-in identity actually changed, so the steady-state cost is one string compare.

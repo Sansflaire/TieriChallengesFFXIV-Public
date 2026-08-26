@@ -139,6 +139,22 @@ public sealed class ChallengeArea
     /// <summary>Box yaw in radians. Ignored for spheres.</summary>
     public float RotationY { get; set; }
 
+    /// <summary>
+    /// The Map row this position belongs to, captured when the centre was taken from the player.
+    /// 0 = never captured (an area authored before this field existed).
+    ///
+    /// <para><b>Why a position needs a map id at all.</b> One territory can present several maps.
+    /// A residential district has a ward map AND a subdivision map with completely different
+    /// coordinate offsets — Empyreum's are (0, 0) and (702, 655) — and <c>TerritoryType.Map</c>
+    /// names only the first. Flagging a subdivision position against the ward map puts the marker
+    /// off the edge of the map entirely, which is exactly what shipped in 0.81.36.0.</para>
+    ///
+    /// <para>Captured at authoring rather than derived later, for the same reason
+    /// <see cref="CustomChallenge.TerritoryId"/> is: the one moment the answer is certainly right
+    /// is the moment the author is standing on the spot.</para>
+    /// </summary>
+    public uint MapId { get; set; }
+
     public Vector3 Center => new(X, Y, Z);
 
     public void SetCenter(Vector3 v) { X = v.X; Y = v.Y; Z = v.Z; }
@@ -194,7 +210,7 @@ public sealed class ChallengeArea
         Name = Name, Shape = Shape,
         X = X, Y = Y, Z = Z,
         Radius = Radius, SizeX = SizeX, SizeY = SizeY, SizeZ = SizeZ,
-        Scale = Scale, RotationY = RotationY,
+        Scale = Scale, RotationY = RotationY, MapId = MapId,
     };
 
     public string Describe() => Shape == AreaShape.Sphere

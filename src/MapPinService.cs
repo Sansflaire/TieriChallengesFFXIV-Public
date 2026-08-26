@@ -39,30 +39,34 @@ internal static unsafe class MapPinService
     /// everything is somehow satisfied, so the call never returns nothing for a well-formed
     /// challenge.</para>
     /// </summary>
-    public static Vector3? LocationOf(Configuration cfg, CustomChallenge c)
+    public static ChallengeArea? AreaOf(Configuration cfg, CustomChallenge c)
     {
         if (c == null) return null;
 
         // A race points at its start line. The finish is the spoiler — half the challenge is
         // working out the route to it.
         if (c.Kind == ChallengeKind.RaceTimer)
-            return c.RaceStart?.Center;
+            return c.RaceStart;
 
         // A chain points at whatever its CURRENT step needs, never at a later one.
         var step = ChallengeCatalog.CurrentStep(c);
         if (step != null)
-            return NextStopCenter(step.Requirements, step.Id, step.Mode);
+            return NextStopArea(step.Requirements, step.Id, step.Mode);
 
         if (c.Requirements is { Count: > 0 })
-            return NextStopCenter(c.Requirements, c.Id, c.Mode);
+            return NextStopArea(c.Requirements, c.Id, c.Mode);
 
         // Legacy kinds keep their volumes in Areas.
-        if (c.Areas is { Count: > 0 }) return c.Areas[0].Center;
+        if (c.Areas is { Count: > 0 }) return c.Areas[0];
 
         return null;
     }
 
-    private static Vector3? NextStopCenter(
+    /// <summary>Centre of <see cref="AreaOf"/>, for callers that only want the position.</summary>
+    public static Vector3? LocationOf(Configuration cfg, CustomChallenge c)
+        => AreaOf(cfg, c)?.Center;
+
+    private static ChallengeArea? NextStopArea(
         System.Collections.Generic.List<AreaRequirement> reqs, string key, AreaMode mode)
     {
         if (reqs == null || reqs.Count == 0) return null;
@@ -73,10 +77,79 @@ internal static unsafe class MapPinService
         {
             // Ordered sets record a prefix, so the count IS the index of the next one.
             bool satisfied = mode == AreaMode.InOrder ? i < done.Count : done.Contains(i);
-            if (!satisfied && reqs[i].Area != null) return reqs[i].Area.Center;
+            if (!satisfied && reqs[i].Area != null) return reqs[i].Area;
         }
 
-        return reqs[0].Area?.Center;
+        return reqs[0].Area;
+    }
+
+    /// <summary>
+    /// The map to flag on.
+    ///
+    /// <para><b>The agent's own CurrentMapId wins over the sheet.</b> <c>TerritoryType.Map</c> gives
+    /// ONE map per territory, but a territory can present several — a residential district has its
+    /// ward map and its subdivision map, and which one is live depends on where the player is
+    /// standing, not on the sheet. Since this only ever runs while the player is in the territory,
+    /// the agent already knows the right answer. The sheet is the fallback for the impossible case
+    /// where it does not.</para>
+    /// </summary>
+    private static uint MapIdFor(AgentMap* agent, ushort territory, ChallengeArea? area)
+    {
+        // (1) The map recorded when the author stood on the spot. The only source that is right
+        //     even when the challenge and the player are on DIFFERENT sub-maps of one territory.
+        if (area != null && area.MapId != 0) return area.MapId;
+
+        // (2) The map the game currently has live. Right whenever the player and the challenge
+        //     share a sub-map, which covers every area authored before MapId was captured.
+        if (agent->CurrentTerritoryId == territory && agent->CurrentMapId != 0)
+            return agent->CurrentMapId;
+
+        // (3) The sheet. LAST, not first — TerritoryType.Map names one map per territory, and for
+        //     a housing district that is the ward, never the subdivision. Using it first is what
+        //     put the flag off the edge of the map in 0.81.36.0.
+        return PlayerStateReader.MapIdFor(territory);
+    }
+
+    /// <summary>
+    /// Dev diagnostic: everything that decides where a flag lands, for the CURRENT zone.
+    /// Logged once on load so a mis-placed pin can be diagnosed from the log rather than by
+    /// guessing at coordinate spaces.
+    /// </summary>
+    public static void LogZoneDiagnostics()
+    {
+        try
+        {
+            ushort territory = (ushort)Plugin.ClientState.TerritoryType;
+            var lp = Plugin.ObjectTable.LocalPlayer;
+            var agent = AgentMap.Instance();
+
+            uint sheetMap = PlayerStateReader.MapIdFor(territory);
+            var (size, offX, offY, mapKey) = PlayerStateReader.MapGeometry(sheetMap);
+
+            Plugin.Log.Information(
+                $"[MapDiag] territory={territory} sheetMap={sheetMap} key='{mapKey}' "
+              + $"sizeFactor={size} offsetX={offX} offsetY={offY} "
+              + $"player=({lp?.Position.X ?? 0:0.###}, {lp?.Position.Z ?? 0:0.###})");
+
+            if (agent != null)
+            {
+                var (aSize, aOffX, aOffY, aKey) = PlayerStateReader.MapGeometry(agent->CurrentMapId);
+                Plugin.Log.Information(
+                    $"[MapDiag] agent curTerr={agent->CurrentTerritoryId} curMap={agent->CurrentMapId} "
+                  + $"key='{aKey}' sizeFactor={aSize} offsetX={aOffX} offsetY={aOffY} "
+                  + $"curSizeFloat={agent->CurrentMapSizeFactorFloat:0.##} "
+                  + $"selMap={agent->SelectedMapId} selSub={agent->SelectedMapSub} "
+                  + $"selTerr={agent->SelectedTerritoryId}");
+            }
+            else
+            {
+                Plugin.Log.Information("[MapDiag] AgentMap unavailable.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, "[MapDiag] failed");
+        }
     }
 
     /// <summary>
@@ -90,27 +163,31 @@ internal static unsafe class MapPinService
     {
         try
         {
-            var where = LocationOf(cfg, c);
-            if (where == null) return false;
+            var area = AreaOf(cfg, c);
+            if (area == null) return false;
+
+            Vector3 where = area.Center;
 
             ushort territory = ChallengeCatalog.EffectiveTerritory(c);
             if (territory == 0) return false;
 
-            uint mapId = PlayerStateReader.MapIdFor(territory);
-            if (mapId == 0) return false;
-
             var agent = AgentMap.Instance();
             if (agent == null) return false;
 
-            agent->SetFlagMapMarker(territory, mapId, where.Value);
+            uint mapId = MapIdFor(agent, territory, area);
+            if (mapId == 0) return false;
+
+            Plugin.Log.Information(
+                $"[MapPin] \"{c.Title}\" pos=({where.X:0.###}, {where.Z:0.###}) "
+              + $"territory={territory} mapId={mapId} (area={area.MapId} "
+              + $"agentCur={agent->CurrentMapId} sheet={PlayerStateReader.MapIdFor(territory)})");
+
+            agent->SetFlagMapMarker(territory, mapId, where);
 
             // Opening the map is what makes the click obviously land. The flag alone shows on the
             // minimap with a distance, but at minimap scale it reads as nothing having happened.
             agent->OpenMap(mapId, territory, null, MapType.FlagMarker);
 
-            Plugin.Log.Debug(
-                $"[MapPin] flagged \"{c.Title}\" at {where.Value.X:0.#}, {where.Value.Z:0.#} "
-              + $"(territory {territory}, map {mapId}).");
             return true;
         }
         catch (Exception ex)

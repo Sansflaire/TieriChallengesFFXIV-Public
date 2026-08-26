@@ -781,7 +781,11 @@ internal sealed class ChallengeCreatorWindow
     {
         while (_areas.Count < 3)
         {
-            _areas.Add(new ChallengeArea { Name = RaceSlotNames[_areas.Count] });
+            _areas.Add(new ChallengeArea
+            {
+                Name  = RaceSlotNames[_areas.Count],
+                MapId = PlayerStateReader.CurrentMapId(),
+            });
         }
 
         // A name is what identifies the slot in the world overlay, so keep them honest even if a
@@ -1497,6 +1501,13 @@ internal sealed class ChallengeCreatorWindow
 
         var area = new ChallengeArea { Name = $"Area {_areas.Count + 1}" };
         area.SetCenter(lp.Position);
+
+        // Which MAP this position is on, not just which territory. A housing district has a ward
+        // map and a subdivision map with different coordinate offsets, and the sheet names only the
+        // ward — so a subdivision position flagged against the sheet's map lands off the map edge.
+        // Standing here is the one moment the answer is certainly right.
+        area.MapId = PlayerStateReader.CurrentMapId();
+
         _areas.Add(area);
 
         // Capturing a position implies the zone, but only bind it the first time so editing an
@@ -1530,7 +1541,27 @@ internal sealed class ChallengeCreatorWindow
         if (ImGui.Button("Move to me", new Vector2(100, 22)))
         {
             var lp = Plugin.ObjectTable.LocalPlayer;
-            if (lp != null) a.SetCenter(lp.Position);
+            if (lp != null)
+            {
+                a.SetCenter(lp.Position);
+
+                // Re-captured with the position: moving an area can carry it onto a different
+                // sub-map of the same territory, and a stale map id there is the bug this field
+                // exists to prevent.
+                a.MapId = PlayerStateReader.CurrentMapId();
+            }
+        }
+
+        // Dragging the centre by hand cannot know which sub-map it landed on, so offer the fix
+        // rather than silently keeping a map id that may no longer match the coordinates.
+        if (a.MapId == 0)
+        {
+            ImGui.SameLine();
+            if (ImGui.Button("Set map from here##areamap", new Vector2(150, 22)))
+                a.MapId = PlayerStateReader.CurrentMapId();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("No map recorded for this area. Map pins fall back to the zone's\n"
+                               + "default map, which is wrong inside a housing subdivision.");
         }
 
         // Dimensions

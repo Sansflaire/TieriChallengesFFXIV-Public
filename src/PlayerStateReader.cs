@@ -218,6 +218,45 @@ internal static unsafe class PlayerStateReader
         catch { return 0; }
     }
 
+    /// <summary>
+    /// The map the game currently considers live, or 0.
+    ///
+    /// <para>Authoritative where <c>TerritoryType.Map</c> is not: a territory can present several
+    /// maps (a housing ward and its subdivision), and only the agent knows which one the player is
+    /// actually standing on.</para>
+    /// </summary>
+    public static uint CurrentMapId()
+    {
+        try
+        {
+            var agent = FFXIVClientStructs.FFXIV.Client.UI.Agent.AgentMap.Instance();
+            return agent == null ? 0u : agent->CurrentMapId;
+        }
+        catch { return 0; }
+    }
+
+    private static ExcelSheet<LSheets.Map>? _mapSheet;
+
+    /// <summary>
+    /// The geometry a map coordinate conversion depends on: scale factor, the X/Y offsets applied
+    /// before scaling, and the map's asset key ("s1d1/00") which identifies it unambiguously in
+    /// a log.
+    /// </summary>
+    public static (ushort SizeFactor, short OffsetX, short OffsetY, string Key) MapGeometry(uint mapId)
+    {
+        if (mapId == 0) return (0, 0, 0, string.Empty);
+        try
+        {
+            _mapSheet ??= Plugin.DataManager.GetExcelSheet<LSheets.Map>();
+            var row = _mapSheet?.GetRowOrDefault(mapId);
+            if (row == null) return (0, 0, 0, string.Empty);
+
+            return (row.Value.SizeFactor, row.Value.OffsetX, row.Value.OffsetY,
+                    row.Value.Id.ToString());
+        }
+        catch { return (0, 0, 0, string.Empty); }
+    }
+
     public static string ZoneName(ushort territory)
     {
         if (territory == 0) return string.Empty;
