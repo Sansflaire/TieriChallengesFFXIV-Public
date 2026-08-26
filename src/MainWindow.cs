@@ -168,6 +168,9 @@ internal sealed class MainWindow : IDisposable
     /// <summary>Open the player-facing settings window (sound, notifications, colours).</summary>
     public Action? OnOpenSettings;
 
+    /// <summary>Open the searchable manual.</summary>
+    public Action? OnOpenHelp;
+
     // ── Palette ──────────────────────────────────────────────────────────────
     // One accent (DESIGN_SYSTEM §1.2) + the shared semantic status palette (§3.3).
     //
@@ -2204,6 +2207,10 @@ internal sealed class MainWindow : IDisposable
         };
 
         // Only when an endpoint was baked in at build time.
+        // First in the menu, because a menu called Help whose only entries were feedback actions
+        // was actively misleading — it read as "there is documentation here" and there was none.
+        help.Add(new MenuItem("Help & documentation", () => OnOpenHelp?.Invoke(), Accent, Ico.Hint));
+
         if (SuggestionService.IsConfigured)
         {
             help.Add(new MenuItem("Report a bug…", _dialogs.RequestBugReport, Danger, Ico.Bug));

@@ -166,6 +166,13 @@ New-Item -ItemType Directory -Path $bgDst | Out-Null
 Copy-Item $bgImages $bgDst
 Ok "bundled $($bgImages.Count) background image(s)"
 
+# Player-facing help document, read at runtime by HelpLibrary. Fails rather than shipping a
+# build whose Help window would open on an error - see BROKEN.md 005.
+$helpSrc = Join-Path $Root 'docs\HELP.md'
+if (-not (Test-Path $helpSrc)) { Fail "Missing help document: $helpSrc - the Help window would have nothing to show." }
+Copy-Item $helpSrc $payload
+Ok "bundled the help document"
+
 $zip = Join-Path $StageDir "TieriChallengesFFXIV-$asmVersion.zip"
 Compress-Archive -Path (Join-Path $payload '*') -DestinationPath $zip -Force
 

@@ -4,8 +4,13 @@ A Dalamud plugin that tracks self-imposed challenges in FFXIV — combat, explor
 crafting and social goals.
 
 Challenges **complete themselves** when their conditions are met. Walk a route, perform an emote
-at a particular spot facing a particular way, ride a specific mount somewhere, or wear a full
-Glamour Dresser outfit in a given zone — the plugin notices and celebrates it.
+at a particular spot facing a particular way, ride a specific mount somewhere, summon a particular
+minion, carry an item, play a certain job, wait for the right Eorzean hour, or wear a full Glamour
+Dresser outfit in a given zone — the plugin notices and celebrates it.
+
+Challenges come in four shapes: ordinary one-off goals, **quests** that run over several steps,
+**adventures** with a list of objectives to work through at your own pace, and **races** timed
+between two points with your best time recorded.
 
 ---
 
@@ -28,7 +33,12 @@ Glamour Dresser outfit in a given zone — the plugin notices and celebrates it.
 | `/tchallenges` | Toggle the window |
 | `/tchal` | Same, shorter |
 | `/tchallenges status` | Print progress to chat |
+| `/tchallenges center` | Bring a lost or off-screen window back |
+| `/tchallenges sync` | Fetch new official challenges now |
 | `/tchallenges reset` | Ask before clearing progress |
+
+Pressing **Escape** always hands the keyboard back to the game and closes the plugin's menus and
+panels. It never cancels a race you are running or a search you have typed.
 
 ---
 
@@ -41,6 +51,14 @@ Glamour Dresser outfit in a given zone — the plugin notices and celebrates it.
 - **Cheap to run.** Challenges are only evaluated in the zone they belong to, only while
   incomplete, and only a few times a second. In a zone with nothing to track it costs a single
   comparison per tick.
+- **Searchable built-in help.** **Help → Help & documentation** explains every part of the plugin
+  and can be searched in plain language — describe a thing loosely and it will still be found.
+- **Find what you care about.** Search both lists by name, description or hint; filter by whether
+  something is done, by challenge type, or by a difficulty ceiling; sort three ways.
+- **Yours to set up.** Sound volume, mute and per-sound switches; independent toggles for the
+  completion banner, corner popups and floating text, with a duration and an option to hold them
+  during combat; a full colour palette editor; three text sizes; and a background image.
+- **No spoilers.** Challenges in zones you have not reached stay hidden until you get there.
 - **Suggestions welcome.** There is a Suggest button in the window that sends feedback straight
   to the developer. Nothing about you is sent unless you choose to include it.
 
@@ -58,7 +76,8 @@ no telemetry.
 
 ## Issues and suggestions
 
-Use the in-plugin **Suggest** button, or open an issue on this repository.
+Use the in-plugin **Report a bug** button — it attaches the plugin's recent log so the problem can
+be traced — or the **Suggest** button for ideas. You can also open an issue on this repository.
 
 ---
 

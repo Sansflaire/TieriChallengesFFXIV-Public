@@ -123,6 +123,9 @@ internal sealed class FallbackWindow
     /// <summary>Open the shared settings window — see MainWindow.OnOpenSettings.</summary>
     public Action? OnOpenSettings;
 
+    /// <summary>Open the shared manual — see MainWindow.OnOpenHelp.</summary>
+    public Action? OnOpenHelp;
+
     /// <summary>
     /// Put the window back in the middle of the screen on the next frame. Mirror of
     /// <c>MainWindow.RequestCenter</c> — see there for why this is a deferred request.
@@ -178,6 +181,9 @@ internal sealed class FallbackWindow
 
         ImGui.SameLine();
         if (ImGui.SmallButton("Settings##tc_fb_settings")) OnOpenSettings?.Invoke();
+
+        ImGui.SameLine();
+        if (ImGui.SmallButton("Help##tc_fb_help")) OnOpenHelp?.Invoke();
 
         var (done, total) = ChallengeCatalog.OverallProgress(_config, _store);
         float frac = ChallengeCatalog.Percent(done, total);

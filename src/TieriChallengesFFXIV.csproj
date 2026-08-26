@@ -28,9 +28,9 @@
          from what was built. Bump it on EVERY change — see docs/How To Versioning.md.
          The one thing that does NOT follow automatically is the manifest's AssemblyVersion
          in ../TieriChallengesFFXIV.json; update that by hand to match. -->
-    <Version>0.83.37.3</Version>
-    <AssemblyVersion>0.83.37.3</AssemblyVersion>
-    <FileVersion>0.83.37.3</FileVersion>
+    <Version>0.84.38.0</Version>
+    <AssemblyVersion>0.84.38.0</AssemblyVersion>
+    <FileVersion>0.84.38.0</FileVersion>
   </PropertyGroup>
 
   <!-- TWO FLAVOURS OF THIS PLUGIN.
@@ -102,6 +102,18 @@
   <ItemGroup>
     <BackgroundImage Include="$(MSBuildProjectDirectory)\..\assets\backgrounds\*.png" />
   </ItemGroup>
+
+  <!-- The player-facing help document. Read at runtime by HelpLibrary and shipped beside the DLL
+       for the same reason as the backgrounds and cue audio: it stays a reviewable, diffable file
+       in the repo rather than an embedded blob. build-public.ps1 bundles it and FAILS if it is
+       absent - see BROKEN.md 005, where an asset was used before it was packaged and every public
+       install got a placeholder. -->
+  <Target Name="CopyHelpDocument" AfterTargets="Build">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\docs\HELP.md"
+          DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\docs\HELP.md"
+          DestinationFolder="$(PluginDeployPath)" SkipUnchangedFiles="true" />
+  </Target>
 
   <Target Name="CopyBackgroundImages" AfterTargets="Build">
     <Copy SourceFiles="@(BackgroundImage)" DestinationFolder="$(TargetDir)backgrounds\"

@@ -121,6 +121,9 @@ public sealed class Plugin : IDalamudPlugin
     /// <summary>Player-facing sound, notification and colour settings. Renderer-agnostic.</summary>
     private readonly SettingsWindow _settingsWindow;
 
+    /// <summary>The searchable manual, parsed from the shipped HELP.md. Renderer-agnostic.</summary>
+    private readonly HelpWindow _helpWindow = new();
+
     // PanacheUI-backed. NULL when the library could not be loaded — these types must never be
     // constructed in that case, because merely loading them throws. See PanacheAvailability.
     private readonly CompletionToast? _toast;
@@ -274,6 +277,7 @@ public sealed class Plugin : IDalamudPlugin
             _mainWindow.OnOpenStatus     = () => _statusWindow.IsVisible = !_statusWindow.IsVisible;
             _mainWindow.OnOpenObjectives = id => _objectiveWindow.Toggle(id);
             _mainWindow.OnOpenSettings   = () => _settingsWindow.IsVisible = !_settingsWindow.IsVisible;
+            _mainWindow.OnOpenHelp       = () => _helpWindow.Open();
         }
 
         // One handler per event, which fans out to sound, fly text and the popup IN THAT ORDER.
@@ -288,6 +292,7 @@ public sealed class Plugin : IDalamudPlugin
         _fallbackWindow.OnOpenStatus     = () => _statusWindow.IsVisible = !_statusWindow.IsVisible;
         _fallbackWindow.OnOpenObjectives = id => _objectiveWindow.Toggle(id);
         _fallbackWindow.OnOpenSettings   = () => _settingsWindow.IsVisible = !_settingsWindow.IsVisible;
+        _fallbackWindow.OnOpenHelp       = () => _helpWindow.Open();
         _tracker.Attach();
 
         // Pick up new official challenges shortly after load, without blocking startup.
@@ -516,6 +521,14 @@ public sealed class Plugin : IDalamudPlugin
         {
             _mapDiagDone = true;
             MapPinService.LogZoneDiagnostics();
+
+            // Parse the help document once at startup in dev builds, so a format mistake shows up
+            // in the log rather than the first time a player opens the window.
+            int sections = HelpLibrary.Sections.Count;
+            int keywords = 0;
+            foreach (var s in HelpLibrary.Sections) keywords += s.Keywords.Count;
+            Log.Information($"[Help] parsed {sections} section(s), {keywords} hidden keyword(s). "
+                          + $"Error: '{HelpLibrary.Error}'");
         }
 #endif
 
@@ -564,6 +577,9 @@ public sealed class Plugin : IDalamudPlugin
 
         try { _settingsWindow.Draw(); }
         catch (Exception ex) { Log.Error(ex, "Settings window draw exception"); }
+
+        try { _helpWindow.Draw(); }
+        catch (Exception ex) { Log.Error(ex, "Help window draw exception"); }
 
         // Exactly one toast renderer per frame — TryCurrent advances the clock, so drawing both
         // would double the fade speed and drop popups.
@@ -851,6 +867,7 @@ public sealed class Plugin : IDalamudPlugin
             // "stop what you are doing" plainly includes the panel sitting over the game.
             _settingsWindow.IsVisible = false;
             _statusWindow.IsVisible   = false;
+            _helpWindow.IsVisible     = false;
             _objectiveWindow.Close();
         }
         catch (Exception ex)
