@@ -2,7 +2,7 @@
   "Author": "Sansflaire",
   "Name": "FFXIV Miscellaneous Challenges",
   "InternalName": "TieriChallengesFFXIV",
-  "AssemblyVersion": "0.81.36.1",
+  "AssemblyVersion": "0.81.36.2",
   "Punchline": "Track self-imposed miscellaneous challenges",
   "Description": "A tracker for miscellaneous self-imposed FFXIV challenges — combat, exploration, gathering, crafting and social goals. Toggle completion per challenge; progress persists per install. Commands: /tchallenges",
   "ApplicableVersion": "any",
