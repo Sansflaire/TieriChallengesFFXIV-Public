@@ -67,6 +67,9 @@ internal sealed class ChallengeCreatorWindow
     private bool   _wholeZone;
     private bool   _showProgress = true;
 
+    /// <summary>Per-challenge opt-out of the find-it-yourself rule. See Configuration.AllowMapPin.</summary>
+    private bool   _allowMapPin;
+
     private string _feedback = string.Empty;
 
     /// <summary>
@@ -273,6 +276,29 @@ internal sealed class ChallengeCreatorWindow
                                + "would spoil the challenge.");
             ImGui.Separator();
         }
+
+        // The catalogue's discoverability rule is zone name plus written hint — finding the exact
+        // spot IS the challenge. This is the deliberate per-challenge exception, so it is off by
+        // default and says plainly what turning it on gives away.
+        ImGui.Checkbox("Allow map pin", ref _allowMapPin);
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip(
+                "Off by default — finding the spot is normally part of the challenge.\n\n"
+              + "On: the \"you are in this zone\" marker on the row becomes a button that drops the\n"
+              + "game's map flag on this challenge's location. Only ever offered while the player is\n"
+              + "standing in the zone, and it points at the NEXT thing they have to do — the current\n"
+              + "step of a chain, the first objective they have not done, or a race's start line.");
+        }
+
+        if (_allowMapPin)
+        {
+            ImGui.TextColored(Warn,
+                "This challenge's location will be revealed on the map. Use it where the doing is "
+              + "the challenge, not the finding.");
+        }
+
+        ImGui.Separator();
 
         switch (_kind)
         {
@@ -1832,6 +1858,7 @@ internal sealed class ChallengeCreatorWindow
             GearItemName  = _gearItemName,
             WholeZone     = _wholeZone,
             ShowProgress  = _showProgress,
+            AllowMapPin   = _allowMapPin,
             Mode          = _mode,
             SessionOnly   = _sessionOnly,
         };
@@ -2049,6 +2076,7 @@ internal sealed class ChallengeCreatorWindow
         _gearItemName = c.GearItemName ?? string.Empty;
         _wholeZone    = c.WholeZone;
         _showProgress = c.ShowProgress;
+        _allowMapPin  = c.AllowMapPin;
 
         _feedback       = $"Editing \"{(string.IsNullOrWhiteSpace(c.Title) ? "(unnamed)" : c.Title)}\".";
         _switchToCreate = true;
@@ -2078,6 +2106,7 @@ internal sealed class ChallengeCreatorWindow
         _requireFacing = false;
         _wholeZone = false;
         _showProgress = true;
+        _allowMapPin  = false;
 
         // A fresh draft binds to wherever you are standing; an edit brought its own zone.
         CaptureZone();
@@ -2297,6 +2326,8 @@ internal sealed class ChallengeCreatorWindow
             ImGui.TextDisabled($"difficulty {meter}  ({c.Difficulty}/5)");
         else
             ImGui.TextDisabled("difficulty not set");
+
+        if (c.AllowMapPin) ImGui.TextDisabled("map pin: allowed");
 
         ImGui.TextDisabled($"guid {c.Id}");
 

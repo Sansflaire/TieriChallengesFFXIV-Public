@@ -202,6 +202,22 @@ internal static unsafe class PlayerStateReader
 
     private static ExcelSheet<LSheets.TerritoryType>? _territorySheet;
 
+    /// <summary>
+    /// The Map row id for a territory, or 0. Needed by the flag marker, which addresses a location
+    /// by (territory, map, position) — the territory alone is not enough, because several
+    /// territories can share a map and a map is what the flag is drawn on.
+    /// </summary>
+    public static uint MapIdFor(ushort territory)
+    {
+        if (territory == 0) return 0;
+        try
+        {
+            _territorySheet ??= Plugin.DataManager.GetExcelSheet<LSheets.TerritoryType>();
+            return _territorySheet?.GetRowOrDefault(territory)?.Map.RowId ?? 0u;
+        }
+        catch { return 0; }
+    }
+
     public static string ZoneName(ushort territory)
     {
         if (territory == 0) return string.Empty;

@@ -73,6 +73,25 @@ public sealed class CustomChallenge
     /// </summary>
     public int Difficulty { get; set; }
 
+    /// <summary>
+    /// The player may place a map flag on this challenge's location, from the "you are in this
+    /// zone" marker on its row.
+    ///
+    /// <para><b>Off by default, and that default is the design.</b> The catalogue's discoverability
+    /// rule is zone name plus written hint — finding the exact spot is part of the challenge (see
+    /// <c>docs/Road to 1.0.md</c>). This is a deliberate per-challenge opt-out of that rule, for
+    /// challenges where the hunt is not the point and the doing is.</para>
+    ///
+    /// <para>Unrelated to the SPOILER mask, which is about story progression rather than
+    /// discoverability. The two cannot collide in practice: the marker only appears while the
+    /// player is standing in the zone, and being in a zone is what clears its mask.</para>
+    ///
+    /// <para>Deliberately does NOT raise the version floor. A build that predates this field
+    /// ignores it and simply offers no pin — a missing convenience, not the silent mis-tracking
+    /// <c>ChallengeCatalog.RequiredFor</c> exists to prevent.</para>
+    /// </summary>
+    public bool AllowMapPin { get; set; }
+
     /// <summary>Stored as an int; append new kinds, never renumber.</summary>
     public ChallengeKind Kind { get; set; } = ChallengeKind.Manual;
 

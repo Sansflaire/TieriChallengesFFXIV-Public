@@ -42,7 +42,8 @@ public sealed record ChallengeDef(
     ChallengeTheme Theme  = ChallengeTheme.Normal,
     int           StepNumber = 0,
     int           StepTotal  = 0,
-    bool          ShowProgress = true)
+    bool          ShowProgress = true,
+    bool          AllowMapPin = false)
 {
     /// <summary>A quest chain. The Title/Detail/Hint above are the CURRENT step's, not the chain's.</summary>
     public bool IsChain => Theme == ChallengeTheme.Quest && StepTotal > 0;
@@ -451,7 +452,8 @@ public static class ChallengeCatalog
                     Theme:      o.Theme,
                     StepNumber: CurrentStepNumber(o),
                     StepTotal:  o.ChainSteps?.Count ?? 0,
-                    ShowProgress: o.ShowProgress)));
+                    ShowProgress: o.ShowProgress,
+                    AllowMapPin:  o.AllowMapPin)));
             }
         }
 
@@ -482,7 +484,8 @@ public static class ChallengeCatalog
                 Theme:      c.Theme,
                 StepNumber: CurrentStepNumber(c),
                 StepTotal:  c.ChainSteps?.Count ?? 0,
-                ShowProgress: c.ShowProgress)));
+                ShowProgress: c.ShowProgress,
+                AllowMapPin:  c.AllowMapPin)));
         }
 
         // ── Ordering ─────────────────────────────────────────────────────────

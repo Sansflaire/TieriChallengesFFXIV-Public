@@ -491,6 +491,25 @@ internal sealed class FallbackWindow
                     hintOpen = !hintOpen;
                 }
 
+                // Map pin, in parity with the Panache row's zone marker. Same two gates: the author
+                // opted this challenge out of find-it-yourself, AND the player is standing in its
+                // zone. This renderer has no "here now" glyph, so the button IS the marker.
+                if (!spoilered && def.AllowMapPin)
+                {
+                    uint here = (uint)Plugin.ClientState.TerritoryType;
+                    if (here != 0 && ZoneIndex.TerritoryOf(_config, def.Id) == here)
+                    {
+                        ImGui.SameLine();
+                        if (ImGui.SmallButton($"Pin##pin_{def.Id}"))
+                        {
+                            var target = ChallengeCatalog.FindCustom(_config, def.Id);
+                            if (target == null || !MapPinService.Pin(_config, target))
+                                Plugin.ChatGui.PrintError(
+                                    "[Challenges] Could not place a map pin for that challenge.");
+                        }
+                    }
+                }
+
                 // Quest / adventure sheet, in parity with the Panache row.
                 if (!spoilered && def.HasObjectiveList)
                 {

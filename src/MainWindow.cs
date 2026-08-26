@@ -2795,7 +2795,31 @@ internal sealed class MainWindow : IDisposable
         {
             uint here = (uint)Plugin.ClientState.TerritoryType;
             if (here != 0 && ZoneIndex.TerritoryOf(_config, def.Id) == here)
-                controls.AppendChild(PUI.Icon(Ico.HereNow, HereIconSz, Accent));
+            {
+                if (def.AllowMapPin)
+                {
+                    // The author opted this challenge out of the find-it-yourself rule, so the
+                    // marker becomes a button that flags the spot. It is a real IconButton rather
+                    // than an interactive bare icon because a click target owes a hover cue
+                    // (DESIGN_SYSTEM §7.2), and hover has to be painted by the node the pointer
+                    // actually hits — an icon inside a button is always an inert child.
+                    string pinId = def.Id;
+                    controls.AppendChild(IconButton("pin:" + pinId, Ico.HereNow, HintBtn, HereIconSz,
+                                                    Accent, lit: false, () =>
+                    {
+                        _controlClickPending = true;
+
+                        var target = ChallengeCatalog.FindCustom(_config, pinId);
+                        if (target == null || !MapPinService.Pin(_config, target))
+                            Plugin.ChatGui.PrintError("[Challenges] Could not place a map pin for that challenge.");
+                    }));
+                }
+                else
+                {
+                    // Default: a status light, not a control. Finding the spot is the challenge.
+                    controls.AppendChild(PUI.Icon(Ico.HereNow, HereIconSz, Accent));
+                }
+            }
         }
 
         // Quest / adventure: a way into the full requirement sheet. The row can only ever show the
