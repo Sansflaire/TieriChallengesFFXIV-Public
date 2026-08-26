@@ -78,7 +78,25 @@ Bio-token issue → fetch → confirm → mark verified. Target the **numeric Lo
 not the name. Unbuilt.
 
 ### I3 — Secrets provisioning
-`TOKEN_PEPPER`, `ADMIN_KEY`, `LODESTONE_UA` — see `SECURITY.local.md` §6. None created yet.
+`TOKEN_PEPPER`, `ADMIN_KEY`, `LODESTONE_UA` — see `SECURITY.local.md` §6.
+
+**No pepper exists yet** (verified 2026-08-26 — nothing in the repo, the worker, or
+`SECRETS.local.md` mentions one). When it is generated, back it up to all three places Trist
+asked for, in this order:
+
+1. **Private vault repo** (`Sansflaire/TieriChallengesFFXIV`) — the durable copy
+2. **Local PC**, alongside `C:\Users\trist\Documents\SansflaireCertificate\`
+3. **`SECRETS.local.md`** in this project (gitignored) — the nearby working copy
+
+Then `wrangler secret put TOKEN_PEPPER`. **Losing it makes every stored `identityHash`
+unlookupable** — name-based support requests stop working permanently.
+
+### I4 — Drop-data extraction pipeline
+Curated `drops.json` built at dev time from community databases (Garland Tools et al.), published
+to the Sync repo. **Never scraped at runtime.** Must encode the exclusion rules in
+`docs/Challenge Tokens and Quests.md` §9b — savage/extreme drops from the current or previous
+expansion, and beast-tribe-currency items — applied across the capstone's **entire** ingredient
+tree, not just its top level. The expansion window must be data, not a constant. Unbuilt.
 
 ---
 

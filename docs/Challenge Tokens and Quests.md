@@ -327,6 +327,50 @@ Every other generator sheet is present and binds normally: `Recipe`, `RecipeLook
 **`GilShopItem` is a subrow sheet** (`IExcelSubrow<T>`, not `IExcelRow<T>`) — discovered at
 compile time. Vendor sourcing needs `GetSubrowExcelSheet<T>()`, not the ordinary accessor.
 
+### 9a. Drop data comes from a curated offline dataset
+
+Decided by Trist 2026-08-26: since the game ships no drop data, **community databases are the only
+source**, e.g. Garland Tools (`garlandtools.org/db/#item/5554` → Morbol Vine → Drop → mob list →
+mob pages give locations). The same applies to NPC shop inventories.
+
+**The plugin must never scrape at runtime.** The pipeline is:
+
+```
+Garland Tools / community DB  →  dev-time extraction  →  curated drops.json
+        →  published to the Sync repo  →  client reads it like any other quest data
+```
+
+Three reasons this is not negotiable: 1,000 clients hitting a community site is abuse of a free
+service; a third-party outage would break quest generation for everyone; and it puts an
+uncontrolled network dependency inside the game client. The dataset is small, changes only on
+patch days, and belongs beside the quest definitions.
+
+**Kill-detection is unaffected.** The `ActionEffectHandler` hook already identifies mobs by
+`BNpcName`; the external dataset only supplies the item→mob→zone *mapping* used to author a quest,
+never the runtime detection.
+
+### 9b. Content exclusion rules — what the generator must refuse
+
+Trist's constraints, 2026-08-26. A generated quest must **never** require:
+
+| Excluded | Why |
+|---|---|
+| **Savage raid drops** from the current or previous expansion | Gates a daily behind endgame raiding |
+| **Extreme trial drops** from the current or previous expansion | Same |
+| **Beast tribe currency** items | Makes beast tribe grinding a prerequisite |
+
+Explicitly **fair game**: normal dungeon drops, anything gatherable, gil-vendor items, and
+**completing a beast tribe quest itself** as a daily/weekly objective (the *quest* is fine; the
+*currency* is not).
+
+Implementation note: exclusion is a property of the **capstone's whole ingredient tree**, not just
+its top-level recipe. Backward-chaining must reject a capstone the moment ANY node in its expanded
+tree resolves to an excluded source — otherwise a level-3 ingredient quietly reintroduces the
+savage drop the top-level check passed.
+
+⚠️ "Current or previous expansion" is a **moving window** — it must be data, not a hardcoded
+constant, or every generated quest silently becomes non-compliant at the next expansion launch.
+
 ---
 
 <!-- SECTION:detection -->
