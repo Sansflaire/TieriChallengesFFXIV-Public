@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.IoC;
@@ -506,6 +507,8 @@ public sealed class Plugin : IDalamudPlugin
         // One place converts the step to a multiplier; every surface reads it.
         UiScale.Set(_config.UiScale);
 
+        HandleEscape();
+
 #if DEV_BUILD
         // One-shot map geometry dump for the zone we are in. Fired from the DRAW loop, not the
         // constructor: the ctor runs off the main thread and ObjectTable.LocalPlayer throws there.
@@ -813,6 +816,49 @@ public sealed class Plugin : IDalamudPlugin
     /// for a UI reason. Fly text second (drawn by the game, so it shows with no window open).
     /// The popup last, since it is the only part that can be delayed behind another.
     /// </summary>
+    /// <summary>
+    /// <b>Escape stops whatever the plugin started.</b> Standing rule, Trist 2026-08-26.
+    ///
+    /// <para>Runs once per frame, before any window draws, so a release lands on the very frame
+    /// the key goes down rather than one frame later. One call site rather than one per surface:
+    /// a rule that has to be remembered separately by every new window is a rule that will be
+    /// missed by the next one.</para>
+    ///
+    /// <para><b>What it does:</b> hands the keyboard back to the game, drops text focus, and
+    /// closes the transient things the plugin put on screen — menus, the filter dropdown, and the
+    /// settings, objectives and info windows.</para>
+    ///
+    /// <para><b>What it deliberately does NOT do:</b> abandon a running race, wipe a search term,
+    /// collapse a row being read, or close the main window. Escape is pressed constantly in FFXIV
+    /// to dismiss game windows, so anything it does here has to cost nothing — a key that could
+    /// silently end a timed run the player was three minutes into is worse than no rule at all.
+    /// The dev Creator is left alone for the same reason: it holds unsaved authoring state.</para>
+    ///
+    /// <para>The press is READ, never consumed. The game still receives it and still closes its
+    /// own windows, which is what a player expects Escape to keep doing.</para>
+    /// </summary>
+    private void HandleEscape()
+    {
+        try
+        {
+            if (!ImGui.IsKeyPressed(ImGuiKey.Escape, false)) return;
+
+            // Panache-side claims: keyboard focus, the menu bar, the filter dropdown. Null when
+            // PanacheUI could not load, in which case there is nothing of its to release.
+            _mainWindow?.ReleaseInput();
+
+            // Renderer-agnostic windows the player opened. Closed rather than left behind, since
+            // "stop what you are doing" plainly includes the panel sitting over the game.
+            _settingsWindow.IsVisible = false;
+            _statusWindow.IsVisible   = false;
+            _objectiveWindow.Close();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Escape handler failed");
+        }
+    }
+
     /// <summary>
     /// Should visual notifications be held right now? Sound is deliberately NOT gated by this —
     /// a cue cannot obscure anything, and this plugin treats audio as its highest-priority

@@ -687,6 +687,43 @@ internal sealed class MainWindow : IDisposable
     // ── Frame ────────────────────────────────────────────────────────────────
 
     /// <summary>Modals are drawn by Plugin, once, regardless of which renderer is active.</summary>
+    /// <summary>
+    /// Give back every input claim this window holds and close anything transient it has open.
+    ///
+    /// <para>The Panache half of the plugin-wide Escape rule — see <c>Plugin.HandleEscape</c>.
+    /// Deliberately touches only input capture and transient overlays: it does NOT abandon a
+    /// running race, wipe a search term the player may still want, or collapse a row they are
+    /// reading. Escape is pressed constantly in FFXIV to dismiss game windows, so anything it
+    /// does has to be free.</para>
+    ///
+    /// <para>Returns true if it actually did something, so the caller can tell whether the press
+    /// was consumed.</para>
+    /// </summary>
+    public bool ReleaseInput()
+    {
+        bool did = false;
+
+        // The keyboard first. PanacheUI already drops focus when Escape reaches a FOCUSED field,
+        // but this has to work when focus is held by something else, or when the field has focus
+        // and the press was routed elsewhere.
+        if (InteractionManager.FocusedNode != null)
+        {
+            InteractionManager.ClearFocus();
+            did = true;
+        }
+
+        if (_filterMenuOpen) { _filterMenuOpen = false; did = true; }
+
+        if (_openMenu != null || _openMenuNext != null)
+        {
+            _openMenu = null;
+            _openMenuNext = null;
+            did = true;
+        }
+
+        return did;
+    }
+
     public void Draw()
     {
         if (IsVisible)
