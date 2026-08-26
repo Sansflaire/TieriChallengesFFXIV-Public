@@ -52,6 +52,11 @@ libSkiaSharp.dll
 # Local-only credential notes. Never committed — see SECRETS.local.md itself for why.
 SECRETS.local.md
 
+# Local-only security design: Challenge Token anti-cheat thresholds, the identity/HMAC scheme,
+# and the secrets inventory. Publishing exact detection thresholds is a roadmap for evading
+# them, so the public design doc describes the shape and points here for the numbers.
+SECURITY.local.md
+
 # Ban ledger mirror written by the Creator's Bans tab: backup/bans-private.json plus dated
 # history under backup/history/.
 #

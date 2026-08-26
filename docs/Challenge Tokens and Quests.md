@@ -306,13 +306,26 @@ Trist described, for free, out of the recipe tree.
 5. **Difficulty, Token value, and minimum plausible completion time all fall out of the same
    graph walk** — depth × breadth × bracket — instead of being hand-tuned per quest.
 
-### ⚠️ The blocker to confirm first
+### ✅ The blocker — RESOLVED 2026-08-26
 
-**Mob drop tables are almost certainly not in the client sheets** — loot is server-side in
-FFXIV. If confirmed, hunt→craft chaining is impossible and **Hunt routes must be kill-count
-only**, decoupled from materials. `MonsterNote` (the Hunting Log) is the likely legitimate
-source for mob → zone → count → class/level. **This decides the generator's shape, not just its
-implementation — verify before designing further.**
+**Mob drop tables are NOT in the client sheets.** Verified by probing `Lumina.Excel.dll`'s
+metadata in the installed API 15: no `DropList`, `LootTable`, `BNpcDrop`, or `MonsterDrop` type
+exists. Loot is server-side, as suspected. (`InstanceContentReward` and `ContentsNote` exist but
+are duty rewards, not mob loot.)
+
+**Consequence — this shapes the generator:**
+
+- **Hunt routes are kill-count only.** "Defeat 12 Ixali" — never "hunt X to obtain material Y."
+- **Hunt cannot chain into Craft.** A multi-part quest's material steps must come from
+  **Gather**, from a **vendor**, or from an intermediate **craft**. This is a real narrowing of
+  the multi-part design and needs to be accounted for when the step structure is designed (Q14).
+- **`MonsterNote` and `MonsterNoteTarget` both exist** and are the source for Hunt routes.
+
+Every other generator sheet is present and binds normally: `Recipe`, `RecipeLookup`,
+`GatheringItem`, `GatheringPointBase`.
+
+**`GilShopItem` is a subrow sheet** (`IExcelSubrow<T>`, not `IExcelRow<T>`) — discovered at
+compile time. Vendor sourcing needs `GetSubrowExcelSheet<T>()`, not the ordinary accessor.
 
 ---
 
@@ -366,9 +379,20 @@ hooks and no guessing.
 | Equip / Emote / Mount | `PlayerStateReader` | ✅ Already shipping |
 | Reach level | — | ⛔ **Ruled out by Trist** |
 
-`IGameInventory`, `IDutyState`, `IPartyList` and `ICondition` are all present in the installed
-Dalamud but **none are injected yet** in [`Plugin.cs`](../src/Plugin.cs). `IGameInventory` and
-`ICondition` are the two to add first — together they unlock Gather, Craft, Obtain and Turn-in.
+**Correction (2026-08-26):** an earlier revision of this document claimed none of these services
+were injected yet. That was wrong — it came from a truncated grep, and absence of output was
+read as absence of code. `ICondition`, `IGameInventory` and `ITargetManager` are **already
+injected** ([`Plugin.cs`](../src/Plugin.cs)), and [`InventoryWatcher`](../src/InventoryWatcher.cs)
+already consumes all six inventory events.
+
+**But `InventoryWatcher` cannot answer Q13.** It deliberately discards the event args and only
+sets a dirty flag — a documented design choice, because applying the six event kinds as deltas
+is fiddly and a desynchronised map silently breaks challenges. So provenance needs its own
+capture path, which is what [`LiveProbe`](../src/LiveProbe.cs) is for.
+
+Also already available and relevant: `GameStateFlag.Gathering` / `.Crafting` already exist in
+[`ChallengeConditions`](../src/ChallengeConditions.cs), so the flags the provenance test depends
+on are already modelled in this plugin.
 
 ---
 
@@ -454,20 +478,21 @@ Only tiers 1 and 2 matter.
 player activity."* And on exploits: *"Shame on me for allowing them to get through — no need to
 be harsh on the player for exploiting something easily available."*
 
-### Hard rejects (the short list)
+### The one structural rule worth stating publicly
 
-- **The client never sends a Token value.** It sends "instance X completed"; the server looks up
-  what that is worth. This is structural and kills the entire casual-cheat tier by itself.
-- **Idempotency** — an instance awards Tokens at most once, ever.
-- **Unknown quest ID** → reject.
-- **Absurd single award** (the `+999,999` case Trist named) → reject and log.
+**The client never sends a Token value.** It sends "instance X completed"; the server looks up
+what that is worth. This alone kills the entire casual-cheat tier.
 
-### Everything else is a soft signal → review queue, never an auto-ban
+### Everything else lives in `SECURITY.local.md`
 
-- Tokens per rolling 24h above the theoretical maximum
-- Completion faster than the generated minimum plausible time
-- Perfect 24/24 hourly streaks over many days
-- Several accounts with identical timing
+> 🔒 **Detection thresholds, the identity/HMAC scheme, and the secrets inventory are in
+> `SECURITY.local.md`, which is gitignored and never published.**
+
+Publishing exact thresholds is a roadmap for evading them — an evader who knows the timing
+variance cutoff simply adds jitter. The shape is public; the numbers are not.
+
+In outline: a small set of hard rejects (idempotency, unknown quest id, an absurd-single-award
+cap), and everything else as a **soft signal routed to a review queue** that never auto-bans.
 
 ### Local storage
 

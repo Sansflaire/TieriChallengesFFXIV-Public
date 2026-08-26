@@ -150,6 +150,12 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ChallengeCreatorWindow _creatorWindow;
 
     /// <summary>
+    /// Investigation harness for questions only the running game can answer. Not a feature —
+    /// see <see cref="LiveProbe"/>. Remove once OPEN_QUESTIONS Q13 is recorded.
+    /// </summary>
+    private readonly LiveProbeWindow _probeWindow = new();
+
+    /// <summary>
     /// Null when PanacheUI could not load — it is a Panache surface, and merely constructing one
     /// resolves the library. The chat commands remain the fallback in that case.
     /// </summary>
@@ -391,6 +397,7 @@ public sealed class Plugin : IDalamudPlugin
         _racePrompt?.Dispose();
 #if DEV_BUILD
         _soundTestWindow?.Dispose();
+        LiveProbe.Detach();
 #endif
         _mainWindow?.Dispose();
         SaveConfig();
@@ -465,6 +472,10 @@ public sealed class Plugin : IDalamudPlugin
 #if DEV_BUILD
                 case "creator":
                     _creatorWindow.IsVisible = !_creatorWindow.IsVisible;
+                    break;
+
+                case "probe":
+                    _probeWindow.IsVisible = !_probeWindow.IsVisible;
                     break;
 
                 case "sounds":
@@ -609,6 +620,9 @@ public sealed class Plugin : IDalamudPlugin
         catch (Exception ex) { Log.Error(ex, "Race prompt draw exception"); }
 
 #if DEV_BUILD
+        try { _probeWindow.Draw(); }
+        catch (Exception ex) { Diag.Error($"[Probe] window failed: {ex.Message}"); }
+
         try { _creatorWindow.Draw(); }
         catch (Exception ex) { Log.Error(ex, "ChallengeCreator draw exception"); }
 
