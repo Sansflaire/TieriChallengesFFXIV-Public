@@ -37,6 +37,37 @@ The probe's sheet census dumps `MonsterNote` + `MonsterNoteTarget` columns and s
 Runs automatically as part of **Write Report** — no separate action, but nobody has read the
 output yet. Needed to confirm mob → zone → count → class/level actually resolves.
 
+### V4 — The catalogue cache is not stale · **highest regression risk of the review pass**
+`ChallengeCatalog.Combined` and `.FindCustom` were memoised on `Configuration.StateVersion` in
+0.84.38.1. Every mutation path was checked by grep and every one bumps it — but a path that does
+not would show as **a list that silently stops updating**, which looks like nothing happening
+rather than like an error.
+
+**How (about a minute, dev build):** with the window open, do each of these and confirm the list
+reacts immediately — create a challenge in the Creator, edit one, delete one, change Sort mode,
+run a Sync, and complete something. Any one that does not refresh is the bug.
+
+### V5 — Objective progress reads correctly in all three places
+The row, the objective sheet and the map pin each used to read the wrong store (BROKEN.md 009).
+All three now go through `ChallengeTracker.SatisfiedStops`.
+
+**How:** part-finish a multi-stop adventure, then check (a) the row shows the right *x of y* **from
+another zone**, (b) the objective sheet ticks the same stops — including for a `SessionOnly` one,
+which previously always read 0 of N, and (c) the map pin points at the **next unfinished** stop
+rather than the first.
+
+### V6 — Audio settings changes
+Two fixes that only ear-testing confirms: the per-cue **Play** buttons in Settings → Sound now
+sound **while muted** (they were silent, beside a comment saying they should not be), and the
+volume slider now applies to the **Zone has challenges** cue, which it previously skipped entirely.
+At volume 1.0 nothing should sound different from before.
+
+### V7 — A built-in background survived the JPEG rename
+Confirmed only that the four backgrounds *look* fine. Not yet confirmed that a config which had
+one **selected as `.png`** followed the rename rather than coming back blank — that is
+`BackgroundLibrary.ResolveRenamed`, and it only runs for someone who had one selected before
+0.84.38.2. Check the window still shows the background you had chosen.
+
 ---
 
 ## ⬜ Needs a decision from Trist
@@ -114,3 +145,4 @@ tree, not just its top level. The expansion window must be data, not a constant.
 | — | Are `IGameInventory` / `ICondition` available and injected? | **Yes, both** — already injected in `Plugin.cs`, and `InventoryWatcher` already consumes all six inventory events. (An earlier claim that they were missing was wrong.) | 2026-08-26 |
 | — | Is `GilShopItem` reachable via `GetExcelSheet<T>()`? | **No** — it is a subrow sheet (`IExcelSubrow<T>`). Needs `GetSubrowExcelSheet<T>()`. | 2026-08-26 |
 | — | Identity model: name+world+IP? | **No — dropped.** Identity is a locally-generated 128-bit secret; name+world is a label. Trist agreed 2026-08-26. Removes the rename problem entirely. | 2026-08-26 |
+| — | Do the JPEG q94 backgrounds (0.84.38.2) look acceptable in game? | **Yes** — Trist confirmed by eye on a local display. The PNG→JPEG conversion stands; no re-encode needed. Masters remain recoverable from git history before `2d36391` if that ever changes. | 2026-08-26 |
