@@ -70,9 +70,16 @@ Nothing extra — the plugin bundles everything it needs.
 
 ## Privacy
 
-The plugin makes no network requests unless **you** press Send in the suggestion box. It sends
-your message, the plugin version, and — only if you tick the box — your character name. There is
-no telemetry.
+The plugin downloads two public files from GitHub — its challenge catalogue and a small
+moderation list — shortly after you log in, and again whenever you press **Sync now**. Those are
+ordinary downloads: nothing about you or your characters is sent with them.
+
+The only time the plugin *transmits* anything is when **you** press Send in the suggestion or
+bug-report box. That sends your message and the plugin version; a bug report also attaches the
+plugin's recent log so the fault can be traced; and your character name is included only if you
+tick the box.
+
+There is no telemetry, and nothing is sent in the background.
 
 ## Issues and suggestions
 
@@ -81,7 +88,9 @@ be traced — or the **Suggest** button for ideas. You can also open an issue on
 
 ---
 
-*This repository hosts the public release and its plugin manifest. The source lives in a private
-repository.*
+*This repository holds the plugin's source, its `pluginmaster.json` and the signed release zips.
+Challenge data is published separately to
+[TieriChallengesFFXIV-Sync](https://github.com/Sansflaire/TieriChallengesFFXIV-Sync) and picked up
+by the plugin when it syncs.*
 
 **Author:** Sansflaire
