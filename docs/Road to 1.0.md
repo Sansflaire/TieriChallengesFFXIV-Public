@@ -8,8 +8,13 @@ the generic [How To Versioning](How%20To%20Versioning.md); this document supplie
 ## Current version
 
 ```
-0.81.32.2    beta · 81% toward 1.0 · 32 major updates · 2 minor updates
+0.84.38.1    beta · 84% toward 1.0 · 38 major updates · 1 minor update
 ```
+
+*This block had been left at 0.81.32.2 for six major updates. It is the one thing in this
+document that nothing computes for you — see the maintenance table at the bottom — so it goes
+stale the moment a version bump is made without opening this file. Update it in the same commit
+as the csproj, every time.*
 
 **Repositories — three of them since the 2026-08-24 split. This table was wrong for a while;
 the old two-repo description had the source in the PRIVATE repo, which is now backwards.**
