@@ -361,6 +361,10 @@ Each completion is stored with the date you earned it, which the row shows once 
 **Settings → Reset** wipes your completions so you can do everything again. It asks first, and it is
 the only thing in the plugin that deletes anything.
 
+It also clears progress on things you have **started but not finished**. A quest chain goes back to
+its first step, and any adventure objectives you have ticked off are unticked. That part is not
+covered by the permanent record below, because the record only ever holds challenges you finished.
+
 What reset does **not** touch:
 
 - Challenges you or the catalogue authored — the definitions all survive.

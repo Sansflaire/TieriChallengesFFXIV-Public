@@ -177,7 +177,50 @@ public static class ChallengeCatalog
     /// Set once by Plugin at startup. Holds the challenges synced from the public repo, and is
     /// the authority on which GUIDs are official.
     /// </summary>
-    public static OfficialCatalog? Official { get; set; }
+    /// <remarks>
+    /// Assigning invalidates the built-list cache. Every OTHER input to that cache moves
+    /// <see cref="Configuration.StateVersion"/>, but this one is a static with no config behind
+    /// it — and it is set during startup, before the first frame, which is exactly when a stale
+    /// entry would be built and then served for the rest of the session.
+    /// </remarks>
+    public static OfficialCatalog? Official
+    {
+        get => _official;
+        set { _official = value; InvalidateCache(); }
+    }
+
+    private static OfficialCatalog? _official;
+
+    // ── Built-list cache ─────────────────────────────────────────────────────
+    //
+    // Combined() is not cheap: two collections, a full sort, and a ChallengeDef allocated twice
+    // per challenge (once built, once cloned by `with { Number }`). It is also called a great many
+    // times per frame — CategoryProgress calls it once per category row, and Categories,
+    // OverallProgress, InCategory, InZone, Tally and DisplayNumber each call it again. Rebuilding
+    // an identical list a dozen times per frame is pure allocation churn in a plugin whose whole
+    // stated design goal is to be cheap.
+    //
+    // The key is every input the result actually depends on. Definitions, the official catalogue,
+    // and a chain's current step (which changes the face of a row) all move StateVersion; the two
+    // sort settings are named explicitly rather than trusted to bump it, because they are ordinary
+    // settings and nothing about changing one says "definitions changed".
+
+    private static IReadOnlyList<ChallengeDef>? _combinedCache;
+    private static int                          _combinedVersion   = int.MinValue;
+    private static ChallengeSort                _combinedSort;
+    private static ChallengeSort                _combinedSecondary;
+
+    private static Dictionary<string, CustomChallenge>? _byId;
+    private static int                                  _byIdVersion = int.MinValue;
+
+    /// <summary>Drop both caches. Cheap; the next read rebuilds.</summary>
+    public static void InvalidateCache()
+    {
+        _combinedCache   = null;
+        _combinedVersion = int.MinValue;
+        _byId            = null;
+        _byIdVersion     = int.MinValue;
+    }
 
     /// <summary>
     /// RETIRED. These twelve were placeholders with no detectors, so once manual marking was
@@ -410,7 +453,25 @@ public static class ChallengeCatalog
     /// stamped on each def is its 1-based position in THAT order, NOT an identity — completion is
     /// keyed by GUID alone, so re-sorting renumbers everything and costs nothing.
     /// </summary>
-    public static List<ChallengeDef> Combined(Configuration cfg)
+    public static IReadOnlyList<ChallengeDef> Combined(Configuration cfg)
+    {
+        if (_combinedCache != null
+            && _combinedVersion   == cfg.StateVersion
+            && _combinedSort      == cfg.SortMode
+            && _combinedSecondary == cfg.SecondarySort)
+            return _combinedCache;
+
+        var built = BuildCombined(cfg);
+
+        _combinedCache     = built;
+        _combinedVersion   = cfg.StateVersion;
+        _combinedSort      = cfg.SortMode;
+        _combinedSecondary = cfg.SecondarySort;
+
+        return built;
+    }
+
+    private static List<ChallengeDef> BuildCombined(Configuration cfg)
     {
         var list = new List<(int Sort, ChallengeDef Def)>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -553,18 +614,34 @@ public static class ChallengeCatalog
     /// The definition behind a GUID — official first, then locally authored. The tracker needs
     /// this to evaluate synced challenges, not just local ones.
     /// </summary>
+    /// <remarks>
+    /// Indexed rather than scanned. A challenge row asks this three separate times per frame — for
+    /// the spoiler mask, for the same-zone pin button, and for the chain-progress line — and the
+    /// zone view asks it once per definition inside a loop over every definition, which is a linear
+    /// search nested in a linear search. Official still wins a GUID collision: it is inserted first
+    /// and local entries do not overwrite.
+    /// </remarks>
     public static CustomChallenge? FindCustom(Configuration cfg, string id)
     {
-        var official = Official;
-        if (official != null)
+        if (string.IsNullOrEmpty(id)) return null;
+
+        if (_byId == null || _byIdVersion != cfg.StateVersion)
         {
-            foreach (var o in official.Challenges)
-                if (string.Equals(o.Id, id, StringComparison.OrdinalIgnoreCase)) return o;
+            var map = new Dictionary<string, CustomChallenge>(StringComparer.OrdinalIgnoreCase);
+
+            var official = Official;
+            if (official != null)
+                foreach (var o in official.Challenges)
+                    if (!string.IsNullOrWhiteSpace(o.Id)) map.TryAdd(o.Id, o);
+
+            foreach (var c in cfg.CustomChallenges)
+                if (!string.IsNullOrWhiteSpace(c.Id)) map.TryAdd(c.Id, c);
+
+            _byId        = map;
+            _byIdVersion = cfg.StateVersion;
         }
 
-        foreach (var c in cfg.CustomChallenges)
-            if (string.Equals(c.Id, id, StringComparison.OrdinalIgnoreCase)) return c;
-        return null;
+        return _byId.TryGetValue(id, out var found) ? found : null;
     }
 
     /// <summary>

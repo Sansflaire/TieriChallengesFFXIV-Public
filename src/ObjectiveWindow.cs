@@ -26,8 +26,9 @@ namespace TieriChallengesFFXIV;
 /// </summary>
 internal sealed class ObjectiveWindow
 {
-    private readonly Configuration   _config;
-    private readonly CompletionStore _store;
+    private readonly Configuration    _config;
+    private readonly CompletionStore  _store;
+    private readonly ChallengeTracker _tracker;
 
     private string? _openId;
 
@@ -38,10 +39,11 @@ internal sealed class ObjectiveWindow
     private static Vector4 Blue   => Palette.Vec(PaletteSlot.Quest);
     private static Vector4 Muted  => DialogTheme.TextMuted;
 
-    public ObjectiveWindow(Configuration config, CompletionStore store)
+    public ObjectiveWindow(Configuration config, CompletionStore store, ChallengeTracker tracker)
     {
-        _config = config;
-        _store  = store;
+        _config  = config;
+        _store   = store;
+        _tracker = tracker;
     }
 
     public bool IsOpen => _openId != null;
@@ -168,7 +170,12 @@ internal sealed class ObjectiveWindow
         bool done = _store.IsComplete(c.Id);
         var reqs  = c.Requirements ?? new List<AreaRequirement>();
 
-        var stops = done ? AllOf(reqs.Count) : Plugin.Progress.Stops(c.Id);
+        // Through the tracker, never straight off the disk. A SessionOnly adventure never writes to
+        // the progress store at all, so reading the store alone made this sheet report 0 of N for
+        // the entire run of one — directly under the gold line promising the progress it was
+        // failing to show. See ChallengeTracker.SatisfiedStops.
+        IReadOnlySet<int> stops = done ? AllOf(reqs.Count)
+                                       : _tracker.SatisfiedStops(c.Id, !c.SessionOnly);
         int satisfied = Math.Min(stops.Count, reqs.Count);
 
         ImGui.TextColored(Green, "ADVENTURE");
@@ -233,7 +240,7 @@ internal sealed class ObjectiveWindow
     {
         if (reqs == null || reqs.Count == 0) return;
 
-        var stops = persist ? Plugin.Progress.Stops(key) : new HashSet<int>();
+        var stops = _tracker.SatisfiedStops(key, persist);
         int satisfied = stops.Count;
 
         for (int i = 0; i < reqs.Count; i++)
@@ -288,7 +295,7 @@ internal sealed class ObjectiveWindow
     /// </summary>
     private static string Marker(bool done) => done ? "[x]" : "[ ]";
 
-    private static HashSet<int> AllOf(int count)
+    private static IReadOnlySet<int> AllOf(int count)
     {
         var set = new HashSet<int>();
         for (int i = 0; i < count; i++) set.Add(i);

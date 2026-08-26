@@ -268,7 +268,7 @@ public sealed class Plugin : IDalamudPlugin
         _fallbackProgressToast = new FallbackProgressToast(RevealChallenge);
         _fallbackRacePrompt    = new FallbackRacePrompt(_config, _store, _tracker, SaveConfig);
         _statusWindow          = new StatusWindow(_config);
-        _objectiveWindow       = new ObjectiveWindow(_config, _store);
+        _objectiveWindow       = new ObjectiveWindow(_config, _store, _tracker);
         _settingsWindow        = new SettingsWindow(_config, SaveConfig, ApplySoundSettings);
         _settingsWindow.ApplyDurations();
 

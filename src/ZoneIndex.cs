@@ -430,9 +430,16 @@ internal static class ZoneIndex
 
         // Resolve territory by walking the definitions once and indexing them, rather than
         // calling FindCustom per challenge — that is a linear search inside a linear loop.
+        // EffectiveTerritory, NOT the authored TerritoryId — the same answer InZone gives, which is
+        // what makes the count on a zone row agree with the list behind it. A quest chain re-files
+        // itself under its CURRENT step's zone; reading the raw field here counted it under the zone
+        // it was authored in while InZone listed it under the one it had moved to, so the origin
+        // zone read "0 of 1" with an empty list and the destination zone listed a challenge its own
+        // count did not include.
         var territoryById = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
         foreach (var c in ChallengeCatalog.AllTrackable(cfg))
-            if (!string.IsNullOrWhiteSpace(c.Id)) territoryById[c.Id] = c.TerritoryId;
+            if (!string.IsNullOrWhiteSpace(c.Id))
+                territoryById[c.Id] = ChallengeCatalog.EffectiveTerritory(c);
 
         foreach (var def in ChallengeCatalog.Combined(cfg))
         {

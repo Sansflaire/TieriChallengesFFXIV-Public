@@ -275,15 +275,50 @@ internal sealed class ChallengeTracker : IDisposable
                 if (!ChallengeCatalog.HasStepProgress(ch)) return false;
 
                 total = ch.StopCount;
-                done  = ch.Mode == AreaMode.InOrder
-                    ? (_sequence.TryGetValue(ch.Id, out var cidx) ? cidx : 0)
-                    : (_visited.TryGetValue(ch.Id, out var cset) ? cset.Count : 0);
+                done  = Math.Min(SatisfiedStopCount(ch.Id, !ch.SessionOnly), total);
                 return total > 0;
 
             default:
                 return false;
         }
     }
+
+    /// <summary>
+    /// How many of a set's stops are satisfied, as the plugin as a whole currently understands it:
+    /// the live session state when there is any, otherwise what is on disk.
+    ///
+    /// <para><b>The disk fallback is not belt-and-braces, it is the common case.</b> The session
+    /// dictionaries are only ever populated by <see cref="Evaluate"/>, which runs solely in the
+    /// challenge's own territory. Reading them alone means an adventure the player left half-done
+    /// last night reports 0 of 4 in the list until they physically walk back into that zone —
+    /// which is precisely the persistence the store exists to provide, thrown away at the one
+    /// place the player would see it.</para>
+    /// </summary>
+    private int SatisfiedStopCount(string key, bool persist)
+    {
+        if (_sequence.TryGetValue(key, out var idx)) return idx;
+        if (_visited.TryGetValue(key, out var set))  return set.Count;
+
+        // An ordered set persists as the PREFIX of satisfied indices, so its count is the index —
+        // the same equivalence EvalSetOrdered relies on when it seeds from disk.
+        return persist ? Plugin.Progress.StopCount(key) : 0;
+    }
+
+    /// <summary>
+    /// Which stops of a set are satisfied, for the objective sheet. Same live-then-disk rule as
+    /// <see cref="SatisfiedStopCount"/>, and for the same reason.
+    /// </summary>
+    /// <remarks>
+    /// Returns the tracker's own live set by reference when there is one — no copy, because this is
+    /// called every frame the sheet is open. Callers must treat it as read-only.
+    /// </remarks>
+    public IReadOnlySet<int> SatisfiedStops(string key, bool persist)
+    {
+        if (_visited.TryGetValue(key, out var set)) return set;
+        return persist ? Plugin.Progress.Stops(key) : Empty;
+    }
+
+    private static readonly HashSet<int> Empty = new();
 
     // ── Tick ─────────────────────────────────────────────────────────────────
 
@@ -350,7 +385,17 @@ internal sealed class ChallengeTracker : IDisposable
             }
 
             // (4) Nothing to do in this zone.
-            if (_active.Count == 0) return;
+            if (_active.Count == 0)
+            {
+                // Dropped, not kept. _lastPos is only refreshed by Evaluate, so leaving it set
+                // while nothing is being evaluated lets it age indefinitely — and the moment a
+                // challenge does become active again (a sync, an edit, a chain advancing) the very
+                // first sweep would run from wherever the player was standing when the set last
+                // emptied. MaxSweepSamples rejects a wild delta, but a stale point a few yalms
+                // away sweeps happily and would credit a volume the player never crossed.
+                _lastPos = null;
+                return;
+            }
 
             Evaluate();
         }
@@ -407,8 +452,26 @@ internal sealed class ChallengeTracker : IDisposable
             _active.Add(ch);
         }
 
+        // A run whose challenge just left the active set can never be advanced again — EvalRace is
+        // only reached through _active — so the clock would keep ticking forever against something
+        // the player can no longer finish, and RunningRaceId would point at a title that no longer
+        // resolves. Reachable whenever definitions change mid-run: a sync dropping the challenge,
+        // an edit that makes it malformed, or the Creator deleting it outright.
+        if (_run != null && !ActiveContains(_run.Id))
+        {
+            Plugin.Log.Information($"[Race] {_run.Id} is no longer trackable here — run abandoned.");
+            EndRun(RaceOutcome.Abandoned);
+        }
+
         if (_active.Count > 0)
             Plugin.Log.Debug($"[Tracker] {_active.Count} challenge(s) active in territory {territory}.");
+    }
+
+    private bool ActiveContains(string id)
+    {
+        for (int i = 0; i < _active.Count; i++)
+            if (string.Equals(_active[i].Id, id, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
     }
 
     private void Evaluate()
@@ -607,10 +670,6 @@ internal sealed class ChallengeTracker : IDisposable
         return complete;
     }
 
-    /// <summary>
-    /// Announce partial progress. Never throws into the tick loop — a subscriber blowing up must
-    /// not cost the player the progress that was just recorded.
-    /// </summary>
     // ── Race ─────────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -911,6 +970,10 @@ internal sealed class ChallengeTracker : IDisposable
         return complete;
     }
 
+    /// <summary>
+    /// Announce partial progress. Never throws into the tick loop — a subscriber blowing up must
+    /// not cost the player the progress that was just recorded.
+    /// </summary>
     private void RaiseProgress(CustomChallenge ch, int done, int total)
     {
         int number = ChallengeCatalog.DisplayNumber(_config, ch.Id);

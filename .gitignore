@@ -39,6 +39,12 @@ libSkiaSharp.dll
 # Build output: background images copied next to the DLL. Source of truth is assets/backgrounds/.
 /backgrounds/
 
+# Build output: the help document copied next to the DLL by CopyHelpDocument, so HelpLibrary can
+# read it at runtime. Source of truth is docs/HELP.md. Anchored so it cannot match that one.
+# Missed when the help feature landed, which left a second HELP.md sitting untracked at the root
+# of the PUBLIC repo — free to be committed by a wildcard add and to drift from the real one.
+/HELP.md
+
 # Build output: PanacheUI's icon PNGs copied next to the DLL by CopyPanacheIcons, so an installed
 # copy can find them without a devPlugins folder (see Issues/005). Owned by the PanacheUI repo.
 /Icons/

@@ -95,14 +95,26 @@ internal static class ConditionEvaluator
     /// One condition, with <see cref="ChallengeCondition.Negate"/> applied.
     /// Presence ignores Negate — "be in this area but not in it" is not a thing.
     /// </summary>
+    /// <remarks>
+    /// <para><b>"Could not evaluate" is not the same as "evaluated false", and Negate is why.</b>
+    /// <see cref="Raw"/> returns null for a condition this build cannot judge — an unknown
+    /// <see cref="ConditionType"/>, a <see cref="GameStateFlag"/> with no mapping, or an exception
+    /// out of the game read. Collapsing that to false looks like failing closed and is the exact
+    /// opposite for a negated condition: "NOT mounted" against an unreadable mount state would
+    /// report satisfied and hand out a completion nobody earned. Null short-circuits ahead of
+    /// Negate so an unjudgeable condition can only ever block.</para>
+    /// </remarks>
     public static bool Holds(ChallengeCondition c, TickState s)
     {
-        bool raw = Raw(c, s);
-        if (c.Type == ConditionType.Presence) return raw;
-        return c.Negate ? !raw : raw;
+        bool? raw = Raw(c, s);
+        if (raw == null) return false;
+
+        if (c.Type == ConditionType.Presence) return raw.Value;
+        return c.Negate ? !raw.Value : raw.Value;
     }
 
-    private static bool Raw(ChallengeCondition c, TickState s)
+    /// <summary>The condition's own truth, or null when this build cannot judge it at all.</summary>
+    private static bool? Raw(ChallengeCondition c, TickState s)
     {
         try
         {
@@ -128,7 +140,14 @@ internal static class ConditionEvaluator
                            <= Facing.ToRadians(c.FacingToleranceDeg);
 
                 case ConditionType.GameState:
-                    return Plugin.Condition[ToFlag(c.Flag)];
+                {
+                    // ToFlag answers None for a GameStateFlag this build has no mapping for.
+                    // Condition[None] is just an array read that reports false, which is a verdict
+                    // rather than the abstention this actually is.
+                    var flag = ToFlag(c.Flag);
+                    if (flag == ConditionFlag.None) return null;
+                    return Plugin.Condition[flag];
+                }
 
                 case ConditionType.Job:
                     if (c.JobId == 0 || s.Job != c.JobId) return false;
@@ -152,15 +171,15 @@ internal static class ConditionEvaluator
 
                 default:
                     // An unknown type reaching here means a challenge slipped past the version
-                    // gate. Failing closed is right: never completing is recoverable, wrongly
+                    // gate. Abstain rather than answer: never completing is recoverable, wrongly
                     // completing is not.
-                    return false;
+                    return null;
             }
         }
         catch (Exception ex)
         {
-            Plugin.Log.Debug($"[Condition] {c.Type} threw, treated as unmet: {ex.Message}");
-            return false;
+            Plugin.Log.Debug($"[Condition] {c.Type} threw, treated as unjudgeable: {ex.Message}");
+            return null;
         }
     }
 

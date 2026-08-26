@@ -225,8 +225,14 @@ public sealed class CompletionStore
     {
         if (seconds < 0) seconds = 0;
 
-        int minutes = (int)(seconds / 60);
-        double rest = seconds - minutes * 60;
+        // Rounded BEFORE the split, not by the format string after it. Formatting the remainder
+        // rounds it in isolation with nothing to carry into the minutes, so 119.999 s split first
+        // and printed as "{1}:{59.999:00.00}" reads "1:60.00", and 59.999 s reads "60.00s" instead
+        // of "1:00.00". Rounding to the displayed precision up front makes the carry happen.
+        double total = Math.Round(seconds, 2, MidpointRounding.AwayFromZero);
+
+        int    minutes = (int)(total / 60);
+        double rest    = total - minutes * 60;
 
         return minutes > 0
             ? $"{minutes}:{rest:00.00}"

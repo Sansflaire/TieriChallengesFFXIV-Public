@@ -343,15 +343,23 @@ internal sealed class Dialogs
 
             ImGui.Spacing();
             ImGui.TextWrapped(
-                $"Every completion mark will be cleared — all {done} challenge(s) you have "
-              + $"marked done, out of {total}, will go back to incomplete.");
+                $"All {done} completed challenge(s), out of {total}, will go back to incomplete.");
+
+            // Named explicitly because it is the part a player cannot get back with Restore, and
+            // the part they are least likely to expect: the permanent ledger only ever held
+            // FINISHED challenges, so a quest chain stopped at step 4 of 5 is not in it. Reset
+            // returns that chain to step 1.
+            ImGui.TextWrapped(
+                "Half-finished quests and adventures are reset too — a quest chain goes back to "
+              + "its first step, and any objectives you have ticked off go with it.");
 
             ImGui.Spacing();
             ImGui.PushStyleColor(ImGuiCol.Text, ColOk);
             ImGui.TextWrapped(
-                $"This is recoverable. A permanent record of all {_store.PermanentCount} completion(s) — "
-              + "with their original dates — is kept in a separate file that Reset never touches. "
-              + "Use Restore afterwards to put it all back.");
+                $"Completions are recoverable. A permanent record of all {_store.PermanentCount} "
+              + "completion(s) — with their original dates — is kept in a separate file that Reset "
+              + "never touches. Use Restore afterwards to put them back. Your best race times are "
+              + "kept as well; a personal best is a record, not progress.");
             ImGui.PopStyleColor();
 
             ImGui.Spacing();

@@ -118,6 +118,17 @@ public sealed class ProgressStore
         return new HashSet<int>();
     }
 
+    /// <summary>
+    /// How many stops are recorded, without materialising the set.
+    ///
+    /// <para>Separate from <see cref="Stops"/> because the challenge row asks this question once
+    /// per row per frame, and <see cref="Stops"/> allocates a <see cref="HashSet{T}"/> copy every
+    /// time it is called — deliberately, so a caller cannot mutate the stored list through it.</para>
+    /// </summary>
+    public int StopCount(string guid) =>
+        !string.IsNullOrEmpty(guid) && _data.Stops.TryGetValue(guid, out var list) && list != null
+            ? list.Count : 0;
+
     public void SetStops(string guid, HashSet<int> stops)
     {
         if (string.IsNullOrEmpty(guid)) return;
