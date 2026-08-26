@@ -689,7 +689,17 @@ internal sealed class MainWindow : IDisposable
     /// <summary>Modals are drawn by Plugin, once, regardless of which renderer is active.</summary>
     public void Draw()
     {
-        if (IsVisible) DrawWindow();
+        if (IsVisible)
+        {
+            DrawWindow();
+            return;
+        }
+
+        // Closed with a field still focused: PumpKeyboard stops running, so the keyboard is
+        // already back — but the focus itself would survive and re-claim it the moment the window
+        // reopened, with nothing on screen explaining why typing had stopped working. Dropped
+        // here so a closed window never holds focus.
+        if (InteractionManager.FocusedNode != null) InteractionManager.ClearFocus();
     }
 
     /// <summary>
@@ -789,6 +799,22 @@ internal sealed class MainWindow : IDisposable
 
         // A modal owns the mouse; swallow clicks so the surface behind it stays inert.
         if (_dialogs.AnyOpen) { mouseClick = false; mouseDown = false; rightClick = false; }
+
+        // GIVE THE KEYBOARD BACK the instant the player clicks away.
+        //
+        // InteractionManager clears focus on any click it SEES that no node claimed — but the
+        // clicks it sees are gated on this window being hovered, so a click out in the world never
+        // reaches it. Focus would survive, PumpKeyboard below would go on asserting
+        // WantCaptureKeyboard every frame, and the game would stay deaf to the keyboard with the
+        // window still open and no field visibly focused. That is worse than the bug that made
+        // PumpKeyboard necessary in the first place.
+        //
+        // A modal counts as "away" too: it swallowed the click above, so the surface will never
+        // see it, and the modal's own text fields need the keyboard.
+        bool clickedAnywhere = ImGui.IsMouseClicked(ImGuiMouseButton.Left)
+                            || ImGui.IsMouseClicked(ImGuiMouseButton.Right);
+
+        if (clickedAnywhere && !mouseClick && !rightClick) InteractionManager.ClearFocus();
 
         float time = (float)(DateTime.UtcNow - _start).TotalSeconds;
         float dt   = ImGui.GetIO().DeltaTime;
