@@ -796,6 +796,18 @@ internal sealed class MainWindow : IDisposable
         var (tex, _) = _surface.Render(root, time, localMouse, mouseDown, mouseClick,
                                        ImGui.GetIO().MouseWheel, dt, forceRedraw: false);
 
+        // Feed the keyboard to whichever Panache field has focus, and — critically — claim the
+        // keyboard while one does.
+        //
+        // A PUI.TextInput is a CUSTOM-DRAWN widget, not an ImGui.InputText. ImGui therefore has no
+        // idea a text field is focused, never raises io.WantTextInput, and Dalamud keeps handing
+        // every keystroke to the game: the search box could be clicked into and showed a caret,
+        // but typing moved the character and opened chat instead. PumpKeyboard is what sets
+        // WantTextInput/WantCaptureKeyboard and routes the characters. It no-ops when nothing has
+        // focus, so it is safe to call unconditionally — but it MUST be inside this window's
+        // Begin/End block, which is why it lives here and not beside the tree build.
+        PUI.PumpKeyboard();
+
         if (tex.HasValue)
             ImGui.Image(tex.Value, new Vector2(w, h));
 
