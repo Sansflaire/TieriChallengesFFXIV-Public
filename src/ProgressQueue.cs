@@ -29,9 +29,17 @@ public sealed class ProgressQueue
     /// rather than added to it, so the popup is fully gone at the five-second mark instead of
     /// lingering to 5.8.
     /// </summary>
-    private const float TotalSeconds = 5.0f;
-    private const float FadeSeconds  = 0.8f;
-    private const float HoldSeconds  = TotalSeconds - FadeSeconds;
+    /// <summary>
+    /// How long a notification stays up, from Settings. A static rather than a const so the
+    /// preference reaches both queues without either taking a config reference — they are pure
+    /// timing state and deliberately know nothing about the plugin around them.
+    /// </summary>
+    public static float TotalSeconds { get; set; } = 5.0f;
+
+    private const float FadeSeconds = 0.8f;
+
+    /// <summary>Fully-opaque time. Never negative, however short the total is set.</summary>
+    private static float HoldSeconds => MathF.Max(0.2f, TotalSeconds - FadeSeconds);
 
     private ProgressEvent? _current;
     private float _elapsed;

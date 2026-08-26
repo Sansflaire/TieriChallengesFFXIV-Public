@@ -83,8 +83,48 @@ internal sealed class SoundService : IDisposable
         GameSound.StopAll();
     }
 
+    /// <summary>
+    /// Set once at startup so cue requests can be filtered without threading a config reference
+    /// through every caller. Null before binding, which simply means nothing is filtered.
+    /// </summary>
+    private static Configuration? _config;
+
+    public static void Bind(Configuration config) => _config = config;
+
+    /// <summary>
+    /// Is this cue switched on? Checked at REQUEST time rather than at playback, so a disabled cue
+    /// costs nothing and cannot occupy a slot in the backlog.
+    /// </summary>
+    public static bool IsEnabled(Cue cue)
+    {
+        if (_config == null) return true;
+        if (_config.SoundMuted) return false;
+
+        var off = _config.DisabledCues;
+        return off == null || !off.Contains(cue.ToString());
+    }
+
+    /// <summary>Every cue the plugin can raise, with player-facing wording for the settings list.</summary>
+    public static readonly (Cue Cue, string Label, string When)[] PublicCues =
+    {
+        (Cue.ObjectiveProgress, "Objective progress",  "part of a challenge is done"),
+        (Cue.ChallengeComplete, "Challenge complete",  "a challenge finishes"),
+        (Cue.ZoneAvailable,     "Zone has challenges", "you arrive somewhere with one still open"),
+        (Cue.ResetConfirmed,    "Progress wiped",      "you confirm a reset"),
+    };
+
     /// <summary>Request a cue. Fire-and-forget, thread-safe, never throws.</summary>
-    public void Play(Cue cue) => Request(GameSound.CueTarget(cue));
+    public void Play(Cue cue)
+    {
+        if (!IsEnabled(cue)) return;
+        Request(GameSound.CueTarget(cue));
+    }
+
+    /// <summary>
+    /// Play a cue ignoring the enable/mute filter — the settings list's preview buttons, where the
+    /// point is to hear what you are about to switch off.
+    /// </summary>
+    public void Preview(Cue cue) => Request(GameSound.CueTarget(cue));
 
 #if DEV_BUILD
     /// <summary>

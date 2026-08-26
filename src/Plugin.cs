@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
@@ -116,6 +117,9 @@ public sealed class Plugin : IDalamudPlugin
     /// </summary>
     private readonly ObjectiveWindow _objectiveWindow;
 
+    /// <summary>Player-facing sound, notification and colour settings. Renderer-agnostic.</summary>
+    private readonly SettingsWindow _settingsWindow;
+
     // PanacheUI-backed. NULL when the library could not be loaded — these types must never be
     // constructed in that case, because merely loading them throws. See PanacheAvailability.
     private readonly CompletionToast? _toast;
@@ -179,6 +183,13 @@ public sealed class Plugin : IDalamudPlugin
 
         _config.MigrateIfNeeded(_store);
         SaveConfig();   // persist any id / sort rewrites migration performed
+
+        // Bound before anything can raise a cue or paint a pixel: both read the config through a
+        // static, and an unbound Palette would draw the first frame in shipped colours before
+        // snapping to the user's.
+        Palette.Bind(_config);
+        SoundService.Bind(_config);
+        ApplySoundSettings();
 
         // Official challenges synced from the public repo. Loaded before anything reads the
         // catalogue, and published to ChallengeCatalog so every query sees them.
@@ -254,11 +265,14 @@ public sealed class Plugin : IDalamudPlugin
         _fallbackRacePrompt    = new FallbackRacePrompt(_config, _store, _tracker, SaveConfig);
         _statusWindow          = new StatusWindow(_config);
         _objectiveWindow       = new ObjectiveWindow(_config, _store);
+        _settingsWindow        = new SettingsWindow(_config, SaveConfig, ApplySoundSettings);
+        _settingsWindow.ApplyDurations();
 
         if (_mainWindow != null)
         {
             _mainWindow.OnOpenStatus     = () => _statusWindow.IsVisible = !_statusWindow.IsVisible;
             _mainWindow.OnOpenObjectives = id => _objectiveWindow.Toggle(id);
+            _mainWindow.OnOpenSettings   = () => _settingsWindow.IsVisible = !_settingsWindow.IsVisible;
         }
 
         // One handler per event, which fans out to sound, fly text and the popup IN THAT ORDER.
@@ -272,6 +286,7 @@ public sealed class Plugin : IDalamudPlugin
                                              SaveConfig, RestoreFromPermanent);
         _fallbackWindow.OnOpenStatus     = () => _statusWindow.IsVisible = !_statusWindow.IsVisible;
         _fallbackWindow.OnOpenObjectives = id => _objectiveWindow.Toggle(id);
+        _fallbackWindow.OnOpenSettings   = () => _settingsWindow.IsVisible = !_settingsWindow.IsVisible;
         _tracker.Attach();
 
         // Pick up new official challenges shortly after load, without blocking startup.
@@ -381,6 +396,17 @@ public sealed class Plugin : IDalamudPlugin
     {
         try { PluginInterface.SavePluginConfig(_config); }
         catch (Exception ex) { Log.Error(ex, "Failed to save config"); }
+    }
+
+    /// <summary>
+    /// Push the audio settings into <see cref="GameSound"/>'s statics. Called at startup and
+    /// whenever the settings window changes one — mirroring on change rather than reading the
+    /// config on every cue keeps the playback path free of a config reference.
+    /// </summary>
+    internal void ApplySoundSettings()
+    {
+        GameSound.Volume = Math.Clamp(_config.SoundVolume, 0f, 1f);
+        GameSound.Muted  = _config.SoundMuted;
     }
 
     private void OnCommand(string command, string args)
@@ -532,6 +558,9 @@ public sealed class Plugin : IDalamudPlugin
 
         try { _objectiveWindow.Draw(); }
         catch (Exception ex) { Log.Error(ex, "Objective window draw exception"); }
+
+        try { _settingsWindow.Draw(); }
+        catch (Exception ex) { Log.Error(ex, "Settings window draw exception"); }
 
         // Exactly one toast renderer per frame — TryCurrent advances the clock, so drawing both
         // would double the fade speed and drop popups.
@@ -784,11 +813,32 @@ public sealed class Plugin : IDalamudPlugin
     /// for a UI reason. Fly text second (drawn by the game, so it shows with no window open).
     /// The popup last, since it is the only part that can be delayed behind another.
     /// </summary>
+    /// <summary>
+    /// Should visual notifications be held right now? Sound is deliberately NOT gated by this —
+    /// a cue cannot obscure anything, and this plugin treats audio as its highest-priority
+    /// feedback (see <see cref="SoundService"/>). This suppresses what would be drawn OVER the
+    /// fight, not what tells you the fight earned you something.
+    /// </summary>
+    private bool NotificationsHeld
+    {
+        get
+        {
+            if (!_config.SuppressInCombat) return false;
+
+            try
+            {
+                return Condition[ConditionFlag.InCombat] || Condition[ConditionFlag.BoundByDuty];
+            }
+            catch { return false; }
+        }
+    }
+
     private void OnCompleted(CompletionEvent e)
     {
         Sound.Play(SoundService.Cue.ChallengeComplete);
-        FlyTextService.ShowComplete(e.Title);
-        _toastQueue.Enqueue(e);
+
+        if (_config.ShowFlyText && !NotificationsHeld) FlyTextService.ShowComplete(e.Title);
+        if (_config.ShowCompletionBanner && !NotificationsHeld) _toastQueue.Enqueue(e);
     }
 
     /// <summary>
@@ -862,11 +912,13 @@ public sealed class Plugin : IDalamudPlugin
     private void OnProgressed(ProgressEvent e)
     {
         Sound.Play(SoundService.Cue.ObjectiveProgress);
-        FlyTextService.ShowProgress(e.Title, e.Done, e.Total);
+
+        if (_config.ShowFlyText && !NotificationsHeld)
+            FlyTextService.ShowProgress(e.Title, e.Done, e.Total);
 
         // Interrupts whatever is on screen rather than queueing behind it — the newest count is
         // the only one worth reading, and it is cumulative anyway.
-        _progressQueue.Show(e);
+        if (_config.ShowProgressPopups && !NotificationsHeld) _progressQueue.Show(e);
     }
 
     /// <summary>

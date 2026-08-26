@@ -31,10 +31,12 @@ internal sealed class ObjectiveWindow
 
     private string? _openId;
 
-    private static readonly Vector4 Gold   = DialogTheme.Accent;
-    private static readonly Vector4 Green  = DialogTheme.StatusOk;
-    private static readonly Vector4 Blue   = new(0.56f, 0.72f, 0.91f, 1f);
-    private static readonly Vector4 Muted  = DialogTheme.TextMuted;
+    // Properties, not fields: DialogTheme now reads the user-recolourable Palette, and a
+    // `static readonly` copy would freeze at class-init and never see a colour change.
+    private static Vector4 Gold   => DialogTheme.Accent;
+    private static Vector4 Green  => DialogTheme.StatusOk;
+    private static Vector4 Blue   => Palette.Vec(PaletteSlot.Quest);
+    private static Vector4 Muted  => DialogTheme.TextMuted;
 
     public ObjectiveWindow(Configuration config, CompletionStore store)
     {

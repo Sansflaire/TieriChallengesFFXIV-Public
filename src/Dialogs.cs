@@ -31,9 +31,9 @@ internal sealed class Dialogs
 
     // Aliased onto DialogTheme's exact values rather than kept as separately-tuned constants —
     // this file was where the drift started (these predate DialogTheme by several versions).
-    private static readonly Vector4 ColOk     = DialogTheme.StatusOk;
+    private static Vector4 ColOk     => DialogTheme.StatusOk;
     private static readonly Vector4 ColWarn   = new(0.85f, 0.60f, 0.35f, 1f);
-    private static readonly Vector4 ColDanger = DialogTheme.Danger;
+    private static Vector4 ColDanger => DialogTheme.Danger;
 
     private readonly Configuration    _config;
     private readonly CompletionStore  _store;

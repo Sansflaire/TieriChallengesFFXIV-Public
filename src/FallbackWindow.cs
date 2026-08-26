@@ -24,11 +24,13 @@ internal sealed class FallbackWindow
 {
     // Aliased onto DialogTheme's exact values so this renderer cannot visually drift from the
     // popups or the main window — same fix applied to Dialogs.cs's constants on 2026-08-24.
-    private static readonly Vector4 ColAccent = DialogTheme.Accent;
-    private static readonly Vector4 ColOk     = DialogTheme.StatusOk;
-    private static readonly Vector4 ColMuted  = DialogTheme.TextMuted;
-    private static readonly Vector4 ColDanger = DialogTheme.Danger;
-    private static readonly Vector4 ColHint   = new(0.66f, 0.79f, 0.94f, 1.00f);
+    // Properties, not fields: DialogTheme now reads the user-recolourable Palette, and a
+    // `static readonly` copy would freeze at class-init and never see a colour change.
+    private static Vector4 ColAccent => DialogTheme.Accent;
+    private static Vector4 ColOk     => DialogTheme.StatusOk;
+    private static Vector4 ColMuted  => DialogTheme.TextMuted;
+    private static Vector4 ColDanger => DialogTheme.Danger;
+    private static Vector4 ColHint   => Palette.Vec(PaletteSlot.Hint);
 
     /// <summary>"  ·  best 41.20s" for a race that has been finished, else nothing.</summary>
     private string RaceBestSuffix(ChallengeDef def)
@@ -118,6 +120,9 @@ internal sealed class FallbackWindow
     /// <summary>Open the shared requirement sheet — see <c>MainWindow.OnOpenObjectives</c>.</summary>
     public Action<string>? OnOpenObjectives;
 
+    /// <summary>Open the shared settings window — see MainWindow.OnOpenSettings.</summary>
+    public Action? OnOpenSettings;
+
     /// <summary>
     /// Put the window back in the middle of the screen on the next frame. Mirror of
     /// <c>MainWindow.RequestCenter</c> — see there for why this is a deferred request.
@@ -170,6 +175,9 @@ internal sealed class FallbackWindow
         // Panache renderer, so the two stay the same shape.
         ImGui.SameLine();
         if (ImGui.SmallButton("Info##tc_fb_info")) OnOpenStatus?.Invoke();
+
+        ImGui.SameLine();
+        if (ImGui.SmallButton("Settings##tc_fb_settings")) OnOpenSettings?.Invoke();
 
         var (done, total) = ChallengeCatalog.OverallProgress(_config, _store);
         float frac = ChallengeCatalog.Percent(done, total);

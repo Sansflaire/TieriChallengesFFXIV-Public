@@ -511,6 +511,68 @@ public sealed class Configuration : IPluginConfiguration
     /// </summary>
     public bool RacePromptSuppressed { get; set; }
 
+    // ── Sound ────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Master cue volume, 0..1.
+    ///
+    /// <para><b>Applied by rescaling the audio, not by the player.</b> Three of the four cues ship
+    /// as .wav files played through winmm's <c>PlaySound</c>, which takes no volume argument, and
+    /// they cannot go back through the game mixer — that was proven silent over ~15 builds
+    /// (BROKEN.md 003). <see cref="SoundVolume"/> is therefore honoured by writing a scaled copy of
+    /// the wave and playing that. The one game-bank cue passes it straight to the engine.</para>
+    /// </summary>
+    public float SoundVolume { get; set; } = 1f;
+
+    /// <summary>Silence every cue. Independent of <see cref="SoundVolume"/> so muting does not lose the level.</summary>
+    public bool SoundMuted { get; set; }
+
+    /// <summary>
+    /// Cues the player has switched off individually, by <c>SoundService.Cue</c> name. Stored by
+    /// name rather than ordinal so adding or reordering cues cannot silence the wrong one.
+    /// </summary>
+    public List<string> DisabledCues { get; set; } = new();
+
+    // ── Notifications ────────────────────────────────────────────────────────
+
+    /// <summary>Show the bottom-right progress notification when part of an objective lands.</summary>
+    public bool ShowProgressPopups { get; set; } = true;
+
+    /// <summary>Show the big completion banner when a challenge finishes.</summary>
+    public bool ShowCompletionBanner { get; set; } = true;
+
+    /// <summary>Show floating text over the character.</summary>
+    public bool ShowFlyText { get; set; } = true;
+
+    /// <summary>How long a notification stays on screen, in seconds. Clamped 2–15 on load.</summary>
+    public float PopupSeconds { get; set; } = 5f;
+
+    /// <summary>
+    /// Hold notifications while in combat or inside a duty.
+    ///
+    /// <para>Off by default: a completion the player earned mid-fight should be celebrated when it
+    /// happens. On, for anyone who would rather nothing appeared over a boss.</para>
+    /// </summary>
+    public bool SuppressInCombat { get; set; }
+
+    // ── Colours ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Recoloured palette slots, keyed by <see cref="PaletteSlot"/> NAME. Absent = shipped default,
+    /// which is what makes "Reset" a delete rather than a second copy of the defaults to keep in
+    /// step with the first.
+    /// </summary>
+    public Dictionary<string, string> PaletteOverrides { get; set; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Challenge categories the filter menu is hiding, by <see cref="ChallengeFilterFlag"/> name.
+    ///
+    /// <para>Stored as what to HIDE rather than what to show, so a filter set before a new
+    /// challenge shape existed cannot silently hide it. An empty list means "show everything",
+    /// which is also what a config written before this field existed deserialises to.</para>
+    /// </summary>
+    public List<string> HiddenFilters { get; set; } = new();
+
     /// <summary>How the challenge list is ordered. Set from Settings → Sort.</summary>
     public ChallengeSort SortMode { get; set; } = ChallengeSort.Created;
 
@@ -610,6 +672,15 @@ public sealed class Configuration : IPluginConfiguration
         CollapsedExpansions ??= new List<uint>();
         CustomCategories    ??= new List<string>();
         VisitedTerritories  ??= new List<uint>();
+        DisabledCues        ??= new List<string>();
+        HiddenFilters       ??= new List<string>();
+        PaletteOverrides    ??= new Dictionary<string, string>(StringComparer.Ordinal);
+
+        // Clamped rather than trusted, for the same reason as UiScale above: these are value types
+        // in a hand-editable file, so a config written before they existed deserialises them to 0 —
+        // which would mean permanent silence and a popup that vanishes before it can be read.
+        SoundVolume  = Math.Clamp(SoundVolume, 0f, 1f);
+        PopupSeconds = PopupSeconds <= 0f ? 5f : Math.Clamp(PopupSeconds, 2f, 15f);
 
         // A 0 here — from a hand edit, or from a config written before the field existed —
         // would hide every rated challenge with nothing on screen explaining why.

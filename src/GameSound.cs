@@ -62,9 +62,21 @@ internal static class GameSound
         return Path.Combine(dir, SoundFolder, fileName);
     }
 
-    private static bool PlayWave(string fileName)
+    /// <summary>
+    /// Master cue volume and mute, mirrored from config by <c>Plugin</c>.
+    ///
+    /// <para>Held here as statics rather than reached through the config because this class is
+    /// static and is called from the framework tick; the mirroring is one assignment on change,
+    /// which is cheaper than a config reference on every cue.</para>
+    /// </summary>
+    public static float Volume { get; set; } = 1f;
+    public static bool  Muted  { get; set; }
+
+    private static bool PlayWave(string fileName) => PlayWaveAbsolute(ResolveAsset(fileName));
+
+    private static bool PlayWaveAbsolute(string full)
     {
-        string full = ResolveAsset(fileName);
+        string fileName = Path.GetFileName(full);
 
         if (!File.Exists(full))
         {
@@ -257,7 +269,15 @@ internal static class GameSound
         try
         {
             // Shipped files never touch the game mixer — that is the entire point of them.
-            if (IsWave(path)) return PlayWave(path);
+            // Volume is applied by handing PlayWave a rescaled COPY, since winmm takes no volume
+            // argument; null means muted or zero, i.e. play nothing at all. See WaveVolume.
+            if (IsWave(path))
+            {
+                string? resolved = WaveVolume.ResolveForPlayback(
+                    ResolveAsset(path), Volume, Muted);
+
+                return resolved != null && PlayWaveAbsolute(resolved);
+            }
 
             // A path that does not exist still produces a resource handle and a "successful"
             // play, so the only way to catch a typo is to ask before playing.

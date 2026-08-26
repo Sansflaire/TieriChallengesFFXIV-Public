@@ -36,12 +36,17 @@ internal static class DialogTheme
     // Same hex values as MainWindow's own constants — kept as separate literals rather than a
     // shared reference because MainWindow's copies are PColor (PanacheUI.Core) and this file must
     // import nothing from that namespace.
-    public static readonly Vector4 Accent   = Hex("#E3B341");
-    public static readonly Vector4 StatusOk = Hex("#7FD6A9");
-    public static readonly Vector4 Danger   = Hex("#E57B72");
-    public static readonly Vector4 Neutral  = Hex("#8B8794");
-    public static readonly Vector4 TextHi   = new(0.94f, 0.94f, 0.94f, 1f);
-    public static readonly Vector4 TextMuted = new(0.62f, 0.60f, 0.66f, 1f);
+    //
+    // Read from Palette, which is deliberately framework-neutral — it holds hex strings and hands
+    // back Vector4, importing nothing from PanacheUI. That is what lets this file share ONE
+    // user-recolourable palette with MainWindow while keeping the no-PanacheUI-reference contract
+    // described above. Properties, not fields: the values change when the user recolours them.
+    public static Vector4 Accent    => Palette.Vec(PaletteSlot.Accent);
+    public static Vector4 StatusOk  => Palette.Vec(PaletteSlot.Success);
+    public static Vector4 Danger    => Palette.Vec(PaletteSlot.Danger);
+    public static Vector4 Neutral   => Palette.Vec(PaletteSlot.Neutral);
+    public static Vector4 TextHi    => Palette.Vec(PaletteSlot.Title);
+    public static Vector4 TextMuted => Palette.Vec(PaletteSlot.Description);
 
     // Dark surfaces. Not read from Panache's theme system for the reason above — chosen to sit
     // close to the dark, low-saturation panel colors the main window renders with by default.

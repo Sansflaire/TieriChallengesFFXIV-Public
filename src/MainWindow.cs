@@ -165,25 +165,35 @@ internal sealed class MainWindow : IDisposable
     /// </summary>
     public Action<string>? OnOpenObjectives;
 
+    /// <summary>Open the player-facing settings window (sound, notifications, colours).</summary>
+    public Action? OnOpenSettings;
+
     // ── Palette ──────────────────────────────────────────────────────────────
     // One accent (DESIGN_SYSTEM §1.2) + the shared semantic status palette (§3.3).
-    private static readonly PColor Accent   = PColor.FromHex("#E3B341");
-    private static readonly PColor StatusOk = PColor.FromHex("#7FD6A9");  // progress / done
-    private static readonly PColor Danger   = PColor.FromHex("#E57B72");  // destructive
-    private static readonly PColor Neutral  = PColor.FromHex("#8B8794");  // unknown / pending
-    private static readonly PColor TextHi   = PColor.White.WithOpacity(0.92f); // never pure #FFF
+    //
+    // These are PROPERTIES, not constants, because the palette is user-recolourable — see
+    // Palette.cs. Keeping the original names means every call site below is unchanged; only the
+    // source of the value moved. Reading through a dictionary once per node is not measurable
+    // against laying out and rasterising the node itself.
+    private static PColor Slot(PaletteSlot s) => PColor.FromHex(Palette.Hex(s));
+
+    private static PColor Accent   => Slot(PaletteSlot.Accent);
+    private static PColor StatusOk => Slot(PaletteSlot.Success);   // progress / done
+    private static PColor Danger   => Slot(PaletteSlot.Danger);    // destructive
+    private static PColor Neutral  => Slot(PaletteSlot.Neutral);   // unknown / pending
+    private static PColor TextHi   => Slot(PaletteSlot.Title);     // never pure #FFF
 
     // Hints get their own hue rather than reusing the gold accent: a revealed hint has to read
     // as "this is not the description you were looking at" at a glance, from across the row.
-    private static readonly PColor HintAccent = PColor.FromHex("#8FB8E8");
+    private static PColor HintAccent => Slot(PaletteSlot.Hint);
 
     /// <summary>
     /// Theme colours. Gold is the plugin's own accent and stays the default; a quest is blue and an
     /// adventure green. These are read off the challenge's STRUCTURE — see <see cref="ChallengeTheme"/>
     /// for why no challenge carries a colour of its own.
     /// </summary>
-    private static readonly PColor QuestBlue     = PColor.FromHex("#8FB8E8");
-    private static readonly PColor AdventureGreen = PColor.FromHex("#7FD6A9");
+    private static PColor QuestBlue      => Slot(PaletteSlot.Quest);
+    private static PColor AdventureGreen => Slot(PaletteSlot.Adventure);
 
     private static PColor ThemeColor(ChallengeTheme t) => t switch
     {
@@ -191,7 +201,7 @@ internal sealed class MainWindow : IDisposable
         ChallengeTheme.Adventure => AdventureGreen,
         _                        => Accent,
     };
-    private static readonly PColor HintText   = PColor.FromHex("#A9C9F0").WithOpacity(0.95f);
+    private static PColor HintText => Slot(PaletteSlot.Hint).WithOpacity(0.95f);
 
     /// <summary>
     /// The multiplier behind Settings → UI Scale, handed to <see cref="PanacheSurface.Scale"/>.
@@ -471,6 +481,15 @@ internal sealed class MainWindow : IDisposable
         public const int Sync         = 51;   // circular arrows
         public const int Restore      = 52;   // dashed circular arrow
         public const int Appearance   = 60;   // sliders
+
+        /// <summary>
+        /// Filter button. The sliders glyph again — the bundled set has no funnel, and the
+        /// declared subset certainly does not. Reusing a declared id is the right trade: an
+        /// UNdeclared one renders as a silent grey placeholder (see devPlugins/CLAUDE.md),
+        /// which is worse than two controls sharing a sensible "adjust what you see" glyph.
+        /// Swap this the moment a funnel is added to the set.
+        /// </summary>
+        public const int Filter       = 60;   // sliders, shared with Appearance
         public const int Renderer     = 71;   // half-filled circle
         public const int Reset        = 46;   // prohibition
         public const int Suggest      = 47;   // lightbulb
@@ -833,6 +852,12 @@ internal sealed class MainWindow : IDisposable
                 _expandedId = null;
             else if (!_controlClickPending)
                 _expandedId = _expandedId == _rowClickPending ? null : _rowClickPending;
+
+            // A click anywhere that was NOT one of the dropdown's own rows closes it. Its rows and
+            // its button all set _controlClickPending, so this is exactly "clicked outside" —
+            // the same resolution the row expansion uses, for the same reason it cannot be done
+            // in a handler.
+            if (!_controlClickPending) _filterMenuOpen = false;
         }
 
         _rowClickPending     = null;
@@ -880,6 +905,11 @@ internal sealed class MainWindow : IDisposable
 
     private Node BuildTree(int w, int h)
     {
+        // Promotes a pending search term once typing has stopped. Once per frame, before anything
+        // reads Active, so the list and the box never disagree within a frame.
+        _challengeSearch.Tick();
+        _masterSearch.Tick();
+
         var root = PUI.RootNode(w, h);
 
         // Background image sits on the root, behind everything. The panels above it are painted
@@ -911,6 +941,25 @@ internal sealed class MainWindow : IDisposable
 
         // Last, so it draws over the panes and escapes their ClipContent.
         AppendMenuOverlay(root, w, h);
+
+        // The filter dropdown, floated for the same reason: inside the detail pane it would be
+        // clipped by the scroll container and would push the list down as it opened.
+        if (_filterMenuOpen)
+        {
+            var overlay = BuildFilterMenu().WithStyle(s =>
+            {
+                s.Position = PositionMode.Absolute;
+                // Anchored under the filter button, which sits at the right-hand end of the detail
+                // title row. Right-aligned by measurement rather than guessed, so it cannot hang
+                // off the edge of a narrow window.
+                s.Left = MathF.Max(8f, w - 210f - PadPaneX);
+                // Directly under the filter button: the detail header starts below the window
+                // header, is padded by PadPaneY, and the button is HintBtn tall.
+                s.Top  = headerH + PadPaneY + HintBtn + 6f;
+            });
+
+            root.AppendChild(overlay);
+        }
 
         return root;
     }
@@ -1290,6 +1339,9 @@ internal sealed class MainWindow : IDisposable
         });
 
         pane.AppendChild(BuildGroupToggle(zones));
+        pane.AppendChild(BuildSearchBox("master_search", _masterSearch,
+                                        zones ? "Search zones…" : "Search categories…",
+                                        masterW - PadPaneX * 2f));
 
         // Separate scroll ids per mode: the offset is keyed by Id, and a category list scrolled
         // halfway would otherwise hand its offset to a 150-row zone list and vice versa.
@@ -1316,8 +1368,19 @@ internal sealed class MainWindow : IDisposable
         }
         else
         {
+            int shownCats = 0;
             foreach (var cat in categories)
+            {
+                if (!_masterSearch.Matches(cat)) continue;
                 scroll.AppendChild(CategoryRow(masterW, cat, cat == selected));
+                shownCats++;
+            }
+
+            // A search that matches nothing must say so. An empty pane with a full search box in
+            // it reads as the list having broken rather than as "no results".
+            if (shownCats == 0)
+                scroll.AppendChild(EmptyNote("No matches.",
+                                             $"Nothing here matches \"{_masterSearch.Active}\"."));
         }
 
         pane.AppendChild(scroll);
@@ -1599,6 +1662,7 @@ internal sealed class MainWindow : IDisposable
         }
 
         bool onlyPopulated = _config.ZonesWithChallengesOnly;
+        bool searching     = _masterSearch.HasTerm;
         int  shown = 0;
 
         foreach (var expansion in expansions)
@@ -1606,7 +1670,30 @@ internal sealed class MainWindow : IDisposable
             var (exDone, exTotal) = counts.Of(expansion);
             if (onlyPopulated && exTotal == 0) continue;
 
-            bool collapsed = _config.CollapsedExpansions.Contains(expansion.Id);
+            // While searching, expansions are pre-scanned so one with no matching zone is left out
+            // entirely rather than shown as an empty header. An expansion whose own NAME matches
+            // keeps all of its zones — searching "Endwalker" means "show me Endwalker".
+            bool exNameHit = _masterSearch.Matches(expansion.Name);
+            var  matching  = new List<ZoneIndex.Zone>();
+
+            if (searching && !exNameHit)
+            {
+                foreach (var zone in expansion.Zones)
+                {
+                    if (onlyPopulated && counts.Zone(zone.TerritoryId).Total == 0) continue;
+
+                    // DisplayName, never ZoneName — a masked zone must not be findable by typing
+                    // the name the mask exists to hide.
+                    if (_masterSearch.Matches(ZoneIndex.DisplayName(_config, zone.TerritoryId)))
+                        matching.Add(zone);
+                }
+
+                if (matching.Count == 0) continue;
+            }
+
+            // Search results ignore the collapsed state: a zone you just searched for, hidden
+            // inside a collapsed expansion, is a result the player cannot see.
+            bool collapsed = !searching && _config.CollapsedExpansions.Contains(expansion.Id);
             scroll.AppendChild(ExpansionRow(expansion, exDone, exTotal, collapsed));
             shown++;
 
@@ -1615,11 +1702,15 @@ internal sealed class MainWindow : IDisposable
             // The catch-all group has no zones of its own — its single row IS the bucket.
             if (expansion.Zones.Count == 0)
             {
-                scroll.AppendChild(ZoneRow(masterW, ZoneIndex.AnyZone, counts.Zone(ZoneIndex.AnyZone)));
+                if (!searching || exNameHit
+                    || _masterSearch.Matches(ZoneIndex.DisplayName(_config, ZoneIndex.AnyZone)))
+                    scroll.AppendChild(ZoneRow(masterW, ZoneIndex.AnyZone, counts.Zone(ZoneIndex.AnyZone)));
                 continue;
             }
 
-            foreach (var zone in expansion.Zones)
+            IReadOnlyList<ZoneIndex.Zone> zones =
+                searching && !exNameHit ? matching : expansion.Zones;
+            foreach (var zone in zones)
             {
                 var tally = counts.Zone(zone.TerritoryId);
                 if (onlyPopulated && tally.Total == 0) continue;
@@ -1629,8 +1720,10 @@ internal sealed class MainWindow : IDisposable
 
         if (shown == 0)
         {
-            scroll.AppendChild(EmptyNote("No zones have challenges yet.",
-                "Switch the filter above back to all zones to browse the full list."));
+            scroll.AppendChild(searching
+                ? EmptyNote("No matches.", $"No zone matches \"{_masterSearch.Active}\".")
+                : EmptyNote("No zones have challenges yet.",
+                    "Switch the filter above back to all zones to browse the full list."));
         }
     }
 
@@ -2000,20 +2093,8 @@ internal sealed class MainWindow : IDisposable
             SortItem("Sort: A → Z",          ChallengeSort.Alphabetical),
             SortItem("Sort: Difficulty",     ChallengeSort.Difficulty),
             new("UI Scale…", () => _dialogs.RequestUiScale(), TextHi, Ico.Scale),
+            new("Sound, notifications & colours…", () => OnOpenSettings?.Invoke(), TextHi, Ico.None),
         };
-
-        // The way back from the race prompt's "Don't show these". Shown ONLY while suppressed:
-        // an always-present toggle would be a fourth line of settings explaining a popup most
-        // players have never turned off, and the item is meaningless until they have.
-        if (_config.RacePromptSuppressed)
-        {
-            settings.Add(new MenuItem("Show race prompts again", () =>
-            {
-                _config.RacePromptSuppressed = false;
-                _save();
-                Plugin.ChatGui.Print("[Challenges] Race prompts re-enabled.");
-            }, StatusOk, Ico.None));
-        }
 
         menus.Add(new MenuDef("Settings", settings));
 
@@ -2398,7 +2479,21 @@ internal sealed class MainWindow : IDisposable
         // progress line useless for the thing it exists to report.
         var shown = new List<ChallengeDef>(list.Count);
         foreach (var d in list)
-            if (!d.HasDifficulty || d.Difficulty <= _config.MaxDifficulty) shown.Add(d);
+        {
+            if (d.HasDifficulty && d.Difficulty > _config.MaxDifficulty) continue;
+            if (!ChallengeFilter.Passes(_config, d, _store.IsComplete(d.Id))) continue;
+
+            // Searching a masked challenge on its hidden text would confirm what the mask exists
+            // to withhold, so a spoilered row is matched on nothing and simply drops out.
+            bool spoiled = !_store.IsComplete(d.Id) && !DevBypassesSpoilers
+                        && AttunementService.IsZoneSpoilered(_config, ZoneIndex.TerritoryOf(_config, d.Id));
+
+            if (_challengeSearch.HasTerm
+                && !(!spoiled && _challengeSearch.Matches(d.Title, d.Detail, d.Hint, d.Category)))
+                continue;
+
+            shown.Add(d);
+        }
         int hidden = list.Count - shown.Count;
 
         // Detail header — category name, difficulty filter, and this category's own x-of-y.
@@ -2411,7 +2506,11 @@ internal sealed class MainWindow : IDisposable
         {
             s.Flow       = Flow.Vertical;
             s.WidthMode  = SizeMode.Fill;
-            s.HeightMode = SizeMode.Fixed; s.Height = DetailHeaderH;
+            // Fit over a MinHeight floor, NOT a fixed height. The floor keeps the original
+            // proportions; the Fit is what lets a row be added without silently overflowing.
+            // It was Fixed when the search box went in, and the overflow drew the progress line
+            // and bar straight through the first challenge row.
+            s.HeightMode = SizeMode.Fit; s.MinHeight = DetailHeaderH;
             s.Padding    = new EdgeSize(PadPaneY, PadPaneX);
             s.Gap        = 6;
         });
@@ -2436,8 +2535,12 @@ internal sealed class MainWindow : IDisposable
             s.PointerEvents = PointerEvents.None;
         }));
 
+        titleRow.AppendChild(BuildFilterButton());
         titleRow.AppendChild(BuildDifficultyFilter());
         head.AppendChild(titleRow);
+
+        head.AppendChild(BuildSearchBox("chal_search", _challengeSearch,
+                                        "Search challenges…", detailW - PadPaneX * 2f));
 
         string scopeWord = _config.Grouping == GroupMode.Zones ? "zone" : "category";
         string progressLine = $"{done} of {total} done  ·  {frac * 100f:0}% of this {scopeWord}";
@@ -3020,6 +3123,175 @@ internal sealed class MainWindow : IDisposable
     /// leave a filter running with nothing on screen to explain it — the "hidden by filter" note
     /// on the progress line covers the case where it bites.</para>
     /// </remarks>
+    // ── Search and filter ────────────────────────────────────────────────────
+
+    /// <summary>Debounced search for the challenge list. See <see cref="DebouncedSearch"/>.</summary>
+    private readonly DebouncedSearch _challengeSearch = new();
+
+    /// <summary>Debounced search for the master pane — categories or zones.</summary>
+    private readonly DebouncedSearch _masterSearch = new();
+
+    /// <summary>Whether the filter dropdown is open. One frame's state, like the menu bar's.</summary>
+    private bool _filterMenuOpen;
+
+    /// <summary>
+    /// A single-line search box.
+    ///
+    /// <para>The first use of <c>PUI.TextInput</c> in this plugin. It was passed over before
+    /// because it is single-line by construction and the only text input at the time was the
+    /// multi-line suggestion box — a search field is exactly the shape it was built for, so this
+    /// needs no ImGui escape hatch and stays inside the Panache surface.</para>
+    /// </summary>
+    private Node BuildSearchBox(string id, DebouncedSearch search, string placeholder, float width)
+    {
+        var row = new Node().WithStyle(s =>
+        {
+            s.Flow       = Flow.Horizontal;
+            s.WidthMode  = SizeMode.Fill;
+            s.HeightMode = SizeMode.Fit;
+            s.Gap        = 6;
+            s.Margin     = new EdgeSize(4, 0, 4, 0);
+            s.AlignItems = AlignItems.Center;
+        });
+
+        var box = PUI.TextInput(id, search.Raw, Accent,
+                                onChange: v => search.SetText(v),
+                                placeholder: placeholder,
+                                width: MathF.Max(60f, width - 26f));
+        row.AppendChild(box);
+
+        // "…" while the delay is running, "×" once there is something to clear. Without the first
+        // of those, typing and then waiting looks like the box has stopped responding.
+        if (search.IsWaiting)
+        {
+            row.AppendChild(new Node().WithText("…").WithStyle(s =>
+            {
+                s.WidthMode     = SizeMode.Fit;
+                s.HeightMode    = SizeMode.Fit;
+                s.FontSize      = 13f;
+                s.Color         = Accent.WithOpacity(0.8f);
+                s.PointerEvents = PointerEvents.None;
+            }));
+        }
+        else if (!string.IsNullOrEmpty(search.Raw))
+        {
+            var clear = PUI.Icon(Ico.Close, 12f, Neutral, interactive: true, nodeId: id + "_clear");
+            clear.OnClick += _ =>
+            {
+                _controlClickPending = true;
+                search.Clear();
+            };
+            row.AppendChild(clear);
+        }
+
+        return row;
+    }
+
+    /// <summary>
+    /// The square filter button. Opens a dropdown of what to show — deliberately separate from the
+    /// difficulty stars, which stay in the open because difficulty is the filter that gets moved
+    /// most and hiding it behind a menu would be a downgrade.
+    /// </summary>
+    private Node BuildFilterButton()
+    {
+        bool active = ChallengeFilter.AnyHidden(_config);
+
+        // Lit whenever something is being hidden. A filter that is doing work with no sign of it
+        // is the classic "why is my list empty" bug, and the count in the progress line above only
+        // helps once the player thinks to read it.
+        var btn = IconButton("filterbtn", Ico.Filter, HintBtn, HintGlyph,
+                             active ? Accent : Neutral, active, () =>
+        {
+            _controlClickPending = true;
+            _filterMenuOpen = !_filterMenuOpen;
+        });
+
+        return btn;
+    }
+
+    /// <summary>
+    /// The filter dropdown's contents, drawn as a floating panel by <see cref="BuildTree"/> so it
+    /// paints over the list rather than pushing it down.
+    /// </summary>
+    private Node BuildFilterMenu()
+    {
+        var panel = new Node().WithId("filtermenu").WithStyle(s =>
+        {
+            s.Flow            = Flow.Vertical;
+            s.WidthMode       = SizeMode.Fixed; s.Width = 210;
+            s.HeightMode      = SizeMode.Fit;
+            s.Padding         = new EdgeSize(8, 10);
+            s.Gap             = 2;
+            s.BackgroundColor = Theme.Panel2;
+            s.BorderRadius    = 8f;
+            s.BorderColor     = Accent.WithOpacity(0.35f);
+            s.BorderWidth     = 1;
+        });
+
+        panel.AppendChild(new Node().WithText("SHOW").WithStyle(s =>
+        {
+            s.WidthMode     = SizeMode.Fill;
+            s.HeightMode    = SizeMode.Fit;
+            s.FontSize      = 9.5f;
+            s.Bold          = true;
+            s.Color         = Accent.WithOpacity(0.65f);
+            s.Margin        = new EdgeSize(0, 0, 4, 0);
+            s.PointerEvents = PointerEvents.None;
+        }));
+
+        foreach (var (flag, label) in ChallengeFilter.All)
+        {
+            bool visible = !ChallengeFilter.IsHidden(_config, flag);
+            var  captured = flag;
+
+            var row = new Node().WithId("filter_" + flag).WithStyle(s =>
+            {
+                s.Flow                  = Flow.Horizontal;
+                s.WidthMode             = SizeMode.Fill;
+                s.HeightMode            = SizeMode.Fixed; s.Height = MenuItemH;
+                s.Gap                   = 8;
+                s.Padding               = new EdgeSize(0, 6);
+                s.AlignItems            = AlignItems.Center;
+                s.BorderRadius          = 4f;
+                s.HoverBackgroundColor  = PColor.White.WithOpacity(0.06f);
+            });
+
+            row.OnClick += _ =>
+            {
+                _controlClickPending = true;
+                ChallengeFilter.Toggle(_config, captured);
+                _save();
+            };
+
+            row.AppendChild(PUI.Icon(visible ? Ico.Complete : Ico.Incomplete, 13f,
+                                     visible ? StatusOk : Neutral.WithOpacity(0.5f)));
+
+            row.AppendChild(new Node().WithText(label).WithStyle(s =>
+            {
+                s.WidthMode     = SizeMode.Fill;
+                s.HeightMode    = SizeMode.Fit;
+                s.FontSize      = 11f;
+                s.Color         = visible ? TextHi : Theme.TextSubtle;
+                s.PointerEvents = PointerEvents.None;
+            }));
+
+            panel.AppendChild(row);
+        }
+
+        if (ChallengeFilter.AnyHidden(_config))
+        {
+            panel.AppendChild(Hairline(PColor.White.WithOpacity(0.08f)));
+            panel.AppendChild(Pill("filter_all", "Show everything", StatusOk, () =>
+            {
+                _controlClickPending = true;
+                ChallengeFilter.ShowAll(_config);
+                _save();
+            }));
+        }
+
+        return panel;
+    }
+
     private Node BuildDifficultyFilter()
     {
         int ceiling = Math.Clamp(_config.MaxDifficulty, 1, 5);

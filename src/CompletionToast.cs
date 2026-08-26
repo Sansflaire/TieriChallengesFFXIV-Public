@@ -28,7 +28,9 @@ internal sealed class CompletionToast : IDisposable
 {
     private const int   SurfaceW    = 560;
     private const int   SurfaceH    = 132;
-    private const float HoldSeconds = 5.0f;
+    /// <summary>Set from Settings — see ProgressQueue.TotalSeconds for why this is a static.</summary>
+    public static float HoldSeconds { get; set; } = 5.0f;
+
     private const float FadeSeconds = 0.9f;
 
     private static readonly PColor Accent   = PColor.FromHex("#E3B341");
