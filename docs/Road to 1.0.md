@@ -8,7 +8,7 @@ the generic [How To Versioning](How%20To%20Versioning.md); this document supplie
 ## Current version
 
 ```
-0.84.38.1    beta · 84% toward 1.0 · 38 major updates · 1 minor update
+0.84.38.2    beta · 84% toward 1.0 · 38 major updates · 2 minor updates
 ```
 
 *This block had been left at 0.81.32.2 for six major updates. It is the one thing in this

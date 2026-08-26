@@ -688,6 +688,17 @@ public sealed class Configuration : IPluginConfiguration
 
         bool changed = false;
 
+        // (0) Follow a built-in background whose extension changed under us. The chosen background
+        //     is persisted as an absolute path, so re-encoding the shipped set — as the PNG-to-JPEG
+        //     pass did — renames the file out from under every config naming it, and the window
+        //     would come back blank with nothing on screen to explain why.
+        string resolvedBackground = BackgroundLibrary.ResolveRenamed(BackgroundImagePath ?? string.Empty);
+        if (!string.Equals(resolvedBackground, BackgroundImagePath, StringComparison.Ordinal))
+        {
+            BackgroundImagePath = resolvedBackground;
+            changed = true;
+        }
+
         // (1) Give pre-GUID authored challenges a permanent identity, remembering the old id so
         //     its completion can be carried across.
         var remapped = new Dictionary<string, string>(StringComparer.Ordinal);

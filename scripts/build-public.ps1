@@ -177,13 +177,25 @@ Ok "bundled $($wavs.Count) cue sound(s)"
 $bgSrc = Join-Path $Root 'assets\backgrounds'
 if (-not (Test-Path $bgSrc)) { Fail "Missing backgrounds folder: $bgSrc" }
 
-$bgImages = @(Get-ChildItem (Join-Path $bgSrc '*.png'))
+# Every format BackgroundLibrary.Extensions accepts, not just PNG - the shipped set is JPEG.
+$bgImages = @(Get-ChildItem $bgSrc -File | Where-Object { $_.Extension -in '.png','.jpg','.jpeg','.bmp' })
 if ($bgImages.Count -eq 0) { Fail "No background images in $bgSrc - the Appearance picker would offer nothing built-in." }
+
+# These are the single largest thing in the zip and they do not compress, so a regression to
+# lossless masters would silently double the download. Loud rather than silent about the size.
+$bgKB = [math]::Round((($bgImages | Measure-Object Length -Sum).Sum) / 1KB)
+if ($bgKB -gt 4096) {
+    Fail "Backgrounds total $bgKB KB. They ship uncompressed inside the zip, so this is most of the download - re-encode them (JPEG q94 puts the shipped four at ~1.5 MB) rather than raising this bound without a reason."
+}
 
 $bgDst = Join-Path $payload 'backgrounds'
 New-Item -ItemType Directory -Path $bgDst | Out-Null
-Copy-Item $bgImages $bgDst
-Ok "bundled $($bgImages.Count) background image(s)"
+
+# -Path with explicit FullName. Positional binding of a Where-Object result resolves against the
+# CURRENT directory rather than the file's own, so a filtered list copies as bare names and fails
+# on the first file - unlike the unfiltered Get-ChildItem the icon and sound steps pass straight in.
+Copy-Item -Path $bgImages.FullName -Destination $bgDst
+Ok "bundled $($bgImages.Count) background image(s), $bgKB KB"
 
 # Player-facing help document, read at runtime by HelpLibrary. Fails rather than shipping a
 # build whose Help window would open on an error - see BROKEN.md 005.

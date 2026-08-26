@@ -28,9 +28,9 @@
          from what was built. Bump it on EVERY change — see docs/How To Versioning.md.
          The one thing that does NOT follow automatically is the manifest's AssemblyVersion
          in ../TieriChallengesFFXIV.json; update that by hand to match. -->
-    <Version>0.84.38.1</Version>
-    <AssemblyVersion>0.84.38.1</AssemblyVersion>
-    <FileVersion>0.84.38.1</FileVersion>
+    <Version>0.84.38.2</Version>
+    <AssemblyVersion>0.84.38.2</AssemblyVersion>
+    <FileVersion>0.84.38.2</FileVersion>
   </PropertyGroup>
 
   <!-- TWO FLAVOURS OF THIS PLUGIN.
@@ -100,7 +100,11 @@
        decode-from-stream special case for the built-ins. build-public.ps1 bundles the same
        folder into the release zip. -->
   <ItemGroup>
-    <BackgroundImage Include="$(MSBuildProjectDirectory)\..\assets\backgrounds\*.png" />
+    <!-- Every image format BackgroundLibrary.Extensions accepts, not just PNG. The shipped set is
+         JPEG: as 24-bit PNGs the four backgrounds were 7.9 MB, more than half the entire download,
+         and a zip cannot compress them further. At quality 94 they are 1.5 MB with no visible
+         difference behind panels that are painted translucent over them anyway. -->
+    <BackgroundImage Include="$(MSBuildProjectDirectory)\..\assets\backgrounds\*.png;$(MSBuildProjectDirectory)\..\assets\backgrounds\*.jpg;$(MSBuildProjectDirectory)\..\assets\backgrounds\*.jpeg;$(MSBuildProjectDirectory)\..\assets\backgrounds\*.bmp" />
   </ItemGroup>
 
   <!-- The player-facing help document. Read at runtime by HelpLibrary and shipped beside the DLL
