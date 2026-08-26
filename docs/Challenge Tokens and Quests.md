@@ -608,6 +608,11 @@ column is what makes it visible at a glance.
 | 19 | **Cloudflare Workers + D1**, reusing the existing Worker experience | 2026-08-26 |
 | 20 | Generation is **backward-chaining from a capstone** | 2026-08-26 |
 | 21 | Supersedes **Q10** ("no points, ranks, or badges") | 2026-08-26 |
+| 22 | **Breadcrumbs are batched** onto the completion call, never sent per-step | 2026-08-26 |
+| 23 | **Per-row salt AND server-side pepper** — salt adds little, but it is cheap | 2026-08-26 |
+| 24 | **We maintain our own curated raw-materials list**, worked off permanently and extended rather than regenerated. Contents to be defined with Trist | 2026-08-26 |
+
+Everything not yet built is inventoried in [`Tokens Build Backlog.md`](Tokens%20Build%20Backlog.md).
 
 ---
 

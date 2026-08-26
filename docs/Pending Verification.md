@@ -68,6 +68,11 @@ Lodestone verification?
 
 ## ⬜ Infrastructure not yet started
 
+> **The full build inventory moved to [`Tokens Build Backlog.md`](Tokens%20Build%20Backlog.md)**
+> (created 2026-08-26). The items below are kept because they carry detail the backlog references
+> — but the backlog is the authoritative list of what does not exist. Add new build items THERE,
+> not here. This file stays focused on what needs **testing or deciding**, not building.
+
 ### I1 — Cloudflare Worker + D1 for the Token ledger
 A `worker/` directory with wrangler state already exists in this repo (used for the Discord
 suggestion relay), so the account and tooling are in place. The Token API, D1 schema, and the
