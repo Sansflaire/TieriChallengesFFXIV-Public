@@ -216,7 +216,19 @@ public sealed class ChallengeSyncService
         _catalog.EnsureDirectory();
 
         int added = 0, updated = 0, rejected = 0, consecutiveFailures = 0, processed = 0;
+
+        // Built from the WHOLE master list up front, not accumulated as files are processed.
+        //
+        // PruneOrphans deletes every cached file this set does not mention, and the loop below can
+        // stop early on either the file cap or the consecutive-failure breaker. Filling this inside
+        // the loop meant an early stop left every remaining entry out of it — so a network hiccup
+        // partway down the list did not merely fail to update those challenges, it DELETED the good
+        // cached copies the player already had, emptying them out of the list until a later sync
+        // happened to complete. Membership of the master list is what makes a file worth keeping;
+        // whether this particular run got as far as re-checking it is irrelevant.
         var keep = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in master.Challenges)
+            if (!string.IsNullOrWhiteSpace(entry.Id)) keep.Add(entry.Id);
 
         // 2. Each challenge file the master vouches for.
         foreach (var entry in master.Challenges)
@@ -235,8 +247,6 @@ public sealed class ChallengeSyncService
                 Plugin.Log.Warning("[Sync] too many consecutive failures; stopping early.");
                 break;
             }
-
-            keep.Add(entry.Id);
 
             // Skip anything already cached with the expected hash.
             string localPath = _catalog.PathFor(entry.Id);

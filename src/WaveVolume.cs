@@ -43,7 +43,19 @@ internal static class WaveVolume
         try
         {
             string cached = CachePathFor(originalPath, step);
-            if (File.Exists(cached)) return cached;
+
+            // A cache entry is only good while it is NEWER than the file it was made from.
+            //
+            // The cache lives in the plugin's config directory, which survives updates, and its
+            // name carries only the cue name and the volume step. Ship a revised zingle under the
+            // same filename and every user who has ever moved the volume slider off 100% keeps
+            // hearing the OLD sound at their chosen volume, permanently, with no in-plugin way to
+            // clear it. A timestamp comparison makes a changed source invalidate every step of its
+            // own accord — there was previously a ClearCache() for this, but nothing ever called
+            // it, and a rule that has to be remembered on each release is one that gets missed.
+            if (File.Exists(cached)
+                && File.GetLastWriteTimeUtc(cached) >= File.GetLastWriteTimeUtc(originalPath))
+                return cached;
 
             return Rescale(originalPath, cached, step / (float)Steps) ? cached : originalPath;
         }
@@ -119,7 +131,14 @@ internal static class WaveVolume
 
                 if (!ScaleSamples(bytes, body, size, bitsPerSample, factor)) return false;
 
-                File.WriteAllBytes(destination, bytes);
+                // Temp then replace, like every other file this plugin writes. A cue is written
+                // while the game is running and the process can go away mid-write; a truncated WAV
+                // left behind still satisfies File.Exists, so it would be served from the cache and
+                // play as silence from then on — a permanently broken cue with no visible cause.
+                string tmp = destination + ".tmp";
+                File.WriteAllBytes(tmp, bytes);
+                if (File.Exists(destination)) File.Replace(tmp, destination, null);
+                else                          File.Move(tmp, destination);
                 return true;
             }
 
@@ -165,20 +184,10 @@ internal static class WaveVolume
         }
     }
 
-    /// <summary>
-    /// Drop the rescaled copies. Called when the shipped cue files change under us — a cache entry
-    /// keyed only by name and volume step would otherwise keep playing the old sound forever.
-    /// </summary>
-    public static void ClearCache()
-    {
-        try
-        {
-            string dir = Path.Combine(Plugin.PluginInterface.GetPluginConfigDirectory(), CacheFolder);
-            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning($"[Sound] could not clear the volume cache: {ex.Message}");
-        }
-    }
+    // There was a ClearCache() here. It was never called from anywhere, and its own summary
+    // described the staleness hazard it was meant to prevent — so the hazard was live and the
+    // guard was decorative. ResolveForPlayback now compares timestamps instead, which needs
+    // nobody to remember anything at release time. Do not reintroduce a manual clear as the
+    // primary defence; if one is ever wanted for troubleshooting, it is an addition to the
+    // timestamp check, not a replacement for it.
 }

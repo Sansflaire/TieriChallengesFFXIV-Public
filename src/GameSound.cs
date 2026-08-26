@@ -262,22 +262,36 @@ internal static class GameSound
     /// Remember the handle so <see cref="StopAll"/> can silence it. Used by the bank scan, which
     /// plays unvetted entries and can hit a looping one.
     /// </param>
+    /// <param name="ignoreMute">
+    /// Play even while <see cref="Muted"/>. For DELIBERATE, one-off requests only — the settings
+    /// preview buttons and the dev audition commands — where the player has just pressed something
+    /// specifically to hear it. Ordinary cues never set this; they are filtered out at request time
+    /// by <c>SoundService.IsEnabled</c> and never reach here at all.
+    /// </param>
     /// <returns>True when the engine handed back a SoundData, i.e. it accepted the entry.</returns>
     public static unsafe bool Play(string path, uint soundNumber, int midiNote = 0,
-                                   bool trackForStop = false)
+                                   bool trackForStop = false, bool ignoreMute = false)
     {
         try
         {
+            bool muted = Muted && !ignoreMute;
+
             // Shipped files never touch the game mixer — that is the entire point of them.
             // Volume is applied by handing PlayWave a rescaled COPY, since winmm takes no volume
             // argument; null means muted or zero, i.e. play nothing at all. See WaveVolume.
             if (IsWave(path))
             {
                 string? resolved = WaveVolume.ResolveForPlayback(
-                    ResolveAsset(path), Volume, Muted);
+                    ResolveAsset(path), Volume, muted);
 
                 return resolved != null && PlayWaveAbsolute(resolved);
             }
+
+            // The game-bank path used to consult neither Muted nor Volume. Mute still worked for
+            // ordinary cues because IsEnabled drops them before they are queued, but anything that
+            // deliberately bypasses that filter reached the engine unfiltered — so the one cue
+            // backed by a game .scd was the only one that played while muted.
+            if (muted) return false;
 
             // A path that does not exist still produces a resource handle and a "successful"
             // play, so the only way to catch a typo is to ask before playing.
@@ -318,9 +332,15 @@ internal static class GameSound
 
             bool  zingle   = IsZingle(path);
             float busSe    = mgr->GetEffectiveVolume(SoundBus.SE);
-            float volume   = zingle ? Math.Clamp(busSe, 0f, 1f) : 1f;
             var   category = zingle ? SoundVolumeCategory.BypassVolumeRules
                                     : SoundVolumeCategory.Player;
+
+            // The plugin's own volume applies here too. It previously did not, so the slider in
+            // Settings governed three of the four cues and silently skipped the one backed by a
+            // game bank. At the default of 1.0 this multiplication changes nothing, so no cue that
+            // was tuned by ear moves; it only starts obeying a setting the player already changed.
+            float volume = (zingle ? Math.Clamp(busSe, 0f, 1f) : 1f)
+                         * Math.Clamp(Volume, 0f, 1f);
 
             // The return value is the diagnostic that matters: a null SoundData means the engine
             // declined the entry (empty slot, bad index), while non-null means it really is

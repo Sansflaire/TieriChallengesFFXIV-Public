@@ -59,8 +59,15 @@ internal sealed class SoundService : IDisposable
     /// </summary>
     private const uint MaxScanSpan = 64;
 
-    /// <summary>Queued cues as (bank path, entry) — each cue names its own .scd.</summary>
-    private readonly ConcurrentQueue<(string Bank, uint Entry)> _pending = new();
+    /// <summary>
+    /// Queued cues as (bank path, entry, ignore-mute) — each cue names its own .scd.
+    ///
+    /// <para><see cref="Play"/> never sets IgnoreMute: an ordinary cue is filtered out by
+    /// <see cref="IsEnabled"/> before it is ever queued. It is set only by the deliberate one-off
+    /// requests — the settings preview buttons and the dev audition commands — where the player has
+    /// just pressed something specifically in order to hear it.</para>
+    /// </summary>
+    private readonly ConcurrentQueue<(string Bank, uint Entry, bool IgnoreMute)> _pending = new();
 
     // Scan state. Driven off the same tick as playback — never a sleeping thread.
     private bool _scanning;
@@ -117,14 +124,28 @@ internal sealed class SoundService : IDisposable
     public void Play(Cue cue)
     {
         if (!IsEnabled(cue)) return;
-        Request(GameSound.CueTarget(cue));
+
+        var (bank, entry) = GameSound.CueTarget(cue);
+        Request((bank, entry, false));
     }
 
     /// <summary>
     /// Play a cue ignoring the enable/mute filter — the settings list's preview buttons, where the
     /// point is to hear what you are about to switch off.
     /// </summary>
-    public void Preview(Cue cue) => Request(GameSound.CueTarget(cue));
+    /// <remarks>
+    /// Bypassing <see cref="IsEnabled"/> is only half of it, and for a long time it was the only
+    /// half that was implemented: <c>GameSound.Muted</c> is read again down in the playback path,
+    /// so a preview of a .wav cue was silent whenever the master mute was on. The settings window
+    /// leaves these buttons enabled while muted and carries a comment saying a Play button that
+    /// does nothing is the worse answer — so it was a live button that did nothing, next to a note
+    /// asserting the opposite. IgnoreMute is what makes the two agree.
+    /// </remarks>
+    public void Preview(Cue cue)
+    {
+        var (bank, entry) = GameSound.CueTarget(cue);
+        Request((bank, entry, true));
+    }
 
 #if DEV_BUILD
     /// <summary>
@@ -145,11 +166,14 @@ internal sealed class SoundService : IDisposable
     };
 #endif
 
+    // The audition commands are the same shape as Preview: the player typed a command whose whole
+    // purpose is to hear one specific entry, so the master mute is not what they are asking about.
+
     /// <summary>Request an entry from the UI bank. Used by the audition command.</summary>
-    public void PlayEntry(uint entry) => Request((GameSound.UiBank, entry));
+    public void PlayEntry(uint entry) => Request((GameSound.UiBank, entry, true));
 
     /// <summary>Request an entry from a named bank.</summary>
-    public void PlayFrom(string bank, uint entry) => Request((bank, entry));
+    public void PlayFrom(string bank, uint entry) => Request((bank, entry, true));
 
     /// <summary>
     /// Walk a range of bank entries, playing one every <see cref="ScanIntervalMs"/> and naming it
@@ -194,7 +218,7 @@ internal sealed class SoundService : IDisposable
 
     public bool IsScanning => _scanning;
 
-    private void Request((string Bank, uint Entry) cue)
+    private void Request((string Bank, uint Entry, bool IgnoreMute) cue)
     {
         try
         {
@@ -222,7 +246,7 @@ internal sealed class SoundService : IDisposable
             int played = 0;
             while (played < MaxPerTick && _pending.TryDequeue(out var cue))
             {
-                GameSound.Play(cue.Bank, cue.Entry);
+                GameSound.Play(cue.Bank, cue.Entry, ignoreMute: cue.IgnoreMute);
                 played++;
             }
 
@@ -247,7 +271,7 @@ internal sealed class SoundService : IDisposable
             // Named BEFORE it plays, so the line is already on screen when the sound lands.
             // Tracked so a looping entry can be stopped by the next step or by sfx stop.
             Plugin.ChatGui.Print($"[Challenges] entry {_scanCurrent}");
-            GameSound.Play(GameSound.UiBank, _scanCurrent, trackForStop: true);
+            GameSound.Play(GameSound.UiBank, _scanCurrent, trackForStop: true, ignoreMute: true);
 
             _scanCurrent++;
             _scanNextAtMs = now + ScanIntervalMs;
