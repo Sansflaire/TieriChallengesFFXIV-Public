@@ -517,7 +517,7 @@ internal sealed class FallbackWindow
                         if (ImGui.SmallButton($"Pin##pin_{def.Id}"))
                         {
                             var target = ChallengeCatalog.FindCustom(_config, def.Id);
-                            if (target == null || !MapPinService.Pin(_config, target))
+                            if (target == null || !MapPinService.Pin(_tracker, target))
                                 Plugin.ChatGui.PrintError(
                                     "[Challenges] Could not place a map pin for that challenge.");
                         }

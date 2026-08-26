@@ -2995,7 +2995,7 @@ internal sealed class MainWindow : IDisposable
                         _controlClickPending = true;
 
                         var target = ChallengeCatalog.FindCustom(_config, pinId);
-                        if (target == null || !MapPinService.Pin(_config, target))
+                        if (target == null || !MapPinService.Pin(_tracker, target))
                             Plugin.ChatGui.PrintError("[Challenges] Could not place a map pin for that challenge.");
                     }));
                 }

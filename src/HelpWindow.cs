@@ -65,9 +65,14 @@ internal sealed class HelpWindow
             }
             else
             {
-                DrawSearchRow();
+                // Searched ONCE per frame and handed to both halves. The count line and the two
+                // panes all need the same answer, and Search walks every section's blob and
+                // allocates a result list each time it is asked.
+                var results = HelpLibrary.Search(_search);
+
+                DrawSearchRow(results.Count);
                 ImGui.Separator();
-                DrawPanes();
+                DrawPanes(results);
             }
         }
 
@@ -77,7 +82,7 @@ internal sealed class HelpWindow
         if (!open) IsVisible = false;
     }
 
-    private void DrawSearchRow()
+    private void DrawSearchRow(int count)
     {
         ImGui.SetNextItemWidth(-160 * UiScale.Factor);
         ImGui.InputTextWithHint("##help_search",
@@ -87,17 +92,15 @@ internal sealed class HelpWindow
         if (ImGui.Button("Clear##help", new Vector2(70 * UiScale.Factor, 0))) _search = string.Empty;
 
         ImGui.SameLine();
-        int count = HelpLibrary.Search(_search).Count;
         ImGui.TextDisabled(string.IsNullOrWhiteSpace(_search)
             ? $"{HelpLibrary.Sections.Count} topics"
             : $"{count} match{(count == 1 ? "" : "es")}");
     }
 
-    private void DrawPanes()
+    private void DrawPanes(System.Collections.Generic.List<HelpSection> results)
     {
-        float scale     = UiScale.Factor;
-        float indexW    = 240 * scale;
-        var   results   = HelpLibrary.Search(_search);
+        float scale  = UiScale.Factor;
+        float indexW = 240 * scale;
 
         // ── Index ────────────────────────────────────────────────────────────
         if (ImGui.BeginChild("##help_index", new Vector2(indexW, 0), true))

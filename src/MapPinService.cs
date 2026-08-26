@@ -39,7 +39,7 @@ internal static unsafe class MapPinService
     /// everything is somehow satisfied, so the call never returns nothing for a well-formed
     /// challenge.</para>
     /// </summary>
-    public static ChallengeArea? AreaOf(Configuration cfg, CustomChallenge c)
+    public static ChallengeArea? AreaOf(ChallengeTracker tracker, CustomChallenge c)
     {
         if (c == null) return null;
 
@@ -48,13 +48,14 @@ internal static unsafe class MapPinService
         if (c.Kind == ChallengeKind.RaceTimer)
             return c.RaceStart;
 
-        // A chain points at whatever its CURRENT step needs, never at a later one.
+        // A chain points at whatever its CURRENT step needs, never at a later one. Chain step
+        // progress always persists, so the disk is authoritative for one either way.
         var step = ChallengeCatalog.CurrentStep(c);
         if (step != null)
-            return NextStopArea(step.Requirements, step.Id, step.Mode);
+            return NextStopArea(tracker, step.Requirements, step.Id, step.Mode, persist: true);
 
         if (c.Requirements is { Count: > 0 })
-            return NextStopArea(c.Requirements, c.Id, c.Mode);
+            return NextStopArea(tracker, c.Requirements, c.Id, c.Mode, persist: !c.SessionOnly);
 
         // Legacy kinds keep their volumes in Areas.
         if (c.Areas is { Count: > 0 }) return c.Areas[0];
@@ -62,16 +63,22 @@ internal static unsafe class MapPinService
         return null;
     }
 
-    /// <summary>Centre of <see cref="AreaOf"/>, for callers that only want the position.</summary>
-    public static Vector3? LocationOf(Configuration cfg, CustomChallenge c)
-        => AreaOf(cfg, c)?.Center;
-
+    /// <summary>
+    /// The first stop that is not satisfied yet.
+    /// </summary>
+    /// <remarks>
+    /// Asked of the TRACKER, not the progress store. A SessionOnly adventure never writes to the
+    /// store, so reading it directly meant such a challenge always pinned its first stop — the one
+    /// place a pin is useless, and precisely the case this method exists to avoid.
+    /// </remarks>
     private static ChallengeArea? NextStopArea(
-        System.Collections.Generic.List<AreaRequirement> reqs, string key, AreaMode mode)
+        ChallengeTracker tracker,
+        System.Collections.Generic.List<AreaRequirement> reqs, string key, AreaMode mode,
+        bool persist)
     {
         if (reqs == null || reqs.Count == 0) return null;
 
-        var done = Plugin.Progress.Stops(key);
+        var done = tracker.SatisfiedStops(key, persist);
 
         for (int i = 0; i < reqs.Count; i++)
         {
@@ -159,11 +166,11 @@ internal static unsafe class MapPinService
     /// available, or the territory has no map row. Callers surface that rather than leaving a click
     /// that silently did nothing.</para>
     /// </summary>
-    public static bool Pin(Configuration cfg, CustomChallenge c)
+    public static bool Pin(ChallengeTracker tracker, CustomChallenge c)
     {
         try
         {
-            var area = AreaOf(cfg, c);
+            var area = AreaOf(tracker, c);
             if (area == null) return false;
 
             Vector3 where = area.Center;
