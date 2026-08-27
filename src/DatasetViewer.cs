@@ -114,6 +114,31 @@ internal sealed class DatasetViewer
     private int[][] _targetColumns = Array.Empty<int[]>();
 
     /// <summary>
+    /// Longest cell string per column, found once over EVERY row at load. Measuring 30,000 rows
+    /// with CalcTextSize would be absurd; picking the longest string by character count and
+    /// measuring only that is one call per column and lands in the right place.
+    /// </summary>
+    private string[] _widest = Array.Empty<string>();
+
+    /// <summary>Pixel width per column. Filled on the first draw, when an ImGui context exists.</summary>
+    private float[] _widths = Array.Empty<float>();
+    private bool _widthsReady;
+
+    /// <summary>
+    /// Bumped per load so the table gets a FRESH ImGui id each time a dataset is opened. ImGui
+    /// remembers column widths per table id, so a stable id would restore the previous, badly
+    /// sized layout and make the auto-fit look broken.
+    /// </summary>
+    private int _loadSeq;
+
+    /// <summary>
+    /// Ceiling on an auto-fitted column. A single 160-character cell would otherwise push every
+    /// other column off screen - which is the same wasted-space complaint from the other side.
+    /// Anything clipped is still readable through the hover tooltip, and columns stay resizable.
+    /// </summary>
+    private const float MaxColumnWidth = 420f;
+
+    /// <summary>
     /// Filters are ANDed - with each other and with the search box. That is what makes a range
     /// expressible at all: ">= 1" plus "&lt; 12" on one column is 1-11, whereas ORing them would
     /// match everything.
@@ -297,6 +322,17 @@ internal sealed class DatasetViewer
                 _blobs.Add(blob.ToString().ToLowerInvariant());
             }
 
+            // Widest content per column, header included so a short column never clips its own name.
+            _widest = new string[_columns.Length];
+            for (int c = 0; c < _columns.Length; c++) _widest[c] = _columns[c];
+            foreach (var cells in _rows)
+                for (int c = 0; c < cells.Length && c < _widest.Length; c++)
+                    if (cells[c].Length > _widest[c].Length) _widest[c] = cells[c];
+
+            _widths = new float[_columns.Length];
+            _widthsReady = false;
+            _loadSeq++;
+
             // Filter targets: every column, plus any group the dataset declares. A group lets one
             // rule span several columns - "ingredient (any)" searches all eight slots at once,
             // which is the only sane way to ask "which recipes use Cotton Yarn".
@@ -350,6 +386,9 @@ internal sealed class DatasetViewer
 
         // Column indices are meaningless against a different dataset - a stale filter would
         // silently point at whatever column happened to land in that slot.
+        _widest = Array.Empty<string>();
+        _widths = Array.Empty<float>();
+        _widthsReady = false;
         _filters.Clear();
         _filterTargets = Array.Empty<string>();
         _targetColumns = Array.Empty<int[]>();
@@ -707,10 +746,23 @@ internal sealed class DatasetViewer
         var flags = ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable
                   | ImGuiTableFlags.ScrollX | ImGuiTableFlags.ScrollY | ImGuiTableFlags.SizingFixedFit;
 
-        if (!ImGui.BeginTable("##tc_ds_grid", _columns.Length, flags)) return;
+        // One CalcTextSize per column, once per dataset. Cannot happen at load time - there is no
+        // ImGui context there - so it is deferred to the first frame that draws the grid.
+        if (!_widthsReady)
+        {
+            for (int c = 0; c < _columns.Length; c++)
+            {
+                float w = ImGui.CalcTextSize(_widest[c]).X + 18f;   // + cell padding
+                _widths[c] = Math.Clamp(w, 40f, MaxColumnWidth);
+            }
+            _widthsReady = true;
+        }
+
+        if (!ImGui.BeginTable($"##tc_ds_grid_{_loadSeq}", _columns.Length, flags)) return;
 
         ImGui.TableSetupScrollFreeze(1, 1);   // keep the first column and the header visible
-        foreach (var c in _columns) ImGui.TableSetupColumn(c);
+        for (int c = 0; c < _columns.Length; c++)
+            ImGui.TableSetupColumn(_columns[c], ImGuiTableColumnFlags.WidthFixed, _widths[c]);
         ImGui.TableHeadersRow();
 
         int start = _page * PageSize;
