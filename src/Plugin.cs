@@ -1057,7 +1057,7 @@ public sealed class Plugin : IDalamudPlugin
     internal void RestoreFromPermanent()
     {
         int restored = _store.RestoreFromPermanent();
-        _config.StateVersion++;
+        _config.DefinitionsChanged();
         _tracker.Invalidate();
 
         ChatGui.Print(restored > 0

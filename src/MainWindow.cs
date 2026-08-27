@@ -685,7 +685,7 @@ internal sealed class MainWindow : IDisposable
     public void RestoreFromPermanent()
     {
         int restored = _store.RestoreFromPermanent();
-        _config.StateVersion++;
+        _config.DefinitionsChanged();
         _tracker.Invalidate();
 
         Plugin.ChatGui.Print(restored > 0

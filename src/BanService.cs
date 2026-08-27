@@ -237,9 +237,16 @@ internal static class BanService
             try { File.WriteAllText(_cachePath, json); }
             catch (Exception ex) { Plugin.Log.Debug($"[Ban] cache write failed: {ex.Message}"); }
 
-            // Re-evaluate immediately: a ban issued mid-session should take hold without a relog.
+            // Invalidate the standing verdict so the next frame re-checks it. A ban issued
+            // mid-session still takes hold without a relog — Plugin.DrawUI calls Evaluate() every
+            // frame, and clearing this is exactly what makes that call stop short-circuiting.
+            //
+            // Deliberately NOT calling Evaluate() here. This method runs on a background thread
+            // (Task.Run in Initialise), and Evaluate reads ObjectTable.LocalPlayer, which is live
+            // game memory and main-thread-only — the same rule InventoryWatcher.Count documents.
+            // Off-thread it can tear or fault, and doing it inside the ban path means the failure
+            // mode is a crash on the frame someone gets banned.
             _verdictFor = string.Empty;
-            Evaluate();
         }
         catch (Exception ex)
         {

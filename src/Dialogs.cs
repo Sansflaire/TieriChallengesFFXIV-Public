@@ -397,7 +397,7 @@ internal sealed class Dialogs
                 Plugin.Progress.ResetAll();
                 _tracker.ClearPartialProgress();
 
-                _config.StateVersion++;
+                _config.DefinitionsChanged();
                 _tracker.Invalidate();
                 _save();
                 Plugin.Log.Information("Challenge progress wiped by user confirmation.");

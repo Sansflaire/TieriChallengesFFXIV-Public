@@ -640,8 +640,19 @@ public sealed class Configuration : IPluginConfiguration
     /// </summary>
     internal int StateVersion;
 
-    /// <summary>Call after adding/editing/removing a challenge definition.</summary>
-    public void DefinitionsChanged() => StateVersion++;
+    /// <summary>
+    /// Call after adding/editing/removing a challenge definition. <b>The only sanctioned way to move
+    /// <see cref="StateVersion"/></b> — do not write <c>StateVersion++</c> anywhere.
+    /// </summary>
+    /// <remarks>
+    /// Interlocked because the bump genuinely happens from two threads: the framework tick
+    /// (a completion, a chain advancing) and background tasks (a sync finishing). <c>++</c> is a
+    /// read-modify-write, so two of them can collapse into one — and a lost bump does not merely
+    /// delay something, it leaves every cache keyed on this value serving stale data until some
+    /// unrelated change happens to move it. That is the "list silently stops updating" failure,
+    /// which reads as nothing happening rather than as an error.
+    /// </remarks>
+    public void DefinitionsChanged() => System.Threading.Interlocked.Increment(ref StateVersion);
 
     /// <summary>
     /// One-time upgrade path. Runs on every load; does real work only once.
@@ -771,6 +782,6 @@ public sealed class Configuration : IPluginConfiguration
             changed = true;
         }
 
-        if (changed) StateVersion++;
+        if (changed) DefinitionsChanged();
     }
 }

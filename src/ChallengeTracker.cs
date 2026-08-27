@@ -836,7 +836,7 @@ internal sealed class ChallengeTracker : IDisposable
         // row per step of every chain the player has ever walked through.
         ClearSetState(step.Id, persist: true);
 
-        _config.StateVersion++;   // the chain's zone may have just changed; force a Rebuild
+        _config.DefinitionsChanged();   // the chain's zone may have just changed; force a Rebuild
 
         Plugin.Log.Information(
             $"[Chain] \"{ch.Title}\" advanced to step {next + 1}/{ch.ChainSteps.Count}.");
@@ -1022,7 +1022,7 @@ internal sealed class ChallengeTracker : IDisposable
         // and is never overwritten). Both files are flushed here, not deferred — a completion
         // that only exists in memory is a completion the user can lose to a crash.
         _store.MarkComplete(ch.Id);
-        _config.StateVersion++;   // invalidates the active set so this is never evaluated again
+        _config.DefinitionsChanged();   // invalidates the active set so this is never evaluated again
 
         _visited.Remove(ch.Id);
         _sequence.Remove(ch.Id);

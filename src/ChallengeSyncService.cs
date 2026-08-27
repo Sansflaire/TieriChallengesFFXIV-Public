@@ -317,7 +317,7 @@ public sealed class ChallengeSyncService
         _catalog.Load();
 
         _config.LastSyncUtc = DateTime.UtcNow;
-        _config.StateVersion++;
+        _config.DefinitionsChanged();
 
         string msg = $"Synced: {added} new, {updated} updated"
                    + (removed  > 0 ? $", {removed} removed"   : string.Empty)

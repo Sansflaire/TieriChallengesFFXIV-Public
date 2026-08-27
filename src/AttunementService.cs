@@ -148,25 +148,38 @@ internal static class AttunementService
         return true;
     }
 
+    /// <remarks>
+    /// <para><b>Built into locals and swapped in only on success, and the refresh clock only moves
+    /// on success.</b> This used to clear both collections up front and push the clock forward
+    /// before reading anything. Telepo is null during a loading screen and at the title screen —
+    /// both perfectly normal — so a refresh landing in that window wiped the attunement census and
+    /// then refused to rebuild it for the next two seconds. Everything read as un-attuned in the
+    /// meantime, which through <see cref="IsZoneSpoilered"/> means every zone the player has not
+    /// physically visited flips to "??? (unexplored)" and back again on every zone change. Losing a
+    /// census you cannot currently rebuild is strictly worse than serving one that is two seconds
+    /// stale, which is the entire premise of the interval.</para>
+    /// </remarks>
     private static void EnsureLiveBuilt()
     {
         long now = Environment.TickCount64;
         if (now < _nextRefreshMs) return;
-        _nextRefreshMs = now + RefreshIntervalMs;
-
-        ByTerritory.Clear();
-        ReachedExpansions.Clear();
 
         try
         {
             unsafe
             {
                 var telepo = FFXIVClientStructs.FFXIV.Client.Game.UI.Telepo.Instance();
+
+                // Not an error, and deliberately does NOT advance the clock: a loading screen is
+                // the common case, and the next frame should be free to try again.
                 if (telepo == null) return;
 
                 // Must be called before TeleportList reflects current attunement/estate state —
                 // same requirement the Brain's endpoint documents at its call site.
                 telepo->UpdateAetheryteList();
+
+                var byTerritory = new Dictionary<uint, Destination>();
+                var reached     = new HashSet<uint>();
 
                 int count = (int)telepo->TeleportList.Count;
                 for (int i = 0; i < count; i++)
@@ -177,15 +190,25 @@ internal static class AttunementService
                     // First entry wins when a territory has several (a housing ward with more
                     // than one plot the player owns, say) — any of them teleports into the same
                     // zone, which is all "attuned to this zone" needs to know.
-                    if (!ByTerritory.ContainsKey(info.TerritoryId))
-                        ByTerritory[info.TerritoryId] = new Destination(info.AetheryteId, info.SubIndex);
+                    if (!byTerritory.ContainsKey(info.TerritoryId))
+                        byTerritory[info.TerritoryId] = new Destination(info.AetheryteId, info.SubIndex);
 
-                    ReachedExpansions.Add(ExpansionOf(info.TerritoryId));
+                    reached.Add(ExpansionOf(info.TerritoryId));
                 }
+
+                ByTerritory.Clear();
+                foreach (var kv in byTerritory) ByTerritory[kv.Key] = kv.Value;
+
+                ReachedExpansions.Clear();
+                foreach (uint ex in reached) ReachedExpansions.Add(ex);
+
+                _nextRefreshMs = now + RefreshIntervalMs;
             }
         }
         catch (Exception ex)
         {
+            // Clock untouched here too — a transient read failure should not blind the mask for
+            // the whole interval, and the previous census is still the best answer available.
             Plugin.Log.Error(ex, "[Attunement] could not read Telepo.TeleportList");
         }
     }
