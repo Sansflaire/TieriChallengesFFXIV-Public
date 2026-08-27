@@ -321,6 +321,13 @@ are duty rewards, not mob loot.)
   the multi-part design and needs to be accounted for when the step structure is designed (Q14).
 - **`MonsterNote` and `MonsterNoteTarget` both exist** and are the source for Hunt routes.
 
+> ⚠️ **Measured 2026-08-26: the Hunting Log locates only 259 monsters — 1.8% of the 14,560 named
+> ones.** It was written for low-level content and never extended. So "hunt N of mob M *in zone
+> Z*" is authorable for a small, fixed, mostly low-level pool, and **Hunt-route variety is capped
+> by that pool** unless zones come from the curated list too. Precise spawn points exist only in
+> the territory LGB layer files, which is a much larger job. Factor this into bracket design
+> (Q15) — high-level Hunt routes have no game-data zone source at all.
+
 Every other generator sheet is present and binds normally: `Recipe`, `RecipeLookup`,
 `GatheringItem`, `GatheringPointBase`.
 
