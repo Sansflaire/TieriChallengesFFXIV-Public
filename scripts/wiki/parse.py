@@ -33,6 +33,9 @@ ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 CACHE = os.path.join(HERE, 'cache')
 CURATED = os.path.join(ROOT, 'data', 'curated')
 
+DISAMBIG = re.compile(
+    r'\s*\((?:final fantasy xiv(?: boss| enemy)?|boss|enemy|dungeon|trial|raid)\)\s*$', re.I)
+
 SOURCE = 'finalfantasy.fandom.com "Final Fantasy XIV enemies" subpages, swept 2026-08-27'
 
 
@@ -225,7 +228,20 @@ def main():
     for ent in duties['entries']:
         by_name.setdefault(norm(ent.get(dk_name, '')), ent.get(dk_id))
 
+    # Bosses get their OWN column, never mixed into the trash-mob list. A duty's boss list is
+    # the part a challenge would actually name ("defeat X"), and a 40-name blob with three
+    # bosses buried in it cannot be filtered or read. Boss status comes from the wiki's 14 boss
+    # subcategories, which is the only place it is recorded at all.
+    boss_names = set()
+    bpath = os.path.join(CACHE, '_bosses.json')
+    if os.path.exists(bpath):
+        bd = json.load(open(bpath, encoding='utf-8'))
+        for title in bd.get('membership', {}):
+            boss_names.add(norm(DISAMBIG.sub('', title)))
+            boss_names.add(norm(title))
+
     per_duty = collections.defaultdict(set)
+    per_duty_boss = collections.defaultdict(set)
     seen_names = collections.Counter()
     for r in rows:
         for kind, val in r['spawn']:
@@ -236,14 +252,25 @@ def main():
             if key is None:
                 key = by_name.get(norm(re.sub(r'\s*\(original\)\s*$', '', val)))
             if key is not None:
-                per_duty[key].add(r['name'])
+                if norm(r['name']) in boss_names:
+                    per_duty_boss[key].add(r['name'])
+                else:
+                    per_duty[key].add(r['name'])
 
     matched = {n for n in seen_names if norm(n) in by_name
                or norm(re.sub(r'\s*\(original\)\s*$', '', n)) in by_name}
     unmatched = sorted(set(seen_names) - matched)
 
-    duty_entries = {str(k): {'monsters': ', '.join(sorted(v))}
-                    for k, v in sorted(per_duty.items()) if v}
+    duty_entries = {}
+    for k in sorted(set(per_duty) | set(per_duty_boss)):
+        patch = {}
+        if per_duty.get(k):
+            patch['monsters'] = ', '.join(sorted(per_duty[k]))
+        if per_duty_boss.get(k):
+            patch['bosses'] = ', '.join(sorted(per_duty_boss[k]))
+        if patch:
+            duty_entries[str(k)] = patch
+    print('duties with a BOSS list             : %d' % sum(1 for v in duty_entries.values() if 'bosses' in v))
 
     write_overlay('duties.wiki.json', 'duties', 'id', duty_entries,
                   ('CURATED overlay for duties.json - the "monsters" column only. Separate file '

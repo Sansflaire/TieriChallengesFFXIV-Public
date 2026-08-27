@@ -1,0 +1,2679 @@
+{
+ "schemaVersion": 1,
+ "dataset": "monsters",
+ "keyField": "id",
+ "source": "finalfantasy.fandom.com (boss categories, List of FATEs, zone pages), swept 2026-08-27",
+ "description": "CURATED overlay: which monsters are BOSSES, and of what kind, from the 14 boss subcategories. Flags only - 638 of 677 boss pages redirect into the enemy subpages parse.py already reads, so the stats were never new.",
+ "warning": "Matched by NAME, not by id: boss pages carry no BNpcName. Unmatched names are printed by parse_more.py rather than dropped silently.",
+ "entryCount": 667,
+ "entries": {
+  "3231": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "10285": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "3210": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "10279": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "3649": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "10259": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "1194": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "73": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "1644": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "725": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "10742": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "10348": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "2183": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "1185": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "8297": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "3632": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "6385": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "2505": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "10256": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "2612": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "4896": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "7127": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "3204": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "10720": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "2832": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "10257": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "7922": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "4776": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "5640": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "2994": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "5199": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "6221": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "1197": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "10448": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "1801": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "8361": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "455": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "10456": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "5567": {
+   "isBoss": true,
+   "bossKind": "Boss"
+  },
+  "9364": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9617": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9618": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9642": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9650": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9153": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "2821": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "706": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "4897": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "3234": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "4613": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9646": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9644": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "7237": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "4634": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "4631": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9147": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9948": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "3227": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "2815": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9989": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9988": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9949": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9143": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "727": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9955": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "732": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "3780": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9920": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "2809": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "9141": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "2824": {
+   "isBoss": true,
+   "bossKind": "Alliance raid"
+  },
+  "12246": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "5410": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "5397": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "12261": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "5461": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "5333": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "5025": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "5384": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "5012": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "5356": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "7493": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "4986": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "12247": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "12265": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "4999": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "7487": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "12242": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "12263": {
+   "isBoss": true,
+   "bossKind": "Deep dungeon"
+  },
+  "4571": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1279": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "8162": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "10075": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "10293": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "7858": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "10403": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "5562": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3823": {
+   "isBoss": true,
+   "bossKind": "Dungeon, Quest"
+  },
+  "2860": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "8232": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "4658": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "10336": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "557": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3734": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2598": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "4943": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1590": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1204": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1677": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "442": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6120": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6119": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1533": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2775": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3434": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "79": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2556": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "7669": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1206": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "5269": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3369": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "8233": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3044": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2604": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3091": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2136": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6173": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2774": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2547": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2778": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6072": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2780": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1280": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "8252": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "8143": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3455": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "101": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3821": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2282": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "10363": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "4954": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6205": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "554": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3822": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2548": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6268": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1284": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1680": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "7857": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1548": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1678": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "548": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "9263": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2143": {
+   "isBoss": true,
+   "bossKind": "Dungeon, Quest"
+  },
+  "9044": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "5529": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2852": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "5218": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1534": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6074": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "10281": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6071": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1690": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2117": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "9601": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3373": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6203": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "5560": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6200": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6037": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2549": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2116": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6263": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "427": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3095": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2134": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "7855": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3374": {
+   "isBoss": true,
+   "bossKind": "Dungeon, Raid"
+  },
+  "3429": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1532": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "8165": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "8272": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "7056": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "9735": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2602": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3793": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2603": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2135": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3458": {
+   "isBoss": true,
+   "bossKind": "Dungeon, Trial"
+  },
+  "7659": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6267": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3726": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "5265": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "119": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3409": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "7200": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2289": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "10315": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3428": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "4952": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "7856": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "10401": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2597": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3452": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3791": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3818": {
+   "isBoss": true,
+   "bossKind": "Dungeon, Quest"
+  },
+  "4653": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6241": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "9264": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3071": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2901": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3849": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3406": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2607": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1417": {
+   "isBoss": true,
+   "bossKind": "Dungeon, Quest"
+  },
+  "3093": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "10404": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "5219": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "12392": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2259": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1285": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "5564": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1196": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3798": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "7662": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1547": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "3405": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "5272": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "8167": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2264": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2606": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "7058": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "2137": {
+   "isBoss": true,
+   "bossKind": "Dungeon, Trial"
+  },
+  "3740": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "792": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "6089": {
+   "isBoss": true,
+   "bossKind": "Dungeon, Trial"
+  },
+  "6155": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "5954": {
+   "isBoss": true,
+   "bossKind": "Dungeon, Quest"
+  },
+  "2261": {
+   "isBoss": true,
+   "bossKind": "Dungeon"
+  },
+  "1372": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "856": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10212": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9682": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9439": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9683": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9564": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1670": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1702": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1524": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "2516": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "2357": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3957": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7754": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10812": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4404": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "51": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10794": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7177": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7171": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6563": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4006": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "2213": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "446": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7742": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1505": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6463": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1663": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "872": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1504": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "5615": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "861": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7965": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "655": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "5484": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "5481": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "884": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9945": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4026": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6168": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4511": {
+   "isBoss": true,
+   "bossKind": "FATE, Field operation"
+  },
+  "3996": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "866": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7157": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1662": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4519": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10783": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7955": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "8453": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4512": {
+   "isBoss": true,
+   "bossKind": "FATE, Field operation"
+  },
+  "3174": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4022": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "851": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1506": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1478": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "515": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3789": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9381": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7505": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "868": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6408": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "5483": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "452": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9378": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6516": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3983": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1664": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "5609": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10252": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10232": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10007": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "257": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4009": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1443": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3941": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1427": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4412": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3939": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7756": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3965": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "5614": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "2828": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "879": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7727": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3944": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3980": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7150": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "2354": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "2368": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6472": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4514": {
+   "isBoss": true,
+   "bossKind": "FATE, Field operation"
+  },
+  "8822": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "11090": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "8072": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9398": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10230": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9600": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "2829": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1428": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "5620": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1243": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "882": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "255": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3992": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "859": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3960": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1446": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4015": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1439": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1669": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "870": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "871": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1444": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7523": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3969": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10750": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7499": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7524": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9958": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6392": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "449": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1329": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3946": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1516": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7165": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "2367": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10095": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "11149": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6488": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "8458": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3999": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "5482": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "8457": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6470": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6413": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1433": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "858": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "2355": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4417": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "5180": {
+   "isBoss": true,
+   "bossKind": "FATE, Raid"
+  },
+  "1202": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7759": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9640": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4363": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7898": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9382": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6553": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1357": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "2831": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "11167": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9383": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9426": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "447": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3940": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "849": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "11173": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1517": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1700": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1513": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "883": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3953": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3950": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "8070": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3942": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1701": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4021": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6531": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1242": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6449": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "11081": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3783": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "2827": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4000": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "8846": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3935": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1523": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "857": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9417": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3975": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1526": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1667": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "8073": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3970": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4405": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7172": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "2350": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1666": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "5616": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3981": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1434": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1432": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "5608": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3943": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1436": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6562": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10192": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1522": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1530": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1515": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10759": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1431": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1438": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "74": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "295": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7148": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "514": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7739": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1234": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7526": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6492": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1437": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9405": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4013": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10737": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "8069": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1445": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4014": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4414": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4663": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7512": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1435": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1440": {
+   "isBoss": true,
+   "bossKind": "FATE, Quest"
+  },
+  "3987": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4017": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3964": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7535": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "7170": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10224": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10814": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3982": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "8469": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "2830": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "862": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6546": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "5612": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "877": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "11157": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1509": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3984": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "9396": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6539": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1518": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1610": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1665": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "6495": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3956": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4419": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3973": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1507": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "1704": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "451": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "2356": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "4403": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "3993": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "8324": {
+   "isBoss": true,
+   "bossKind": "FATE"
+  },
+  "10152": {
+   "isBoss": true,
+   "bossKind": "Field operation"
+  },
+  "9755": {
+   "isBoss": true,
+   "bossKind": "Field operation"
+  },
+  "5593": {
+   "isBoss": true,
+   "bossKind": "Field operation"
+  },
+  "5594": {
+   "isBoss": true,
+   "bossKind": "Field operation"
+  },
+  "5596": {
+   "isBoss": true,
+   "bossKind": "Field operation"
+  },
+  "9557": {
+   "isBoss": true,
+   "bossKind": "Field operation"
+  },
+  "5595": {
+   "isBoss": true,
+   "bossKind": "Field operation"
+  },
+  "1637": {
+   "isBoss": true,
+   "bossKind": "Guildhest"
+  },
+  "470": {
+   "isBoss": true,
+   "bossKind": "Guildhest"
+  },
+  "1629": {
+   "isBoss": true,
+   "bossKind": "Guildhest"
+  },
+  "1264": {
+   "isBoss": true,
+   "bossKind": "Guildhest"
+  },
+  "1632": {
+   "isBoss": true,
+   "bossKind": "Guildhest"
+  },
+  "1258": {
+   "isBoss": true,
+   "bossKind": "Guildhest"
+  },
+  "465": {
+   "isBoss": true,
+   "bossKind": "Guildhest"
+  },
+  "123": {
+   "isBoss": true,
+   "bossKind": "Guildhest"
+  },
+  "1265": {
+   "isBoss": true,
+   "bossKind": "Guildhest"
+  },
+  "1154": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "1793": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "2231": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "1127": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "2233": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "1143": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "1779": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "1109": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "1108": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "1786": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "1792": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "1137": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "2224": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "1133": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "1160": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "1165": {
+   "isBoss": true,
+   "bossKind": "Levequest"
+  },
+  "9881": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4145": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "1454": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "608": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "9189": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4222": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "3339": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "8397": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4248": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4179": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4261": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "1304": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "2196": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4233": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "2873": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "1937": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "7110": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "2211": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4232": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "1894": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4269": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "5668": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4739": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "939": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "941": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "1301": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "10438": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "3102": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "708": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "1457": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4219": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "992": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "2872": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "9296": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "3119": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4148": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "996": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "2083": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "2149": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "1421": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "1942": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "3761": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "906": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "2067": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "969": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "598": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4239": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4141": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "2092": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "269": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "2089": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "617": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "2063": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "10580": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "597": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4491": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "6300": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "600": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4258": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4425": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "946": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "2160": {
+   "isBoss": true,
+   "bossKind": "Quest, Trial"
+  },
+  "6152": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "9458": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "834": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "3151": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "1380": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4142": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4131": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "1808": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4127": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "1650": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "1651": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "9341": {
+   "isBoss": true,
+   "bossKind": "Quest, Trial"
+  },
+  "3330": {
+   "isBoss": true,
+   "bossKind": "Quest, Trial"
+  },
+  "656": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "1901": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4267": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "4185": {
+   "isBoss": true,
+   "bossKind": "Quest"
+  },
+  "1459": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "5629": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "12377": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "1469": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "2611": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "4699": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "4703": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "4708": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "1466": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "5186": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "1472": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "1473": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "9813": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "10345": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "3745": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "5169": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "4709": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "3192": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "3197": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "3765": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "3772": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "2610": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "1471": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "7635": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "7634": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "7633": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "4707": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "3747": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "3748": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "9832": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "1468": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "3376": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "2609": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "4687": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "5170": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "1470": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "4705": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "11445": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "1482": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "4706": {
+   "isBoss": true,
+   "bossKind": "Raid"
+  },
+  "7601": {
+   "isBoss": true,
+   "bossKind": "Treasure dungeon"
+  },
+  "7599": {
+   "isBoss": true,
+   "bossKind": "Treasure dungeon"
+  },
+  "9183": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "2162": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "9953": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "9696": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "720": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "2665": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "8352": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "2161": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "9182": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "9181": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "3287": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "9180": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "722": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "724": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "723": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "7221": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "9250": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "719": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "718": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  },
+  "721": {
+   "isBoss": true,
+   "bossKind": "Trial"
+  }
+ }
+}

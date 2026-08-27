@@ -4,15 +4,32 @@ Fills the two gaps the game files cannot: **which monsters exist with what stats
 **which instance each one lives in**.
 
 ```
-fetch.py   ->  scripts/wiki/cache/*.json        23 API requests, resumable
-parse.py   ->  data/curated/monsters.json       3,504 entries
-           ->  data/curated/duties.wiki.json      207 entries
+fetch.py        ->  cache/<class>.json, _categories.json      23 requests
+fetch_more.py   ->  cache/_bosses.json, _fates.json, _zones.json   33 requests (batched)
+       |
+parse.py        ->  data/curated/monsters.json                 3,516 entries
+                ->  data/curated/duties.wiki.json                207 entries
+parse_more.py   ->  data/curated/monsters.boss.json              667 entries
+                ->  data/curated/fates.wiki.json                  872 entries
+                ->  data/curated/places-of-interest.wiki.json     239 entries
                  |
-                 +--> scripts/gen-datasets folds both in during generation
+                 +--> scripts/gen-datasets folds them all in during generation
 ```
 
-Re-run order is `fetch.py` → `parse.py` → `gen-datasets`. Verified idempotent: running the
-whole chain twice produces byte-identical datasets (modulo the `generated` timestamp).
+Re-run order is `fetch*.py` → `parse.py` → `parse_more.py` → `gen-datasets`. `parse_more.py`
+reads the generated datasets to resolve ids, so it must run after at least one generation.
+Verified idempotent: running the whole chain twice produces byte-identical datasets (modulo
+the `generated` timestamp).
+
+## Bosses are their own column, never mixed in
+
+`duties.bosses` is separate from `duties.monsters`, and `monsters.isBoss` / `monsters.bossKind`
+carry the classification. A duty's boss list is the part a challenge actually names ("defeat
+X"); buried inside a forty-name trash list it can be neither read nor filtered.
+
+Boss status exists in **no game sheet**. It comes from the wiki's 14 boss subcategories, which
+is also the only source for the KIND (`Trial`, `Raid`, `Alliance raid`, `Dungeon`, `FATE`,
+`Quest`, `Deep dungeon`, `Field operation`, `Guildhest`, `Levequest`, `Treasure dungeon`).
 
 ---
 
@@ -103,3 +120,31 @@ combination of in-game sources and fan conjecture". Levels, HP and abilities are
 not extracted from the client. Treat this as good curated data with a named provenance — which is
 exactly why it lands in `curated/` and is labelled `CURATED (external, not game files)` in the
 Dataset Viewer, rather than being merged in as though it came from sqpack.
+
+---
+
+## The three later sources, and what each was actually worth
+
+**Boss categories — worth far less than they look, and one thing nothing else has.**
+677 of the 681 pages are REDIRECTS, and **638 of those point straight back into the enemy
+family subpages `parse.py` already reads**. So the boss *stats* were never new. What is new and
+unobtainable anywhere else is the *classification*: 667 monsters flagged `isBoss` with a
+`bossKind`. 13 titles do not match a monster (disambiguated duplicates like
+*"Captain Madison (gladiator boss)"*, and the non-creature page *"Final Fantasy XIV superbosses"*).
+
+**List of FATEs — the only source for FATE location, because the game genuinely lacks it.**
+`Fate.Location` is **not** a `Level` row: all 1,697 values sit inside `Level`'s RowId range yet
+match nothing in it — not `RowId`, not `Object`, not `EventId`. It is an LGB layer-object id,
+and LGB files are not Excel sheets. That is why `fates.json` shipped with `zone = ???` on all
+1,712 rows and nobody noticed: the lookup silently resolved to nothing. The wiki gives zone,
+place, coordinates, time limit, FATE type and spawn conditions outright — **872 matched**.
+
+*123 are left deliberately unpatched.* Their names are shared with another FATE (518 of our
+1,712 rows share a name — "Steel Reign" appears 12 times) and **our own zone column is `???` for
+every row**, so there is nothing to disambiguate against. Attaching one zone's coordinates to
+another zone's FATE would be worse than leaving it blank.
+
+**Locations page — an index, not data.** It is 4.6 KB of links. The places themselves are on the
+zone pages, and those are inconsistent (*Places of Interest* on one, *Geography* on another,
+*Locations → Areas → Settlements* on a third), which is why only 239 POIs get a description.
+**The dataset itself does not come from here at all** — see below.

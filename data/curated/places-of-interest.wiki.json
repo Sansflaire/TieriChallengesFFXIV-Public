@@ -1,0 +1,728 @@
+{
+ "schemaVersion": 1,
+ "dataset": "places-of-interest",
+ "keyField": "id",
+ "source": "finalfantasy.fandom.com (boss categories, List of FATEs, zone pages), swept 2026-08-27",
+ "description": "CURATED overlay: prose description for a place of interest, taken from the matching section heading on its zone's wiki page.",
+ "warning": "Only places the wiki gives a real section AND a paragraph for. Zone pages are inconsistent - some use \"Places of Interest\", some \"Geography\", some \"Locations/Areas\" - so coverage is partial by nature.",
+ "entryCount": 239,
+ "entries": {
+  "4:5:10": {
+   "description": "The training grounds for the Order of the Twin Adder."
+  },
+  "4:5:14": {
+   "description": "A structure initially built in the days of Gelmorra, Spirithold has found new use as a prison to hold enemies of the forest while they await judgment - though whether the same can be said after the Calamity is unclear. Some also refer to the crumbling ruin as Warren's Hold, after the cells' first gaoler."
+  },
+  "4:5:19": {
+   "description": "These catacombs have long been tombs of the Gelmorran nobility. But these days, it has been infested by the Lambs of Dalamud."
+  },
+  "4:5:20": {
+   "description": "Located along the Mirror lake, this pier contains ferry services to Lavender Beds."
+  },
+  "4:5:25": {
+   "description": "This mansion in Sorrel Haven was formerly owned by the Seedseers as a place of respite, but was generally viewed as a symbol of excess by Gridanians. Public opinion eventually swayed them to sell it to a Duskwight noblewoman named Amandine."
+  },
+  "4:5:30": {
+   "description": "A dig into the crater located at the Standing Corses. What exactly the spriggans are digging for is a mystery."
+  },
+  "4:5:33": {
+   "description": "Situated on a wooden causeway, this trading post houses a major chocobo ranch."
+  },
+  "5:6:9": {
+   "description": "Located near Hawthorne's Hut, this village has become a refuge for untouched sylphs after a schism in the Sylphlands over their primal."
+  },
+  "5:6:10": {
+   "description": "A Garlean citadel located southeast of Nine Ivies. It runs under Baelsar's Wall and serves as a vital supply line for the XIVth Legion's campaigns in Eorzea."
+  },
+  "5:6:12": {
+   "description": "Once created long ago during the Fifth Umbral Era as a place of refuge, this sanctuary was rediscovered after the calamity and has since been used for a number of ceremonies."
+  },
+  "5:6:14": {
+   "description": "The deepest part of the forest. Ever since a schism over the primal Ramuh, the sylphlands has become extremely hostile to visitors, whether they be Eorzean or Garlean. The area is perpetually tinted purple."
+  },
+  "5:6:29": {
+   "description": "A colossal metal wall separating the Black Shroud from Gyr Abania. It was built by Solus zos Galvus to protect the empire against beast tribe and primal threats."
+  },
+  "6:7:5": {
+   "description": "A tavern and hamlet run by former Wood Wailer, Buscarron, for travelers in South Shroud. Triple Triad is permitted within the establishment."
+  },
+  "6:7:6": {
+   "description": "A gaol named for a man-eating beast of Padjal folklore. These natural caverns were used to incarcerate the worst of Gridania's criminals until recently, when it was abandoned in favor of a new gaol closer to the city-state. It has since been claimed by wildlife."
+  },
+  "6:7:10": {
+   "description": "This camp is used by the Wood Wailers to guard the border between the Black Shroud and Thanalan. It is situated on several large platforms connected by bridges."
+  },
+  "6:7:11": {
+   "description": "The original city-state of Amdapor. Until the Calamity, the Elementals had quarantined the ancient capital away from the current denizens of Twelveswood."
+  },
+  "6:7:15": {
+   "description": "A citadel constructed by the old Amdapori civilization. It has since been occupied by the Lambs of Dalamud."
+  },
+  "6:7:17": {
+   "description": "A village originally built by the first settlers to emerge from Gelmorra in order to quarry stones for construction of their new city, Gridania. It's notable for being the main hub of levequests for crafters/gathers in the 20s."
+  },
+  "6:7:18": {
+   "description": "Originally a settlement called Boughbury, it has since become a stronghold for the Redbelly bandits."
+  },
+  "6:7:22": {
+   "description": "In ancient times, a heroine named Urth sealed away the primal Odin in this crystal structure. That elder primal has since gotten free, having been seen walking the Twelveswood atop his dark steed."
+  },
+  "7:8:2": {
+   "description": "A chocobo ranch located just outside the Yellow Serpent Gate."
+  },
+  "7:8:6": {
+   "description": "A hamlet tucked away in Peacegarden."
+  },
+  "7:8:14": {
+   "description": "Situated on the shore of Lake Tahtotl, the Ixal continually take lumber from the outskirts of the Black Shroud (and certainly without permission). The lumber is eventually transported via balloncraft to their homeland in the mountains."
+  },
+  "7:8:24": {
+   "description": "A village built over Proud Creek."
+  },
+  "15:74:0": {
+   "description": "Making up the southern end of middle La Noscea is the Zephyr Drift, just outside of Limsa Lominsa past the Zephyr Gate. This idyllic grassland draws its name from the westerly breeze that graces the region. Passage to Cedarwood in lower La Noscea can be found in the southeast. ::This checkpoint was originally established by the Maelstrom to watch over the La Thagran Eastroad. With the Maelstrom stretched thin following the Calamity and kobold incursions proving rare, jurisdiction of the checkpoint was left to the Yellowjackets. ::One of two land entrances to Limsa Lominsa, the Zephyr Gate conn"
+  },
+  "15:74:1": {
+   "description": "These fertile farmlands, braced by the Rogue and Nym Rivers and split by the Agelyss River, are the largest region in middle La Noscea. Prior to the Calamity, Summerford was where Camp Bearded Rock and its eponymous rock could be located. ::One of two new rivers formed in middle La Noscea by the Calamity, the Agelyss flows down from the Agelyss Wise in eastern La Noscea. This stretch of the river is also known as the west Agelyss River to differentiate it from its source waters to the east. ::A natural rock formation in the shape of a circle that has become home to a herd of aurochs. ::The sec"
+  },
+  "15:74:2": {
+   "description": "Cleft from the rest of middle La Noscea in the Calamity, this stretch of land lies several yalms below the rest of middle La Noscea. Continuing northwest through the Bend leads to Quarterstone in western La Noscea, while Raincatcher Gully in eastern La Noscea lies to the northeast beyond the De Nevelle Checkpoint. ::Much like its counterpart to the east, this checkpoint was founded to watch over the De Nevelle Westroad. Unlike the La Thagran Checkpoint, however, it remains under Maelstrom command, not out of fear of beastmen incursions, but of the XIVth Imperial Legion stationed at Castrum Occ"
+  },
+  "16:75:7": {
+   "description": "A bridge constructed to reconnect Gods' Grip to the rest of Vylbrand when the Calamity sundered it."
+  },
+  "16:75:8": {
+   "description": "A homestead on a small hill near the Cedarwood farmlands, just east of Limsa Lominsa in the Lower La Noscea zone. It is located outside the entrance to The Mist residential district."
+  },
+  "16:75:9": {
+   "description": "A series of coastal windmills constructed from leftover sails and materials of decommissioned ships."
+  },
+  "16:75:10": {
+   "description": "A mineshaft located to the west of Cedarwood. A tunnel leading to the La Thagran checkpoint in Middle La Noscea is here."
+  },
+  "16:75:13": {
+   "description": "The official shipyards of Limsa Lominsa, it was spared the worst of the Calamity thanks to geography of Gods's Grip. The shipyards have since been hard at work in designing a new flagship Victory to bolster the city-state's morale."
+  },
+  "16:75:14": {
+   "description": "Part of the coastline north of Candlekeep Quay, the site where a shard of Dalamud had struck offshore. A surge of aether immediately fused with and crystallized the fountain of salt water from the impact, leaving an unmistakable legacy of the Calamity."
+  },
+  "16:75:15": {
+   "description": "A small dock in the Gods' Grip area. Ferry services regularly travel between here and Aleport."
+  },
+  "16:75:17": {
+   "description": "A lighthouse located at the southern end of the peninsula, overlooking Candlekeep Quay. Another lighthouse, Llymlaen's Ring, used to be accessible by land along a cape, but this was washed away during the Calamity. Now on a small island, it was closed to civilians. ==Activies=="
+  },
+  "17:76:3": {
+   "description": "A watchtower and lighthouse for the eastern coast of Vylbrand."
+  },
+  "17:76:4": {
+   "description": "A beach resort along the Bloodshore in Eastern La Noscea. It is run by the wealthy Ul'dahn merchant Gegeruju, who purchased the land from Limsa Lominsa when it was found unfit for agriculture."
+  },
+  "17:76:10": {
+   "description": "A rainforest glade located in the eastern part of the zone. It has been claimed by Brayflox Alltalks of the former Company of Heroes as a place for her kin."
+  },
+  "17:76:14": {
+   "description": "A town known for its vineyards. Despite the name, it's not a coastal settlement—the name itself a relic from a time when the sea levels were higher."
+  },
+  "17:76:15": {
+   "description": "An Imperial military base atop the Agelyss Wise, created by Gaius van Baelsar after the Calamity. Though partially intended to support Castrum Marina in the Straits of Merithor, its true purpose is to research the debris from Dalamud."
+  },
+  "18:77:9": {
+   "description": "Formerly a mere outpost, it is now a major military garrison of the Maelstrom that manages the Tidegate—a walled barrier into Sahagin spawning grounds at Halfstone."
+  },
+  "18:77:38": {
+   "description": "The stronghold of the Sahagin at the far end of Western La Noscea, created in the aftermath of the Calamity. Its presence has led to increasing skirmishes with the Maelstrom, largely instigated by the militant Coral Tridents faction of the beastmen."
+  },
+  "18:77:40": {
+   "description": "A towering lighthouse with a castle-like architecture, it was impaled by a shard of corrupted aether during the Calamity. Since then, it has become home to a siren who has bewitched many a mariner with her song."
+  },
+  "18:77:45": {
+   "description": "A small remote island off the coastline, used by the Sahagin for collecting food."
+  },
+  "19:78:4": {
+   "description": "A trading camp set up by a Qiqirn named Memeroon, along the western shore of Bronze Lake. His estranged brother, Jijiroon, runs a similar trading post on the opposite shore."
+  },
+  "19:78:5": {
+   "description": "A run down mill in the Oakwood region of Upper La Noscea. Now run by a group of former pirates, the Salthounds, led by Rabid Ratata, after the Calamity destroyed their ship."
+  },
+  "19:78:6": {
+   "description": "The fossilized remains of an ancient serpent, situated upon a bluff overlooking Oakwood. Though unconfirmed, rumors suggest it is one of the legendary sea serpents said to have been released by Llymlaen at the dawn of time."
+  },
+  "19:78:8": {
+   "description": "A structure of Nymian creation, uncovered when Bronze Lake drained during the Calamity. It is named for Oschon, thought to be patron of the old civilization."
+  },
+  "19:78:9": {
+   "description": "A trading camp set up by a Qiqirn named Jijiroon, along the eastern shore of Bronze Lake. His estranged brother, Memeroon, runs a similar trading post on the opposite shore."
+  },
+  "20:40:7": {
+   "description": "A river valley located south of Horizon."
+  },
+  "20:40:12": {
+   "description": "Though abandoned for centuries, the mine was reactivated when new veins were discovered, and the Calamity pressed the need for materials. It turns out the mines were also where hecatoncheir slaves were sealed in an uprising."
+  },
+  "20:40:19": {
+   "description": "A port city along the Strait of Merlthor. Despite being one of the foremost hubs of Ul'dahn trade with Limsa Lominsa and the home base of the Scions of the Seventh Dawn, the Syndicate has declined to construct an Aetheryte in the town, which the Scions assume as due the Syndicate expecting some kind of recompense from them for its construction."
+  },
+  "20:40:20": {
+   "description": "An underground spring inhabited by a group of giants."
+  },
+  "20:40:22": {
+   "description": "This coastal formation is garrisoned by the XIVth Legion to support Castrum Marinum."
+  },
+  "20:40:23": {
+   "description": "Located offshore, this artificial island was built on the Rhotano Sea to resupply XIVth Legion cohorts in La Noscea and Thanalan. It was later used to house the VIIth Imperial Legion’s Emerald Weapon."
+  },
+  "20:40:46": {
+   "description": "This building in Vesper Bay was chosen by Minfilia to be the headquarters of the Scions of the Seventh Dawn."
+  },
+  "21:39:8": {
+   "description": "The southernmost station of Ul'dah's rail line, located next to the Royal Plantations."
+  },
+  "21:39:14": {
+   "description": "A tavern just south of Black Brush Station. Triple Triad can be played at this establishment."
+  },
+  "21:39:15": {
+   "description": "Originally a basic aetheryte camp, the construction of a rail line for transporting mining results gave it a new form and function."
+  },
+  "21:39:16": {
+   "description": "The site of the ruins of Sil'dih, destroyed in a bitter feud with its sister nation of Ul'dah."
+  },
+  "21:39:20": {
+   "description": "A small enclave of Mutamix Bubblypots and his followers, the foremost researchers of Materia. It is the only place where Materia transmutation can be done. By talking to Mutamix, players can transmute 5 Materias into one, though this is a complete random process, so the result can be a better Materia or a worst one."
+  },
+  "22:41:3": {
+   "description": "Before the Calamity, the Burning Wall was an unscalable cliff named for its signature glow at sunset. Since then, the cliff had been destroyed by a fragment of Dalamud, and massive orange corrupted crystal formations have sprouted in its wake, giving new meaning to its name."
+  },
+  "22:41:5": {
+   "description": "Named for the nearby ponds, this dugout settlement facilitates the lichyards of the Church of Saint Adama Landama, and contains an inn with the inappropriate name of \"Eternal Rest.\" Since the Calamity, it has become home to an increasing number of refugees."
+  },
+  "22:41:6": {
+   "description": "These Belah'dian ruins were unearthed by Bahamut's fury in the Calamity, and would likely not have been discovered otherwise. Scholars speculate they may be the tomb complex of Lalafuto IV."
+  },
+  "22:41:10": {
+   "description": "These proving grounds have long been used for gladiator sport by Ul'dah, but it was abandoned in the aftermath of the Calamity and now mainly contains captive creatures."
+  },
+  "22:41:12": {
+   "description": "A large bridge and settlement built over the immense chasm formed twain through the center. The discovery of ruins within the opened earth has drawn many researchers, in addition to caravaners. Unfortunately, it has also been plagued with frequent raids by a Qiqirn camp on the Amalj'aa payroll."
+  },
+  "22:41:14": {
+   "description": "A shrine to Thal, god of traders, along the road in Wellwick Wood. Due to its remote location, only the devout make pilgrimages."
+  },
+  "23:42:4": {
+   "description": "These Belah'dian ruins are believed to have once been used by Belah'dian culture as a temple to worship Azeyma, the Warden. Recent research suggests the temple complex itself was originally built by an older civilization."
+  },
+  "23:42:5": {
+   "description": "These caves serve as a refuge for displaced citizens of Ala Mhigo that could not adapt to life in Ul'dah. Despite this, the resistance leader Gundobald has permitted the Flame Serpents to operate a garrison here."
+  },
+  "23:42:7": {
+   "description": "These caves are the lair of the Corpse Brigade, the former Ala Mhigan palace guard turned bandits."
+  },
+  "23:42:11": {
+   "description": "The main stronghold of the Amal'jaa, built into the canyons of Southern Thanalan, just north of the Sagolii Desert."
+  },
+  "23:42:12": {
+   "description": "A shrine to Nald, god of traders, along the road in Wellwick Wood. A tunnel leading to Minotaur Malm allows safe access to Forgotten Springs."
+  },
+  "23:42:13": {
+   "description": "Part of a cave complex leading to Forgotten Springs, the name comes from a legend of a goatherd being chased by a minotaur through the caves for a malm. While the creature has never been confirmed to exist, this hasn't stopped it from deterring the more fearful travelers."
+  },
+  "23:42:14": {
+   "description": "Located on the edge of the Sagolii Desert, this settlement is primarily home to the U tribe of Miqo'te, also known as \"Children of the Sand.\""
+  },
+  "23:42:15": {
+   "description": "A mining station in the middle of the Sagolii Desert."
+  },
+  "24:43:2": {
+   "description": "A massive fortress built by the XIV Imperial Legion, connected by rail to Castrum Centri in Mor Dhona. An inner stronghold called the Praetorium serves as Gaius Van Baelsar's base of operations in Eorzea."
+  },
+  "24:43:3": {
+   "description": "A forward military camp of the Bluefog region, itself named for the distinct haze of ceruleum."
+  },
+  "24:43:6": {
+   "description": "Once a popular mining deposit for mythril, the veins ran dry and were abandoned. The facility is now home to the Lambs of Dalamud."
+  },
+  "24:43:7": {
+   "description": "A collection of corrupted crystals that fell in the Calamity, strewn throughout parts of zone."
+  },
+  "24:43:8": {
+   "description": "A collection of corrupted crystals that fell in the Calamity, strewn throughout parts of zone."
+  },
+  "24:43:9": {
+   "description": "A collection of corrupted crystals that fell in the Calamity, strewn throughout parts of zone."
+  },
+  "24:43:11": {
+   "description": "A facility run by Amajina & Sons Mineral Concern to process ceruleum mined in the area."
+  },
+  "24:43:13": {
+   "description": "A massive fortress built by the XIV Imperial Legion, connected by rail to Castrum Centri in Mor Dhona. An inner stronghold called the Praetorium serves as Gaius Van Baelsar's base of operations in Eorzea."
+  },
+  "25:108:3": {
+   "description": "The original Camp Revenant's Toll was annihilated in the Calamity, and the crystal grew out of the ground to engulf the otherwise pristine and uniform Aetheryte crystal. Players can still navigate the ruined camp in various quests, but all NPCs have either died or moved to the new, full-blown town of Revenant's Toll, situated nearby. It has been growing larger as time passes."
+  },
+  "25:108:5": {
+   "description": "One of the most intriguing spots for its reason for development, the Tangle is a labyrinthine forest full of Morbols just outside Castrum Centri. It was made to resemble the spot the CG Midlander fought the Malboro during an Echo in the original game's Opening Movie. Needless to say, the swamp is also quite perilous."
+  },
+  "25:108:6": {
+   "description": "Situated on a cliff to the west of the Agrius, a large tree stands crystallized since the fallout of the Battle of Silvertear Skies. A stone bearing the mark of Thaliak the Scholar lies in front of it. More unusually, several Harriers from Coerthas have been seen in the path leading to the crystal tree."
+  },
+  "25:108:7": {
+   "description": "Castrum Centri was once Castrum Novum, remodeled and renamed after the XIVth Legion took over from the tattered remnants of the VIIth. It serves as one of the cores of the Garlean Empire's presence in Eorzea, along with the Praetorium."
+  },
+  "25:108:8": {
+   "description": "The Sons of Saint Coinach, an organization of scholars and researchers from Sharlayan, have made camp in these Allagan Ruins. In addition to the ruins, the suddenly formed Crystal Tower is a valued subject for study."
+  },
+  "25:108:9": {
+   "description": "A huge cluster of crystal formations to the north of Saint Coinach's Find, with a crater lake in the middle. A fragment of Dalamud had landed here during the Calamity, which still crackles with energy."
+  },
+  "25:108:10": {
+   "description": "Located in the middle of Lake Silvertear lies the ruined hulk of the Agrius, with the wyrmking's carcass entwined around it. Along with the Crystal Tower, it remains the definitive landmark of the region."
+  },
+  "25:108:26": {
+   "description": "The Crystal Tower sprang up sometime shortly after the Calamity. The Sons of Saint Coinach would likely unlock its odd, slanted door were it not for the hostile Gigas roaming the area that appear to worship the tower. Along with the Keeper of the Lake, the tower dominates Mor Dhona's modern landscape."
+  },
+  "30:79:2": {
+   "description": "A lone, mysterious, empty cabin up on the slopes of Outer La Noscea near natural springs. Few are said to ever meet the master of this cabin, though it does not stop travelers from taking advantage of the local springs or the bedding."
+  },
+  "30:79:3": {
+   "description": "These ruins were were thought to be the hub of Nymian civilization during the Fifth Astral Era. Many of the ruins hover in place -- believed to be due to over-aspected wind crystals -- and thus making them a distinctive landmark of La Noscea."
+  },
+  "30:79:4": {
+   "description": "A Maelstrom military camp located high up on Outer La Noscea, overlooking the Wanderer's Palance and Upper La Noscea environs. Run by ex-pirates known as the Red Swallows, this camp monitors the activities of kobolds and their stronghold of U'Ghamaro Mines, and as such is the only place of respite adventurers may find up here."
+  },
+  "30:79:5": {
+   "description": "An underground city built into the volcano of O'Ghomoro. It functions as the primary outpost of the kobolds."
+  },
+  "47:516:0": {
+   "description": "Livia sas Junius is the final boss of the dungeon. Livia sas Junius from FFXIV battle render.png }}"
+  },
+  "53:102:2": {
+   "description": "A large snow-covered partial dome made of debris from Dalamud."
+  },
+  "53:102:5": {
+   "description": "The Observatorium is home to scholars and knights alike, housing well kept records of the observations made through a gigantic telescope, under Chief Astrologian Forlemort. These records are highly classified, and not readily available to travelers. Its functions are instrumental to Ishgard's war against the Dravanian Horde."
+  },
+  "53:102:8": {
+   "description": "A large fort under command of Lord Haurchefant of House Fortemps, who is welcoming of adventurers."
+  },
+  "53:102:10": {
+   "description": "This vigil was sacked by the dragon Svara shortly after the Calamity struck."
+  },
+  "53:102:12": {
+   "description": "A watery grotto to the northeast of Dragonhead."
+  },
+  "53:102:13": {
+   "description": "The prime stronghold of the Ixal, located along eastern cliffs. Since the beast-tribe has directed most of their attention to Gridania, the Holy See has chosen to ignore them."
+  },
+  "53:102:16": {
+   "description": "A grand tower very close to the Fury's Gaze. Like the tower at the Observatorium, it has a spiral staircase that changes directions near the top. It's purpose was to protect Fury's Gaze and provide respite for pilgrims. The Fury's Gaze is a mountain formation with a gaping hole through it, making it an impressive landmark. The mark of its namesake, Halone the Fury, once existed in front of the cave beneath its spot in the Eastern Highlands, but when the landmark itself was moved to the Central Highlands (the only available Coerthas zone post-calamity), the mark was moved to a stalactite in a c"
+  },
+  "53:102:20": {
+   "description": "This imposing gatehouse controls access to the city-state of Ishgard. Only those authorized may pass across the Steps of Faith into the Holy See."
+  },
+  "53:102:21": {
+   "description": "This vigil was seized by the Dravanian Horde. House Durendaire has been trying to reclaim it."
+  },
+  "53:102:22": {
+   "description": "A fort operated by Lord Drillemont of House Durendaire. As the first line of defense against the Dravania Horde, it is one more well secured settlements."
+  },
+  "53:102:23": {
+   "description": "A clearing known to be the home of the dreaded Behemoth."
+  },
+  "53:102:24": {
+   "description": "A colossal glacier blocking the way to the Coerthas Western Highlands. A side-effect of the Calamity, this remains the most extreme symptom of the glaciation that has gripped Coerthas."
+  },
+  "53:102:25": {
+   "description": "A large mountain in center of the Central Highlands. According to legend, the goddess Halone drove the Nail through both the sky and earth, binding the two together. Despite having immense shrapnel ejected from Dalamud currently embedded into its southern slope, the Nail remains a prominent landmark and symbol of perseverance."
+  },
+  "211:161:10": {
+   "description": "A merchant vessel that ran aground when the area suddenly froze over after the Calamity. There were no survivors."
+  },
+  "211:161:13": {
+   "description": "A farmstead north of Camp Riversmeet. Though its previous occupants abandoned it due to the winter, it has since been claimed by many of the heretics in the Western Highlands as a base."
+  },
+  "211:161:15": {
+   "description": "A town once occupied by woodcutters. The freezing since the Calamity has left it a ghost town."
+  },
+  "211:161:16": {
+   "description": "An immense black bridge crossing the (now frozen) river. Though frosted, the bridge itself is still intact and serviceable."
+  },
+  "211:161:22": {
+   "description": "Formerly a garrison of knights and falconers, it was originally abandoned when the snows came following the Calamity. Since then, House Durendaire and House Dzemael have been trying to rebuild the settlement into a fort as part of the effort to reclaim the western highlands."
+  },
+  "211:161:23": {
+   "description": "This former Aetheryte Camp was abandoned when the cold set in and the Aetheryte became encased in ice. Now only wolves prowl the grounds."
+  },
+  "211:161:29": {
+   "description": "Situated in the now frozen Ashpool, this structure is said to have once been a living dragon now petrified."
+  },
+  "211:161:32": {
+   "description": "One of the four vigils surrounding the Holy See, it was cut off when extremely cold weather gripped the region."
+  },
+  "216:166:27": {
+   "description": "A Garlean outpost constructed in the Gamma Quadrant by the VIth Legion to investigate the floating continent."
+  },
+  "216:166:29": {
+   "description": "The newest dreadnaught of the Garlean Empire. Due to its engines being frozen in aetheric ice, it won't be leaving for awhile."
+  },
+  "354:282:19": {
+   "description": "One of the many small villages that exist in Yanxia."
+  },
+  "354:282:27": {
+   "description": "The tomb of Gannen, first king of Doma, and a master geomancer."
+  },
+  "354:282:28": {
+   "description": "These colossal structures bound Doma to the east and the south. The Garleans added their own 'improvements' to them, magitek generators that form an impassable barrier for all except who they allow in."
+  },
+  "354:282:30": {
+   "description": "The Headquarters of the Doman Resistance, and later, its army."
+  },
+  "354:282:33": {
+   "description": "Once the residential district for Doma's nobles, it was razed to the ground by the Empire following the rebellion's failure. Now naught remains but automata and geomancy familiars."
+  },
+  "354:282:47": {
+   "description": "The tomb of Gannen, first king of Doma, and a master geomancer."
+  },
+  "367:277:11": {
+   "description": "The fortified border between The Black Shroud and Gyr Abania, named for Gaius van Baelsar."
+  },
+  "367:277:14": {
+   "description": "The remains of a hamlet in the East End. Bittermill was used as a chemical weapons testing site by the Garleans, who carried out the first experiments with Black Rose on the hamlet's inhabitants."
+  },
+  "367:277:20": {
+   "description": "The remains of a Garlean fort overlooking The Pall of Clarity, the upper of the two bridges spanning the canyon."
+  },
+  "367:277:29": {
+   "description": "A village located on a rocky outcrop in Virdjala, and home to the M Miqo'te tribe."
+  },
+  "367:277:30": {
+   "description": "A village inhabited by the Vira Ananta tribe."
+  },
+  "367:277:34": {
+   "description": "A great chasm located in southern Virdjala, the Yawn was formed by Omega after pursuing Shinryu. The chasm connects to the Interdimensional Rift, an artificial pocket dimension created by Omega for the purpose of carrying out experiments. As the experiments continue, the Yawn begins to fill with a strange purple liquid. After Omega is defeated, the Yawn returns to normal and the Interdimensional Rift can no longer be accessed."
+  },
+  "367:277:51": {
+   "description": "Originally built to oversee the construction of Baelsar's Wall, Castrum Oriens was expanded following the Seventh Umbral Calamity in readiness for Gaius van Baelsar's re-attempts at invading Eorzea. The camp is the first Garlean base to fall to the Eorzean Alliance during the campaign to liberate Gyr Abania, and serves as its temporary headquarters for much of Stormblood. It is officially held by the Order of the Twin Adder."
+  },
+  "368:278:17": {
+   "description": "A settlement that in it's heyday was a prime supplier of cut granite for use in building."
+  },
+  "368:278:18": {
+   "description": "A former trading hub, neglected during the Garlean occupation."
+  },
+  "368:278:22": {
+   "description": "A structure important in the history of red mages as a symbol of the first act of cooperation between black and white mages following the 6th Umbral Calamity. Following the fall of the Order of the Crimson Duelists, a tribe of man-eater Qiqirn have made it their home."
+  },
+  "368:278:40": {
+   "description": "A giant ship created by the famous Archon Nyunkrepf Nyunkrepsyn in his attempt to save as many as possible during the 6th Umbral Calamity. In the raging tides of the Great Flood, Nyunkrepf cast a spell that transported this ark to rest atop the high peaks of Mount Yorn, before he and his followers alighted. After the waters receeded, he lead his people west to Dravania, and then across the ocean to the north, founding what would become Sharlayan."
+  },
+  "368:278:45": {
+   "description": "A small isolated village that is the hometown of Raubahn Aldynn."
+  },
+  "369:279:12": {
+   "description": "The main body of the great salt lake from which the region derives it's name. It is a remnant of the great flood that embodied the Sixth Umbral Calamity. The shallows near the southern lake shore allow for salt panning."
+  },
+  "369:279:13": {
+   "description": "A residential area situated to the south of Ala Mhigo proper, it was built to accommodate the city's growing population. As the newest district to be added, it is a considerable distance from the royal palace, and was expected to become an enclave for the less well-to-do. Under Garlean rule, it more or less retained that status, serving to quarter the Aan─those without citizenship. During that time, it was also known as the Peregrine Quarter─a reference to the derogatory name by which the imperial occupiers called Ala Mhigan natives."
+  },
+  "369:279:16": {
+   "description": "Formerly a checkpoint along the main highroad to Ala Mhigo, it was incorporated into the newly constructed Castrum Abania. Prior to the Garlean invasion, the area bustled with merchants bound for the Near East, but mercantile endeavors have since given way to military ones. This area served as the Eorzean Alliance's forward base into the region during Operation Rhalgr's Beacon. Following the liberation, it remains a base and checkpoint along the way to the new headquarters at the Ghimlyt Dark."
+  },
+  "369:279:17": {
+   "description": "A residential area situated to the south of Ala Mhigo proper, it was built to accommodate the city's growing population. As the newest district to be added, it is a considerable distance from the royal palace, and was expected to become an enclave for the less well-to-do. Under Garlean rule, it more or less retained that status, serving to quarter the Aan─those without citizenship. During that time, it was also known as the Peregrine Quarter─a reference to the derogatory name by which the imperial occupiers called Ala Mhigan natives."
+  },
+  "369:279:30": {
+   "description": "This small town on the shore of Loch Seld was once home to salt miners that panned the shallows for precious 'white gold' to be exported to various other nations. Following the Garlean occupation it fell out of use and was eventually abandoned, however an initiative put forth by Sultana Nanamo Ul Namo and Syndicate member Lolorito following the liberation has seen the region's salt industry pick up, and thus the town has been reoccupied."
+  },
+  "369:279:34": {
+   "description": "Once known as the strongest military power of Eorzea, Ala Mhigo has suffered under imperial rule for over 20 years. The original residents have been pushed into a new adjoining sector known as 'The Ala Mhigan Quarter', while the city proper, including the Royal Palace, have been made the homes for, originally, the XIVth Imperial Legion, and then the XIIth Imperial Legion, as well as other Garlean notables and Ala Mhigans that have adapted to their rule."
+  },
+  "369:279:51": {
+   "description": "The ruins of a 5th Astral Era city state, a casualty of the War of the Magi. The ruins were flooded in the 6th calamity, but the Ala Mhigan Royal Family discovered a way inside. During the reign of the Mad King, the ruins were used as a vault for his vast fortune and a prison for those who opposed his rule, where his thaumaturges experimented upon them and turned them into horrid monsters."
+  },
+  "370:280:22": {
+   "description": "The Rakuza District is a market district in Kugane. It is home to Daitenya, named for the mountain Daitenzan on the neighboring island of Koshu and providers of the finest silks and garments in Kugane."
+  },
+  "370:280:25": {
+   "description": "Meaning \"gold\" in ancient Hingan, Kugane is a port where golden fortunes are made, and it is on this bustling street that merchants earn lesser fortunes, or \"kogane.\" From foreign wares to local specialties, there is something to suit every taste. Those who have had their fill of the markets may also find amusement at the renowned Mujikoza theater. Adventurers are free to use the Market Board to exchange goods, and a summoning bell allows them to call their retainers."
+  },
+  "370:280:33": {
+   "description": "The Sekiseigumi is Kugane's local peacekeeping force, an order of samurai dedicated to keeping law and order in the port city. The city's strict policies for foreign visitors are often enforced very harshly by the Sekiseigumi."
+  },
+  "370:280:34": {
+   "description": "The largest tavern in Kugane, the Shiokaze Hostelry is located near Pier #2 and boasts a large tower that rivals the northern gate. It is operated by Kotokaze, whose establishment naturally obtains significant ijin (foreigner) clientele. Clan Centurio also operates out of this establishment and maintain posts for mark bils outside. The hostelry is known for its sake, particularly junmaishu─a rice wine that is very pure and rich in flavor─obtained through close relations with the finest brewers on the neighboring island of Koshu. The immense tower also features a daunting jumping puzzle for pla"
+  },
+  "370:280:42": {
+   "description": "A branch office of the East Aldenard Company under the management of Hancock, and is easily distinguished by the Ul'dahn decor inside."
+  },
+  "370:280:47": {
+   "description": "An embassy from the island nation of Thavnair."
+  },
+  "370:280:48": {
+   "description": "An embassy for Garlean Empire to the neutral Hingashi kingdom. The Garleans' diplomatic graces to the locals and other ijin travelers leaves much to be desired, requiring even water from the hot springs to be delivered rather than suffering bathing with the \"savages\"."
+  },
+  "379:298:0": {
+   "description": "Players can return to Yanxia by riding one of the skiffs moored here. A group of Kojin can be seen attempting to trade with the Enclave's residents. In Shadowbringers, players can travel to Gangos by speaking to an airship pilot in the docks during the \"Save the Queen - The Blades of Gunnhildr\" series of quests."
+  },
+  "411:300:1": {
+   "description": "The Rakuza District is a market district in Kugane. It is home to Daitenya, named for the mountain Daitenzan on the neighboring island of Koshu and providers of the finest silks and garments in Kugane."
+  },
+  "411:300:4": {
+   "description": "Meaning \"gold\" in ancient Hingan, Kugane is a port where golden fortunes are made, and it is on this bustling street that merchants earn lesser fortunes, or \"kogane.\" From foreign wares to local specialties, there is something to suit every taste. Those who have had their fill of the markets may also find amusement at the renowned Mujikoza theater. Adventurers are free to use the Market Board to exchange goods, and a summoning bell allows them to call their retainers."
+  },
+  "411:300:11": {
+   "description": "The Sekiseigumi is Kugane's local peacekeeping force, an order of samurai dedicated to keeping law and order in the port city. The city's strict policies for foreign visitors are often enforced very harshly by the Sekiseigumi."
+  },
+  "411:300:12": {
+   "description": "The largest tavern in Kugane, the Shiokaze Hostelry is located near Pier #2 and boasts a large tower that rivals the northern gate. It is operated by Kotokaze, whose establishment naturally obtains significant ijin (foreigner) clientele. Clan Centurio also operates out of this establishment and maintain posts for mark bils outside. The hostelry is known for its sake, particularly junmaishu─a rice wine that is very pure and rich in flavor─obtained through close relations with the finest brewers on the neighboring island of Koshu. The immense tower also features a daunting jumping puzzle for pla"
+  },
+  "411:300:20": {
+   "description": "A branch office of the East Aldenard Company under the management of Hancock, and is easily distinguished by the Ul'dahn decor inside."
+  },
+  "411:300:25": {
+   "description": "An embassy from the island nation of Thavnair."
+  },
+  "411:300:26": {
+   "description": "An embassy for Garlean Empire to the neutral Hingashi kingdom. The Garleans' diplomatic graces to the locals and other ijin travelers leaves much to be desired, requiring even water from the hot springs to be delivered rather than suffering bathing with the \"savages\"."
+  },
+  "437:298:0": {
+   "description": "Players can return to Yanxia by riding one of the skiffs moored here. A group of Kojin can be seen attempting to trade with the Enclave's residents. In Shadowbringers, players can travel to Gangos by speaking to an airship pilot in the docks during the \"Save the Queen - The Blades of Gunnhildr\" series of quests."
+  },
+  "463:313:0": {
+   "description": "Players can return to Yanxia by riding one of the skiffs moored here. A group of Kojin can be seen attempting to trade with the Enclave's residents. In Shadowbringers, players can travel to Gangos by speaking to an airship pilot in the docks during the \"Save the Queen - The Blades of Gunnhildr\" series of quests."
+  },
+  "463:313:1": {
+   "description": "The Kienkan is the residence of Lord Hien, located near the Aetheryte Plaza. It is the place where Hien deals with governing matters."
+  },
+  "491:363:8": {
+   "description": "The remains of a fortress in eastern Lakeland, once used by an order of knights in Lakeland's glory days. The Crystarium now uses it as an outpost. Beneath the fort lies a hall once used as a place of worship by the Church of the First Light."
+  },
+  "491:363:11": {
+   "description": "A watchtower on the road between the Crystarium and the Ostall Imperative. Named after a soldier who gave his life to delay a swarm of sin eaters."
+  },
+  "491:363:14": {
+   "description": "A village located somewhere in the woods to the northeast of Lakeland."
+  },
+  "491:363:17": {
+   "description": "The former seat of the Elven kingdom that once ruled Lakeland (\"Laxan\" is the original name of Lakeland in the Elven language). It was here that the Warriors of Light had their final confrontation with the Shadowkeeper and their Elven dissident allies, and to this day the spirits of Elven knights continue to roam the castle grounds."
+  },
+  "491:363:21": {
+   "description": "An old fortress located in western Lakeland, now used by the Crystarium as an outpost. Named after the historical figure Ser Ostall, who is said to have led a heroic last stand against a horde of sin eaters while the citizens fled to safety."
+  },
+  "491:363:32": {
+   "description": "A small island a short distance out into the lake. The \"island\" is in fact the dormant form of the Fae entity Bismarck, and is named for the man who once lived there and befriended him."
+  },
+  "492:364:4": {
+   "description": "A beach in southeastern Kholusia infested with Hobgoblins. The player can return to the Crystarium by speaking to the Amarokeep here."
+  },
+  "492:364:5": {
+   "description": "A small fishing village on the southeastern coast of Kholusia."
+  },
+  "492:364:15": {
+   "description": "A shanty town located right outside the gates to Eulmore, hence the name. Gatetown's inhabitants dream of living in (relative) luxury as indentured servants to the free citizens of Eulmore, and constantly try to attract their attention by learning unique and unusual skills. Eulmore entices the would-be bonded citizens with regular gifts of Meol, a nutritious but addictive foodstuff."
+  },
+  "492:364:22": {
+   "description": "Shipyards near Wright that were largely abandoned in the wake of the Flood, now used only for dismantling old vessels for parts."
+  },
+  "492:364:24": {
+   "description": "A village that was once home to those who worked at the nearby shipyards. In the aftermath of the Flood, the need for shipbuilding declined and the village's inhabitants moved to a more agricultural lifestyle."
+  },
+  "492:364:28": {
+   "description": "A large, Talos-operated elevator providing access between the lowland and highland areas of Kholusia."
+  },
+  "492:364:33": {
+   "description": "A small village overlooking the cliff, mainly inhabited by refugees who have fled or been cast out of Eulmore."
+  },
+  "492:364:35": {
+   "description": "A village inhabited by the Tholls, a clan of Dwarves who are constantly feuding with the Gogg clan."
+  },
+  "492:364:40": {
+   "description": "A village inhabited by the Goggs, a clan of Dwarves who are constantly feuding with the Tholl clan."
+  },
+  "492:364:41": {
+   "description": "A series of sulfur deposits in the Duergar Mountains, mined by the Dwarves of Komra."
+  },
+  "492:364:78": {
+   "description": "The wreckage of a large, technologically advanced structure of unknown origin. The Bunker lies in a large crater beyond the Duergar Mountains and is exposed following an attack on Komra by androids garbed in white."
+  },
+  "493:365:5": {
+   "description": "This outpost serves as the hub for travel between the Crystarium and the nearby Mord Souq."
+  },
+  "493:365:8": {
+   "description": "Meaning \"Mord City\", this town of trade is run by the Mord. It has numerous market stalls, and buildings home to the merchants and residents. It has one watchtower located behind the Aetheryte known as The Rack."
+  },
+  "493:365:15": {
+   "description": "A hospice located in the southern region of The Fields of Amber, situated in a rock formation where its residents take refuge. The settlement is run by a group of carers who make sure those corrupted by light live out their final days in peace."
+  },
+  "493:365:19": {
+   "description": "A small Mord village located in The Northern Hills of Amber."
+  },
+  "493:365:21": {
+   "description": "A mining town located in The Central Hills of Amber, so named for the partnership between the Ronso and Mystel miners who once drove the region's industry - although nowadays, only the Ronso remain in any great number. Talos-powered mining trolley tracks connect the town with Mt. Biran mines in the north and Malikah's Well and Nabaath Areng in the south."
+  },
+  "494:366:3": {
+   "description": "This small village is the main settlement of the pixies."
+  },
+  "494:366:6": {
+   "description": "In the time of Voeburt, a scholar of great renown made their home here, gathering as much knowledge as they could. Now, Urianger has made his base here to better understand this world as well as the Fae who occupy the region."
+  },
+  "494:366:12": {
+   "description": "A cave in the mountains at the north of Il Mheg, the hollowed giant mushrooms here make home for the main tribe of Nu Mou."
+  },
+  "494:366:13": {
+   "description": "Once part of the Kingdom of Voeburt, these ruins are now home to Tupaq Amaro, Amaro that have awakened the gift of speech and sapience."
+  },
+  "494:366:20": {
+   "description": "The castle at the centre of Il Mheg. In the time of Voeburt, it was known as Grünes Licht and was the home of the royal family. In the time of the Fae, it serves a similar purpose as where the Fae king Titania resides to monitor their realm."
+  },
+  "693:475:15": {
+   "description": "Once a branch office of the Students of Baldesion, it has been repurposed as their main headquarters after the Isle of Val was moved to the other side of the world. The main hall serves as a gathering place for the Scions during the main scenario, while players can retire to an inn room in the Andron."
+  },
+  "693:475:17": {
+   "description": "An elegant mansion three centuries old that is the ancestral home of the Leveilleur family."
+  },
+  "693:475:20": {
+   "description": "The only cafe and restaurant in all of Sharlayan, so named as the last bastion of culinary art in a city of scholars who care only for nutritional value."
+  },
+  "693:475:23": {
+   "description": "A statue of Thaliak, the Scholar that oversees the main harbour of Sharlayan. At the foot of the statue is a door that leads to a chamber where the ceremony for annointing new Archons takes place."
+  },
+  "695:477:22": {
+   "description": "The Sharlayan Hamlet is home to those who work in the Central Circuit, who are engaged in highly classified research."
+  },
+  "696:478:8": {
+   "description": "Even in Thavnair, the birthplace of alchemy, the practitioners of House Daemir are renowned for the craft of their concoctions. It was they who founded the settlement of the Great Work, and to this day, many talented alchemists choose to reside here and carry on the family's peerless endeavors."
+  },
+  "696:478:9": {
+   "description": "Known as the mother of the Kriegstanz, Kadjaya is honored in both name and form at this open-air stage for dancers. Those who carry on her legacy perform here beneath her stone-carved likeness, strutting and twirling for the glory of their gods and ancestors."
+  },
+  "696:478:11": {
+   "description": "Quarried here by the wagonload, the purple-streaked stone known as “giantsgall” is one of Thavnair's most coveted exports. Incredibly dense and possessed of high aetherial conductivity, it is prized not only as a building material, but also as a component in the crafting of unyielding arms and armor, and the brewing of alchemical concoctions."
+  },
+  "696:478:14": {
+   "description": "A settlement where the keepers of the temples that dot the Shroud of the Samgha reside, alongside their families."
+  },
+  "696:478:18": {
+   "description": "This temple was once the abode of an order of Arkasodara ascetics who sought the divine enlightenment of maya. Abandoned for a stronghold deeper in the jungle, the structure now sits derelict and half-submerged in rainwater."
+  },
+  "696:478:41": {
+   "description": "A stretch of land in Saltwind's Welcome owned by Yedlihmad merchant Kancana and lent out to the displaced Hippor Riders of Vanaspati to serve as the base of operations in aid of their new courier trade."
+  },
+  "697:479:0": {
+   "description": "Originally the Imperial Palace, the machinations of Fandaniel and Zenos saw enthralled Garleans transform it into an ominous structure connected to the various towers in the rest of the Three Great Continents, gathering aether for some unknown purpose."
+  },
+  "697:479:5": {
+   "description": "Originally an urban district of the imperial capital, it is here that the Ilsabardian Contingent have made their base of operations in the region."
+  },
+  "697:479:11": {
+   "description": "One of several facilities responsible for extracting ceruleum from the Cerulea Ingens and subsequently providing power to the imperial capital, it has lain dormant ever since the civil war saw the foreman disappear with the main ignition key."
+  },
+  "699:481:1": {
+   "description": "The starship originally created by the Sharlayans to serve as an ark for their exodus to the silver moon. With the aid of both the Loporrits and the Garland Ironworks, it has been significantly improved and now serves the purpose of ferrying the champions of Etheirys to deliver them from doom."
+  },
+  "699:481:2": {
+   "description": "An abandoned fort left by the mechanical invaders of the Dragonstar."
+  },
+  "699:481:3": {
+   "description": "A recreation of a dwelling of dragons that had remained on the Dragonstar following the war with Omicrons. Unlike the shades that prowl the surrounds in madness, these dragons have lost the will to do anything."
+  },
+  "699:481:4": {
+   "description": "The remains of a nesting ground, the spoiled land giving rise to malformed abominations when any eggs manage to hatch."
+  },
+  "699:481:8": {
+   "description": "A recreation of a \"village\" of the Ea, a species that were able to forsake flesh to exist as immortal aetherial entities. The name has long been lost due to the inhabitants losing interest in such things. It consists of rock formations with crystalline bulbs, which serve as \"dwellings\" for the Ea."
+  },
+  "699:481:14": {
+   "description": "The sole organic lifeform present in Deka-Hexi, taken from its homeworld as a token of conquest. It has somehow managed to survive in its environment despite all odds."
+  },
+  "699:481:15": {
+   "description": "The main body of one of the six strategical command matrices that oversaw the function of the Omicrons."
+  },
+  "699:481:18": {
+   "description": "The ruined buildings of a dead civilization. The structures are whole but hauntingly empty - as if all life had come to an abrupt end."
+  },
+  "699:481:19": {
+   "description": "The closest point to Meteion's nest, it was orignally a barren rock, but the power of hope influenced the blooming of radiant Elpis flowers."
+  },
+  "699:481:22": {
+   "description": "A platform floating in the void disconnected from the rest of Ostrakon Deka-Hexi."
+  },
+  "699:481:30": {
+   "description": "Meteion's nest, a dead sun within which lies the memories and despair of countless dead stars."
+  },
+  "699:481:39": {
+   "description": "A recreation of an Omicron war camp, whose inhabitants carry out specified duties while awaiting new orders that will never arrive."
+  },
+  "699:481:40": {
+   "description": "A cafe set-up in the Nekropolis by Loporrit Jammingway alongside Omicron N-7000 and Stigma-4 in an effort to recover data of the lost civilizations encountered by Meteion."
+  },
+  "700:482:3": {
+   "description": "Named for an ancient word meaning \"recognition\" or \"discovery\", this settlement houses those whose job it is to assess the creations admitted to Ktisis Hyperboreia. These observers study every aspect of their charges, and determine if a concept will add to─or detract from─the environ for which it was designed."
+  },
+  "700:482:4": {
+   "description": "This facility is responsible for the climate control of Elpis, where the latest spellcraft from Amaurot is used to maintain and adjust the assorted climes through which creations reside─for test purposes."
+  },
+  "700:482:7": {
+   "description": "The researchers of this small facility are unlike their colleagues in that they seek to manifest new creations without the aid of creation magicks. Their natural breeding program pairs creatures with differing characteristics, relying on chance to conceive heretofore unimagined possibilities."
+  },
+  "700:482:11": {
+   "description": "An annex to Ktisis Hyperboreia, this facility is mainly concerned with the observation and evaluation of sea life. Although its construction appears too narrow to support such an ambitious project, the building's interior harbors six separate marine habitats, each painstakingly recreated via arcane means."
+  },
+  "700:482:18": {
+   "description": "The most extensive facility in Elpis, Ktisis Hyperboreia is a sprawling complex of magically simulated environs. Concepts awaiting evaluation are brought here for the last stages of observation, and, upon meeting the appropriate criteria, are released into the world at large."
+  },
+  "700:482:22": {
+   "description": "Following a process of exhaustive testing, a creation deemed unsuitable for release into the world is brought to this lake, where its life energies are magically unbound and allowed to dissipate. It is at once the most beautiful as well as the most sorrowful locale in Elpis."
+  },
+  "700:482:48": {
+   "description": "The most extensive facility in Elpis, Ktisis Hyperboreia is a sprawling complex of magically simulated environs. Concepts awaiting evaluation are brought here for the last stages of observation, and, upon meeting the appropriate criteria, are released into the world at large."
+  },
+  "750:479:0": {
+   "description": "Originally the Imperial Palace, the machinations of Fandaniel and Zenos saw enthralled Garleans transform it into an ominous structure connected to the various towers in the rest of the Three Great Continents, gathering aether for some unknown purpose."
+  },
+  "750:479:5": {
+   "description": "Originally an urban district of the imperial capital, it is here that the Ilsabardian Contingent have made their base of operations in the region."
+  },
+  "750:479:11": {
+   "description": "One of several facilities responsible for extracting ceruleum from the Cerulea Ingens and subsequently providing power to the imperial capital, it has lain dormant ever since the civil war saw the foreman disappear with the main ignition key."
+  },
+  "751:481:1": {
+   "description": "The starship originally created by the Sharlayans to serve as an ark for their exodus to the silver moon. With the aid of both the Loporrits and the Garland Ironworks, it has been significantly improved and now serves the purpose of ferrying the champions of Etheirys to deliver them from doom."
+  },
+  "751:481:2": {
+   "description": "An abandoned fort left by the mechanical invaders of the Dragonstar."
+  },
+  "751:481:3": {
+   "description": "A recreation of a dwelling of dragons that had remained on the Dragonstar following the war with Omicrons. Unlike the shades that prowl the surrounds in madness, these dragons have lost the will to do anything."
+  },
+  "751:481:4": {
+   "description": "The remains of a nesting ground, the spoiled land giving rise to malformed abominations when any eggs manage to hatch."
+  },
+  "751:481:8": {
+   "description": "A recreation of a \"village\" of the Ea, a species that were able to forsake flesh to exist as immortal aetherial entities. The name has long been lost due to the inhabitants losing interest in such things. It consists of rock formations with crystalline bulbs, which serve as \"dwellings\" for the Ea."
+  },
+  "751:481:14": {
+   "description": "The sole organic lifeform present in Deka-Hexi, taken from its homeworld as a token of conquest. It has somehow managed to survive in its environment despite all odds."
+  },
+  "751:481:15": {
+   "description": "The main body of one of the six strategical command matrices that oversaw the function of the Omicrons."
+  },
+  "751:481:18": {
+   "description": "The ruined buildings of a dead civilization. The structures are whole but hauntingly empty - as if all life had come to an abrupt end."
+  },
+  "751:481:19": {
+   "description": "The closest point to Meteion's nest, it was orignally a barren rock, but the power of hope influenced the blooming of radiant Elpis flowers."
+  },
+  "751:481:22": {
+   "description": "A platform floating in the void disconnected from the rest of Ostrakon Deka-Hexi."
+  },
+  "751:481:30": {
+   "description": "Meteion's nest, a dead sun within which lies the memories and despair of countless dead stars."
+  },
+  "751:481:39": {
+   "description": "A recreation of an Omicron war camp, whose inhabitants carry out specified duties while awaiting new orders that will never arrive."
+  },
+  "751:481:40": {
+   "description": "A cafe set-up in the Nekropolis by Loporrit Jammingway alongside Omicron N-7000 and Stigma-4 in an effort to recover data of the lost civilizations encountered by Meteion."
+  }
+ }
+}

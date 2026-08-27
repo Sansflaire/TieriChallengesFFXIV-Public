@@ -5,7 +5,7 @@
  "source": "finalfantasy.fandom.com \"Final Fantasy XIV enemies\" subpages, swept 2026-08-27",
  "description": "CURATED overlay for monsters.json. NOT from game files. Joined by BNpcName row id, which the wiki publishes directly - no name matching involved.",
  "warning": "Community-maintained and openly described as part conjecture. Levels, HP and abilities are as recorded by editors, not extracted from the client. Coverage is partial: the wiki documents the notable mobs, not all 14,560.",
- "entryCount": 3504,
+ "entryCount": 3516,
  "entries": {
   "3": {
    "wikiName": "Antelope Doe",
@@ -36,8 +36,8 @@
    "hp": "51-160",
    "hitbox": "0.84y",
    "abilities": "Attack, Stone Throw",
-   "family": "Opo-opo",
-   "creatureClass": "Beastkin",
+   "family": "Lancer, Opo-opo",
+   "creatureClass": "Beastkin, Disciples of War",
    "zones": "north shroud",
    "zonesSource": "Final Fantasy Wiki",
    "fates": "breaking bud"
@@ -54,6 +54,16 @@
    "zonesSource": "Final Fantasy Wiki",
    "duties": "basic training: enemy strongholds",
    "quests": "stand-in sentry"
+  },
+  "7": {
+   "wikiName": "Hired Hand",
+   "family": "Lancer",
+   "creatureClass": "Disciples of War"
+  },
+  "10": {
+   "wikiName": "Duskwight Freelancer Captain",
+   "family": "Lancer",
+   "creatureClass": "Disciples of War"
   },
   "12": {
    "wikiName": "Northern Vulture",
@@ -87,8 +97,8 @@
    "hp": "293-413",
    "hitbox": "1.8y",
    "abilities": "Attack, Reckless Charge",
-   "family": "Boar",
-   "creatureClass": "Beastkin",
+   "family": "Boar, Lancer",
+   "creatureClass": "Beastkin, Disciples of War",
    "zones": "east shroud",
    "zonesSource": "Final Fantasy Wiki",
    "duties": "pulling poison posies",
@@ -100,8 +110,8 @@
    "hp": "371-2,180",
    "hitbox": "2.4y",
    "abilities": "Attack, Bellowing Grunt, Reckless Charge",
-   "family": "Boar",
-   "creatureClass": "Beastkin",
+   "family": "Boar, Lancer",
+   "creatureClass": "Beastkin, Disciples of War",
    "zones": "south shroud",
    "zonesSource": "Final Fantasy Wiki",
    "quests": "lance of destiny"
@@ -117,6 +127,16 @@
    "zones": "east shroud",
    "zonesSource": "Final Fantasy Wiki",
    "quests": "a porcine plight"
+  },
+  "17": {
+   "wikiName": "Grizzled Lancer",
+   "family": "Lancer",
+   "creatureClass": "Disciples of War"
+  },
+  "18": {
+   "wikiName": "Raptor Poacher",
+   "family": "Lancer",
+   "creatureClass": "Disciples of War"
   },
   "19": {
    "wikiName": "Zombie Mage",
@@ -135,21 +155,21 @@
    "hp": "192-677",
    "hitbox": "0.75y",
    "abilities": "Attack, Hell Slash",
-   "family": "Wight",
-   "creatureClass": "Ashkin",
+   "family": "Lancer, Wight",
+   "creatureClass": "Ashkin, Disciples of War",
    "zones": "central shroud",
    "zonesSource": "Final Fantasy Wiki",
    "duties": "under the armor",
    "fates": "sleep tight"
   },
   "22": {
-   "wikiName": "Roselet",
+   "wikiName": "Redbelly Swarmpoint",
    "level": "10-13",
    "hp": "192-268",
    "hitbox": "0.8y",
    "abilities": "Attack, Seedvolley, Swift Sough",
-   "family": "Flying Trap",
-   "creatureClass": "Seedkin",
+   "family": "Flying Trap, Lancer",
+   "creatureClass": "Disciples of War, Seedkin",
    "zones": "central shroud",
    "zonesSource": "Final Fantasy Wiki"
   },
@@ -178,13 +198,13 @@
    "quests": "fortune favors the bole"
   },
   "25": {
-   "wikiName": "Dryad",
+   "wikiName": "Tempered Pikeman",
    "level": 37,
    "hp": "1,409",
    "hitbox": "3y",
    "abilities": "Arboreal Storm, Attack, Canopy",
-   "family": "Treant",
-   "creatureClass": "Seedkin",
+   "family": "Lancer, Treant",
+   "creatureClass": "Disciples of War, Seedkin",
    "zones": "north shroud",
    "zonesSource": "Final Fantasy Wiki"
   },
@@ -200,14 +220,19 @@
    "zonesSource": "Final Fantasy Wiki",
    "fates": "poor maid's misfortune"
   },
+  "30": {
+   "wikiName": "Foulques of the Mist",
+   "family": "Lancer",
+   "creatureClass": "Disciples of War"
+  },
   "32": {
-   "wikiName": "Microchu",
+   "wikiName": "Severaint Seven Splinter",
    "level": "6-8",
    "hp": "108-143",
    "hitbox": "0.8y",
    "abilities": "Acid Mist, Attack",
-   "family": "Ochu",
-   "creatureClass": "Seedkin",
+   "family": "Lancer, Ochu",
+   "creatureClass": "Disciples of War, Seedkin",
    "zones": "central shroud, north shroud",
    "zonesSource": "Final Fantasy Wiki"
   },
@@ -263,18 +288,23 @@
    "hp": "413-905",
    "hitbox": "0.4y",
    "abilities": "Attack, Blood Drain",
-   "family": "Bat",
-   "creatureClass": "Cloudkin",
+   "family": "Bat, Lancer",
+   "creatureClass": "Cloudkin, Disciples of War",
    "duties": "sastasha"
+  },
+  "43": {
+   "wikiName": "Tempered Spearwife",
+   "family": "Lancer",
+   "creatureClass": "Disciples of War"
   },
   "45": {
    "wikiName": "Will-o'-the-wisp",
-   "level": "30-38",
+   "level": "30-45",
    "hp": "780-1,515",
    "hitbox": "0.2y",
    "abilities": "Fire",
-   "family": "Will-o'-the-Wisp",
-   "creatureClass": "Ashkin",
+   "family": "Lancer, Will-o'-the-Wisp",
+   "creatureClass": "Ashkin, Disciples of War",
    "zones": "coerthas central highlands, south shroud",
    "zonesSource": "Final Fantasy Wiki",
    "fates": "a fire in the distance, follow the light",
@@ -292,37 +322,42 @@
    "zonesSource": "Final Fantasy Wiki"
   },
   "48": {
-   "wikiName": "Toadstool",
+   "wikiName": "Rummaging Harrier",
    "level": "27-32",
    "hp": "677-965",
    "hitbox": "0.45y",
    "abilities": "Attack, Hypha Whip, Queasy Cloud",
-   "family": "Funguar",
-   "creatureClass": "Seedkin",
+   "family": "Funguar, Lancer",
+   "creatureClass": "Disciples of War, Seedkin",
    "zones": "central shroud",
    "zonesSource": "Final Fantasy Wiki",
    "fates": "what's your poison"
   },
+  "49": {
+   "wikiName": "Huibairten's Harrier",
+   "family": "Lancer",
+   "creatureClass": "Disciples of War"
+  },
   "50": {
-   "wikiName": "Goblin Thug",
+   "wikiName": "Duskwight Outlaw",
    "level": "25-28",
    "hp": "594-714",
    "hitbox": "0.7y",
    "abilities": "Attack, Bomb Toss, Firecracker Shower",
-   "family": "Goblin Thug",
-   "creatureClass": "Spoken",
+   "family": "Goblin Thug, Lancer",
+   "creatureClass": "Disciples of War, Spoken",
    "zones": "south shroud",
    "zonesSource": "Final Fantasy Wiki",
    "fates": "the negotiators"
   },
   "51": {
-   "wikiName": "Alpha Anole",
+   "wikiName": "Spear-wielding Heretic",
    "level": 9,
    "hp": "1,612",
    "hitbox": "3.36y",
    "abilities": "Attack, Frost Breath",
-   "family": "Raptor",
-   "creatureClass": "Scalekin",
+   "family": "Lancer, Raptor",
+   "creatureClass": "Disciples of War, Scalekin",
    "fates": "leader of the pack"
   },
   "52": {
@@ -350,6 +385,11 @@
    "zonesSource": "Final Fantasy Wiki",
    "dungeonEnemy": true
   },
+  "54": {
+   "wikiName": "Impatient Son",
+   "family": "Lancer",
+   "creatureClass": "Disciples of War"
+  },
   "55": {
    "wikiName": "Deathgaze",
    "level": 33,
@@ -370,6 +410,11 @@
    "family": "Gladiator",
    "creatureClass": "Disciples of War",
    "quests": "acting the part, sylphish concerns"
+  },
+  "60": {
+   "wikiName": "Lance-wielding Loyalist",
+   "family": "Lancer",
+   "creatureClass": "Disciples of War"
   },
   "61": {
    "wikiName": "3rd Cohort Signifer",
@@ -394,6 +439,11 @@
    "creatureClass": "Scalekin",
    "zones": "outer la noscea",
    "zonesSource": "Final Fantasy Wiki"
+  },
+  "63": {
+   "wikiName": "Palace Guard",
+   "family": "Lancer",
+   "creatureClass": "Disciples of War"
   },
   "64": {
    "wikiName": "Sylvan Screech",
@@ -420,13 +470,13 @@
    "zonesSource": "Final Fantasy Wiki"
   },
   "66": {
-   "wikiName": "Sylvan Snarl",
+   "wikiName": "Dotharli Hunter",
    "level": "42-43",
    "hp": "1,789-1,891",
    "hitbox": "0.5y",
    "abilities": "Paralyze, Shock Spikes, Thunder",
-   "family": "Sylvan Snarl",
-   "creatureClass": "Spoken",
+   "family": "Lancer, Sylvan Snarl",
+   "creatureClass": "Disciples of War, Spoken",
    "zones": "east shroud",
    "zonesSource": "Final Fantasy Wiki"
   },
@@ -444,13 +494,13 @@
    "quests": "brotherly love"
   },
   "68": {
-   "wikiName": "Sylpheed Sigh",
+   "wikiName": "Elven Brigand",
    "level": "1-47",
    "hp": "246-2,314",
    "hitbox": "0.5y",
    "abilities": "Cure, Shock Spikes, Thunder",
-   "family": "Sylvan Sigh",
-   "creatureClass": "Spoken",
+   "family": "Lancer, Sylvan Sigh",
+   "creatureClass": "Disciples of War, Spoken",
    "zones": "east shroud",
    "zonesSource": "Final Fantasy Wiki",
    "fates": "collecting keepsakes, got milkroot, the enemy of my enemy, the enmity of my enemy",
@@ -468,6 +518,11 @@
    "zonesSource": "Final Fantasy Wiki",
    "fates": "collecting keepsakes, got milkroot, the enemy of my enemy, the enmity of my enemy",
    "quests": "brotherly love, some seedy business"
+  },
+  "70": {
+   "wikiName": "Specter of the Homeland",
+   "family": "Lancer",
+   "creatureClass": "Disciples of War"
   },
   "74": {
    "wikiName": "Shredder",
@@ -505,9 +560,14 @@
    "hp": "420-750",
    "hitbox": "0.5y",
    "abilities": "Attack, Fast Blade, Fight or Flight, Rampart, Shield Bash",
-   "family": "Gladiator",
+   "family": "Gladiator, Lancer",
    "creatureClass": "Disciples of War",
    "fates": "defending the hive, to whom the toll goes"
+  },
+  "82": {
+   "wikiName": "Vergilia van Corculum",
+   "family": "Lancer",
+   "creatureClass": "Disciples of War"
   },
   "83": {
    "wikiName": "Redbelly Sharpeye",

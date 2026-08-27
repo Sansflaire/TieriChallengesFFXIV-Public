@@ -146,3 +146,17 @@ tree, not just its top level. The expansion window must be data, not a constant.
 | — | Is `GilShopItem` reachable via `GetExcelSheet<T>()`? | **No** — it is a subrow sheet (`IExcelSubrow<T>`). Needs `GetSubrowExcelSheet<T>()`. | 2026-08-26 |
 | — | Identity model: name+world+IP? | **No — dropped.** Identity is a locally-generated 128-bit secret; name+world is a label. Trist agreed 2026-08-26. Removes the rename problem entirely. | 2026-08-26 |
 | — | Do the JPEG q94 backgrounds (0.84.38.2) look acceptable in game? | **Yes** — Trist confirmed by eye on a local display. The PNG→JPEG conversion stands; no re-encode needed. Masters remain recoverable from git history before `2d36391` if that ever changes. | 2026-08-26 |
+
+## Map coordinate conversion — `places-of-interest.json` (added 2026-08-27)
+
+⬜ **TODO — needs Trist in game.** `MarkerToMap(raw, sizeFactor) = 41/(sf/100) * (raw/2048) + 1`
+converts `MapMarker` X/Y into the coordinates the game displays. It is **spot-checked, not
+proven**: Summerford Farms lands at (25.2, 16.8) against a known (25, 17). Not confirmed across
+differing `SizeFactor` values (100 / 200 / 400), and housing maps with non-zero `OffsetX/Y` are
+untested — the offset is deliberately NOT applied to markers, since marker values are already in
+map space, but that has not been verified where an offset is non-zero.
+
+**To check:** open `places-of-interest.json` in the Dataset Viewer, pick a few places in
+different zones, stand on them, compare the in-game coordinate readout. `rawX`/`rawY` are stored
+beside the converted values, so a correction is a formula change and a regeneration — no data
+needs re-deriving. Tracked as TODO **A14**.

@@ -23,6 +23,7 @@ This file records *method*.
 | 6A | **Unlocks — sheets can't answer these** | `unlocks` |
 | 6B | Recipe level, fish, gear requirements | `reqs` |
 | 6C | **Monster locations — the wiki, joined by BNpcName id** | `wiki` |
+| 6D | **Places of interest + map coordinates** | `poi` |
 | 7 | Traps, collected | `traps` |
 
 ---
@@ -474,6 +475,53 @@ with matching names. The 1.7% are wiki display names vs internal names, not a ba
 
 Implementation and the four parsing traps: [`scripts/wiki/README.md`](../scripts/wiki/README.md).
 
+<!-- SECTION:poi -->
+## 6D. Places of interest, and map coordinates
+
+**The game has a landmark list, and it is better than any scrape.** `MapMarker` is a SUBROW
+sheet reached through `Map.MapMarkerRange`:
+
+```csharp
+var maps = gd.GetExcelSheet<Map>();
+var mm   = gd.GetSubrowExcelSheet<MapMarker>();
+foreach (var map in maps) {
+    if (map.MapMarkerRange == 0) continue;
+    foreach (var s in mm.GetRowOrDefault(map.MapMarkerRange)!.Value) {
+        var name = s.PlaceNameSubtext.ValueNullable?.Name.ToString();   // "Blue Badger Gate"
+    }
+}
+```
+
+**10,747 markers, 6,435 named, across 339 zones** — settlements, gates, guilds, camps, rivers,
+ruins, aetheryte plazas, dungeon entrances. A two-line label is stored with an embedded newline
+(`"Carline Canopy
+(Adventurers' Guild)"`), so collapse whitespace.
+
+### Two coordinate conversions, and they are NOT interchangeable
+
+```csharp
+// MapMarker.X/Y are ALREADY map space (0..2048)
+float MarkerToMap(int raw, ushort sf) => 41f / (sf / 100f) * (raw / 2048f) + 1f;
+
+// Level.X/Z are WORLD coordinates (yalms)
+float WorldToMap(float w, ushort sf, short off) {
+    float c = sf / 100f;
+    return 41f / c * (((w + off) * c + 1024f) / 2048f) + 1f;
+}
+```
+
+Using the world formula on a marker (or vice versa) puts the point somewhere plausible and
+wrong, with no error. Spot-checked: Summerford Farms converts to (25.2, 16.8) against a known
+(25, 17). **Not confirmed in game across map scales** — `places-of-interest.json` therefore
+keeps `rawX`/`rawY` beside the converted values so a correction costs nothing.
+
+### FATE positions are NOT in Excel
+
+`Fate.Location` looks like a `Level` row and is not one. All 1,697 values fall inside `Level`'s
+RowId range and match **nothing** in it — not `RowId`, not `Object`, not `EventId`. It is an LGB
+layer-object id. `fates.json` carried `zone = ???` on all 1,712 rows for this reason, silently.
+FATE zone and coordinates come from the wiki instead (§6C).
+
 <!-- SECTION:traps -->
 ## 7. Traps, collected
 
@@ -494,4 +542,9 @@ Implementation and the four parsing traps: [`scripts/wiki/README.md`](../scripts
 15. **HTML/wiki tables need a real grid, not line parsing.** `rowspan` is how a wiki records "this mob appears in five duties"; reading rows line-by-line loses four of the five and invents four nameless mobs. Expand into a grid first, header included (the header itself uses `colspan`).
 16. **A nested table is cell content, not structure.** Breaking on its `|}` truncated a 303-row table to 13. And when the nesting sits under `colspan="2"`, BOTH columns receive the same blob — reading either as a scalar gave level `1` for a level 20-24 mob.
 17. **Don't locate a table by its own text.** 41 tables on one page shared two distinct 200-char prefixes, so `find(table[:200])` returned the first every time and mis-attributed every section heading. Carry real offsets.
+19. **A sheet reference that resolves to nothing is silent.** `Fate.Location` is in `Level`'s id range but is an LGB object id; the lookup returned null for all 1,697 FATEs and the field just stayed `???`. Count how many references RESOLVE, not how many are non-zero.
+20. **`redirects=1` on a batch API silently collapses the batch.** 681 boss titles returned 51 pages, 121 zone titles returned 97, every request reporting success. Fetch raw pages and follow redirects yourself.
+21. **An anchor is not a title.** `Azys Lla#Castrum Solus` fetches nothing; split on `#` first.
+22. **Only `|-` starts a table row — a `!` cell does not.** FATE rows are `!name` followed by four `|` cells; treating the `!` as a header break tore every row in two, put 2,000 FATE names in the header, and matched zero. A row is a header row only when ALL its cells are `!` cells.
+23. **`[[File:...]]` is markup, not text.** Left in, a name cleans to `20px|Battle FATE. On the Lamb`.
 18. **Wrong-but-plausible is the failure mode of scraping.** Every one of 15-17 produced confident, well-formed, wrong values rather than an exception. Spot-check parsed output against the raw source before trusting a single number.

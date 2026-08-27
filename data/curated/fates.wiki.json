@@ -1,0 +1,7285 @@
+{
+ "schemaVersion": 1,
+ "dataset": "fates",
+ "keyField": "id",
+ "source": "finalfantasy.fandom.com (boss categories, List of FATEs, zone pages), swept 2026-08-27",
+ "description": "CURATED overlay for fates.json: zone, place, map coordinates, time limit, FATE type and spawn conditions.",
+ "warning": "Matched by NAME. 518 of our 1,712 FATEs share a name with another FATE and our own zone column is ??? for every row, so there is nothing to disambiguate against - those are deliberately left unpatched rather than guessed. Fate.Location is an LGB object id, not a Level row, so the game files cannot supply this.",
+ "entryCount": 872,
+ "entries": {
+  "227": {
+   "zone": "Middle La Noscea",
+   "place": "Zephyr Drift",
+   "mapX": 22.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "239": {
+   "zone": "Middle La Noscea",
+   "place": "Summerford",
+   "mapX": 21.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "221": {
+   "zone": "Middle La Noscea",
+   "place": "Summerford",
+   "mapX": 22.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "226": {
+   "zone": "Middle La Noscea",
+   "place": "Zephyr Drift",
+   "mapX": 24.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the Yellowjacket drill sergeant."
+  },
+  "225": {
+   "zone": "Middle La Noscea",
+   "place": "Summerford",
+   "mapX": 23.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the troubled tiller."
+  },
+  "237": {
+   "zone": "Middle La Noscea",
+   "place": "Summerford",
+   "mapX": 22.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "240": {
+   "zone": "Middle La Noscea",
+   "place": "Summerford",
+   "mapX": 19.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "220": {
+   "zone": "Middle La Noscea",
+   "place": "The Cookpot",
+   "mapX": 18.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "229": {
+   "zone": "Middle La Noscea",
+   "place": "Summerford",
+   "mapX": 21.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the farmer in need."
+  },
+  "231": {
+   "zone": "Middle La Noscea",
+   "place": "Three-malm Bend",
+   "mapX": 16.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "222": {
+   "zone": "Middle La Noscea",
+   "place": "Three-malm Bend",
+   "mapX": 14.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "223": {
+   "zone": "Middle La Noscea",
+   "place": "Three-malm Bend",
+   "mapX": 17.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with Storm Sergeant Doenfarr."
+  },
+  "233": {
+   "zone": "Middle La Noscea",
+   "place": "Three-malm Bend",
+   "mapX": 17.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "238": {
+   "zone": "Middle La Noscea",
+   "place": "Three-malm Bend",
+   "mapX": 17.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete the boy who cried jackal."
+  },
+  "257": {
+   "zone": "Lower La Noscea",
+   "place": "Moraby Bay",
+   "mapX": 25.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "249": {
+   "zone": "Lower La Noscea",
+   "place": "Moraby Bay",
+   "mapX": 24.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "246": {
+   "zone": "Lower La Noscea",
+   "place": "Cedarwood",
+   "mapX": 30.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the furious farmer."
+  },
+  "250": {
+   "zone": "Lower La Noscea",
+   "place": "Blind Iron Mines",
+   "mapX": 26.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "251": {
+   "zone": "Lower La Noscea",
+   "place": "Cedarwood",
+   "mapX": 35.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the miller in need."
+  },
+  "264": {
+   "zone": "Lower La Noscea",
+   "place": "Cedarwood",
+   "mapX": 31.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "265": {
+   "zone": "Lower La Noscea",
+   "place": "Cedarwood",
+   "mapX": 31.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete enter beastman."
+  },
+  "261": {
+   "zone": "Lower La Noscea",
+   "place": "Candlekeep Quay",
+   "mapX": 21.0,
+   "mapY": 38.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Speak with the Yellowjacket."
+  },
+  "333": {
+   "zone": "Lower La Noscea",
+   "place": "The Gods' Grip",
+   "mapX": 20.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "260": {
+   "zone": "Lower La Noscea",
+   "place": "Candlekeep Quay",
+   "mapX": 20.0,
+   "mapY": 38.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the Yellowjacket veteran."
+  },
+  "262": {
+   "zone": "Lower La Noscea",
+   "place": "Empty Heart",
+   "mapX": 22.0,
+   "mapY": 34.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "245": {
+   "zone": "Lower La Noscea",
+   "place": "The Gods' Grip",
+   "mapX": 19.0,
+   "mapY": 37.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "278": {
+   "zone": "Eastern La Noscea",
+   "place": "Bloodshore",
+   "mapX": 28.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "282": {
+   "zone": "Eastern La Noscea",
+   "place": "Bloodshore",
+   "mapX": 29.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "287": {
+   "zone": "Eastern La Noscea",
+   "place": "Bloodshore",
+   "mapX": 27.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "267": {
+   "zone": "Eastern La Noscea",
+   "place": "Raincatcher Gully",
+   "mapX": 21.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the perturbed porter."
+  },
+  "268": {
+   "zone": "Eastern La Noscea",
+   "place": "Raincatcher Gully",
+   "mapX": 17.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "272": {
+   "zone": "Eastern La Noscea",
+   "place": "Raincatcher Gully",
+   "mapX": 20.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with Jijiroon of the Silver Clutch."
+  },
+  "280": {
+   "zone": "Eastern La Noscea",
+   "place": "Bloodshore",
+   "mapX": 26.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "335": {
+   "zone": "Eastern La Noscea",
+   "place": "Bloodshore",
+   "mapX": 31.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss"
+  },
+  "560": {
+   "zone": "Eastern La Noscea",
+   "place": "Raincatcher Gully",
+   "mapX": 24.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "564": {
+   "zone": "Eastern La Noscea",
+   "place": "Raincatcher Gully",
+   "mapX": 18.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "566": {
+   "zone": "Eastern La Noscea",
+   "place": "Raincatcher Gully",
+   "mapX": 18.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "271": {
+   "zone": "Eastern La Noscea",
+   "place": "Raincatcher Gully",
+   "mapX": 20.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the Lominsan merchant."
+  },
+  "274": {
+   "zone": "Eastern La Noscea",
+   "place": "Red Mantis Falls",
+   "mapX": 15.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "279": {
+   "zone": "Eastern La Noscea",
+   "place": "Bloodshore",
+   "mapX": 32.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the oyster hunter."
+  },
+  "286": {
+   "zone": "Eastern La Noscea",
+   "place": "Costa del Sol",
+   "mapX": 30.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the thrill-seeking milksop."
+  },
+  "334": {
+   "zone": "Eastern La Noscea",
+   "place": "Costa del Sol",
+   "mapX": 30.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with the cute courtesan."
+  },
+  "562": {
+   "zone": "Eastern La Noscea",
+   "place": "Raincatcher Gully",
+   "mapX": 16.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the vineyard bond."
+  },
+  "563": {
+   "zone": "Eastern La Noscea",
+   "place": "Raincatcher Gully",
+   "mapX": 16.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "565": {
+   "zone": "Eastern La Noscea",
+   "place": "Raincatcher Gully",
+   "mapX": 17.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "561": {
+   "zone": "Eastern La Noscea",
+   "place": "Raincatcher Gully",
+   "mapX": 17.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "291": {
+   "zone": "Western La Noscea",
+   "place": "The Flock",
+   "mapX": 34.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "306": {
+   "zone": "Western La Noscea",
+   "place": "Quarterstone",
+   "mapX": 36.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "304": {
+   "zone": "Western La Noscea",
+   "place": "The Flock",
+   "mapX": 33.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "295": {
+   "zone": "Western La Noscea",
+   "place": "Quarterstone",
+   "mapX": 30.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "308": {
+   "zone": "Western La Noscea",
+   "place": "Skull Valley",
+   "mapX": 27.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "310": {
+   "zone": "Western La Noscea",
+   "place": "Skull Valley",
+   "mapX": 29.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "289": {
+   "zone": "Western La Noscea",
+   "place": "Skull Valley",
+   "mapX": 25.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with the storm courier."
+  },
+  "312": {
+   "zone": "Western La Noscea",
+   "place": "Skull Valley",
+   "mapX": 22.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "298": {
+   "zone": "Western La Noscea",
+   "place": "Skull Valley",
+   "mapX": 24.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "303": {
+   "zone": "Western La Noscea",
+   "place": "Skull Valley",
+   "mapX": 24.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "297": {
+   "zone": "Western La Noscea",
+   "place": "Skull Valley",
+   "mapX": 26.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the Yellowjacket captain."
+  },
+  "309": {
+   "zone": "Western La Noscea",
+   "place": "Skull Valley",
+   "mapX": 26.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "576": {
+   "zone": "Western La Noscea",
+   "place": "The Isles of Umbra",
+   "mapX": 16.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "577": {
+   "zone": "Western La Noscea",
+   "place": "The Ship Graveyard",
+   "mapX": 14.0,
+   "mapY": 34.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "568": {
+   "zone": "Western La Noscea",
+   "place": "Halfstone",
+   "mapX": 20.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "569": {
+   "zone": "Western La Noscea",
+   "place": "Halfstone",
+   "mapX": 20.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete gauging north tidegate."
+  },
+  "572": {
+   "zone": "Western La Noscea",
+   "place": "Halfstone",
+   "mapX": 18.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "336": {
+   "zone": "Western La Noscea",
+   "place": "The Ship Graveyard  Does not appear on the map.",
+   "mapX": 16.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Quest",
+   "spawnConditions": "*Speak with Hildibrand. *Must be on the quest seeds of rebellion to initiate. *FATE provides no rewards, and players not on the quest can participate without level syncing."
+  },
+  "570": {
+   "zone": "Western La Noscea",
+   "place": "Sahagin Landbase",
+   "mapX": 18.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "571": {
+   "zone": "Western La Noscea",
+   "place": "Sahagin Landbase",
+   "mapX": 18.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete gauging south tidegate."
+  },
+  "574": {
+   "zone": "Western La Noscea",
+   "place": "Sapsa Spawning Grounds",
+   "mapX": 17.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "575": {
+   "zone": "Western La Noscea",
+   "place": "Halfstone",
+   "mapX": 13.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "10 minutes",
+   "fateType": "Boss"
+  },
+  "578": {
+   "zone": "Western La Noscea",
+   "place": "Sapsa Spawning Grounds",
+   "mapX": 17.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "451": {
+   "zone": "Upper La Noscea",
+   "place": "Poor Maid's Mill",
+   "mapX": 11.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "452": {
+   "zone": "Upper La Noscea",
+   "place": "Poor Maid's Mill",
+   "mapX": 11.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "453": {
+   "zone": "Upper La Noscea",
+   "place": "Poor Maid's Mill",
+   "mapX": 11.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "454": {
+   "zone": "Upper La Noscea",
+   "place": "Poor Maid's Mill",
+   "mapX": 11.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "323": {
+   "zone": "Upper La Noscea",
+   "place": "Oakwood",
+   "mapX": 14.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "314": {
+   "zone": "Upper La Noscea",
+   "place": "Fool Falls",
+   "mapX": 9.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "320": {
+   "zone": "Upper La Noscea",
+   "place": "Bronze Lake",
+   "mapX": 31.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "322": {
+   "zone": "Upper La Noscea",
+   "place": "Bronze Lake",
+   "mapX": 34.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "321": {
+   "zone": "Upper La Noscea",
+   "place": "Bronze Lake",
+   "mapX": 32.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "329": {
+   "zone": "Upper La Noscea",
+   "place": "Bronze Lake",
+   "mapX": 28.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "331": {
+   "zone": "Upper La Noscea",
+   "place": "Bronze Lake",
+   "mapX": 28.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Speak with the storm sergeant."
+  },
+  "332": {
+   "zone": "Upper La Noscea",
+   "place": "Bronze Lake",
+   "mapX": 28.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "317": {
+   "zone": "Upper La Noscea",
+   "place": "Zelma's Run",
+   "mapX": 26.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "591": {
+   "zone": "Outer La Noscea",
+   "place": "The Long Climb",
+   "mapX": 14.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "580": {
+   "zone": "Outer La Noscea",
+   "place": "The Long Climb",
+   "mapX": 17.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "581": {
+   "zone": "Outer La Noscea",
+   "place": "The Long Climb",
+   "mapX": 16.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "583": {
+   "zone": "Outer La Noscea",
+   "place": "The Long Climb",
+   "mapX": 15.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "593": {
+   "zone": "Outer La Noscea",
+   "place": "The Long Climb",
+   "mapX": 18.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "594": {
+   "zone": "Outer La Noscea",
+   "place": "The Floating City of Nym",
+   "mapX": 14.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "595": {
+   "zone": "Outer La Noscea",
+   "place": "Iron Lake",
+   "mapX": 22.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the cowering coachman."
+  },
+  "587": {
+   "zone": "Outer La Noscea",
+   "place": "Kobold Dig",
+   "mapX": 25.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Speak with the storm private."
+  },
+  "588": {
+   "zone": "Outer La Noscea",
+   "place": "The Long Climb",
+   "mapX": 21.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "589": {
+   "zone": "Outer La Noscea",
+   "place": "Iron Lake",
+   "mapX": 25.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "586": {
+   "zone": "Outer La Noscea",
+   "place": "Iron Lake",
+   "mapX": 23.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "598": {
+   "zone": "Outer La Noscea",
+   "place": "U'Ghamaro Mines",
+   "mapX": 21.0,
+   "mapY": 5.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "599": {
+   "zone": "Outer La Noscea",
+   "place": "Iron Lake",
+   "mapX": 22.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "700": {
+   "zone": "Outer La Noscea",
+   "place": "U'Ghamaro Mines",
+   "mapX": 21.0,
+   "mapY": 5.0,
+   "timeLimitMinutes": "10 minutes",
+   "fateType": "Boss"
+  },
+  "597": {
+   "zone": "Outer La Noscea",
+   "place": "U'Ghamaro Mines",
+   "mapX": 24.0,
+   "mapY": 6.0,
+   "timeLimitMinutes": "10 minutes",
+   "fateType": "Boss"
+  },
+  "121": {
+   "zone": "Central Shroud",
+   "place": "Jadeite Thick",
+   "mapX": 25.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "120": {
+   "zone": "Central Shroud",
+   "place": "Jadeite Thick",
+   "mapX": 26.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "136": {
+   "zone": "Central Shroud",
+   "place": "The Bannock",
+   "mapX": 21.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the serpent recruit."
+  },
+  "208": {
+   "zone": "Central Shroud",
+   "place": "Greentear",
+   "mapX": 29.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "123": {
+   "zone": "Central Shroud",
+   "place": "Jadeite Thick",
+   "mapX": 23.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "127": {
+   "zone": "Central Shroud",
+   "place": "Greentear",
+   "mapX": 30.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "126": {
+   "zone": "Central Shroud",
+   "place": "Naked Rock",
+   "mapX": 31.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "128": {
+   "zone": "Central Shroud",
+   "place": "Spirithold",
+   "mapX": 25.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "131": {
+   "zone": "Central Shroud",
+   "place": "Bentbranch",
+   "mapX": 18.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "140": {
+   "zone": "Central Shroud",
+   "place": "Spirithold",
+   "mapX": 27.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "124": {
+   "zone": "Central Shroud",
+   "place": "Lilystone",
+   "mapX": 27.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "141": {
+   "zone": "Central Shroud",
+   "place": "Galvanth's Spire",
+   "mapX": 22.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "139": {
+   "zone": "Central Shroud",
+   "place": "Bentbranch",
+   "mapX": 18.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "137": {
+   "zone": "Central Shroud",
+   "place": "The Hedgetree",
+   "mapX": 20.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "142": {
+   "zone": "Central Shroud",
+   "place": "Everschade",
+   "mapX": 14.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "122": {
+   "zone": "Central Shroud",
+   "place": "Sorrel Haven",
+   "mapX": 15.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "601": {
+   "zone": "Central Shroud",
+   "place": "Hopeseed Pond",
+   "mapX": 15.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the Wood Wailer Lance."
+  },
+  "209": {
+   "zone": "Central Shroud",
+   "place": "Hopeseed Pond",
+   "mapX": 13.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "600": {
+   "zone": "Central Shroud",
+   "place": "Sorrel Haven",
+   "mapX": 15.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the greatloam farmer."
+  },
+  "602": {
+   "zone": "Central Shroud",
+   "place": "Sorrel Haven",
+   "mapX": 12.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "603": {
+   "zone": "Central Shroud",
+   "place": "The Standing Corses",
+   "mapX": 11.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the nameless conjurer."
+  },
+  "125": {
+   "zone": "Central Shroud",
+   "place": "Sanguine Perch",
+   "mapX": 17.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "604": {
+   "zone": "Central Shroud",
+   "place": "Spriggan Dig",
+   "mapX": 11.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "143": {
+   "zone": "East Shroud",
+   "place": "The Honey Yard",
+   "mapX": 11.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the bothered beekeeper."
+  },
+  "214": {
+   "zone": "East Shroud",
+   "place": "The Honey Yard",
+   "mapX": 12.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "144": {
+   "zone": "East Shroud",
+   "place": "Nine Ivies",
+   "mapX": 19.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "149": {
+   "zone": "East Shroud",
+   "place": "Little Solace",
+   "mapX": 21.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "150": {
+   "zone": "East Shroud",
+   "place": "Nine Ivies",
+   "mapX": 21.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "212": {
+   "zone": "East Shroud",
+   "place": "Nine Ivies",
+   "mapX": 20.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "152": {
+   "zone": "East Shroud",
+   "place": "The Bramble Patch",
+   "mapX": 18.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "218": {
+   "zone": "East Shroud",
+   "place": "Nine Ivies",
+   "mapX": 23.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss"
+  },
+  "217": {
+   "zone": "East Shroud",
+   "place": "The Hawthorne Hut",
+   "mapX": 17.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with the mead-porting Midlander."
+  },
+  "213": {
+   "zone": "East Shroud",
+   "place": "The Bramble Patch",
+   "mapX": 19.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "607": {
+   "zone": "East Shroud",
+   "place": "Larkscall",
+   "mapX": 27.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with Phanaxio of the New Leaf."
+  },
+  "608": {
+   "zone": "East Shroud",
+   "place": "Larkscall",
+   "mapX": 25.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "610": {
+   "zone": "East Shroud",
+   "place": "Larkscall",
+   "mapX": 27.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with Mianne Thousandmalm."
+  },
+  "611": {
+   "zone": "East Shroud",
+   "place": "Larkscall",
+   "mapX": 27.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete the enemy of my enemy."
+  },
+  "691": {
+   "zone": "East Shroud",
+   "place": "Larkscall",
+   "mapX": 29.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "609": {
+   "zone": "East Shroud",
+   "place": "Larkscall",
+   "mapX": 23.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "612": {
+   "zone": "East Shroud",
+   "place": "Larkscall",
+   "mapX": 32.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "615": {
+   "zone": "East Shroud",
+   "place": "Sylphlands",
+   "mapX": 28.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "616": {
+   "zone": "East Shroud",
+   "place": "Goldleaf Dais",
+   "mapX": 32.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "10 minutes",
+   "fateType": "Boss"
+  },
+  "619": {
+   "zone": "East Shroud",
+   "place": "Moonspore Grove",
+   "mapX": 29.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "618": {
+   "zone": "East Shroud",
+   "place": "Hanging Barbs",
+   "mapX": 24.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "620": {
+   "zone": "East Shroud",
+   "place": "Sylphlands",
+   "mapX": 23.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "10 minutes",
+   "fateType": "Battle"
+  },
+  "622": {
+   "zone": "East Shroud",
+   "place": "The Seedbed",
+   "mapX": 20.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "692": {
+   "zone": "East Shroud",
+   "place": "Sylphlands",
+   "mapX": 23.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "10 minutes",
+   "fateType": "Boss"
+  },
+  "167": {
+   "zone": "South Shroud",
+   "place": "Upper Paths",
+   "mapX": 15.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "163": {
+   "zone": "South Shroud",
+   "place": "Upper Paths",
+   "mapX": 22.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "166": {
+   "zone": "South Shroud",
+   "place": "Buscarron's Druthers",
+   "mapX": 17.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the abused adventurer."
+  },
+  "170": {
+   "zone": "South Shroud",
+   "place": "Upper Paths",
+   "mapX": 21.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "153": {
+   "zone": "South Shroud",
+   "place": "Upper Paths",
+   "mapX": 19.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "215": {
+   "zone": "South Shroud",
+   "place": "Upper Paths",
+   "mapX": 16.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "158": {
+   "zone": "South Shroud",
+   "place": "Silent Arbor",
+   "mapX": 26.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the Wood Wailer Lance."
+  },
+  "164": {
+   "zone": "South Shroud",
+   "place": "Takers' Rot",
+   "mapX": 30.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete hide and seek."
+  },
+  "168": {
+   "zone": "South Shroud",
+   "place": "Silent Arbor",
+   "mapX": 29.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Complete the negotiators. *Speak with the Wood Wailer Lance."
+  },
+  "172": {
+   "zone": "South Shroud",
+   "place": "Goblins' Meet",
+   "mapX": 27.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the crestfallen merchant."
+  },
+  "626": {
+   "zone": "South Shroud",
+   "place": "Rootslake",
+   "mapX": 16.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "627": {
+   "zone": "South Shroud",
+   "place": "Rootslake",
+   "mapX": 15.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "159": {
+   "zone": "South Shroud",
+   "place": "Redbelly Hive",
+   "mapX": 22.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Redbelly Hive must be under control of the Redbelly Hornets, which can occur by failing defending the hive or keeping the hive, and maintained by failing this FATE or clearing the hive."
+  },
+  "160": {
+   "zone": "South Shroud",
+   "place": "Redbelly Hive",
+   "mapX": 22.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete breaching the hive."
+  },
+  "161": {
+   "zone": "South Shroud",
+   "place": "Redbelly Hive",
+   "mapX": 22.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Redbelly Hive must be under control of the Wood Wailers, which can occur by completing clearing the hive, and maintained by completing this FATE and keeping the hive."
+  },
+  "162": {
+   "zone": "South Shroud",
+   "place": "Redbelly Hive",
+   "mapX": 22.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Redbelly Hive must be under control of the Wood Wailers, which can occur by completing clearing the hive, and maintained by completing this FATE and defending the hive."
+  },
+  "169": {
+   "zone": "South Shroud",
+   "place": "Lower Paths",
+   "mapX": 15.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "624": {
+   "zone": "South Shroud",
+   "place": "Rootslake",
+   "mapX": 19.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "154": {
+   "zone": "South Shroud",
+   "place": "Rootslake",
+   "mapX": 21.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "628": {
+   "zone": "South Shroud",
+   "place": "Urth's Gift",
+   "mapX": 32.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "178": {
+   "zone": "North Shroud",
+   "place": "Treespeak",
+   "mapX": 25.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "183": {
+   "zone": "North Shroud",
+   "place": "Treespeak",
+   "mapX": 25.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "174": {
+   "zone": "North Shroud",
+   "place": "Treespeak",
+   "mapX": 27.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "184": {
+   "zone": "North Shroud",
+   "place": "Hyrstmill",
+   "mapX": 28.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "185": {
+   "zone": "North Shroud",
+   "place": "Peacegarden",
+   "mapX": 26.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "187": {
+   "zone": "North Shroud",
+   "place": "Alder Springs",
+   "mapX": 23.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "188": {
+   "zone": "North Shroud",
+   "place": "Alder Springs",
+   "mapX": 18.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "189": {
+   "zone": "North Shroud",
+   "place": "Alder Springs",
+   "mapX": 14.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "180": {
+   "zone": "North Shroud",
+   "place": "Alder Springs",
+   "mapX": 17.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the shifty-eyed prospector."
+  },
+  "216": {
+   "zone": "North Shroud",
+   "place": "Alder Springs",
+   "mapX": 15.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "631": {
+   "zone": "North Shroud",
+   "place": "Proud Creek",
+   "mapX": 22.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "634": {
+   "zone": "North Shroud",
+   "place": "Gelmorra Ruins",
+   "mapX": 23.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "633": {
+   "zone": "North Shroud",
+   "place": "Ixali Logging Grounds",
+   "mapX": 19.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "632": {
+   "zone": "North Shroud",
+   "place": "Proud Creek",
+   "mapX": 21.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "342": {
+   "zone": "Western Thanalan",
+   "place": "Hammerlea",
+   "mapX": 23.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "356": {
+   "zone": "Western Thanalan",
+   "place": "Hammerlea",
+   "mapX": 23.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "343": {
+   "zone": "Western Thanalan",
+   "place": "Hammerlea",
+   "mapX": 22.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "344": {
+   "zone": "Western Thanalan",
+   "place": "Hammerlea",
+   "mapX": 19.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the worried worker."
+  },
+  "345": {
+   "zone": "Western Thanalan",
+   "place": "Hammerlea",
+   "mapX": 18.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "346": {
+   "zone": "Western Thanalan",
+   "place": "Hammerlea",
+   "mapX": 18.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the diligent worker."
+  },
+  "347": {
+   "zone": "Western Thanalan",
+   "place": "Nophica's Wells",
+   "mapX": 24.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "348": {
+   "zone": "Western Thanalan",
+   "place": "Nophica's Wells",
+   "mapX": 22.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "349": {
+   "zone": "Western Thanalan",
+   "place": "Hammerlea",
+   "mapX": 24.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "350": {
+   "zone": "Western Thanalan",
+   "place": "Horizon's Edge",
+   "mapX": 25.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "361": {
+   "zone": "Western Thanalan",
+   "place": "Horizon's Edge",
+   "mapX": 23.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "352": {
+   "zone": "Western Thanalan",
+   "place": "The Footfalls",
+   "mapX": 15.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "353": {
+   "zone": "Western Thanalan",
+   "place": "The Footfalls",
+   "mapX": 15.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "367": {
+   "zone": "Western Thanalan",
+   "place": "The Footfalls",
+   "mapX": 13.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "357": {
+   "zone": "Western Thanalan",
+   "place": "The Footfalls",
+   "mapX": 13.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "354": {
+   "zone": "Western Thanalan",
+   "place": "The Footfalls",
+   "mapX": 14.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with the mauled merchant."
+  },
+  "366": {
+   "zone": "Western Thanalan",
+   "place": "Parata's Peace",
+   "mapX": 14.0,
+   "mapY": 6.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "355": {
+   "zone": "Western Thanalan",
+   "place": "The Footfalls",
+   "mapX": 13.0,
+   "mapY": 7.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "370": {
+   "zone": "Central Thanalan",
+   "place": "Fesca's Wash",
+   "mapX": 21.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Speak with the cowardly challenger."
+  },
+  "373": {
+   "zone": "Central Thanalan",
+   "place": "Black Brush",
+   "mapX": 21.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "378": {
+   "zone": "Central Thanalan",
+   "place": "Black Brush",
+   "mapX": 23.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the hungry hobbledehoy."
+  },
+  "375": {
+   "zone": "Central Thanalan",
+   "place": "Black Brush",
+   "mapX": 18.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "374": {
+   "zone": "Central Thanalan",
+   "place": "The Coffer & Coffin",
+   "mapX": 19.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the Coffer & Coffin heavy."
+  },
+  "383": {
+   "zone": "Central Thanalan",
+   "place": "Black Brush",
+   "mapX": 15.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "389": {
+   "zone": "Central Thanalan",
+   "place": "Black Brush",
+   "mapX": 18.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "376": {
+   "zone": "Central Thanalan",
+   "place": "The Rat's Nest",
+   "mapX": 16.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "379": {
+   "zone": "Central Thanalan",
+   "place": "Black Brush",
+   "mapX": 18.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "381": {
+   "zone": "Central Thanalan",
+   "place": "The Clutch",
+   "mapX": 23.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the crestfallen merchant."
+  },
+  "393": {
+   "zone": "Central Thanalan",
+   "place": "Black Brush",
+   "mapX": 17.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "377": {
+   "zone": "Central Thanalan",
+   "place": "The Unholy Heir",
+   "mapX": 28.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with Tiny Chris."
+  },
+  "385": {
+   "zone": "Central Thanalan",
+   "place": "The Unholy Heir",
+   "mapX": 28.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "395": {
+   "zone": "Eastern Thanalan",
+   "place": "Drybone",
+   "mapX": 12.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "400": {
+   "zone": "Eastern Thanalan",
+   "place": "The Golden Bazaar",
+   "mapX": 10.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "401": {
+   "zone": "Eastern Thanalan",
+   "place": "Drybone",
+   "mapX": 14.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "402": {
+   "zone": "Eastern Thanalan",
+   "place": "Drybone",
+   "mapX": 12.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "412": {
+   "zone": "Eastern Thanalan",
+   "place": "Drybone",
+   "mapX": 13.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "413": {
+   "zone": "Eastern Thanalan",
+   "place": "Drybone",
+   "mapX": 17.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "397": {
+   "zone": "Eastern Thanalan",
+   "place": "Drybone",
+   "mapX": 16.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "398": {
+   "zone": "Eastern Thanalan",
+   "place": "Amalj'aa Encampment",
+   "mapX": 19.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Speak with the flame scout."
+  },
+  "394": {
+   "zone": "Eastern Thanalan",
+   "place": "Drybone",
+   "mapX": 17.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "191": {
+   "zone": "Eastern Thanalan",
+   "place": "Wellwick Wood",
+   "mapX": 22.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "192": {
+   "zone": "Eastern Thanalan",
+   "place": "Highbridge",
+   "mapX": 22.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*attack on highbridge: prelude ends in completion or failure."
+  },
+  "193": {
+   "zone": "Eastern Thanalan",
+   "place": "Highbridge",
+   "mapX": 22.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete attack on highbridge: act i."
+  },
+  "194": {
+   "zone": "Eastern Thanalan",
+   "place": "Wellwick Wood",
+   "mapX": 23.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete attack on highbridge: act ii."
+  },
+  "195": {
+   "zone": "Eastern Thanalan",
+   "place": "Wellwick Wood",
+   "mapX": 23.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "60 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Fail attack on highbridge: act i or attack on highbridge: act ii. *Speak with the Brass Blade. *This FATE or the NPC to start it will remain active until it is successfully completed, preventing the chain from restarting."
+  },
+  "409": {
+   "zone": "Eastern Thanalan",
+   "place": "Wellwick Wood",
+   "mapX": 27.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "406": {
+   "zone": "Eastern Thanalan",
+   "place": "Wellwick Wood",
+   "mapX": 25.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "407": {
+   "zone": "Eastern Thanalan",
+   "place": "Wellwick Wood",
+   "mapX": 26.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "541": {
+   "zone": "Eastern Thanalan",
+   "place": "The Burning Wall",
+   "mapX": 29.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "540": {
+   "zone": "Eastern Thanalan",
+   "place": "The Burning Wall",
+   "mapX": 25.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "542": {
+   "zone": "Eastern Thanalan",
+   "place": "The Burning Wall",
+   "mapX": 27.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "543": {
+   "zone": "Eastern Thanalan",
+   "place": "The Burning Wall",
+   "mapX": 30.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "421": {
+   "zone": "Southern Thanalan",
+   "place": "Broken Water",
+   "mapX": 15.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "434": {
+   "zone": "Southern Thanalan",
+   "place": "The Red Labyrinth",
+   "mapX": 17.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with the flame scout."
+  },
+  "420": {
+   "zone": "Southern Thanalan",
+   "place": "Broken Water",
+   "mapX": 20.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "419": {
+   "zone": "Southern Thanalan",
+   "place": "The Sepulchre",
+   "mapX": 22.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete bump and grind."
+  },
+  "441": {
+   "zone": "Southern Thanalan",
+   "place": "Broken Water",
+   "mapX": 16.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "456": {
+   "zone": "Southern Thanalan",
+   "place": "The Sepulchre",
+   "mapX": 22.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "422": {
+   "zone": "Southern Thanalan",
+   "place": "Broken Water",
+   "mapX": 24.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the Ul'dahn naturalist."
+  },
+  "429": {
+   "zone": "Southern Thanalan",
+   "place": "Sagolii Desert",
+   "mapX": 14.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "437": {
+   "zone": "Southern Thanalan",
+   "place": "Sagolii Desert",
+   "mapX": 14.0,
+   "mapY": 38.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "432": {
+   "zone": "Southern Thanalan",
+   "place": "Byregot's Strike",
+   "mapX": 19.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with the Stone Torch."
+  },
+  "436": {
+   "zone": "Southern Thanalan",
+   "place": "Sagolii Desert",
+   "mapX": 26.0,
+   "mapY": 34.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "455": {
+   "zone": "Southern Thanalan",
+   "place": "Forgotten Springs",
+   "mapX": 14.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "424": {
+   "zone": "Southern Thanalan",
+   "place": "Zanr'ak",
+   "mapX": 21.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "10 minutes",
+   "fateType": "Battle"
+  },
+  "552": {
+   "zone": "Southern Thanalan",
+   "place": "Zanr'ak",
+   "mapX": 18.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "10 minutes",
+   "fateType": "Battle"
+  },
+  "423": {
+   "zone": "Southern Thanalan",
+   "place": "Zanr'ak",
+   "mapX": 20.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "545": {
+   "zone": "Southern Thanalan",
+   "place": "Zanr'ak",
+   "mapX": 21.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the flame recruit."
+  },
+  "546": {
+   "zone": "Southern Thanalan",
+   "place": "Zanr'ak",
+   "mapX": 21.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "548": {
+   "zone": "Southern Thanalan",
+   "place": "Zanr'ak",
+   "mapX": 16.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "549": {
+   "zone": "Southern Thanalan",
+   "place": "Zanr'ak",
+   "mapX": 19.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "555": {
+   "zone": "Southern Thanalan",
+   "place": "Zanr'ak",
+   "mapX": 16.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "427": {
+   "zone": "Southern Thanalan",
+   "place": "Zanr'ak Encampment",
+   "mapX": 18.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Speak with the flame scout."
+  },
+  "550": {
+   "zone": "Southern Thanalan",
+   "place": "Zahar'ak",
+   "mapX": 23.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "551": {
+   "zone": "Southern Thanalan",
+   "place": "Zanr'ak",
+   "mapX": 22.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "558": {
+   "zone": "Southern Thanalan",
+   "place": "Zahar'ak",
+   "mapX": 32.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "430": {
+   "zone": "Southern Thanalan",
+   "place": "Zanr'ak Altar",
+   "mapX": 24.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "431": {
+   "zone": "Southern Thanalan",
+   "place": "Zanr'ak",
+   "mapX": 23.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "553": {
+   "zone": "Southern Thanalan",
+   "place": "Zahar'ak",
+   "mapX": 29.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "554": {
+   "zone": "Southern Thanalan",
+   "place": "Zahar'ak",
+   "mapX": 32.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "557": {
+   "zone": "Southern Thanalan",
+   "place": "Zahar'ak",
+   "mapX": 34.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "10 minutes",
+   "fateType": "Boss"
+  },
+  "446": {
+   "zone": "Northern Thanalan",
+   "place": "Dalamud's Talons",
+   "mapX": 25.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "447": {
+   "zone": "Northern Thanalan",
+   "place": "Bluefog",
+   "mapX": 24.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "449": {
+   "zone": "Northern Thanalan",
+   "place": "Raubahn's Push",
+   "mapX": 17.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "450": {
+   "zone": "Northern Thanalan",
+   "place": "Raubahn's Push",
+   "mapX": 18.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "457": {
+   "zone": "Northern Thanalan",
+   "place": "Raubahn's Push",
+   "mapX": 18.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the Amajina & Sons draughtsman."
+  },
+  "556": {
+   "zone": "Northern Thanalan",
+   "place": "Bluefog",
+   "mapX": 22.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the Amajina & Sons draughtsman."
+  },
+  "637": {
+   "zone": "Northern Thanalan",
+   "place": "Bluefog",
+   "mapX": 25.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "638": {
+   "zone": "Northern Thanalan",
+   "place": "Bluefog",
+   "mapX": 22.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "639": {
+   "zone": "Northern Thanalan",
+   "place": "Bluefog",
+   "mapX": 22.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "641": {
+   "zone": "Northern Thanalan",
+   "place": "Bluefog",
+   "mapX": 20.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "642": {
+   "zone": "Northern Thanalan",
+   "place": "Camp Bluefog",
+   "mapX": 21.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with the wary merchant."
+  },
+  "643": {
+   "zone": "Northern Thanalan",
+   "place": "Abandoned Amajina Mythril Mine",
+   "mapX": 26.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with Twin-tongued Addison."
+  },
+  "644": {
+   "zone": "Northern Thanalan",
+   "place": "Abandoned Amajina Mythril Mine",
+   "mapX": 26.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete dark devices - the plea. *Speak with Milburh."
+  },
+  "645": {
+   "zone": "Northern Thanalan",
+   "place": "Abandoned Amajina Mythril Mine",
+   "mapX": 26.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete dark devices - the bait."
+  },
+  "646": {
+   "zone": "Northern Thanalan",
+   "place": "Abandoned Amajina Mythril Mine",
+   "mapX": 26.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete dark devices - the switch."
+  },
+  "647": {
+   "zone": "Northern Thanalan",
+   "place": "Raubahn's Push",
+   "mapX": 17.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss"
+  },
+  "460": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Dragonhead",
+   "mapX": 23.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "464": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Skyfire Locks",
+   "mapX": 25.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "466": {
+   "zone": "Coerthas Central Highlands",
+   "place": "First Dicasterial Observatorium of Aetherial and Astrological Phenomena",
+   "mapX": 26.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "463": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Skyfire Locks",
+   "mapX": 27.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "465": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Dragonhead",
+   "mapX": 25.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "467": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Dragonhead",
+   "mapX": 25.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "491": {
+   "zone": "Coerthas Central Highlands",
+   "place": "First Dicasterial Observatorium of Aetherial and Astrological Phenomena",
+   "mapX": 26.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with the Ishgardian astrologian."
+  },
+  "473": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Providence Point",
+   "mapX": 32.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "474": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Dragonhead",
+   "mapX": 27.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "469": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Providence Point",
+   "mapX": 27.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the injured Fortemps sentry."
+  },
+  "470": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Providence Point",
+   "mapX": 24.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "472": {
+   "zone": "Coerthas Central Highlands",
+   "place": "The Weeping Saint",
+   "mapX": 32.0,
+   "mapY": 6.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item"
+  },
+  "501": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Camp Dragonhead",
+   "mapX": 26.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with the House Fortemps engineer."
+  },
+  "502": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Steel Vigil",
+   "mapX": 26.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete svara's flight."
+  },
+  "503": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Steel Vigil",
+   "mapX": 26.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete svara's fear."
+  },
+  "504": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Steel Vigil",
+   "mapX": 26.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Fail svara's flight or svara's fear."
+  },
+  "475": {
+   "zone": "Coerthas Central Highlands",
+   "place": "The Ogre's Belly",
+   "mapX": 34.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "479": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Whitebrim",
+   "mapX": 15.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "483": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Whitebrim",
+   "mapX": 18.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "494": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Whitebrim",
+   "mapX": 21.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "507": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Whitebrim",
+   "mapX": 15.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss"
+  },
+  "480": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Whitebrim",
+   "mapX": 8.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "482": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Whitebrim",
+   "mapX": 9.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the House Fortemps guard."
+  },
+  "493": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Whitebrim",
+   "mapX": 4.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "496": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Whitebrim",
+   "mapX": 10.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "497": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Whitebrim",
+   "mapX": 12.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "484": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Daniffen Pass",
+   "mapX": 12.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "490": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Boulder Downs",
+   "mapX": 13.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "487": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Boulder Downs",
+   "mapX": 19.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "489": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Boulder Downs",
+   "mapX": 9.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "498": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Natalan",
+   "mapX": 33.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "499": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Natalan",
+   "mapX": 34.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "500": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Natalan",
+   "mapX": 33.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "508": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Natalan",
+   "mapX": 34.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "505": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Whitebrim  Does not appear on the map.",
+   "mapX": 6.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*36 hour spawn window begins after server reset; after 36 hours have passed since failure of this FATE; or after 36 hours have passed since last appearance of he taketh it with his eyes."
+  },
+  "506": {
+   "zone": "Coerthas Central Highlands",
+   "place": "Behemoth's Dominion  Does not appear on the map.",
+   "mapX": 4.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete behold now behemoth."
+  },
+  "787": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Riversmeet",
+   "mapX": 28.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "788": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Riversmeet",
+   "mapX": 31.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the garrison knight."
+  },
+  "789": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Riversmeet",
+   "mapX": 25.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "791": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Riversmeet",
+   "mapX": 31.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "792": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Riversmeet",
+   "mapX": 31.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete dawn of the mylodons."
+  },
+  "796": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Riversmeet",
+   "mapX": 27.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "801": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Riversmeet",
+   "mapX": 34.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "807": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Riversmeet",
+   "mapX": 30.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "809": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Riversmeet",
+   "mapX": 26.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "810": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Riversmeet",
+   "mapX": 26.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete panic rheum."
+  },
+  "813": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Riversmeet",
+   "mapX": 31.0,
+   "mapY": 34.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "814": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Riversmeet",
+   "mapX": 27.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "815": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Riversmeet",
+   "mapX": 31.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Speak with the Convictor knight."
+  },
+  "816": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Riversmeet",
+   "mapX": 31.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete no ifs, ands, or butts."
+  },
+  "793": {
+   "zone": "Coerthas Western Highlands",
+   "place": "The Bed of Bones",
+   "mapX": 20.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "794": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Twinpools",
+   "mapX": 19.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "795": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Twinpools",
+   "mapX": 15.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "798": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Dragonspit",
+   "mapX": 8.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "800": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Twinpools",
+   "mapX": 13.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "802": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Twinpools",
+   "mapX": 12.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "805": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Twinpools",
+   "mapX": 16.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "811": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Twinpools",
+   "mapX": 19.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "812": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Twinpools",
+   "mapX": 19.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete unsilent vigil."
+  },
+  "817": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Twinpools",
+   "mapX": 17.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Speak with Beaudonet the Blunt."
+  },
+  "908": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Red Rim",
+   "mapX": 22.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "909": {
+   "zone": "Coerthas Western Highlands",
+   "place": "Red Rim",
+   "mapX": 13.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "514": {
+   "zone": "The Firmament",
+   "place": "The Tangle",
+   "mapX": 14.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "517": {
+   "zone": "The Firmament",
+   "place": "The Tangle",
+   "mapX": 13.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "530": {
+   "zone": "The Firmament",
+   "place": "Fogfens",
+   "mapX": 13.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "512": {
+   "zone": "The Firmament",
+   "place": "Camp Revenant's Toll",
+   "mapX": 18.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the seasoned adventurer."
+  },
+  "516": {
+   "zone": "The Firmament",
+   "place": "Fogfens",
+   "mapX": 15.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "523": {
+   "zone": "The Firmament",
+   "place": "North Silvertear",
+   "mapX": 25.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "529": {
+   "zone": "The Firmament",
+   "place": "Revenant's Toll",
+   "mapX": 22.0,
+   "mapY": 7.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with the rugged researcher."
+  },
+  "520": {
+   "zone": "The Firmament",
+   "place": "Fogfens",
+   "mapX": 12.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "522": {
+   "zone": "The Firmament",
+   "place": "North Silvertear",
+   "mapX": 29.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the porter."
+  },
+  "524": {
+   "zone": "The Firmament",
+   "place": "North Silvertear",
+   "mapX": 27.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "525": {
+   "zone": "The Firmament",
+   "place": "North Silvertear",
+   "mapX": 29.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "526": {
+   "zone": "The Firmament",
+   "place": "North Silvertear",
+   "mapX": 33.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "527": {
+   "zone": "The Firmament",
+   "place": "North Silvertear",
+   "mapX": 27.0,
+   "mapY": 6.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "521": {
+   "zone": "The Firmament",
+   "place": "North Silvertear",
+   "mapX": 31.0,
+   "mapY": 5.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "839": {
+   "zone": "The Sea of Clouds",
+   "place": "Cloudtop",
+   "mapX": 14.0,
+   "mapY": 37.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the Rose Knight."
+  },
+  "840": {
+   "zone": "The Sea of Clouds",
+   "place": "Cloudtop",
+   "mapX": 20.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "841": {
+   "zone": "The Sea of Clouds",
+   "place": "Cloudtop",
+   "mapX": 20.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete saved the nests for last."
+  },
+  "842": {
+   "zone": "The Sea of Clouds",
+   "place": "Voor Sian Siran",
+   "mapX": 28.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "843": {
+   "zone": "The Sea of Clouds",
+   "place": "Voor Sian Siran",
+   "mapX": 25.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "844": {
+   "zone": "The Sea of Clouds",
+   "place": "Voor Sian Siran",
+   "mapX": 30.0,
+   "mapY": 36.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "845": {
+   "zone": "The Sea of Clouds",
+   "place": "Voor Sian Siran",
+   "mapX": 30.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "846": {
+   "zone": "The Sea of Clouds",
+   "place": "Voor Sian Siran",
+   "mapX": 36.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "847": {
+   "zone": "The Sea of Clouds",
+   "place": "Voor Sian Siran",
+   "mapX": 34.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "851": {
+   "zone": "The Sea of Clouds",
+   "place": "The Blue Window",
+   "mapX": 6.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "852": {
+   "zone": "The Sea of Clouds",
+   "place": "The Blue Window",
+   "mapX": 12.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the nat'leii Zundu."
+  },
+  "853": {
+   "zone": "The Sea of Clouds",
+   "place": "The Blue Window",
+   "mapX": 28.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with the Zundu fugitive."
+  },
+  "854": {
+   "zone": "The Sea of Clouds",
+   "place": "The Blue Window",
+   "mapX": 17.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "855": {
+   "zone": "The Sea of Clouds",
+   "place": "The Blue Window",
+   "mapX": 21.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss"
+  },
+  "856": {
+   "zone": "The Sea of Clouds",
+   "place": "The Blue Window",
+   "mapX": 26.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "857": {
+   "zone": "The Sea of Clouds",
+   "place": "Ok' Vundu Vana",
+   "mapX": 29.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "860": {
+   "zone": "The Sea of Clouds",
+   "place": "Ok' Vundu Vana",
+   "mapX": 23.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "861": {
+   "zone": "The Sea of Clouds",
+   "place": "Ok' Vundu Mok",
+   "mapX": 20.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "862": {
+   "zone": "The Sea of Clouds",
+   "place": "Ok' Vundu Mok",
+   "mapX": 20.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete bismarcking time."
+  },
+  "863": {
+   "zone": "The Sea of Clouds",
+   "place": "Ok' Vundu Mok",
+   "mapX": 20.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete let there be acolytes."
+  },
+  "864": {
+   "zone": "The Sea of Clouds",
+   "place": "The Nidifice",
+   "mapX": 36.0,
+   "mapY": 36.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "865": {
+   "zone": "The Sea of Clouds",
+   "place": "Provenance",
+   "mapX": 10.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "866": {
+   "zone": "The Sea of Clouds",
+   "place": "The Gauntlet",
+   "mapX": 36.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "867": {
+   "zone": "The Sea of Clouds",
+   "place": "The Gauntlet",
+   "mapX": 21.0,
+   "mapY": 6.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "875": {
+   "zone": "The Sea of Clouds",
+   "place": "Hengr's Crucible",
+   "mapX": 37.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "880": {
+   "zone": "Azys Lla",
+   "place": "Alpha Quadrant",
+   "mapX": 18.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the verification node."
+  },
+  "881": {
+   "zone": "Azys Lla",
+   "place": "Alpha Quadrant",
+   "mapX": 19.0,
+   "mapY": 7.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "882": {
+   "zone": "Azys Lla",
+   "place": "Alpha Quadrant",
+   "mapX": 18.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "883": {
+   "zone": "Azys Lla",
+   "place": "Beta Quadrant",
+   "mapX": 30.0,
+   "mapY": 7.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "884": {
+   "zone": "Azys Lla",
+   "place": "Beta Quadrant",
+   "mapX": 37.0,
+   "mapY": 6.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "885": {
+   "zone": "Azys Lla",
+   "place": "Beta Quadrant",
+   "mapX": 35.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "886": {
+   "zone": "Azys Lla",
+   "place": "Beta Quadrant",
+   "mapX": 34.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "887": {
+   "zone": "Azys Lla",
+   "place": "Dreadnaught Landing",
+   "mapX": 37.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "888": {
+   "zone": "Azys Lla",
+   "place": "The Cathedral",
+   "mapX": 24.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "889": {
+   "zone": "Azys Lla",
+   "place": "Castrum Solus",
+   "mapX": 34.0,
+   "mapY": 36.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "890": {
+   "zone": "Azys Lla",
+   "place": "Castrum Solus",
+   "mapX": 34.0,
+   "mapY": 36.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete put the knives down."
+  },
+  "891": {
+   "zone": "Azys Lla",
+   "place": "Gamma Quadrant",
+   "mapX": 37.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "892": {
+   "zone": "Azys Lla",
+   "place": "Gamma Quadrant",
+   "mapX": 30.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "893": {
+   "zone": "Azys Lla",
+   "place": "Gamma Quadrant",
+   "mapX": 28.0,
+   "mapY": 38.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "894": {
+   "zone": "Azys Lla",
+   "place": "The Pappus Tree",
+   "mapX": 6.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "895": {
+   "zone": "Azys Lla",
+   "place": "Delta Quadrant",
+   "mapX": 12.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "897": {
+   "zone": "Azys Lla",
+   "place": "Alpha Quadrant",
+   "mapX": 12.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "898": {
+   "zone": "Azys Lla",
+   "place": "Quarantine Block",
+   "mapX": 9.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Boss"
+  },
+  "899": {
+   "zone": "Azys Lla",
+   "place": "Delta Quadrant",
+   "mapX": 12.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "900": {
+   "zone": "Azys Lla",
+   "place": "Beta Quadrant",
+   "mapX": 31.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "901": {
+   "zone": "Azys Lla",
+   "place": "Alpha Quadrant",
+   "mapX": 12.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "818": {
+   "zone": "The Dravanian Forelands",
+   "place": "Chocobo Forest",
+   "mapX": 34.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "819": {
+   "zone": "The Dravanian Forelands",
+   "place": "Chocobo Forest",
+   "mapX": 35.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "820": {
+   "zone": "The Dravanian Forelands",
+   "place": "Chocobo Forest",
+   "mapX": 38.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "821": {
+   "zone": "The Dravanian Forelands",
+   "place": "Chocobo Forest",
+   "mapX": 32.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the Tailfeather hunter."
+  },
+  "822": {
+   "zone": "The Dravanian Forelands",
+   "place": "Chocobo Forest",
+   "mapX": 37.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "823": {
+   "zone": "The Dravanian Forelands",
+   "place": "Whilom River",
+   "mapX": 31.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "824": {
+   "zone": "The Dravanian Forelands",
+   "place": "Chocobo Forest",
+   "mapX": 35.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with Mossy Peak."
+  },
+  "825": {
+   "zone": "The Dravanian Forelands",
+   "place": "Chocobo Forest",
+   "mapX": 26.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "826": {
+   "zone": "The Dravanian Forelands",
+   "place": "The Smoldering Wasters",
+   "mapX": 24.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "827": {
+   "zone": "The Dravanian Forelands",
+   "place": "The Stained One",
+   "mapX": 25.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "828": {
+   "zone": "The Dravanian Forelands",
+   "place": "The Stained One",
+   "mapX": 25.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete the whole truth."
+  },
+  "829": {
+   "zone": "The Dravanian Forelands",
+   "place": "The Smoldering Wastes",
+   "mapX": 26.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "833": {
+   "zone": "The Dravanian Forelands",
+   "place": "Whilom River",
+   "mapX": 22.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "902": {
+   "zone": "The Dravanian Forelands",
+   "place": "Chocobo Forest  Does not appear on the map.",
+   "mapX": 36.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*36 hour spawn window begins after server reset; after 36 hours have passed since failure of this FATE orcoeurls chase boys; or after 36 hours have passed last appearance of coeurls chase boys chase coeurls. *Changes weather in the Forelands to royal levin while active."
+  },
+  "830": {
+   "zone": "The Dravanian Forelands",
+   "place": "Whilom River",
+   "mapX": 22.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "831": {
+   "zone": "The Dravanian Forelands",
+   "place": "Avalonia Fallen",
+   "mapX": 19.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "832": {
+   "zone": "The Dravanian Forelands",
+   "place": "Avalonia Fallen",
+   "mapX": 16.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "834": {
+   "zone": "The Dravanian Forelands",
+   "place": "Mourn",
+   "mapX": 13.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "835": {
+   "zone": "The Dravanian Forelands",
+   "place": "Mourn",
+   "mapX": 18.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "836": {
+   "zone": "The Dravanian Forelands",
+   "place": "Sohm Al Foothills",
+   "mapX": 15.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "838": {
+   "zone": "The Dravanian Forelands",
+   "place": "Avalonia Fallen",
+   "mapX": 13.0,
+   "mapY": 36.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss"
+  },
+  "837": {
+   "zone": "The Dravanian Forelands",
+   "place": "The Hundred Throes",
+   "mapX": 28.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "910": {
+   "zone": "The Dravanian Forelands",
+   "place": "Anyx Minor",
+   "mapX": 12.0,
+   "mapY": 39.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "756": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Arkhitekton",
+   "mapX": 32.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with Slicktrix the Gobnaminous."
+  },
+  "757": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Arkhitekton",
+   "mapX": 32.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete metal gears rising."
+  },
+  "758": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Arkhitekton",
+   "mapX": 31.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete metal gears revengeance."
+  },
+  "759": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Ruling Quarter",
+   "mapX": 34.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "760": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Makers' Quarter",
+   "mapX": 33.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "761": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Makers' Quarter",
+   "mapX": 37.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "763": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Makers' Quarter",
+   "mapX": 23.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "764": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Makers' Quarter",
+   "mapX": 36.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "766": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Collectors' Quarter",
+   "mapX": 22.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "767": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Collectors' Quarter",
+   "mapX": 22.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete pop goes the whizzle."
+  },
+  "768": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Makers' Quarter",
+   "mapX": 37.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "769": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Makers' Quarter",
+   "mapX": 28.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "770": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Makers' Quarter",
+   "mapX": 26.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "772": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Answering Quarter",
+   "mapX": 11.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "773": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Answering Quarter",
+   "mapX": 16.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "774": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Answering Quarter",
+   "mapX": 7.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "775": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Ruling Quarter",
+   "mapX": 14.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "779": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "Quickspill Delta",
+   "mapX": 11.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "780": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Answering Quarter",
+   "mapX": 13.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with Browfix Turnalot."
+  },
+  "785": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Answering Quarter",
+   "mapX": 10.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "786": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Answering Quarter",
+   "mapX": 15.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "762": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Ruling Quarter",
+   "mapX": 26.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "771": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "Quickspill Delta",
+   "mapX": 13.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "777": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "Quickspill Delta",
+   "mapX": 10.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with Maro Roggo."
+  },
+  "778": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Ruling Quarter",
+   "mapX": 20.0,
+   "mapY": 37.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "781": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Ruling Quarter",
+   "mapX": 26.0,
+   "mapY": 38.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "782": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "Quickspill Delta",
+   "mapX": 15.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "783": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "Quickspill Delta",
+   "mapX": 11.0,
+   "mapY": 34.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "784": {
+   "zone": "The Dravanian Hinterlands",
+   "place": "The Ruling Quarter",
+   "mapX": 15.0,
+   "mapY": 37.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "725": {
+   "zone": "The Churning Mists",
+   "place": "Eil Tohm",
+   "mapX": 27.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "726": {
+   "zone": "The Churning Mists",
+   "place": "Eil Tohm",
+   "mapX": 29.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with Mogoosh the Misbehaving."
+  },
+  "727": {
+   "zone": "The Churning Mists",
+   "place": "Landlord Colony",
+   "mapX": 32.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "731": {
+   "zone": "The Churning Mists",
+   "place": "Eil Tohm",
+   "mapX": 36.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "732": {
+   "zone": "The Churning Mists",
+   "place": "Eil Tohm",
+   "mapX": 33.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "735": {
+   "zone": "The Churning Mists",
+   "place": "Landlord Colony",
+   "mapX": 29.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "736": {
+   "zone": "The Churning Mists",
+   "place": "Landlord Colony",
+   "mapX": 27.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "737": {
+   "zone": "The Churning Mists",
+   "place": "Landlord Colony",
+   "mapX": 26.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete say it tulihand."
+  },
+  "738": {
+   "zone": "The Churning Mists",
+   "place": "Monsterie",
+   "mapX": 33.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "740": {
+   "zone": "The Churning Mists",
+   "place": "Four Arms",
+   "mapX": 17.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "741": {
+   "zone": "The Churning Mists",
+   "place": "Four Arms",
+   "mapX": 17.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete how to cane your dragon."
+  },
+  "742": {
+   "zone": "The Churning Mists",
+   "place": "Four Arms",
+   "mapX": 21.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "752": {
+   "zone": "The Churning Mists",
+   "place": "Four Arms",
+   "mapX": 18.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with the mouthing-off moogle."
+  },
+  "753": {
+   "zone": "The Churning Mists",
+   "place": "Landlord Colony",
+   "mapX": 21.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Speak with Mogpo the Magnificent."
+  },
+  "755": {
+   "zone": "The Churning Mists",
+   "place": "Four Arms",
+   "mapX": 16.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "872": {
+   "zone": "The Churning Mists",
+   "place": "Ohl Tahn",
+   "mapX": 13.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the Zenith dragonling."
+  },
+  "874": {
+   "zone": "The Churning Mists",
+   "place": "Landlord Colony",
+   "mapX": 22.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "728": {
+   "zone": "The Churning Mists",
+   "place": "The House of Letters",
+   "mapX": 34.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the modish moogle."
+  },
+  "744": {
+   "zone": "The Churning Mists",
+   "place": "Ohl Tahn",
+   "mapX": 14.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with Fjalar."
+  },
+  "747": {
+   "zone": "The Churning Mists",
+   "place": "The Rookery",
+   "mapX": 20.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "748": {
+   "zone": "The Churning Mists",
+   "place": "Ohl Tahn",
+   "mapX": 8.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "754": {
+   "zone": "The Churning Mists",
+   "place": "Four Arms",
+   "mapX": 13.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the Zenith dragonling."
+  },
+  "868": {
+   "zone": "The Churning Mists",
+   "place": "Olh Tahn",
+   "mapX": 18.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "869": {
+   "zone": "The Churning Mists",
+   "place": "Olh Tahn",
+   "mapX": 18.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete darkscale descendeth."
+  },
+  "870": {
+   "zone": "The Churning Mists",
+   "place": "Tharl Oom Khash",
+   "mapX": 18.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete darkscale disappeareth."
+  },
+  "873": {
+   "zone": "The Churning Mists",
+   "place": "Ohl Tahn",
+   "mapX": 14.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "746": {
+   "zone": "The Churning Mists",
+   "place": "Ohl Tahn",
+   "mapX": 8.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "751": {
+   "zone": "The Churning Mists",
+   "place": "Ohl Tahn",
+   "mapX": 25.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "871": {
+   "zone": "The Churning Mists",
+   "place": "Greensward",
+   "mapX": 11.0,
+   "mapY": 36.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete darkscale devoureth, mogicide, end of the rainbow, and rastaban vibration, in any order. *All four required FATEs must be completed before they or darkscale descendeth respawn."
+  },
+  "1112": {
+   "zone": "The Fringes",
+   "place": "East End",
+   "mapX": 8.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1113": {
+   "zone": "The Fringes",
+   "place": "East End",
+   "mapX": 8.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete showing the recruits what for."
+  },
+  "1114": {
+   "zone": "The Fringes",
+   "place": "East End",
+   "mapX": 8.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete showing the officers what for."
+  },
+  "1115": {
+   "zone": "The Fringes",
+   "place": "East End",
+   "mapX": 12.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1116": {
+   "zone": "The Fringes",
+   "place": "East End",
+   "mapX": 10.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1118": {
+   "zone": "The Fringes",
+   "place": "East End",
+   "mapX": 11.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1119": {
+   "zone": "The Fringes",
+   "place": "Pike Falls",
+   "mapX": 18.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1120": {
+   "zone": "The Fringes",
+   "place": "The Striped Hills",
+   "mapX": 28.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with the Resistance fighter."
+  },
+  "1121": {
+   "zone": "The Fringes",
+   "place": "The Striped Hills",
+   "mapX": 23.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with the Resistance fighter."
+  },
+  "1122": {
+   "zone": "The Fringes",
+   "place": "The Striped Hills",
+   "mapX": 23.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the Resistance fighter."
+  },
+  "1124": {
+   "zone": "The Fringes",
+   "place": "The Striped Hills",
+   "mapX": 27.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1126": {
+   "zone": "The Fringes",
+   "place": "East End",
+   "mapX": 12.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1117": {
+   "zone": "The Fringes",
+   "place": "East End",
+   "mapX": 11.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1125": {
+   "zone": "The Fringes",
+   "place": "Dimwold",
+   "mapX": 10.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1127": {
+   "zone": "The Fringes",
+   "place": "East End",
+   "mapX": 11.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the storm herald."
+  },
+  "1128": {
+   "zone": "The Fringes",
+   "place": "East End",
+   "mapX": 10.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1129": {
+   "zone": "The Fringes",
+   "place": "Pike Falls",
+   "mapX": 14.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss"
+  },
+  "1130": {
+   "zone": "The Fringes",
+   "place": "Pike Falls",
+   "mapX": 17.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1140": {
+   "zone": "The Fringes",
+   "place": "Bittermill",
+   "mapX": 13.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1131": {
+   "zone": "The Fringes",
+   "place": "Virdjala",
+   "mapX": 31.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the M tribe ranger."
+  },
+  "1132": {
+   "zone": "The Fringes",
+   "place": "Virdjala",
+   "mapX": 29.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1133": {
+   "zone": "The Fringes",
+   "place": "Virdjala",
+   "mapX": 26.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the M tribe youth."
+  },
+  "1134": {
+   "zone": "The Fringes",
+   "place": "Virdjala",
+   "mapX": 35.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1135": {
+   "zone": "The Fringes",
+   "place": "Virdjala",
+   "mapX": 31.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1136": {
+   "zone": "The Fringes",
+   "place": "Qalyana Nilyu",
+   "mapX": 35.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the Vira beadmaid."
+  },
+  "1137": {
+   "zone": "The Fringes",
+   "place": "Virdjala",
+   "mapX": 27.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1138": {
+   "zone": "The Fringes",
+   "place": "Virdjala",
+   "mapX": 28.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1139": {
+   "zone": "The Fringes",
+   "place": "Virdjala",
+   "mapX": 30.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete pop the trunk."
+  },
+  "1141": {
+   "zone": "The Fringes",
+   "place": "Virdjala",
+   "mapX": 31.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1173": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 11.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort"
+  },
+  "1174": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 13.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete a new leaf."
+  },
+  "1175": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 13.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete salad days."
+  },
+  "1176": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 15.0,
+   "mapY": 7.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "1177": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 20.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1178": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 7.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1179": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 20.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the frightened villager."
+  },
+  "1180": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 17.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1182": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 13.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1184": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 19.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1187": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 11.0,
+   "mapY": 6.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1197": {
+   "zone": "The Peaks",
+   "place": "Rustrock",
+   "mapX": 21.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1199": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 10.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1200": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 15.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1201": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 9.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the wounded fighter."
+  },
+  "1203": {
+   "zone": "The Peaks",
+   "place": "The Last Forest",
+   "mapX": 21.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1181": {
+   "zone": "The Peaks",
+   "place": "Rustrock",
+   "mapX": 27.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1185": {
+   "zone": "The Peaks",
+   "place": "Rustrock",
+   "mapX": 23.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1188": {
+   "zone": "The Peaks",
+   "place": "Rustrock",
+   "mapX": 34.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1189": {
+   "zone": "The Peaks",
+   "place": "Rustrock",
+   "mapX": 25.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1186": {
+   "zone": "The Peaks",
+   "place": "Mount Yorn",
+   "mapX": 25.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the sorry sutler."
+  },
+  "1190": {
+   "zone": "The Peaks",
+   "place": "Wightrock",
+   "mapX": 16.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1191": {
+   "zone": "The Peaks",
+   "place": "Mount Yorn",
+   "mapX": 12.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1193": {
+   "zone": "The Peaks",
+   "place": "Wightrock",
+   "mapX": 13.0,
+   "mapY": 36.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1194": {
+   "zone": "The Peaks",
+   "place": "Goodblade",
+   "mapX": 15.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete mouth for water."
+  },
+  "1195": {
+   "zone": "The Peaks",
+   "place": "Mount Yorn",
+   "mapX": 24.0,
+   "mapY": 34.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the Coldhearth resident."
+  },
+  "1196": {
+   "zone": "The Peaks",
+   "place": "Wightrock",
+   "mapX": 14.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1198": {
+   "zone": "The Peaks",
+   "place": "Mount Yorn",
+   "mapX": 26.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1202": {
+   "zone": "The Peaks",
+   "place": "Mount Yorn",
+   "mapX": 23.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1204": {
+   "zone": "The Peaks",
+   "place": "Mount Yorn",
+   "mapX": 28.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1205": {
+   "zone": "The Peaks",
+   "place": "Wightrock",
+   "mapX": 18.0,
+   "mapY": 34.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with J'najaq Sunflare."
+  },
+  "1207": {
+   "zone": "The Peaks",
+   "place": "Wightrock",
+   "mapX": 14.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Chase"
+  },
+  "1272": {
+   "zone": "The Lochs",
+   "place": "Loch Seld",
+   "mapX": 23.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1273": {
+   "zone": "The Lochs",
+   "place": "Loch Seld",
+   "mapX": 22.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1274": {
+   "zone": "The Lochs",
+   "place": "The Queen's Gardens",
+   "mapX": 30.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1275": {
+   "zone": "The Lochs",
+   "place": "The Queen's Gardens",
+   "mapX": 30.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1276": {
+   "zone": "The Lochs",
+   "place": "The Divine Audience",
+   "mapX": 18.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1277": {
+   "zone": "The Lochs",
+   "place": "Loch Seld",
+   "mapX": 21.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss"
+  },
+  "1278": {
+   "zone": "The Lochs",
+   "place": "Loch Seld",
+   "mapX": 19.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1279": {
+   "zone": "The Lochs",
+   "place": "The High Bank",
+   "mapX": 10.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1280": {
+   "zone": "The Lochs",
+   "place": "The Pauper's Lode",
+   "mapX": 4.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1281": {
+   "zone": "The Lochs",
+   "place": "The High Bank",
+   "mapX": 26.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1282": {
+   "zone": "The Lochs",
+   "place": "The Divine Audience",
+   "mapX": 20.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1283": {
+   "zone": "The Lochs",
+   "place": "The Firkins",
+   "mapX": 8.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1284": {
+   "zone": "The Lochs",
+   "place": "The High Bank",
+   "mapX": 14.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1285": {
+   "zone": "The Lochs",
+   "place": "The High Bank",
+   "mapX": 18.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1286": {
+   "zone": "The Lochs",
+   "place": "The High Bank",
+   "mapX": 13.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1287": {
+   "zone": "The Lochs",
+   "place": "The White Aisle",
+   "mapX": 24.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1288": {
+   "zone": "The Lochs",
+   "place": "Abalathia's Skull",
+   "mapX": 25.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1289": {
+   "zone": "The Lochs",
+   "place": "Loch Seld",
+   "mapX": 24.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1290": {
+   "zone": "The Lochs",
+   "place": "Loch Seld",
+   "mapX": 18.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1291": {
+   "zone": "The Lochs",
+   "place": "The High Bank",
+   "mapX": 13.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1292": {
+   "zone": "The Lochs",
+   "place": "The High Bank",
+   "mapX": 13.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete enemy territory."
+  },
+  "1293": {
+   "zone": "The Lochs",
+   "place": "The Royal Hunting Grounds",
+   "mapX": 7.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1294": {
+   "zone": "The Lochs",
+   "place": "The High Bank",
+   "mapX": 10.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1295": {
+   "zone": "The Lochs",
+   "place": "Loch Seld",
+   "mapX": 26.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1296": {
+   "zone": "The Lochs",
+   "place": "Loch Seld",
+   "mapX": 28.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1297": {
+   "zone": "The Lochs",
+   "place": "Loch Seld",
+   "mapX": 26.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1298": {
+   "zone": "The Lochs",
+   "place": "The Royal Hunting Grounds",
+   "mapX": 7.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete give bees a chance."
+  },
+  "1299": {
+   "zone": "The Lochs",
+   "place": "The High Bank",
+   "mapX": 29.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1300": {
+   "zone": "The Lochs",
+   "place": "The High Bank",
+   "mapX": 14.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1301": {
+   "zone": "The Lochs",
+   "place": "The High Bank",
+   "mapX": 12.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1302": {
+   "zone": "The Lochs",
+   "place": "The High Bank",
+   "mapX": 14.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1303": {
+   "zone": "The Lochs",
+   "place": "The Song of Kings",
+   "mapX": 16.0,
+   "mapY": 7.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1304": {
+   "zone": "The Lochs",
+   "place": "The Song of Kings",
+   "mapX": 14.0,
+   "mapY": 6.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete ancelot's fear."
+  },
+  "1305": {
+   "zone": "The Lochs",
+   "place": "The Song of Kings",
+   "mapX": 12.0,
+   "mapY": 7.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete ancelot's folly."
+  },
+  "1142": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 34.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1143": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 28.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1146": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 33.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1147": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 31.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1148": {
+   "zone": "The Ruby Sea",
+   "place": "Hells' Lid",
+   "mapX": 29.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1149": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 29.0,
+   "mapY": 7.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the busy beachcomber."
+  },
+  "1150": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 33.0,
+   "mapY": 5.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1151": {
+   "zone": "The Ruby Sea",
+   "place": "The Isle of Bekko",
+   "mapX": 37.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1152": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 20.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the wounded Confederate."
+  },
+  "1153": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 26.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1155": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 29.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1156": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 27.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1159": {
+   "zone": "The Ruby Sea",
+   "place": "Onokoro",
+   "mapX": 18.0,
+   "mapY": 6.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Speak with the green Confederate."
+  },
+  "1160": {
+   "zone": "The Ruby Sea",
+   "place": "Onokoro",
+   "mapX": 18.0,
+   "mapY": 6.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete bilge-hold jin."
+  },
+  "1161": {
+   "zone": "The Ruby Sea",
+   "place": "Onokoro",
+   "mapX": 20.0,
+   "mapY": 4.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete days of plunder."
+  },
+  "1164": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 14.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1166": {
+   "zone": "The Ruby Sea",
+   "place": "Onokoro",
+   "mapX": 23.0,
+   "mapY": 5.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1167": {
+   "zone": "The Ruby Sea",
+   "place": "East Othard Coastline",
+   "mapX": 14.0,
+   "mapY": 5.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1168": {
+   "zone": "The Ruby Sea",
+   "place": "East Othard Coastline",
+   "mapX": 14.0,
+   "mapY": 5.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete another one bites the dust."
+  },
+  "1170": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 29.0,
+   "mapY": 34.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1172": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 17.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss"
+  },
+  "1144": {
+   "zone": "The Ruby Sea",
+   "place": "The Isle of Bekko",
+   "mapX": 32.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1145": {
+   "zone": "The Ruby Sea",
+   "place": "East Othard Coastline",
+   "mapX": 10.0,
+   "mapY": 7.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1154": {
+   "zone": "The Ruby Sea",
+   "place": "East Othard Coastline",
+   "mapX": 9.0,
+   "mapY": 6.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1157": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 34.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1158": {
+   "zone": "The Ruby Sea",
+   "place": "The Isle of Bekko",
+   "mapX": 34.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1162": {
+   "zone": "The Ruby Sea",
+   "place": "The Isle of Zekki",
+   "mapX": 8.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the Blue avenger."
+  },
+  "1163": {
+   "zone": "The Ruby Sea",
+   "place": "The Isle of Bekko",
+   "mapX": 34.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1165": {
+   "zone": "The Ruby Sea",
+   "place": "Rasen Kaikyo",
+   "mapX": 26.0,
+   "mapY": 5.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1171": {
+   "zone": "The Ruby Sea",
+   "place": "The Isle of Bekko",
+   "mapX": 34.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1110": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 12.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with Kinko."
+  },
+  "1208": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 17.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with Gyogun of the Most Bountiful Catch."
+  },
+  "1209": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 17.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete a tisket, a tasket."
+  },
+  "1210": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 17.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete a fish to fry."
+  },
+  "1214": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 25.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1215": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 25.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete stay of eggsecution."
+  },
+  "1216": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 32.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1217": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 33.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete deep red sea."
+  },
+  "1218": {
+   "zone": "Yanxia",
+   "place": "The Gensui Chain",
+   "mapX": 38.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1219": {
+   "zone": "Yanxia",
+   "place": "Unseen Spirits Laughing",
+   "mapX": 38.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1220": {
+   "zone": "Yanxia",
+   "place": "The Gensui Chain",
+   "mapX": 32.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1221": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 31.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1222": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 26.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1223": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 22.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1224": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 26.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the flabbergasted farmwife."
+  },
+  "1225": {
+   "zone": "Yanxia",
+   "place": "The Gensui Chain",
+   "mapX": 29.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the Namai farmhand."
+  },
+  "1226": {
+   "zone": "Yanxia",
+   "place": "The Gensui Chain",
+   "mapX": 34.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1227": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 27.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1228": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 17.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1229": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 28.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1230": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 15.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1231": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 13.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "1239": {
+   "zone": "Yanxia",
+   "place": "The Gensui Chain",
+   "mapX": 32.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1240": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 26.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1241": {
+   "zone": "Yanxia",
+   "place": "The Glittering Basin",
+   "mapX": 18.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1109": {
+   "zone": "Yanxia",
+   "place": "Valley of the Fallen Rainbow",
+   "mapX": 31.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete freedom flies andmore to offer. *Speak with Mikuzume. *Both required FATEs must be completed before either respawns. *2 hours must have passed since last appearance."
+  },
+  "1111": {
+   "zone": "Yanxia",
+   "place": "Doma",
+   "mapX": 20.0,
+   "mapY": 6.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with Ginko."
+  },
+  "1211": {
+   "zone": "Yanxia",
+   "place": "Valley of the Fallen Rainbow",
+   "mapX": 26.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with Gaei Straightheart."
+  },
+  "1212": {
+   "zone": "Yanxia",
+   "place": "Valley of the Fallen Rainbow",
+   "mapX": 26.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete scared straightheart."
+  },
+  "1213": {
+   "zone": "Yanxia",
+   "place": "Valley of the Fallen Rainbow",
+   "mapX": 26.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete wolves of a feather."
+  },
+  "1232": {
+   "zone": "Yanxia",
+   "place": "The Ribbons",
+   "mapX": 31.0,
+   "mapY": 7.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1233": {
+   "zone": "Yanxia",
+   "place": "Doma",
+   "mapX": 21.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1234": {
+   "zone": "Yanxia",
+   "place": "Prism Lake",
+   "mapX": 29.0,
+   "mapY": 6.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1235": {
+   "zone": "Yanxia",
+   "place": "Prism Lake",
+   "mapX": 28.0,
+   "mapY": 7.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1236": {
+   "zone": "Yanxia",
+   "place": "Monzen",
+   "mapX": 18.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1237": {
+   "zone": "Yanxia",
+   "place": "Doma",
+   "mapX": 20.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1238": {
+   "zone": "Yanxia",
+   "place": "Monzen",
+   "mapX": 15.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss"
+  },
+  "1243": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 33.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1245": {
+   "zone": "The Azim Steppe",
+   "place": "Onsal Hakair",
+   "mapX": 20.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1246": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 35.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1250": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 30.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Speak with the Qestiri merchant."
+  },
+  "1251": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 30.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete a good day to die."
+  },
+  "1255": {
+   "zone": "The Azim Steppe",
+   "place": "Ceol Aen",
+   "mapX": 17.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the Oroniri youth."
+  },
+  "1256": {
+   "zone": "The Azim Steppe",
+   "place": "Onsal Hakair",
+   "mapX": 30.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1257": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 28.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1258": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 31.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1259": {
+   "zone": "The Azim Steppe",
+   "place": "Ceol Aen",
+   "mapX": 12.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1260": {
+   "zone": "The Azim Steppe",
+   "place": "Onsal Hakair",
+   "mapX": 27.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1261": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 30.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the Olkund dzotamer."
+  },
+  "1265": {
+   "zone": "The Azim Steppe",
+   "place": "Onsal Hakair",
+   "mapX": 22.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1267": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 29.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss"
+  },
+  "1268": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 34.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1269": {
+   "zone": "The Azim Steppe",
+   "place": "Onsal Hakair",
+   "mapX": 25.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the Mol shepherd."
+  },
+  "1270": {
+   "zone": "The Azim Steppe",
+   "place": "Onsal Hakair",
+   "mapX": 24.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Complete they shall not want. *Speak with the Mol Shepherd. A FATE icon will not appear over the shepherd but the FATE can be initiated regardless."
+  },
+  "1271": {
+   "zone": "The Azim Steppe",
+   "place": "Ceol Aen",
+   "mapX": 14.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1306": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 27.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "1307": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 25.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*the dataqi chronicles: departures ends in completion or failure."
+  },
+  "1308": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 26.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*the dataqi chronicles: distractions ends in completion or failure. *Speak with Altani after ~20 minutes have passed. FATE will automatically begin 5 minutes after Altani begins offering it regardless of player input."
+  },
+  "1309": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 26.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*the dataqi chronicles: duty ends in completion or failure. *Begins after ~20 minutes have passed."
+  },
+  "1310": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 26.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*the dataqi chronicles: deprivation ends in completion or failure."
+  },
+  "1311": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 31.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete the dataqi chronicles: deterrence."
+  },
+  "1312": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 33.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete the dataqi chronicles: desperation."
+  },
+  "1313": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 34.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete the dataqi chronicles: distress. *Begins after ~20 minutes have passed."
+  },
+  "1315": {
+   "zone": "The Azim Steppe",
+   "place": "The Sea of Blades",
+   "mapX": 32.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*the dataqi chronicles: displacement ends in completion or failure."
+  },
+  "1316": {
+   "zone": "The Azim Steppe",
+   "place": "Onsal Hakair",
+   "mapX": 21.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete the dataqi chronicles: diplomacy."
+  },
+  "1318": {
+   "zone": "The Azim Steppe",
+   "place": "Ceol Aen",
+   "mapX": 10.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete the dataqi chronicles: decimation."
+  },
+  "1319": {
+   "zone": "The Azim Steppe",
+   "place": "Ceol Aen",
+   "mapX": 10.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete the dataqi chronicles: divergence."
+  },
+  "1320": {
+   "zone": "The Azim Steppe",
+   "place": "Ceol Aen",
+   "mapX": 10.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete the dataqi chronicles: declarations."
+  },
+  "1242": {
+   "zone": "The Azim Steppe",
+   "place": "Nhaama's Retreat",
+   "mapX": 11.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1244": {
+   "zone": "The Azim Steppe",
+   "place": "Nhaama's Retreat",
+   "mapX": 9.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1247": {
+   "zone": "The Azim Steppe",
+   "place": "Nhaama's Retreat",
+   "mapX": 16.0,
+   "mapY": 36.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1248": {
+   "zone": "The Azim Steppe",
+   "place": "Nhaama's Retreat",
+   "mapX": 20.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1249": {
+   "zone": "The Azim Steppe",
+   "place": "Nhaama's Retreat",
+   "mapX": 13.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1252": {
+   "zone": "The Azim Steppe",
+   "place": "Nhaama's Retreat",
+   "mapX": 17.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1253": {
+   "zone": "The Azim Steppe",
+   "place": "Nhaama's Retreat",
+   "mapX": 12.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1254": {
+   "zone": "The Azim Steppe",
+   "place": "Nhaama's Retreat",
+   "mapX": 19.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1262": {
+   "zone": "The Azim Steppe",
+   "place": "Nhaama's Retreat",
+   "mapX": 11.0,
+   "mapY": 34.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1263": {
+   "zone": "The Azim Steppe",
+   "place": "Nhaama's Retreat",
+   "mapX": 18.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1264": {
+   "zone": "The Azim Steppe",
+   "place": "Nhaama's Retreat",
+   "mapX": 15.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1266": {
+   "zone": "The Azim Steppe",
+   "place": "Nhaama's Retreat",
+   "mapX": 23.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1496": {
+   "zone": "Lakeland",
+   "place": "Hare Among Giants",
+   "mapX": 8.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1497": {
+   "zone": "Lakeland",
+   "place": "Mortal Irons",
+   "mapX": 10.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1498": {
+   "zone": "Lakeland",
+   "place": "Northern Staging Point",
+   "mapX": 34.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1499": {
+   "zone": "Lakeland",
+   "place": "The Forest of the Lost Shepherd",
+   "mapX": 19.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1500": {
+   "zone": "Lakeland",
+   "place": "The Forest of the Lost Shepherd",
+   "mapX": 21.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the Crystarium botanist."
+  },
+  "1501": {
+   "zone": "Lakeland",
+   "place": "The Forest of the Lost Shepherd",
+   "mapX": 24.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete pick-up sticks."
+  },
+  "1502": {
+   "zone": "Lakeland",
+   "place": "Weathering",
+   "mapX": 25.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the artless dodger."
+  },
+  "1503": {
+   "zone": "Lakeland",
+   "place": "The Stay",
+   "mapX": 17.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete creeping nightshade, flowering nightshade, looming nightshade, and subtle nightshade, in any order. *All four required FATEs must be completed before they or pick-up sticks respawn."
+  },
+  "1504": {
+   "zone": "Lakeland",
+   "place": "The Stay",
+   "mapX": 17.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete toxic nightshade."
+  },
+  "1505": {
+   "zone": "Lakeland",
+   "place": "Weathering",
+   "mapX": 25.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with the Jobb guard."
+  },
+  "1506": {
+   "zone": "Lakeland",
+   "place": "The Forest of the Lost Shepherd",
+   "mapX": 32.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1507": {
+   "zone": "Lakeland",
+   "place": "The Forest of the Lost Shepherd",
+   "mapX": 14.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1508": {
+   "zone": "Lakeland",
+   "place": "The Forest of the Lost Shepherd",
+   "mapX": 28.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1509": {
+   "zone": "Lakeland",
+   "place": "The Thirstless Shore",
+   "mapX": 21.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "1510": {
+   "zone": "Lakeland",
+   "place": "The Thirstless Shore",
+   "mapX": 21.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete behind anemone lines."
+  },
+  "1469": {
+   "zone": "Kholusia",
+   "place": "Shadow Fault",
+   "mapX": 18.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "1470": {
+   "zone": "Kholusia",
+   "place": "Cracked Shell Beach",
+   "mapX": 31.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1471": {
+   "zone": "Kholusia",
+   "place": "The Bright Cliff",
+   "mapX": 25.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1472": {
+   "zone": "Kholusia",
+   "place": "Shadow Fault",
+   "mapX": 8.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1462": {
+   "zone": "Kholusia",
+   "place": "Scree",
+   "mapX": 22.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "1463": {
+   "zone": "Kholusia",
+   "place": "Scree",
+   "mapX": 25.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete foes most formidable."
+  },
+  "1473": {
+   "zone": "Kholusia",
+   "place": "Scree",
+   "mapX": 23.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1474": {
+   "zone": "Kholusia",
+   "place": "Scree",
+   "mapX": 15.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1475": {
+   "zone": "Kholusia",
+   "place": "Scree",
+   "mapX": 18.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "1476": {
+   "zone": "Kholusia",
+   "place": "Scree",
+   "mapX": 11.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1477": {
+   "zone": "Kholusia",
+   "place": "Scree",
+   "mapX": 25.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the Tholl engineer."
+  },
+  "1478": {
+   "zone": "Kholusia",
+   "place": "Scree",
+   "mapX": 18.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete ironbeard builders - rebuilt. *Speak with the Tholl engineer after ~5 minutes have passed."
+  },
+  "1479": {
+   "zone": "Kholusia",
+   "place": "Scree",
+   "mapX": 16.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete ironbeard builders - resist. *Begins after ~5 minutes have passed."
+  },
+  "1464": {
+   "zone": "Kholusia",
+   "place": "The Duergar Mountains  Does not appear on the map.",
+   "mapX": 33.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete a family most formidable and ironbeard builders - revolt, in any order. *Both required FATEs must be completed before foes most formidable or ironbeard builders - rebuilt respawn. *24 hour spawn window begins after server reset or after 24 hours have passed since last appearance."
+  },
+  "1511": {
+   "zone": "Amh Araeng",
+   "place": "The Fields of Amber",
+   "mapX": 31.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "1512": {
+   "zone": "Amh Araeng",
+   "place": "The Fields of Amber",
+   "mapX": 33.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete scavengers hunted. *Speak with Darmal."
+  },
+  "1513": {
+   "zone": "Amh Araeng",
+   "place": "The Fields of Amber",
+   "mapX": 35.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete reptilian roadblock."
+  },
+  "1514": {
+   "zone": "Amh Araeng",
+   "place": "The Fields of Amber",
+   "mapX": 34.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete cactus makes perfect."
+  },
+  "1519": {
+   "zone": "Amh Araeng",
+   "place": "Qasr Sharl",
+   "mapX": 33.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1520": {
+   "zone": "Amh Araeng",
+   "place": "The Fields of Amber",
+   "mapX": 28.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1521": {
+   "zone": "Amh Araeng",
+   "place": "Snitch",
+   "mapX": 31.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1522": {
+   "zone": "Amh Araeng",
+   "place": "The Fields of Amber",
+   "mapX": 32.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1515": {
+   "zone": "Amh Araeng",
+   "place": "The Central Hills of Amber",
+   "mapX": 17.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete theft from above. *Begins after ~15 minutes have passed."
+  },
+  "1516": {
+   "zone": "Amh Araeng",
+   "place": "The Central Hills of Amber",
+   "mapX": 14.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Complete sand and deliver."
+  },
+  "1517": {
+   "zone": "Amh Araeng",
+   "place": "Kelk",
+   "mapX": 20.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete this time, it's personal. *Speak with Darmal."
+  },
+  "1518": {
+   "zone": "Amh Araeng",
+   "place": "The Central Hills of Amber",
+   "mapX": 22.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete armadillo peccadillo."
+  },
+  "1523": {
+   "zone": "Amh Araeng",
+   "place": "The Northern Hills of Amber",
+   "mapX": 14.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1524": {
+   "zone": "Amh Araeng",
+   "place": "Mount Biran Mines",
+   "mapX": 21.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1527": {
+   "zone": "Amh Araeng",
+   "place": "The Central Hills of Amber",
+   "mapX": 15.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1525": {
+   "zone": "Amh Araeng",
+   "place": "The Southern Hills of Amber",
+   "mapX": 16.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1526": {
+   "zone": "Amh Araeng",
+   "place": "The Southern Hills of Amber",
+   "mapX": 9.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1488": {
+   "zone": "Il Mheg",
+   "place": "Timh Gyeus",
+   "mapX": 10.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1489": {
+   "zone": "Il Mheg",
+   "place": "Timh Gyeus",
+   "mapX": 17.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1490": {
+   "zone": "Il Mheg",
+   "place": "Timh Gyeus",
+   "mapX": 8.0,
+   "mapY": 31.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1491": {
+   "zone": "Il Mheg",
+   "place": "Timh Gyeus",
+   "mapX": 10.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1492": {
+   "zone": "Il Mheg",
+   "place": "Timh Gyeus",
+   "mapX": 7.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Complete once upon a time. *Speak with the nectar-seeking pixie after ~5 minutes have passed."
+  },
+  "1493": {
+   "zone": "Il Mheg",
+   "place": "Timh Gyeus",
+   "mapX": 6.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1494": {
+   "zone": "Il Mheg",
+   "place": "Timh Gyeus",
+   "mapX": 13.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete twice upon a time. *Begins after ~5 minutes have passed."
+  },
+  "1495": {
+   "zone": "Il Mheg",
+   "place": "Timh Gyeus",
+   "mapX": 10.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with the nectar-seeking pixie."
+  },
+  "1480": {
+   "zone": "Il Mheg",
+   "place": "Voeburtenburg",
+   "mapX": 23.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1484": {
+   "zone": "Il Mheg",
+   "place": "Mithai Glorianda",
+   "mapX": 25.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete back and fuath. *Begins after ~15 minutes have passed."
+  },
+  "1485": {
+   "zone": "Il Mheg",
+   "place": "Timh Gyeus",
+   "mapX": 8.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete brute fuath."
+  },
+  "1486": {
+   "zone": "Il Mheg",
+   "place": "Voeburtenburg",
+   "mapX": 20.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete breaking the fuath wall."
+  },
+  "1487": {
+   "zone": "Il Mheg",
+   "place": "Voeburtenburg",
+   "mapX": 32.0,
+   "mapY": 5.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete go fuath a conqueror."
+  },
+  "1451": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "The Citia Swamps",
+   "mapX": 14.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1452": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "Lake Tusi Mek'ta",
+   "mapX": 12.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1453": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "The Trip",
+   "mapX": 15.0,
+   "mapY": 36.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the Night's Blessed missionary."
+  },
+  "1454": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "The Trip",
+   "mapX": 17.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1455": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "The Citia Swamps",
+   "mapX": 13.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1456": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "The Citia Swamps",
+   "mapX": 10.0,
+   "mapY": 35.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1441": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "The Blind Forest of Yx'Maja",
+   "mapX": 32.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1442": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "Bowrest",
+   "mapX": 32.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*barking mad ends in completion or failure."
+  },
+  "1443": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "The Blind Forest of Yx'Maja",
+   "mapX": 23.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*creepy crawlers ends in completion or failure. *Speak with Myalna Bowsing."
+  },
+  "1444": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "The Blind Forest of Yx'Maja",
+   "mapX": 25.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*pluck of the draw ends in completion or failure. *Begins after ~10 minutes have passed."
+  },
+  "1445": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "Bowrest",
+   "mapX": 35.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete the end of the sentry. *Begins after ~10 minutes have passed."
+  },
+  "1457": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "The K'mul Astropolis",
+   "mapX": 22.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Speak with the Fanow huntress."
+  },
+  "1458": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "The K'mul Astropolis",
+   "mapX": 27.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1459": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "The K'mul Astropolis",
+   "mapX": 23.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the Fanow warder."
+  },
+  "1460": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "The K'mul Astropolis",
+   "mapX": 28.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*Speak with Qilmet Redspear."
+  },
+  "1461": {
+   "zone": "The Rak'tika Greatwood",
+   "place": "The K'mul Astropolis",
+   "mapX": 20.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1426": {
+   "zone": "The Tempest",
+   "place": "The Caliban Gorge",
+   "mapX": 22.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with Teushs Ooan."
+  },
+  "1427": {
+   "zone": "The Tempest",
+   "place": "The Norvrandt Slope",
+   "mapX": 28.0,
+   "mapY": 12.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*where has the dagon ends in completion or failure. *Speak with Teushs Ooan."
+  },
+  "1428": {
+   "zone": "The Tempest",
+   "place": "The Trinculo Shelf",
+   "mapX": 24.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense",
+   "spawnConditions": "*ondo of blood ends in completion or failure. *Speak with Teushs Ooan."
+  },
+  "1429": {
+   "zone": "The Tempest",
+   "place": "The Norvrandt Slope",
+   "mapX": 35.0,
+   "mapY": 9.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*lookin' back on the track ends in completion or failure. *Speak with Teushs Ooan."
+  },
+  "1430": {
+   "zone": "The Tempest",
+   "place": "Where the Dry Return",
+   "mapX": 36.0,
+   "mapY": 5.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Complete coral support."
+  },
+  "1431": {
+   "zone": "The Tempest",
+   "place": "The Caliban Gorge",
+   "mapX": 21.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete where has the dagon, ondo of blood, lookin' back on the track, and low coral fiber. *While the required FATEs are part of a chain, most of the chain can continue even in failure, and this FATE can appear in the middle of the chain in the event they are successfully completed out of order. *24 hour spawn window begins after server reset; after 24 hours have passed since failure of this FATE; or after 24 hours have passed since last appearance of the head, the tail, the whole damned thing."
+  },
+  "1433": {
+   "zone": "The Tempest",
+   "place": "The Norvrandt Slope",
+   "mapX": 18.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Boss"
+  },
+  "1434": {
+   "zone": "The Tempest",
+   "place": "The Caliban Gorge",
+   "mapX": 29.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Escort",
+   "spawnConditions": "*Speak with Mewshs Laan."
+  },
+  "1435": {
+   "zone": "The Tempest",
+   "place": "The Crock of Pearls",
+   "mapX": 39.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Item",
+   "spawnConditions": "*Speak with the Ondo spearfisher."
+  },
+  "1436": {
+   "zone": "The Tempest",
+   "place": "The Norvrandt Slope",
+   "mapX": 33.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1437": {
+   "zone": "The Tempest",
+   "place": "The Caliban Gorge",
+   "mapX": 18.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1438": {
+   "zone": "The Tempest",
+   "place": "The Caliban Gorge",
+   "mapX": 12.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1439": {
+   "zone": "The Tempest",
+   "place": "The Norvrandt Slope",
+   "mapX": 36.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1440": {
+   "zone": "The Tempest",
+   "place": "The Norvrandt Slope",
+   "mapX": 28.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle"
+  },
+  "1432": {
+   "zone": "The Tempest",
+   "place": "The Swallow Spire  Does not appear on the map.",
+   "mapX": 27.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete nothing like a trappin' life."
+  },
+  "1332": {
+   "zone": "Eureka Anemos",
+   "place": "Heartbreak Holt",
+   "mapX": 14.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat flowering sabotenders."
+  },
+  "1348": {
+   "zone": "Eureka Anemos",
+   "place": "The Val River Swale",
+   "mapX": 30.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat sea bishops."
+  },
+  "1333": {
+   "zone": "Eureka Anemos",
+   "place": "The Orchard",
+   "mapX": 25.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Anemos harpeias."
+  },
+  "1328": {
+   "zone": "Eureka Anemos",
+   "place": "The Orchard",
+   "mapX": 17.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat darners."
+  },
+  "1344": {
+   "zone": "Eureka Anemos",
+   "place": "The Orchard",
+   "mapX": 25.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Val bears."
+  },
+  "1347": {
+   "zone": "Eureka Anemos",
+   "place": "The Orchard",
+   "mapX": 23.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat pneumaflayers."
+  },
+  "1345": {
+   "zone": "Eureka Anemos",
+   "place": "The Orchard",
+   "mapX": 19.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat typhoon sprites, which only appear during gales."
+  },
+  "1334": {
+   "zone": "Eureka Anemos",
+   "place": "Klauser's Peace",
+   "mapX": 14.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat abraxases."
+  },
+  "1335": {
+   "zone": "Eureka Anemos",
+   "place": "Klauser's Peace",
+   "mapX": 13.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat stalker ziz."
+  },
+  "1336": {
+   "zone": "Eureka Anemos",
+   "place": "The Val River Swale",
+   "mapX": 28.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat traveling gourmands, which only appear at night."
+  },
+  "1339": {
+   "zone": "Eureka Anemos",
+   "place": "The Val River Swale",
+   "mapX": 25.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat khor claws."
+  },
+  "1346": {
+   "zone": "Eureka Anemos",
+   "place": "The Val River Swale",
+   "mapX": 21.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat henbanes."
+  },
+  "1343": {
+   "zone": "Eureka Anemos",
+   "place": "The Val River Swale",
+   "mapX": 19.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat duskfall dullahans, which only appear at night."
+  },
+  "1337": {
+   "zone": "Eureka Anemos",
+   "place": "The Anemos Seam",
+   "mapX": 26.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat monoeyes."
+  },
+  "1342": {
+   "zone": "Eureka Anemos",
+   "place": "The Anemos Seam",
+   "mapX": 29.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Old World zu."
+  },
+  "1341": {
+   "zone": "Eureka Anemos",
+   "place": "Uncanny Valley",
+   "mapX": 35.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Anemos analas."
+  },
+  "1331": {
+   "zone": "Eureka Anemos",
+   "place": "Uncanny Valley",
+   "mapX": 35.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat fossil dragons, which only appear at night."
+  },
+  "1340": {
+   "zone": "Eureka Anemos",
+   "place": "Newvoid",
+   "mapX": 7.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat voidscales."
+  },
+  "1338": {
+   "zone": "Eureka Anemos",
+   "place": "Newvoid",
+   "mapX": 7.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Val specters, which only appear at night."
+  },
+  "1329": {
+   "zone": "Eureka Anemos",
+   "place": "Newvoid",
+   "mapX": 7.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat shadow wraiths, which only appear at night. *Only appears during gales, which may not align with the night required to spawn shadow wraiths. However, as long as sufficient shadow wraiths have been defeated during the night, the FATE should appear as soon as the appropriate weather begins."
+  },
+  "1351": {
+   "zone": "Eureka Pagos",
+   "place": "Frozen Lake",
+   "mapX": 21.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat yukinko."
+  },
+  "1367": {
+   "zone": "Eureka Pagos",
+   "place": "Frozen Lake",
+   "mapX": 18.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka"
+  },
+  "1369": {
+   "zone": "Eureka Pagos",
+   "place": "The Val River Belly",
+   "mapX": 26.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat demons of the incunable, which only appear at night."
+  },
+  "1353": {
+   "zone": "Eureka Pagos",
+   "place": "The Val River Belly",
+   "mapX": 30.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat blood demons."
+  },
+  "1354": {
+   "zone": "Eureka Pagos",
+   "place": "The Val River Belly",
+   "mapX": 32.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Val worms."
+  },
+  "1355": {
+   "zone": "Eureka Pagos",
+   "place": "The Val River Belly",
+   "mapX": 33.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat snowmelt sprites, which only appear during fog."
+  },
+  "1366": {
+   "zone": "Eureka Pagos",
+   "place": "The Val River Belly",
+   "mapX": 29.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat blubber eyes."
+  },
+  "1357": {
+   "zone": "Eureka Pagos",
+   "place": "Brushtip Gap",
+   "mapX": 17.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat huwasis."
+  },
+  "1356": {
+   "zone": "Eureka Pagos",
+   "place": "Hot Water",
+   "mapX": 10.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat wandering opkens."
+  },
+  "1352": {
+   "zone": "Eureka Pagos",
+   "place": "Hot Water",
+   "mapX": 9.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Pagos billygoats."
+  },
+  "1360": {
+   "zone": "Eureka Pagos",
+   "place": "Hot Water",
+   "mapX": 8.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Val snippers. *Only appears during fog."
+  },
+  "1358": {
+   "zone": "Eureka Pagos",
+   "place": "The Bull's Pen",
+   "mapX": 13.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat lab minotaurs."
+  },
+  "1361": {
+   "zone": "Eureka Pagos",
+   "place": "Agaric Rock",
+   "mapX": 26.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat elder buffaloes."
+  },
+  "1368": {
+   "zone": "Eureka Pagos",
+   "place": "Brushtip Gap",
+   "mapX": 20.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka"
+  },
+  "1362": {
+   "zone": "Eureka Pagos",
+   "place": "Agaric Rock",
+   "mapX": 31.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat lesser void dragons. *Only appears during thunder."
+  },
+  "1359": {
+   "zone": "Eureka Pagos",
+   "place": "The Moldbeds",
+   "mapX": 26.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat void vouivres. *Only appears during heat waves."
+  },
+  "1363": {
+   "zone": "Eureka Pagos",
+   "place": "Corse Rise",
+   "mapX": 23.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat gawpers."
+  },
+  "1364": {
+   "zone": "Eureka Pagos",
+   "place": "Icebloom Cavern",
+   "mapX": 36.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Val corpses, which only appear at night."
+  },
+  "1365": {
+   "zone": "Eureka Pagos",
+   "place": "The Barren Arena",
+   "mapX": 22.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat ameretats. *Only appears during blizzards."
+  },
+  "1388": {
+   "zone": "Eureka Pyros",
+   "place": "Northeastern Ice Needles",
+   "mapX": 27.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Pyros bhoots, which only appear at night."
+  },
+  "1407": {
+   "zone": "Eureka Pyros",
+   "place": "Northeastern Ice Needles",
+   "mapX": 24.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka"
+  },
+  "1389": {
+   "zone": "Eureka Pyros",
+   "place": "Northeastern Ice Needles",
+   "mapX": 28.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat thunderstorm sprites, which only appear during thunder."
+  },
+  "1391": {
+   "zone": "Eureka Pyros",
+   "place": "Southwestern Ice Needles",
+   "mapX": 23.0,
+   "mapY": 37.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Valkings."
+  },
+  "1392": {
+   "zone": "Eureka Pyros",
+   "place": "Southwestern Ice Needles",
+   "mapX": 19.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat overdue tomes. *Only appears during umbral wind."
+  },
+  "1393": {
+   "zone": "Eureka Pyros",
+   "place": "West Flamerock",
+   "mapX": 17.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat dark troubadours, which only appear at night."
+  },
+  "1394": {
+   "zone": "Eureka Pyros",
+   "place": "West Flamerock",
+   "mapX": 10.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Islandhander."
+  },
+  "1395": {
+   "zone": "Eureka Pyros",
+   "place": "West Flamerock",
+   "mapX": 12.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka"
+  },
+  "1396": {
+   "zone": "Eureka Pyros",
+   "place": "West Flamerock",
+   "mapX": 15.0,
+   "mapY": 6.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Pyros crabs."
+  },
+  "1397": {
+   "zone": "Eureka Pyros",
+   "place": "West Flamerock",
+   "mapX": 21.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat northern swallows."
+  },
+  "1398": {
+   "zone": "Eureka Pyros",
+   "place": "East Flamerock",
+   "mapX": 21.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Illuminati escapees."
+  },
+  "1399": {
+   "zone": "Eureka Pyros",
+   "place": "East Flamerock",
+   "mapX": 27.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Matanga castaways. *Only appears during thunder."
+  },
+  "1408": {
+   "zone": "Eureka Pyros",
+   "place": "East Flamerock",
+   "mapX": 25.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka"
+  },
+  "1400": {
+   "zone": "Eureka Pyros",
+   "place": "East Flamerock",
+   "mapX": 30.0,
+   "mapY": 11.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Pyros treants."
+  },
+  "1401": {
+   "zone": "Eureka Pyros",
+   "place": "East Flamerock",
+   "mapX": 32.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Val skatenes."
+  },
+  "1402": {
+   "zone": "Eureka Pyros",
+   "place": "The Cavern of the Second Cant",
+   "mapX": 15.0,
+   "mapY": 34.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Pyros hecteyes."
+  },
+  "1403": {
+   "zone": "Eureka Pyros",
+   "place": "The Garden of Despite",
+   "mapX": 24.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat pyros shucks. *Only appears during blizzards."
+  },
+  "1404": {
+   "zone": "Eureka Pyros",
+   "place": "The Ring of Fire",
+   "mapX": 36.0,
+   "mapY": 5.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Val bloodgliders. *Only appears during heat waves."
+  },
+  "1412": {
+   "zone": "Eureka Hydatos",
+   "place": "The West Val River Bank",
+   "mapX": 11.0,
+   "mapY": 25.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat xzomit."
+  },
+  "1425": {
+   "zone": "Eureka Hydatos",
+   "place": "The Val River Source",
+   "mapX": 14.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka"
+  },
+  "1413": {
+   "zone": "Eureka Hydatos",
+   "place": "The West Val River Bank",
+   "mapX": 10.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Hydatos primelephases."
+  },
+  "1414": {
+   "zone": "Eureka Hydatos",
+   "place": "The West Val River Bank",
+   "mapX": 7.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Val Nullchu."
+  },
+  "1415": {
+   "zone": "Eureka Hydatos",
+   "place": "The West Val River Bank",
+   "mapX": 6.0,
+   "mapY": 14.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat vivid gastornis."
+  },
+  "1416": {
+   "zone": "Eureka Hydatos",
+   "place": "The West Val River Bank",
+   "mapX": 7.0,
+   "mapY": 26.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat northern tigers."
+  },
+  "1417": {
+   "zone": "Eureka Hydatos",
+   "place": "The East Val River Bank",
+   "mapX": 25.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat dark void monks."
+  },
+  "1418": {
+   "zone": "Eureka Hydatos",
+   "place": "The East Val River Bank",
+   "mapX": 28.0,
+   "mapY": 23.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Hydatos wraiths, which only appear at night."
+  },
+  "1419": {
+   "zone": "Eureka Hydatos",
+   "place": "The East Val River Bank",
+   "mapX": 37.0,
+   "mapY": 27.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat tigerhawks."
+  },
+  "1420": {
+   "zone": "Eureka Hydatos",
+   "place": "The East Val River Bank",
+   "mapX": 32.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat laboratory lions."
+  },
+  "1421": {
+   "zone": "Eureka Hydatos",
+   "place": "The East Val River Bank",
+   "mapX": 36.0,
+   "mapY": 13.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat Hydatos Delphynes."
+  },
+  "1423": {
+   "zone": "Eureka Hydatos",
+   "place": "The Crystal Dragon's Bloom",
+   "mapX": 32.0,
+   "mapY": 19.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Defeat crystal claws."
+  },
+  "1424": {
+   "zone": "Eureka Hydatos",
+   "place": "The Val River Source",
+   "mapX": 26.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Changes weather in Hydatos to umbral turbulence while active."
+  },
+  "1422": {
+   "zone": "Eureka Hydatos",
+   "place": "The Val River Source",
+   "mapX": 19.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Eureka",
+   "spawnConditions": "*Initiated by players within baldesion arsenal."
+  },
+  "1378": {
+   "zone": "The Calamity Retold (2018)",
+   "place": "Ul'dah - Steps of Nald",
+   "mapX": 8.0,
+   "mapY": 10.0,
+   "timeLimitMinutes": "10 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete counter-fiend training: less is morbol."
+  },
+  "1370": {
+   "zone": "The Calamity Retold (2018)",
+   "place": "Ul'dah - Steps of Nald",
+   "mapX": 9.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "10 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete counter-void training: free-for-ul'dah."
+  },
+  "1381": {
+   "zone": "The Calamity Retold (2018)",
+   "place": "Ul'dah - Steps of Nald",
+   "mapX": 9.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "10 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Complete counter-void training: a giant undertaking."
+  },
+  "1409": {
+   "zone": "A Nocturne for Heroes",
+   "place": "Central Thanalan",
+   "mapX": 27.0,
+   "mapY": 21.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Speak with Noctis."
+  },
+  "932": {
+   "zone": "The Maiden's Rhapsody",
+   "place": "Eastern La Noscea",
+   "mapX": 32.0,
+   "mapY": 33.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "933": {
+   "zone": "The Maiden's Rhapsody",
+   "place": "Central Shroud",
+   "mapX": 11.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "934": {
+   "zone": "The Maiden's Rhapsody",
+   "place": "Southern Thanalan",
+   "mapX": 22.0,
+   "mapY": 37.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Defense"
+  },
+  "935": {
+   "zone": "The Maiden's Rhapsody",
+   "place": "Upper La Noscea  Does not appear on the map.",
+   "mapX": 26.0,
+   "mapY": 22.0,
+   "timeLimitMinutes": "15 minutes",
+   "fateType": "Quest",
+   "spawnConditions": "*Interact with the destination marker. *Must be on the quest a journey to remember to initiate. *FATE provides no rewards, and players not on the quest can participate without level syncing."
+  },
+  "968": {
+   "zone": "The Diadem",
+   "place": "Southwestern Pavilion",
+   "mapX": 11.0,
+   "mapY": 32.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Only appears during fog."
+  },
+  "970": {
+   "zone": "The Diadem",
+   "place": "Southwestern Pavilion",
+   "mapX": 13.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle"
+  },
+  "971": {
+   "zone": "The Diadem",
+   "place": "Southeastern Pavilion",
+   "mapX": 25.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Only appears during fog."
+  },
+  "972": {
+   "zone": "The Diadem",
+   "place": "Northwestern Pavilion",
+   "mapX": 13.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle"
+  },
+  "977": {
+   "zone": "The Diadem",
+   "place": "Northwestern Pavilion",
+   "mapX": 24.0,
+   "mapY": 5.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle"
+  },
+  "1024": {
+   "zone": "The Diadem",
+   "place": "Southeastern Pavilion",
+   "mapX": 25.0,
+   "mapY": 28.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle"
+  },
+  "1035": {
+   "zone": "The Diadem",
+   "place": "Northeastern Pavilion",
+   "mapX": 26.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Only appears during umbral wind."
+  },
+  "1037": {
+   "zone": "The Diadem",
+   "place": "Northwestern Pavilion",
+   "mapX": 14.0,
+   "mapY": 18.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle"
+  },
+  "1041": {
+   "zone": "The Diadem",
+   "place": "Northwestern Pavilion",
+   "mapX": 21.0,
+   "mapY": 8.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle"
+  },
+  "1050": {
+   "zone": "The Diadem",
+   "place": "Northwestern Pavilion",
+   "mapX": 14.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle",
+   "spawnConditions": "*Complete blacker than the foulest witch. Has a 1 in 3 chance of spawning."
+  },
+  "1056": {
+   "zone": "The Diadem",
+   "place": "Northeastern Pavilion",
+   "mapX": 27.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle"
+  },
+  "1057": {
+   "zone": "The Diadem",
+   "place": "Northeastern Pavilion",
+   "mapX": 29.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle"
+  },
+  "1067": {
+   "zone": "The Diadem",
+   "place": "Northeastern Pavilion",
+   "mapX": 28.0,
+   "mapY": 15.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle"
+  },
+  "1073": {
+   "zone": "The Diadem",
+   "place": "Southeastern Pavilion",
+   "mapX": 32.0,
+   "mapY": 29.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle"
+  },
+  "1074": {
+   "zone": "The Diadem",
+   "place": "Southwestern Pavilion",
+   "mapX": 12.0,
+   "mapY": 24.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Only appears during wind."
+  },
+  "1076": {
+   "zone": "The Diadem",
+   "place": "Southwestern Pavilion",
+   "mapX": 13.0,
+   "mapY": 30.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle"
+  },
+  "1084": {
+   "zone": "The Diadem",
+   "place": "Southwestern Pavilion",
+   "mapX": 13.0,
+   "mapY": 36.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle"
+  },
+  "1087": {
+   "zone": "The Diadem",
+   "place": "Northeastern Pavilion",
+   "mapX": 34.0,
+   "mapY": 16.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle"
+  },
+  "1088": {
+   "zone": "The Diadem",
+   "place": "Northwestern Pavilion",
+   "mapX": 11.0,
+   "mapY": 17.0,
+   "timeLimitMinutes": "5 minutes",
+   "fateType": "Battle"
+  },
+  "1094": {
+   "zone": "The Diadem",
+   "place": "Northwestern Pavilion",
+   "mapX": 13.0,
+   "mapY": 20.0,
+   "timeLimitMinutes": "30 minutes",
+   "fateType": "Boss",
+   "spawnConditions": "*Only appears during fair skies."
+  }
+ }
+}

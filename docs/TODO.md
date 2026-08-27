@@ -70,9 +70,17 @@ started right now. Update the indented line in the same edit that changes a depe
   - ⛔ Blocked by: **V2** *(no schema to extract into)*, **R5** *(redistribution unresolved)*
 - [ ] **A5** 🙋 **Fill the rest of `data/duties.json`** — `unlockQuest` is ??? for 114 of 373
       (mostly Savage/Extreme tiers unlocked by clearing the normal version, which is
-      indistinguishable from missing data). `monsters` is ??? for 166, mostly **Trials (70) and
-      Raids (76)** — the wiki documents primal/raid bosses on their own pages rather than in the
-      enemy tables `scripts/wiki` reads. Dungeons are nearly done (18 of 103 missing).
+      indistinguishable from missing data). `monsters` is filled for 176 of 373 and the new
+      `bosses` column for 156 — the rest are mostly **Trials and Raids**, whose bosses the wiki
+      documents on duty-article pages rather than the enemy tables. **A13 covers those directly.**
+- [ ] **A13** 🤖 **Fetch the 33 duty-article pages** the boss redirects point at (Asphodelos,
+      The Singularity Reactor, The Crown of the Immaculate, …). They are the only wiki source
+      for Trial and Raid bosses, which is exactly the 146 duties `bosses` is still ??? for.
+      Cheap: 33 titles, one batched request.
+- [ ] **A14** 🙋 **Confirm the map-coordinate conversion in game.** `MarkerToMap` is
+      spot-checked (Summerford Farms → 25.2, 16.8 vs a known 25, 17) but not proven across map
+      scales. Stand somewhere in `places-of-interest.json` and compare the readout. `rawX`/`rawY`
+      are stored so a correction needs no re-derivation.
 - [ ] **A12** 🤖 **Widen the duty content-type filter.** `duties.json` holds only Dungeons /
       Trials / Raids / Ultimate / Chaotic (373 rows). The wiki sweep referenced **76 duty names
       we simply do not carry**: deep dungeons (Palace of the Dead, Eureka Orthos), field ops
@@ -84,8 +92,10 @@ started right now. Update the indented line in the same edit that changes a depe
       `isLegendaryNode` are ??? for all 4,198 entries.
 - [ ] **A8** 🙋 **Fill `data/gear.json`** — `expansion` (all 28,992) and `acquisition` (all except
       crafted) are ???.
-- [ ] **A9** 🙋 **Fill `data/fates.json`** — `monsters`, `monsterAbilities`, bronze/silver/gold
-      `rewards` and chain **ordering** are ??? for all 1,712 entries.
+- [ ] **A9** 🙋 **Fill the rest of `data/fates.json`** — zone/coords/time limit/type now come
+      from the wiki for **872 of 1,712**. Still ???: `monsters` and `rewards` (**irreducible** —
+      server-side), chain **ordering** (`FATEChain` groups but does not sequence), and the 123
+      FATEs whose name is shared with another so nothing can disambiguate them.
 - [ ] **A11** 🙋 **Fill `data/npcs.json`** — `level`, `isTargetable` and `hairColorName` are ???
       for all 30,878 entries. Hair colour needs the `human.cmp` palette decoded (no Excel sheet);
       level and targetability are not in client data at all.
@@ -189,7 +199,8 @@ Listed in **rule 3 priority order**, so the top item is the default recommendati
 
 | # | Item | Why it ranks here |
 |---|---|---|
-| 1 | **A12** Widen the duty content-type filter | (a) small, (c) data. The monster data for the missing 76 duties is **already in the wiki cache** — no fetching, just a filter |
+| 1 | **A13** Fetch the 33 boss duty-article pages | (a) tiny, (b) unblocks the Trial/Raid half of `duties.bosses`, (c) data |
+| 1b | **A12** Widen the duty content-type filter | (a) small, (c) data. The monster data for the missing 76 duties is **already in the wiki cache** — no fetching, just a filter |
 | 2 | **I7** Exclusion data as data, not a constant | (a) small, (c) core/data |
 | 3 | **I16** Local account secret | (a) small, (c) core |
 | 4 | **I17** Account tier setting | (a) small, (c) core |
@@ -242,5 +253,8 @@ Moved here with the date and the answer — never deleted.
 | **I38** Sync jitter | **Done.** Routine auto-sync now waits a random 0–300 s (`Plugin.StartAutoSync`). **The first-ever sync is deliberately NOT delayed** — one client is not a herd, and an empty list for five minutes on install would trade a real cost for an imaginary one. Needed a `CancellationTokenSource` too: the delay was fire-and-forget, so a dev reload left a task sleeping up to 5 min and waking inside a disposed plugin. Both flavours build clean. | 2026-08-26 |
 | **A10** Generated-vs-curated split | **Resolved and shipped.** `data/curated/` overlays are an **input to generation**, not a patch applied after, so regeneration is idempotent and can never destroy curated work. A dataset may carry **several** overlays (`duties.json` + `duties.wiki.json`) so two research pipelines re-run independently. Provenance reaches the header (`curatedFields`/`curatedSource`) and the viewer's CURATED banner. | 2026-08-26 |
 | **A4** Monster→zone list | **Done via the Final Fantasy Wiki** (`scripts/wiki/`). Zones went **259 → 755**, and 1,628 monsters gained a duty location. The wiki publishes the **`BNpcName` row id**, so the join is exact, not fuzzy — verified: all 5,035 ids exist in our dataset, 98.3% with matching names. | 2026-08-27 |
+| **Places of Interest dataset** | **Built, and from GAME data not the wiki.** `MapMarker` via `Map.MapMarkerRange` gives **6,435 named landmarks across 339 zones** with real map coordinates - settlements, gates, guilds, camps, rivers, aetheryte plazas. The wiki only adds prose (239). Includes the requested `location` column (the zone). | 2026-08-27 |
+| **Bosses in their own column** | `duties.bosses` split from `duties.monsters` (156 duties), plus `monsters.isBoss` / `bossKind` for 667 monsters. Boss status is in **no game sheet** - it comes from the wiki's 14 boss subcategories. | 2026-08-27 |
+| Is `Fate.Location` a `Level` row? | **No.** All 1,697 values sit inside `Level`'s RowId range and match nothing in it - not RowId, not Object, not EventId. It is an **LGB layer-object id**. This is why `fates.json` shipped with `zone=???` on all 1,712 rows, silently. FATE location must come from the wiki. | 2026-08-27 |
 | **A6** Fill `data/monsters.json` | **Largely done.** 3,504 of 14,560 entries curated: level (3,401), hp, hitbox, abilities, family, creatureClass, zones, duties, fates, quests, dungeonEnemy/Boss. `drops` stays ??? forever — server-side, settled at Q11. Garland was correctly ruled out; the wiki was the right source. | 2026-08-27 |
 | Where do instance monsters come from? | **`Final Fantasy XIV enemies/<class>` subpages**, not the ~9,000 individual enemy pages — those are redirects. 19 subpages, **23 requests**, 5,294 rows. Four parsing traps documented in `scripts/wiki/README.md`; every one produced plausible-but-wrong data rather than an error. | 2026-08-27 |

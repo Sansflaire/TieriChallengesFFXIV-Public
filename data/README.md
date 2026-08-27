@@ -1,6 +1,6 @@
 # data/ — reference datasets for the quest generator
 
-Six JSON datasets, generated from the game's own files and **intended to be hand-augmented** with
+Eight JSON datasets, generated from the game's own files and **intended to be hand-augmented** with
 the data the game does not expose.
 
 Generated 2026-08-26. Regenerate with `scripts/gen-datasets/` (see below).
@@ -18,6 +18,7 @@ Generated 2026-08-26. Regenerate with `scripts/gen-datasets/` (see below).
 | `gear.json` | 28,992 | 7.2 MB | ⚠️ partial |
 | `fates.json` | 1,712 | 686 KB | ⚠️ partial |
 | `npcs.json` | 30,878 | 14.3 MB | ⚠️ partial |
+| `places-of-interest.json` | 6,435 | 1.1 MB | ✅ game-derived; descriptions partial |
 
 ---
 
@@ -56,23 +57,30 @@ it — that distinction is the entire point of the marker.
 
 ## What is missing, and why
 
-| Dataset | Missing | Why |
-|---|---|---|
-| `duties` | `monsters`, `itemsFound` | Not in client data at all |
-| `duties` | `unlock` for 754 of 857 | `ContentFinderCondition.UnlockCriteria` is empty for most; only 102 record anything |
-| `monsters` | `level`, `drops`, `abilities`, `mapLocation`, `inInstance` | None exist client-side |
-| `monsters` | `zones` for ~98% | Only the Hunting Log's 259 mobs have one |
-| `gatherables` | `isCollectable`, `isTimedNode`, `isLegendaryNode` | Not expressed in a form this generator reads |
-| `gear` | `expansion` | `Item` carries no `ExVersion` |
-| `gear` | `acquisition` except crafted | Drop/relic/tome/vendor sources are not in client data |
-| `fates` | `monsters`, `monsterAbilities`, all `rewards` | FATE spawn tables and reward tiers are server-side |
-| `fates` | chain **ordering** | `FATEChain` groups them; the sequence is not stored |
-| `npcs` | `level`, `isTargetable` | Neither exists client-side |
-| `npcs` | `hairColorName` | The palette is `chara/xls/charamake/human.cmp`, a raw file with no Excel sheet — only the raw index is available |
-| `npcs` | `locations` for some | NPCs with no `Level` row are instanced or cutscene-only |
+Current as of 2026-08-27. **"Irreducible"** means no amount of work on the client files will
+fix it — the data is server-side or simply absent, and only an external source or live capture
+could supply it.
 
-**`recipes-level-based.json` is the only complete file.** It is also the only one safe to build
-on today without external data.
+| Dataset | Still missing | Coverage now | Why / status |
+|---|---|---|---|
+| `monsters` | `drops` | 0 of 14,560 | **Irreducible.** Loot is server-side; all 1,198 sheet types scanned, every `BNpc*` sheet has zero item refs |
+| `monsters` | `level`, `abilities`, `zones` | 3,401 / 3,516 / 755 of 14,560 | The wiki documents the notable ~3,500. The rest need another source |
+| `monsters` | `mapLocation` (exact spawn coords) | 0 | Needs **LGB layer-file parsing** — not an Excel sheet. Zone-level location is covered |
+| `duties` | `bosses` / `monsters` | 156 / 176 of 373 | Missing ones are mostly Trials + Raids; wiki documents those bosses on duty-article pages, not enemy tables |
+| `duties` | `unlockQuest` | 259 of 373 | The 114 are largely Savage/Extreme unlocked by clearing the normal version — indistinguishable from missing |
+| `duties` | whole content types | 373 rows | Deep dungeons, Eureka/Bozja/Diadem, treasure dungeons, Variant/Criterion are **excluded by the generator's filter** (TODO A12) |
+| `fates` | `zone`, coords, `timeLimit`, `fateType` | 872 of 1,712 | 123 unmatched because the name is shared and our zone column was `???`; 717 not on the wiki page |
+| `fates` | `monsters`, `rewards`, chain **order** | 0 | **Irreducible from client data.** Spawn tables and reward tiers are server-side; `FATEChain` groups but does not sequence |
+| `places-of-interest` | `description`, `placeKind` | 239 of 6,435 | Zone pages are inconsistent about documenting landmarks |
+| `places-of-interest` | coordinate conversion **unproven** | all 6,435 | Spot-checked only. `rawX`/`rawY` retained so a fix is free — see `docs/Pending Verification.md` |
+| `gatherables` | `isCollectable`, `isTimedNode`, `isLegendaryNode` | 0 of 4,198 | Not expressed in a form this generator reads |
+| `gear` | `expansion` | 0 of 28,992 | `Item` carries no `ExVersion`; derivable from patch data with work |
+| `gear` | `acquisition` except crafted | partial | Drop/relic/tome/vendor sources are not in client data |
+| `npcs` | `level`, `isTargetable` | 0 of 30,878 | **Irreducible.** Neither exists client-side |
+| `npcs` | `hairColorName` | 0 | Palette is `chara/xls/charamake/human.cmp`, a raw file with no Excel sheet |
+
+**`recipes-level-based.json` and `places-of-interest.json` are the complete, fully game-derived
+files.** They are the two safest to build on today without any external data.
 
 Background and method: [`../research/Game Data Cookbook.md`](../research/Game%20Data%20Cookbook.md).
 

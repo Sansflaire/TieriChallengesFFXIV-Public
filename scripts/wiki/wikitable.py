@@ -129,18 +129,34 @@ def parse_table(tbl):
         if st.startswith('|-'):
             cur = None
             continue
+
+        # ONLY '|-' starts a row. A '!' cell does NOT.
+        #
+        # A row may legitimately MIX header and data cells, and the FATE tables do exactly
+        # that - the name is a '!' cell followed by four '|' cells:
+        #
+        #     |-
+        #     !rowspan="2"|[[File:...]] {{A|On the Lamb}}
+        #     |3-8
+        #     |Zephyr Drift (x22 y24)
+        #
+        # Splitting on the !/| switch tore every FATE into two rows, put all 2,000 names into
+        # the header, and matched zero of them. A row is a HEADER row only when every one of
+        # its cells is a '!' cell (decided below), not because it happens to contain one.
         if st.startswith('!'):
-            if cur is None or cur[0] is False:
-                cur = [True, []]
+            if cur is None:
+                cur = [[], []]          # [cell_is_header flags, cells]
                 rows.append(cur)
             for c in _depth_split(st[1:], '!!'):
+                cur[0].append(True)
                 cur[1].append(_split_attrs(c))
             continue
         if st.startswith('|'):
-            if cur is None or cur[0] is True:
-                cur = [False, []]
+            if cur is None:
+                cur = [[], []]
                 rows.append(cur)
             for c in _depth_split(st[1:], '||'):
+                cur[0].append(False)
                 cur[1].append(_split_attrs(c))
             continue
         # continuation of the previous cell (multi-line cell content)
@@ -152,7 +168,14 @@ def parse_table(tbl):
     grid = []
     active = {}          # col -> [content, rows_remaining]
     kinds = []
-    for is_header, cells in rows:
+    seen_data = False
+    for flags, cells in rows:
+        # A header row is one whose cells are ALL header cells, and only while we are still in
+        # the table's leading header block. After real data starts, a stray all-'!' row is a
+        # sub-heading inside the body, not a column definition.
+        is_header = bool(flags) and all(flags) and not seen_data
+        if not is_header:
+            seen_data = True
         rowmap = {}
         for c in sorted(active):
             rowmap[c] = active[c][0]
@@ -245,6 +268,9 @@ def clean_text(s):
     # icons: keep the label, drop the machinery
     s = re.sub(r'\{\{icon\|ffxiv\|rank\|\d+\}\}', '', s, flags=re.I)
     s = re.sub(r'\{\{icon\|ffxiv\|[^|{}]+\|([^{}|]*?)\}\}', r'\1', s, flags=re.I)
+    # Image/file links are markup, not text. Left in, '[[File:x.png|20px|Battle FATE.]]'
+    # cleans to "20px|Battle FATE." and glues itself onto every FATE name.
+    s = re.sub(r'\[\[(?:File|Image):[^\[\]]*(?:\[\[[^\[\]]*\]\][^\[\]]*)*\]\]', '', s, flags=re.I)
     # links
     s = re.sub(r'\[\[[^\]|]*\|([^\]]*)\]\]', r'\1', s)
     s = re.sub(r'\[\[([^\]]*)\]\]', r'\1', s)

@@ -28,6 +28,34 @@ string IName(uint id) => items.GetRowOrDefault(id) is { } i ? T(i.Name) : U;
 string Zone(uint tid) => terr.GetRowOrDefault(tid) is { } t
     ? (pn.GetRowOrDefault(t.PlaceName.RowId) is { } p ? T(p.Name) : U) : U;
 
+// ---------------------------------------------------------------------------------------
+// Map coordinates - the numbers the game shows in the coordinate readout and in /coords.
+//
+// Two different inputs need two different conversions, and mixing them up puts a point in
+// the wrong place with no error:
+//
+//   MapMarker.X/Y  are ALREADY in map space (0..2048).  -> MarkerToMap
+//   Level.X/Z      are WORLD coordinates (yalms).       -> WorldToMap
+//
+// Both then scale by the map's SizeFactor. Verified by spot check: the Summerford Farms
+// marker in Middle La Noscea converts to (25.2, 16.8), and that aetheryte is at (25, 17).
+// NOT fully validated - see docs/Pending Verification.md. The raw values are kept in the
+// dataset alongside the converted ones so a correction never requires re-deriving anything.
+// ---------------------------------------------------------------------------------------
+var mapSheet = gd.GetExcelSheet<Map>();
+
+
+static float MarkerToMap(int raw, ushort sizeFactor)
+    => 41f / (sizeFactor / 100f) * (raw / 2048f) + 1f;
+
+static float WorldToMap(float world, ushort sizeFactor, short offset)
+{
+    float c = sizeFactor / 100f;
+    return 41f / c * (((world + offset) * c + 1024f) / 2048f) + 1f;
+}
+
+static float R1(float v) => (float)Math.Round(v, 1);
+
 /// <summary>
 /// Serialises a dataset, shrinking it three ways without losing a single fact:
 ///
@@ -286,6 +314,9 @@ foreach (var c in cfc)
         // Unlock is curated by necessity, and the header records that it is.
         unlockQuest = U,
 
+        // Bosses live in their OWN column. A duty's boss list is the part a challenge names
+        // ("defeat X"); buried inside a 40-name trash list it can be neither read nor filtered.
+        bosses = U,
         monsters = U,
         itemsFound = U
     });
@@ -571,8 +602,18 @@ foreach (var f in fate)
     if (n.Length == 0) continue;
 
     string zone = U;
+    object fx = U, fy = U, fterr = U;
     if (f.Location != 0 && lvlSheet.GetRowOrDefault(f.Location) is { } lv && lv.Territory.RowId != 0)
+    {
         zone = Zone(lv.Territory.RowId);
+        fterr = lv.Territory.RowId;
+        var fm = mapSheet.GetRowOrDefault(lv.Map.RowId);
+        if (fm is { } m2)
+        {
+            fx = R1(WorldToMap(lv.X, m2.SizeFactor, m2.OffsetX));
+            fy = R1(WorldToMap(lv.Z, m2.SizeFactor, m2.OffsetY));
+        }
+    }
 
     uint rewardItem = f.EventItem.RowId;
 
@@ -585,21 +626,32 @@ foreach (var f in fate)
         levelMin = (int)f.ClassJobLevel,
         levelMax = (int)f.ClassJobLevelMax,
         zone,
+        // A FATE's spot IS in the game data: Location points at a Level row carrying world
+        // X/Z, which converts to the map coordinate the wiki quotes as "(x22 y24)".
+        // This was previously ??? and assumed to need an external source.
+        mapX = fx, mapY = fy,
+        territoryId = fterr,
         locationLevelRow = f.Location,
-        chain = new
-        {
-            isChained = f.FATEChain != 0,
-            chainId = f.FATEChain,
-            note = f.FATEChain != 0 ? "FATEChain groups linked FATEs; ordering within a chain is ???" : ""
-        },
+
+        // Flat, one column each. A nested object renders as a raw JSON blob in a grid cell -
+        // the same defect already fixed for recipes and duties, missed here.
+        isChained = f.FATEChain != 0,
+        chainId = f.FATEChain,
+
         requiredQuest = f.RequiredQuest.RowId != 0
             ? T(quest.GetRowOrDefault(f.RequiredQuest.RowId)?.Name) : "",
         eventItemReward = rewardItem != 0 ? (object)rewardItem : "",
         isSpecialFate = f.SpecialFate,
         isEurekaFate = f.EurekaFate != 0,
+
+        fateType = U,
+        place = U,
+        spawnConditions = U,
+        timeLimitMinutes = U,
         monsters = U,
-        monsterAbilities = U,
-        rewards = new { bronze = U, silver = U, gold = U, itemReward = U }
+        bosses = U,
+        rewards = U,
+        chainOrder = U
     });
 }
 Write("fates.json",
@@ -619,6 +671,7 @@ var enpcRes = gd.GetExcelSheet<ENpcResident>();
 var enpcBase = gd.GetExcelSheet<ENpcBase>();
 var npcEquip = gd.GetExcelSheet<NpcEquip>();
 var lvlAll = gd.GetExcelSheet<Level>();
+
 var stain = gd.GetExcelSheet<Stain>();
 var raceSheet = gd.GetExcelSheet<Race>();
 var tribeSheet = gd.GetExcelSheet<Tribe>();
@@ -752,5 +805,77 @@ Write("npcs.json",
   + "not an error. NPCs with no Level row have locations=??? (instanced//cutscene-only spawns).",
     new[] { "level", "isTargetable", "hairColorName", "locations (when ???)" },
     npcs, npcs.Count);
+
+// ---------------- 8. PLACES OF INTEREST ----------------
+//
+// Every named landmark the game itself puts on a map: settlements, gates, guilds, camps,
+// rivers, ruins, aetheryte plazas, dungeon entrances.
+//
+// THIS IS GAME DATA, NOT CURATED. The wiki was the obvious source and would have been the
+// wrong one - MapMarker carries the same places with exact coordinates, a map/territory
+// binding and an icon, none of which a scrape could match. The wiki's value here is prose
+// description, which is what its overlay adds.
+//
+// A marker is reached through Map.MapMarkerRange -> MapMarker subrows, so the same marker set
+// shared by several maps is emitted once per map. That is deliberate: a place of interest is
+// only meaningful together with the map it is drawn on, and housing wards genuinely repeat.
+var mmSheet = gd.GetSubrowExcelSheet<MapMarker>();
+var pois = new List<object>();
+var poiSeen = new HashSet<string>(StringComparer.Ordinal);
+
+foreach (var map in mapSheet)
+{
+    if (map.MapMarkerRange == 0) continue;
+    var set = mmSheet.GetRowOrDefault(map.MapMarkerRange);
+    if (set is null) continue;
+
+    uint tid = map.TerritoryType.RowId;
+    string zoneName = tid != 0 ? Zone(tid) : U;
+    string region = pn.GetRowOrDefault(map.PlaceNameRegion.RowId) is { } pr ? T(pr.Name) : "";
+    string sub = pn.GetRowOrDefault(map.PlaceNameSub.RowId) is { } ps ? T(ps.Name) : "";
+
+    foreach (var s in set.Value)
+    {
+        string name = pn.GetRowOrDefault(s.PlaceNameSubtext.RowId) is { } p2 ? T(p2.Name) : "";
+        if (name.Length == 0) continue;
+        // The sheet stores a two-line label as an embedded newline: "Carline Canopy\n(Adventurers' Guild)".
+        name = name.Replace("\r", " ").Replace("\n", " ").Trim();
+        while (name.Contains("  ")) name = name.Replace("  ", " ");
+
+        string key = $"{map.RowId}:{s.RowId}:{s.SubrowId}";
+        if (!poiSeen.Add(key)) continue;
+
+        pois.Add(new
+        {
+            id = key,
+            name,
+            location = zoneName,          // the ZONE this place sits in
+            region,
+            subLocation = sub,
+            mapX = R1(MarkerToMap(s.X, map.SizeFactor)),
+            mapY = R1(MarkerToMap(s.Y, map.SizeFactor)),
+            territoryId = tid != 0 ? (object)tid : U,
+            mapId = map.RowId,
+            mapSizeFactor = (int)map.SizeFactor,
+            rawX = (int)s.X,
+            rawY = (int)s.Y,
+            iconId = (int)s.Icon,
+            markerType = (int)s.Type,
+            description = U,              // wiki overlay fills this
+            placeKind = U,
+        });
+    }
+}
+
+Write("places-of-interest.json",
+    "Every named landmark the game draws on a map - settlements, gates, guilds, camps, rivers, "
+  + "ruins, aetheryte plazas, dungeon entrances. From MapMarker, with real map coordinates.",
+    "PARTIAL - 'description' and 'placeKind' are ??? and come from the wiki overlay where the "
+  + "zone page documents the place. THE COORDINATE CONVERSION IS SPOT-CHECKED, NOT PROVEN: "
+  + "MarkerToMap reproduced Summerford Farms at (25.2, 16.8) against a known (25, 17), but it "
+  + "has not been confirmed in game across map scales. rawX/rawY are kept so a correction needs "
+  + "no re-derivation. See docs/Pending Verification.md.",
+    new[] { "description", "placeKind" },
+    pois, pois.Count);
 
 Console.WriteLine("\ndone.");
