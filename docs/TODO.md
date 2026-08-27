@@ -62,6 +62,11 @@ started right now. Update the indented line in the same edit that changes a depe
 - [ ] **A2** 🤖 ⚡🔒 Create `ADMIN_KEY` and `LODESTONE_UA`
 - [ ] **A3** 🙋 Seed the materials list — one-time dev-side extraction pass
   - ⛔ Blocked by: **V2** *(no schema to extract into)*, **R5** *(redistribution unresolved)*
+- [ ] **A4** 🙋 **Compile our own monster→zone list.** The game gives zones for only **259
+      monsters (1.8% of 14,560 named)** — the Hunting Log, low-level only. Needs online data;
+      Trist will help. Without it, Hunt routes are capped at that small low-level pool and
+      high-level Hunt routes have no zone source at all.
+  - ⛔ Blocked by: **R5** *(same redistribution question as the materials list)*
 
 ## 🔨 Implement
 

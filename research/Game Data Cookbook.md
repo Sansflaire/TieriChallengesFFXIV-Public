@@ -102,6 +102,73 @@ padded empty slots.
 
 Other useful columns: `AmountResult`, `CraftType` (which class), `RecipeLevelTable` (difficulty).
 
+
+### Recipe KIND — level-based vs Master vs Expert
+
+A daily/weekly Craft route must only ever use a **plain level-based** recipe. `Recipe` carries
+every discriminator needed; there is no single "kind" column, so it is a conjunction:
+
+```csharp
+bool IsPlainLevelRecipe(Recipe r) =>
+       r.SecretRecipeBook.RowId == 0     // not a Master / recipe-book recipe
+    && !r.IsSpecializationRequired       // not Specialist-only
+    && !r.IsExpert                       // not an Expert recipe
+    && r.Quest.RowId == 0                // not unlocked by a quest
+    && r.StatusRequired.RowId == 0       // no required status effect
+    && r.ItemRequired.RowId == 0;        // no required held item
+```
+
+Measured over 13,892 recipes with a result:
+
+| Filter | Count | Meaning |
+|---|---|---|
+| `SecretRecipeBook != 0` | 3,459 | Master / recipe-book |
+| `IsExpert` | 544 | Expert (e.g. Skybuilders') |
+| `ItemRequired != 0` | 400 | needs a specific held item |
+| `StatusRequired != 0` | 312 | needs a status effect |
+| `Quest != 0` | 72 | quest-unlocked |
+| `IsSpecializationRequired` | 19 | Specialist only |
+| **PLAIN (all clear)** | **9,577 recipes → 7,516 distinct items** | **safe for generated quests** |
+
+Spot-checked: plain → *Peisteskin Harness* (Leatherworking); master → *Heavy Wolfram Helm*;
+expert → *Grade 2 Artisanal Skybuilders' Wardrobe*. Matches expectation.
+
+`CraftType` gives the class (Leatherworking, Blacksmith, …) and is **separate** from kind — a
+Leatherworker-specific item is fine, a Master Leatherworker recipe is not.
+
+### Gathered items — Miner / Botanist / Fisher
+
+Two disjoint sources; there is no single "gatherable" flag:
+
+```csharp
+var gathered = new HashSet<uint>();
+foreach (var g in gd.GetExcelSheet<GatheringItem>())  gathered.Add((uint)g.Item.RowId);  // MIN + BTN
+foreach (var f in gd.GetExcelSheet<FishParameter>())  gathered.Add((uint)f.Item.RowId);  // FSH
+```
+
+| Source | Rows | Distinct items | Jobs |
+|---|---|---|---|
+| `GatheringItem` | 2,148 | **1,596** | Miner + Botanist |
+| `FishParameter` | 2,512 | **2,461** | Fisher |
+| union | — | **4,039** | all three |
+
+**Filter `RowId != 0 && RowId < 1,000,000`** — both sheets contain padding and out-of-range refs.
+
+**Which job?** `GatheringItem` does not say. Walk `GatheringPointBase.Item` → `GatheringType`:
+
+| GatheringType | Items | Job |
+|---|---|---|
+| Harvesting | 542 | Botanist |
+| Logging | 334 | Botanist |
+| Mining | 447 | Miner |
+| Quarrying | 309 | Miner |
+
+⚠️ Only **1,495 of 1,596** map to a node type — roughly 100 gathering items sit on no ordinary
+node (timed/legendary, Diadem, Island Sanctuary). Treat "no GatheringType" as *unknown*, never as
+*not gatherable*.
+
+Fisher has no equivalent type split here; `FishingSpot` locates fish if that is ever needed.
+
 <!-- SECTION:monsters -->
 ## 3. Monsters
 
