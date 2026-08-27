@@ -226,7 +226,7 @@ internal sealed class SoundService : IDisposable
 
             if (_pending.Count >= MaxPending)
             {
-                Plugin.Log.Warning($"[Sound] backlog full — dropping {cue.Bank} #{cue.Entry}.");
+                Diag.Warn($"[Sound] backlog full — dropping {cue.Bank} #{cue.Entry}.");
                 return;
             }
 
@@ -235,7 +235,7 @@ internal sealed class SoundService : IDisposable
         catch (Exception ex)
         {
             // A cue must never propagate a failure into whatever was reporting real progress.
-            Plugin.Log.Error(ex, "[Sound] request failed");
+            Diag.Error(ex, "[Sound] request failed");
         }
     }
 
@@ -278,7 +278,7 @@ internal sealed class SoundService : IDisposable
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "[Sound] drain failed");
+            Diag.Error(ex, "[Sound] drain failed");
         }
     }
 }

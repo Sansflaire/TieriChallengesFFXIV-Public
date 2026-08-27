@@ -209,7 +209,7 @@ internal static class AttunementService
         {
             // Clock untouched here too — a transient read failure should not blind the mask for
             // the whole interval, and the previous census is still the best answer available.
-            Plugin.Log.Error(ex, "[Attunement] could not read Telepo.TeleportList");
+            Diag.Error(ex, "[Attunement] could not read Telepo.TeleportList");
         }
     }
 
@@ -263,7 +263,7 @@ internal static class AttunementService
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "[Attunement] could not census TerritoryType");
+            Diag.Error(ex, "[Attunement] could not census TerritoryType");
         }
         _territoryExVersion     = exMap;
         _residentialTerritories = residential;
@@ -295,7 +295,7 @@ internal static class AttunementService
             }
             catch (Exception ex)
             {
-                Plugin.Log.Error(ex, "[Attunement] could not census the Aetheryte sheet");
+                Diag.Error(ex, "[Attunement] could not census the Aetheryte sheet");
             }
             _anyAetheryte = set;
         }
@@ -332,7 +332,7 @@ internal static class AttunementService
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "[Attunement] Telepo.Teleport threw");
+            Diag.Error(ex, "[Attunement] Telepo.Teleport threw");
             return TeleportOutcome.Failed;
         }
     }

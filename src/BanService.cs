@@ -204,7 +204,7 @@ internal static class BanService
         }
         catch (Exception ex)
         {
-            Plugin.Log.Debug($"[Ban] cache unreadable: {ex.Message}");
+            Diag.Debug($"[Ban] cache unreadable: {ex.Message}");
         }
 
         _ = Task.Run(RefreshAsync);
@@ -228,14 +228,14 @@ internal static class BanService
             if (file?.Entries == null) return;
             if (file.SchemaVersion > 1)
             {
-                Plugin.Log.Warning($"[Ban] list schema {file.SchemaVersion} is newer than this build understands.");
+                Diag.Warn($"[Ban] list schema {file.SchemaVersion} is newer than this build understands.");
                 return;
             }
 
             _entries = file.Entries;
 
             try { File.WriteAllText(_cachePath, json); }
-            catch (Exception ex) { Plugin.Log.Debug($"[Ban] cache write failed: {ex.Message}"); }
+            catch (Exception ex) { Diag.Debug($"[Ban] cache write failed: {ex.Message}"); }
 
             // Invalidate the standing verdict so the next frame re-checks it. A ban issued
             // mid-session still takes hold without a relog — Plugin.DrawUI calls Evaluate() every
@@ -251,7 +251,7 @@ internal static class BanService
         catch (Exception ex)
         {
             // Includes the 404 that means "no bans published", the normal state.
-            Plugin.Log.Debug($"[Ban] list not refreshed: {ex.Message}");
+            Diag.Debug($"[Ban] list not refreshed: {ex.Message}");
         }
     }
 
@@ -274,7 +274,7 @@ internal static class BanService
             var resp = await Http.SendAsync(req).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode)
             {
-                Plugin.Log.Debug($"[Ban] {(api ? "api" : "raw")} returned {(int)resp.StatusCode}.");
+                Diag.Debug($"[Ban] {(api ? "api" : "raw")} returned {(int)resp.StatusCode}.");
                 return null;
             }
 
@@ -282,7 +282,7 @@ internal static class BanService
         }
         catch (Exception ex)
         {
-            Plugin.Log.Debug($"[Ban] {(api ? "api" : "raw")} fetch failed: {ex.Message}");
+            Diag.Debug($"[Ban] {(api ? "api" : "raw")} fetch failed: {ex.Message}");
             return null;
         }
     }
@@ -323,7 +323,7 @@ internal static class BanService
             IsBanned = true;
             Reason   = DecryptReason(identity, entry.Reason)
                        ?? "No reason was recorded.";
-            Plugin.Log.Information("[Ban] this character is on the ban list.");
+            Diag.Info("[Ban] this character is on the ban list.");
             return;
         }
 

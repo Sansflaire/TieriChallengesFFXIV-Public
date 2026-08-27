@@ -178,7 +178,7 @@ internal static class ConditionEvaluator
         }
         catch (Exception ex)
         {
-            Plugin.Log.Debug($"[Condition] {c.Type} threw, treated as unjudgeable: {ex.Message}");
+            Diag.Debug($"[Condition] {c.Type} threw, treated as unjudgeable: {ex.Message}");
             return null;
         }
     }

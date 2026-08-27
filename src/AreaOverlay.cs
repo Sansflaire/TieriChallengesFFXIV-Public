@@ -119,7 +119,7 @@ internal sealed class AreaOverlay
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "AreaOverlay draw failed");
+            Diag.Error(ex, "AreaOverlay draw failed");
         }
     }
 

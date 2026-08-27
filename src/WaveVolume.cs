@@ -64,7 +64,7 @@ internal static class WaveVolume
             // Falling back to the original means the cue plays LOUD rather than not at all. That is
             // the right failure: a missed cue is invisible, and this plugin treats sound as its
             // highest-priority feedback.
-            Plugin.Log.Warning($"[Sound] volume rescale failed, playing at full: {ex.Message}");
+            Diag.Warn($"[Sound] volume rescale failed, playing at full: {ex.Message}");
             return originalPath;
         }
     }
@@ -97,7 +97,7 @@ internal static class WaveVolume
             || bytes[0] != 'R' || bytes[1] != 'I' || bytes[2] != 'F' || bytes[3] != 'F'
             || bytes[8] != 'W' || bytes[9] != 'A' || bytes[10] != 'V' || bytes[11] != 'E')
         {
-            Plugin.Log.Warning($"[Sound] {Path.GetFileName(source)} is not a RIFF/WAVE file.");
+            Diag.Warn($"[Sound] {Path.GetFileName(source)} is not a RIFF/WAVE file.");
             return false;
         }
 
@@ -124,7 +124,7 @@ internal static class WaveVolume
                 // would produce noise rather than a quieter sound.
                 if (formatTag != 1)
                 {
-                    Plugin.Log.Warning(
+                    Diag.Warn(
                         $"[Sound] {Path.GetFileName(source)} is format {formatTag}, not PCM — not rescaled.");
                     return false;
                 }
@@ -146,7 +146,7 @@ internal static class WaveVolume
             pos = body + size + (size & 1);
         }
 
-        Plugin.Log.Warning($"[Sound] no data chunk found in {Path.GetFileName(source)}.");
+        Diag.Warn($"[Sound] no data chunk found in {Path.GetFileName(source)}.");
         return false;
     }
 
@@ -179,7 +179,7 @@ internal static class WaveVolume
                 return true;
 
             default:
-                Plugin.Log.Warning($"[Sound] {bitsPerSample}-bit audio is not handled — not rescaled.");
+                Diag.Warn($"[Sound] {bitsPerSample}-bit audio is not handled — not rescaled.");
                 return false;
         }
     }

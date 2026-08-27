@@ -41,7 +41,7 @@ internal static class PanacheAvailability
         try
         {
             ProbeInner();
-            Plugin.Log.Information("[Panache] library available.");
+            Diag.Info("[Panache] library available.");
             return true;
         }
         catch (Exception ex)
@@ -52,7 +52,7 @@ internal static class PanacheAvailability
                 ? $"{ex.GetType().Name}"
                 : $"{ex.GetType().Name}: {ex.Message}";
 
-            Plugin.Log.Warning($"[Panache] unavailable ({_reason}). Falling back to plain ImGui.");
+            Diag.Warn($"[Panache] unavailable ({_reason}). Falling back to plain ImGui.");
             return false;
         }
     }

@@ -128,14 +128,14 @@ public sealed class OfficialCatalog
         {
             if (!File.Exists(_masterPath))
             {
-                Plugin.Log.Information("[Official] no synced catalogue yet.");
+                Diag.Info("[Official] no synced catalogue yet.");
                 return;
             }
 
             var parsed = JsonConvert.DeserializeObject<MasterList>(File.ReadAllText(_masterPath));
             if (parsed?.Challenges == null)
             {
-                Plugin.Log.Warning("[Official] master list unreadable; treating as empty.");
+                Diag.Warn("[Official] master list unreadable; treating as empty.");
                 return;
             }
             _master = parsed;
@@ -152,7 +152,7 @@ public sealed class OfficialCatalog
                 if (!string.IsNullOrWhiteSpace(entry.Sha256)
                     && !string.Equals(Sha256Hex(bytes), entry.Sha256, StringComparison.OrdinalIgnoreCase))
                 {
-                    Plugin.Log.Warning($"[Official] hash mismatch for {entry.Id}; ignoring the cached copy.");
+                    Diag.Warn($"[Official] hash mismatch for {entry.Id}; ignoring the cached copy.");
                     rejected++;
                     continue;
                 }
@@ -170,13 +170,13 @@ public sealed class OfficialCatalog
                 loaded++;
             }
 
-            Plugin.Log.Information(
+            Diag.Info(
                 $"[Official] loaded {loaded} official challenge(s)"
               + (rejected > 0 ? $", rejected {rejected} on hash mismatch." : "."));
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "[Official] failed to load the synced catalogue");
+            Diag.Error(ex, "[Official] failed to load the synced catalogue");
         }
     }
 
@@ -185,7 +185,7 @@ public sealed class OfficialCatalog
     public void EnsureDirectory()
     {
         try { Directory.CreateDirectory(_dir); }
-        catch (Exception ex) { Plugin.Log.Error(ex, "[Official] could not create the cache directory"); }
+        catch (Exception ex) { Diag.Error(ex, "[Official] could not create the cache directory"); }
     }
 
     public string PathFor(string id) => Path.Combine(_dir, id + ".json");
@@ -231,7 +231,7 @@ public sealed class OfficialCatalog
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "[Official] prune failed");
+            Diag.Error(ex, "[Official] prune failed");
         }
         return removed;
     }

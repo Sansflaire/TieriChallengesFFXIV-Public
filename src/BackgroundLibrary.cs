@@ -68,7 +68,7 @@ internal static class BackgroundLibrary
         }
         catch (Exception ex)
         {
-            Plugin.Log.Warning($"[Appearance] could not list built-in backgrounds: {ex.Message}");
+            Diag.Warn($"[Appearance] could not list built-in backgrounds: {ex.Message}");
         }
 
         list.Sort(static (a, b) => string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase));
@@ -115,7 +115,7 @@ internal static class BackgroundLibrary
             {
                 if (!string.Equals(opt.Name, name, StringComparison.OrdinalIgnoreCase)) continue;
 
-                Plugin.Log.Information(
+                Diag.Info(
                     $"[Appearance] built-in background \"{name}\" moved to "
                   + $"{Path.GetExtension(opt.Path)}; config updated.");
                 return opt.Path;
@@ -123,7 +123,7 @@ internal static class BackgroundLibrary
         }
         catch (Exception ex)
         {
-            Plugin.Log.Warning($"[Appearance] could not re-resolve the background path: {ex.Message}");
+            Diag.Warn($"[Appearance] could not re-resolve the background path: {ex.Message}");
         }
 
         return configuredPath;

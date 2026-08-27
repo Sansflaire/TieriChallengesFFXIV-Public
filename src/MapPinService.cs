@@ -133,7 +133,7 @@ internal static unsafe class MapPinService
             uint sheetMap = PlayerStateReader.MapIdFor(territory);
             var (size, offX, offY, mapKey) = PlayerStateReader.MapGeometry(sheetMap);
 
-            Plugin.Log.Information(
+            Diag.Info(
                 $"[MapDiag] territory={territory} sheetMap={sheetMap} key='{mapKey}' "
               + $"sizeFactor={size} offsetX={offX} offsetY={offY} "
               + $"player=({lp?.Position.X ?? 0:0.###}, {lp?.Position.Z ?? 0:0.###})");
@@ -141,7 +141,7 @@ internal static unsafe class MapPinService
             if (agent != null)
             {
                 var (aSize, aOffX, aOffY, aKey) = PlayerStateReader.MapGeometry(agent->CurrentMapId);
-                Plugin.Log.Information(
+                Diag.Info(
                     $"[MapDiag] agent curTerr={agent->CurrentTerritoryId} curMap={agent->CurrentMapId} "
                   + $"key='{aKey}' sizeFactor={aSize} offsetX={aOffX} offsetY={aOffY} "
                   + $"curSizeFloat={agent->CurrentMapSizeFactorFloat:0.##} "
@@ -150,12 +150,12 @@ internal static unsafe class MapPinService
             }
             else
             {
-                Plugin.Log.Information("[MapDiag] AgentMap unavailable.");
+                Diag.Info("[MapDiag] AgentMap unavailable.");
             }
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "[MapDiag] failed");
+            Diag.Error(ex, "[MapDiag] failed");
         }
     }
 
@@ -184,7 +184,7 @@ internal static unsafe class MapPinService
             uint mapId = MapIdFor(agent, territory, area);
             if (mapId == 0) return false;
 
-            Plugin.Log.Information(
+            Diag.Info(
                 $"[MapPin] \"{c.Title}\" pos=({where.X:0.###}, {where.Z:0.###}) "
               + $"territory={territory} mapId={mapId} (area={area.MapId} "
               + $"agentCur={agent->CurrentMapId} sheet={PlayerStateReader.MapIdFor(territory)})");
@@ -200,7 +200,7 @@ internal static unsafe class MapPinService
         catch (Exception ex)
         {
             // Never propagate into the draw loop — a failed pin is a failed convenience.
-            Plugin.Log.Error(ex, "[MapPin] failed to set flag");
+            Diag.Error(ex, "[MapPin] failed to set flag");
             return false;
         }
     }

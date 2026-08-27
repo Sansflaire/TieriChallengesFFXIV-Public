@@ -103,7 +103,7 @@ internal static class HelpLibrary
             if (!File.Exists(path))
             {
                 _error = $"The help document is missing.\n\nExpected it at:\n{path}";
-                Plugin.Log.Warning($"[Help] {FileName} not found at {path}");
+                Diag.Warn($"[Help] {FileName} not found at {path}");
                 return result;
             }
 
@@ -112,12 +112,12 @@ internal static class HelpLibrary
             if (result.Count == 0)
                 _error = "The help document was found but contains no sections.";
 
-            Plugin.Log.Information($"[Help] loaded {result.Count} section(s) from {FileName}.");
+            Diag.Info($"[Help] loaded {result.Count} section(s) from {FileName}.");
         }
         catch (Exception ex)
         {
             _error = "The help document could not be read.\n\n" + ex.Message;
-            Plugin.Log.Error(ex, "[Help] failed to load");
+            Diag.Error(ex, "[Help] failed to load");
         }
 
         return result;

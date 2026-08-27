@@ -80,14 +80,14 @@ internal static class GameSound
 
         if (!File.Exists(full))
         {
-            Plugin.Log.Warning($"[Sound] {full} is missing — cue cannot play.");
+            Diag.Warn($"[Sound] {full} is missing — cue cannot play.");
             return false;
         }
 
         bool ok = PlaySoundW(full, IntPtr.Zero, SndAsync | SndFilename | SndNoDefault);
 
         if (ok) Plugin.Log.Information($"[Sound] wav {fileName} playing.");
-        else    Plugin.Log.Warning($"[Sound] winmm refused {fileName} "
+        else    Diag.Warn($"[Sound] winmm refused {fileName} "
                                  + $"(error {Marshal.GetLastWin32Error()}).");
         return ok;
     }
@@ -193,7 +193,7 @@ internal static class GameSound
         try
         {
             var mgr = SoundManager.Instance();
-            if (mgr == null) { Plugin.Log.Warning("[Sound] dump: no SoundManager."); return; }
+            if (mgr == null) { Diag.Warn("[Sound] dump: no SoundManager."); return; }
 
             // The first attempt at this used entry 0 at volume 0 and got a NULL SoundData back,
             // so the engine declines that combination. Try progressively louder/realer requests
@@ -221,17 +221,17 @@ internal static class GameSound
                 }
             }
 
-            if (data == null) { Plugin.Log.Warning("[Sound] dump: no SoundData from any probe."); return; }
+            if (data == null) { Diag.Warn("[Sound] dump: no SoundData from any probe."); return; }
 
             var res = data->SoundResourceHandle;
-            if (res == null) { Plugin.Log.Warning("[Sound] dump: no resource handle."); return; }
+            if (res == null) { Diag.Warn("[Sound] dump: no resource handle."); return; }
 
             byte* bytes = res->GetData();
             ulong len   = res->GetLength();
 
             if (bytes == null || len == 0)
             {
-                Plugin.Log.Warning($"[Sound] dump: resource has no data (len {len}).");
+                Diag.Warn($"[Sound] dump: resource has no data (len {len}).");
                 return;
             }
 
@@ -249,7 +249,7 @@ internal static class GameSound
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "[Sound] bank dump failed");
+            Diag.Error(ex, "[Sound] bank dump failed");
         }
     }
 
@@ -297,7 +297,7 @@ internal static class GameSound
             // play, so the only way to catch a typo is to ask before playing.
             if (!BankExists(path))
             {
-                Plugin.Log.Warning($"[Sound] {path} does not exist — cue cannot play.");
+                Diag.Warn($"[Sound] {path} does not exist — cue cannot play.");
                 return false;
             }
 
@@ -308,7 +308,7 @@ internal static class GameSound
                 // logged the failure paths at Debug, which dalamud.log filters out by default —
                 // so a call throwing on every single invocation looked exactly like a call
                 // succeeding silently, and cost two rounds of wrong diagnosis.
-                Plugin.Log.Warning("[Sound] SoundManager not available — cue skipped.");
+                Diag.Warn("[Sound] SoundManager not available — cue skipped.");
                 return false;
             }
 
@@ -384,7 +384,7 @@ internal static class GameSound
 
             if (data == null)
             {
-                Plugin.Log.Warning($"[Sound] entry {soundNumber} in {path} returned no SoundData "
+                Diag.Warn($"[Sound] entry {soundNumber} in {path} returned no SoundData "
                                  + "— the engine declined it (empty slot or bad index).");
                 return false;
             }
@@ -415,7 +415,7 @@ internal static class GameSound
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, $"[Sound] PlaySound threw for entry {soundNumber} in {path}");
+            Diag.Error(ex, $"[Sound] PlaySound threw for entry {soundNumber} in {path}");
             return false;
         }
     }
@@ -448,7 +448,7 @@ internal static class GameSound
             // output unreadable after the fact — a diagnostic nobody can retrieve is not one.
             Plugin.Log.Information(sb.ToString());
         }
-        catch (Exception ex) { Plugin.Log.Error(ex, "[Sound] bus dump failed"); }
+        catch (Exception ex) { Diag.Error(ex, "[Sound] bus dump failed"); }
     }
 
     /// <summary>Guards the once-per-session bus snapshot.</summary>
@@ -464,7 +464,7 @@ internal static class GameSound
 
             Plugin.Log.Information(sb.ToString());
         }
-        catch (Exception ex) { Plugin.Log.Error(ex, "[Sound] bus snapshot failed"); }
+        catch (Exception ex) { Diag.Error(ex, "[Sound] bus snapshot failed"); }
     }
 
     /// <summary>Effective volume of one bus, or 0 if the engine is not up.</summary>
@@ -493,7 +493,7 @@ internal static class GameSound
             Plugin.ChatGui.Print($"[Challenges] bus {bus} set to {value:0.##} "
                                + $"— now reads {mgr->GetEffectiveVolume(bus):0.###}.");
         }
-        catch (Exception ex) { Plugin.Log.Error(ex, "[Sound] set bus volume failed"); }
+        catch (Exception ex) { Diag.Error(ex, "[Sound] set bus volume failed"); }
     }
 
     /// <summary>Zingle banks are routed to a bus the game keeps closed outside its own fanfares.</summary>
@@ -557,7 +557,7 @@ internal static class GameSound
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, $"[Sound] release failed for 0x{handle:X}");
+            Diag.Error(ex, $"[Sound] release failed for 0x{handle:X}");
         }
     }
 }

@@ -667,7 +667,7 @@ internal static unsafe class PlayerStateReader
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "Failed to build outfit index");
+            Diag.Error(ex, "Failed to build outfit index");
         }
 
         _outfitIndex = list;

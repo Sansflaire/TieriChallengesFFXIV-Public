@@ -400,7 +400,7 @@ internal sealed class Dialogs
                 _config.DefinitionsChanged();
                 _tracker.Invalidate();
                 _save();
-                Plugin.Log.Information("Challenge progress wiped by user confirmation.");
+                Diag.Info("Challenge progress wiped by user confirmation.");
                 _resetPopupOpen = false;
                 ImGui.CloseCurrentPopup();
             }
@@ -527,7 +527,7 @@ internal sealed class Dialogs
                 bool dropped = BanService.IsBanned;
                 if (dropped)
                 {
-                    Plugin.Log.Information("[Suggestion] dropped: sender is on the blocklist.");
+                    Diag.Info("[Suggestion] dropped: sender is on the blocklist.");
                     _suggestOk      = true;
                     _suggestStatus  = "Sent — thank you!";
                     _suggestSending = false;

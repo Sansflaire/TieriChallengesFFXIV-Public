@@ -50,7 +50,7 @@ public static class SuggestionService
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "[Suggestion] could not resolve endpoint");
+            Diag.Error(ex, "[Suggestion] could not resolve endpoint");
         }
         return string.Empty;
     }
@@ -181,13 +181,13 @@ public static class SuggestionService
 
             if (response.IsSuccessStatusCode)
             {
-                Plugin.Log.Information("[Suggestion] delivered.");
+                Diag.Info("[Suggestion] delivered.");
                 return (true, "Sent — thank you!");
             }
 
             // Refund the budget: a failed send should not cost the user an attempt.
             _sentThisSession--;
-            Plugin.Log.Warning($"[Suggestion] endpoint returned {(int)response.StatusCode}.");
+            Diag.Warn($"[Suggestion] endpoint returned {(int)response.StatusCode}.");
             return (false, $"Couldn't send (server said {(int)response.StatusCode}). Try again later.");
         }
         catch (TaskCanceledException)
@@ -198,7 +198,7 @@ public static class SuggestionService
         catch (Exception ex)
         {
             _sentThisSession--;
-            Plugin.Log.Error(ex, "[Suggestion] send failed");
+            Diag.Error(ex, "[Suggestion] send failed");
             return (false, "Couldn't send. Check your connection and try again.");
         }
     }

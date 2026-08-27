@@ -733,7 +733,7 @@ public sealed class Configuration : IPluginConfiguration
             // Carry any completion already sitting in the store under the old id.
             store.RemapId(oldId, c.Id);
             changed = true;
-            Plugin.Log.Information($"[Migrate] challenge \"{c.Title}\": {oldId} -> {c.Id}");
+            Diag.Info($"[Migrate] challenge \"{c.Title}\": {oldId} -> {c.Id}");
         }
 
         // (2) Adopt v1 completions, which lived in this config keyed by slug.
@@ -761,7 +761,7 @@ public sealed class Configuration : IPluginConfiguration
             if (adopted > 0)
             {
                 store.SaveBoth();
-                Plugin.Log.Information($"[Migrate] adopted {adopted} legacy completion(s) into the GUID stores.");
+                Diag.Info($"[Migrate] adopted {adopted} legacy completion(s) into the GUID stores.");
             }
 
             Completed.Clear();   // migrated; never read again

@@ -165,9 +165,9 @@ internal sealed class ChallengeTracker : IDisposable
 
         _run = new RaceRun { Id = id, StartedAtMs = Environment.TickCount64, LeftStart = false };
 
-        Plugin.Log.Information($"[Race] started {id}");
+        Diag.Info($"[Race] started {id}");
         try { RaceStarted?.Invoke(id); }
-        catch (Exception ex) { Plugin.Log.Error(ex, "Race start handler threw"); }
+        catch (Exception ex) { Diag.Error(ex, "Race start handler threw"); }
 
         return true;
     }
@@ -190,7 +190,7 @@ internal sealed class ChallengeTracker : IDisposable
 
         string title = ChallengeCatalog.FindCustom(_config, run.Id)?.Title ?? string.Empty;
 
-        Plugin.Log.Information(
+        Diag.Info(
             $"[Race] {run.Id} ended: {outcome} at {run.ElapsedSeconds:0.00}s");
 
         try
@@ -208,7 +208,7 @@ internal sealed class ChallengeTracker : IDisposable
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "Race end handler threw");
+            Diag.Error(ex, "Race end handler threw");
         }
     }
 
@@ -401,7 +401,7 @@ internal sealed class ChallengeTracker : IDisposable
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "ChallengeTracker tick failed");
+            Diag.Error(ex, "ChallengeTracker tick failed");
         }
     }
 
@@ -459,12 +459,12 @@ internal sealed class ChallengeTracker : IDisposable
         // an edit that makes it malformed, or the Creator deleting it outright.
         if (_run != null && !ActiveContains(_run.Id))
         {
-            Plugin.Log.Information($"[Race] {_run.Id} is no longer trackable here — run abandoned.");
+            Diag.Info($"[Race] {_run.Id} is no longer trackable here — run abandoned.");
             EndRun(RaceOutcome.Abandoned);
         }
 
         if (_active.Count > 0)
-            Plugin.Log.Debug($"[Tracker] {_active.Count} challenge(s) active in territory {territory}.");
+            Diag.Debug($"[Tracker] {_active.Count} challenge(s) active in territory {territory}.");
     }
 
     private bool ActiveContains(string id)
@@ -714,9 +714,9 @@ internal sealed class ChallengeTracker : IDisposable
             _run.StartedAtMs = Environment.TickCount64;
             _run.LeftStart   = false;
 
-            Plugin.Log.Debug($"[Race] {ch.Id} restarted at the line.");
+            Diag.Debug($"[Race] {ch.Id} restarted at the line.");
             try { RaceStarted?.Invoke(ch.Id); }
-            catch (Exception ex) { Plugin.Log.Error(ex, "Race start handler threw"); }
+            catch (Exception ex) { Diag.Error(ex, "Race start handler threw"); }
 
             return false;
         }
@@ -838,7 +838,7 @@ internal sealed class ChallengeTracker : IDisposable
 
         _config.DefinitionsChanged();   // the chain's zone may have just changed; force a Rebuild
 
-        Plugin.Log.Information(
+        Diag.Info(
             $"[Chain] \"{ch.Title}\" advanced to step {next + 1}/{ch.ChainSteps.Count}.");
 
         // Same rule as everywhere else: the finishing step is announced by MarkComplete.
@@ -938,7 +938,7 @@ internal sealed class ChallengeTracker : IDisposable
             long since = Environment.TickCount64 - (_stepStamp.TryGetValue(key, out var t) ? t : 0);
             if (since > next.WithinSeconds * 1000L)
             {
-                Plugin.Log.Debug(
+                Diag.Debug(
                     $"[Tracker] \"{ch.Title}\" step {idx + 1} missed its {next.WithinSeconds}s window "
                   + $"({since / 1000f:0.#}s) — sequence reset.");
 
@@ -977,7 +977,7 @@ internal sealed class ChallengeTracker : IDisposable
     private void RaiseProgress(CustomChallenge ch, int done, int total)
     {
         int number = ChallengeCatalog.DisplayNumber(_config, ch.Id);
-        Plugin.Log.Debug($"[Tracker] Challenge #{number} \"{ch.Title}\" progressed to {done}/{total}.");
+        Diag.Debug($"[Tracker] Challenge #{number} \"{ch.Title}\" progressed to {done}/{total}.");
 
         try
         {
@@ -993,7 +993,7 @@ internal sealed class ChallengeTracker : IDisposable
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "Progress handler threw");
+            Diag.Error(ex, "Progress handler threw");
         }
     }
 
@@ -1035,7 +1035,7 @@ internal sealed class ChallengeTracker : IDisposable
             foreach (var s in ch.ChainSteps) ClearSetState(s.Id, persist: true);
 
         int number = ChallengeCatalog.DisplayNumber(_config, ch.Id);
-        Plugin.Log.Information($"[Tracker] Challenge #{number} \"{ch.Title}\" auto-completed.");
+        Diag.Info($"[Tracker] Challenge #{number} \"{ch.Title}\" auto-completed.");
 
         try
         {
@@ -1048,7 +1048,7 @@ internal sealed class ChallengeTracker : IDisposable
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "Completion handler threw");
+            Diag.Error(ex, "Completion handler threw");
         }
     }
 }

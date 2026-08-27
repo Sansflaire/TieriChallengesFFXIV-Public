@@ -72,7 +72,7 @@ internal sealed class InventoryWatcher : IDisposable
         {
             // A failure here must not take the plugin down — it just means item conditions fall
             // back to rebuilding whenever something else invalidates the map.
-            Plugin.Log.Error(ex, "[Inventory] failed to subscribe to inventory events");
+            Diag.Error(ex, "[Inventory] failed to subscribe to inventory events");
         }
     }
 
@@ -91,7 +91,7 @@ internal sealed class InventoryWatcher : IDisposable
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "[Inventory] failed to unsubscribe");
+            Diag.Error(ex, "[Inventory] failed to unsubscribe");
         }
 
         _attached = false;
@@ -153,7 +153,7 @@ internal sealed class InventoryWatcher : IDisposable
         {
             // Leave _dirty set so the next read tries again — a loading screen is a normal reason
             // for the containers not to be readable yet.
-            Plugin.Log.Debug($"[Inventory] rebuild deferred: {ex.Message}");
+            Diag.Debug($"[Inventory] rebuild deferred: {ex.Message}");
         }
     }
 }

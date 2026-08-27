@@ -210,7 +210,7 @@ internal static class ZoneIndex
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "[Zones] could not build the developer zone/duty census");
+            Diag.Error(ex, "[Zones] could not build the developer zone/duty census");
         }
 
         var result = new List<Expansion>(byGroup.Count);
@@ -223,7 +223,7 @@ internal static class ZoneIndex
         }
         result.Sort(static (a, b) => a.Id.CompareTo(b.Id));
 
-        Plugin.Log.Information($"[Zones] developer census: {result.Sum(e => e.Zones.Count)} entr(ies) "
+        Diag.Info($"[Zones] developer census: {result.Sum(e => e.Zones.Count)} entr(ies) "
                               + $"in {result.Count} group(s)");
 
         _devCache    = result;
@@ -315,7 +315,7 @@ internal static class ZoneIndex
             if (!_sheetsFailed)
             {
                 _sheetsFailed = true;
-                Plugin.Log.Error(ex, "[Zones] could not build the zone index from the game sheets");
+                Diag.Error(ex, "[Zones] could not build the zone index from the game sheets");
             }
         }
 
@@ -352,7 +352,7 @@ internal static class ZoneIndex
                 total += e.Zones.Count;
                 summary.Add($"{e.Name} {e.Zones.Count}");
             }
-            Plugin.Log.Information($"[Zones] indexed {total} zone(s) in {result.Count} group(s): {string.Join(", ", summary)}");
+            Diag.Info($"[Zones] indexed {total} zone(s) in {result.Count} group(s): {string.Join(", ", summary)}");
         }
 
         _cache    = result;

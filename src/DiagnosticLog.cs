@@ -13,6 +13,19 @@ namespace TieriChallengesFFXIV;
 /// the ring buffer and forwards to <c>Plugin.Log</c>, so `/xllog` is unchanged. Anything that
 /// calls <c>Plugin.Log</c> directly is invisible to a bug report — use <see cref="Diag"/>.</para>
 ///
+/// <para><b>That rule was stated here and then ignored 141 times.</b> A review on 2026-08-26 found
+/// only 19 of 160 log calls went through <see cref="Diag"/>, and the ones that did were the least
+/// useful — toast bookkeeping and fly-text — while every call that answers "why didn't my challenge
+/// fire", "why did my sync report nothing" and "why is my cue silent" went to <c>Plugin.Log</c> and
+/// never reached a report. A player ticking "attach my log" got an environment header and almost
+/// nothing else. Everything diagnostic is routed through <see cref="Diag"/> now.</para>
+///
+/// <para><b>What is deliberately still on <c>Plugin.Log</c>:</b> the dev-only tools (BanAdmin,
+/// ChallengeExporter), and <c>GameSound</c>'s per-cue success chatter — it logs a long line on
+/// every cue, and a 400-entry ring filled with "wav playing" would evict the failures this exists
+/// to carry. <c>GameSound</c>'s warnings and errors DO go through <see cref="Diag"/>, which is the
+/// half that matters in a report.</para>
+///
 /// <para>Bounded on purpose: a fixed number of entries, each truncated. A plugin that leaks
 /// memory through its own diagnostics would be a poor joke.</para>
 /// </summary>

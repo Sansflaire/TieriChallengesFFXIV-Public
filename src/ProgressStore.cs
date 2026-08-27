@@ -66,14 +66,14 @@ public sealed class ProgressStore
             foreach (var kv in parsed.Stops     ?? new()) d.Stops[kv.Key]     = kv.Value ?? new List<int>();
             _data = d;
 
-            Plugin.Log.Information(
+            Diag.Info(
                 $"[Progress] loaded {_data.ChainStep.Count} chain position(s), "
               + $"{_data.Stops.Count} partial objective set(s).");
         }
         catch (Exception ex)
         {
             // Non-fatal: losing partial progress is bad, taking the plugin down with it is worse.
-            Plugin.Log.Error(ex, $"Failed to read {_path}");
+            Diag.Error(ex, $"Failed to read {_path}");
         }
     }
 
@@ -91,7 +91,7 @@ public sealed class ProgressStore
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, $"Failed to write {_path}");
+            Diag.Error(ex, $"Failed to write {_path}");
         }
     }
 
@@ -158,7 +158,7 @@ public sealed class ProgressStore
     {
         _data = new Data();
         Save();
-        Plugin.Log.Information("[Progress] all partial progress cleared.");
+        Diag.Info("[Progress] all partial progress cleared.");
     }
 
     public int TrackedCount => _data.ChainStep.Count + _data.Stops.Count;

@@ -102,11 +102,11 @@ public sealed class ChallengeSyncService
             if (res.IsSuccessStatusCode)
                 return await res.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-            Plugin.Log.Debug($"[Sync] contents API returned {(int)res.StatusCode} for {clean}; using raw.");
+            Diag.Debug($"[Sync] contents API returned {(int)res.StatusCode} for {clean}; using raw.");
         }
         catch (Exception ex)
         {
-            Plugin.Log.Debug($"[Sync] contents API unavailable ({ex.Message}); using raw.");
+            Diag.Debug($"[Sync] contents API unavailable ({ex.Message}); using raw.");
         }
 
         // Cache-busted raw. Kept as the fallback rather than the primary: it is free and may help
@@ -167,7 +167,7 @@ public sealed class ChallengeSyncService
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "[Sync] failed");
+            Diag.Error(ex, "[Sync] failed");
             LastStatus = "Sync failed. Check your connection.";
             return new SyncResult { Ok = false, Message = LastStatus };
         }
@@ -188,7 +188,7 @@ public sealed class ChallengeSyncService
         }
         catch (Exception ex)
         {
-            Plugin.Log.Warning($"[Sync] could not fetch the master list: {ex.Message}");
+            Diag.Warn($"[Sync] could not fetch the master list: {ex.Message}");
             return new SyncResult { Ok = false, Message = "Couldn't reach the challenge repository." };
         }
 
@@ -196,7 +196,7 @@ public sealed class ChallengeSyncService
         try { master = JsonConvert.DeserializeObject<MasterList>(masterJson); }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "[Sync] master list is not valid JSON");
+            Diag.Error(ex, "[Sync] master list is not valid JSON");
             return new SyncResult { Ok = false, Message = "The challenge list is malformed. Try again later." };
         }
 
@@ -237,14 +237,14 @@ public sealed class ChallengeSyncService
 
             if (++processed > MaxFilesPerSync)
             {
-                Plugin.Log.Warning($"[Sync] stopped at the {MaxFilesPerSync}-file cap; " +
+                Diag.Warn($"[Sync] stopped at the {MaxFilesPerSync}-file cap; " +
                                    $"{master.Challenges.Count - processed + 1} not fetched.");
                 break;
             }
 
             if (consecutiveFailures >= MaxConsecutiveFailures)
             {
-                Plugin.Log.Warning("[Sync] too many consecutive failures; stopping early.");
+                Diag.Warn("[Sync] too many consecutive failures; stopping early.");
                 break;
             }
 
@@ -276,7 +276,7 @@ public sealed class ChallengeSyncService
             catch (Exception ex)
             {
                 consecutiveFailures++;
-                Plugin.Log.Warning($"[Sync] {entry.Id}: download failed ({ex.Message}).");
+                Diag.Warn($"[Sync] {entry.Id}: download failed ({ex.Message}).");
                 continue;
             }
 
@@ -287,7 +287,7 @@ public sealed class ChallengeSyncService
                 string actual = OfficialCatalog.Sha256Hex(bytes);
                 if (!string.Equals(actual, entry.Sha256, StringComparison.OrdinalIgnoreCase))
                 {
-                    Plugin.Log.Warning($"[Sync] {entry.Id}: hash mismatch — rejected.");
+                    Diag.Warn($"[Sync] {entry.Id}: hash mismatch — rejected.");
                     rejected++;
                     continue;
                 }
@@ -300,7 +300,7 @@ public sealed class ChallengeSyncService
 
             if (parsed == null || string.IsNullOrWhiteSpace(parsed.Title))
             {
-                Plugin.Log.Warning($"[Sync] {entry.Id}: unusable payload — rejected.");
+                Diag.Warn($"[Sync] {entry.Id}: unusable payload — rejected.");
                 rejected++;
                 continue;
             }
@@ -329,7 +329,7 @@ public sealed class ChallengeSyncService
         if (_catalog.Count == 0)
             msg += " If something was just published, it can take up to 5 minutes to appear.";
 
-        Plugin.Log.Information("[Sync] " + msg);
+        Diag.Info("[Sync] " + msg);
         return new SyncResult
         {
             Ok = true, Message = msg,

@@ -454,7 +454,7 @@ public static class ChallengeCatalog
             // step first — so this is a phantom that would only ever be published and puzzled over.
             if (c.Areas.Count > 0)
             {
-                Plugin.Log.Information(
+                Diag.Info(
                     $"[Zones] \"{c.Title}\": dropped {c.Areas.Count} stray top-level area(s); "
                   + "a chain's content lives on its steps.");
                 c.Areas.Clear();
@@ -469,7 +469,7 @@ public static class ChallengeCatalog
         ushort own = TerritoryFromAreas(c.Requirements, c.Areas);
         if (own != 0 && own != c.TerritoryId)
         {
-            Plugin.Log.Information(
+            Diag.Info(
                 $"[Zones] \"{c.Title}\": zone {c.TerritoryId} disagreed with its captured position "
               + $"(really territory {own}); rebound.");
 
@@ -493,7 +493,7 @@ public static class ChallengeCatalog
         ushort fromMap = TerritoryFromAreas(step.Requirements, null);
         if (fromMap == 0 || fromMap == step.TerritoryId) return false;
 
-        Plugin.Log.Information(
+        Diag.Info(
             $"[Zones] step \"{step.Title}\": zone {step.TerritoryId} disagreed with its captured "
           + $"position (really territory {fromMap}); rebound.");
 

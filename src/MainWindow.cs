@@ -1083,13 +1083,13 @@ internal sealed class MainWindow : IDisposable
                     // failure just means no background.
                     if (System.IO.File.Exists(path)) _bgSource = SKBitmap.Decode(path);
                     if (_bgSource == null)
-                        Plugin.Log.Warning($"[Appearance] could not decode background image: {path}");
+                        Diag.Warn($"[Appearance] could not decode background image: {path}");
                     else
-                        Plugin.Log.Information($"[Appearance] background loaded: {_bgSource.Width}x{_bgSource.Height}");
+                        Diag.Info($"[Appearance] background loaded: {_bgSource.Width}x{_bgSource.Height}");
                 }
                 catch (Exception ex)
                 {
-                    Plugin.Log.Error(ex, "[Appearance] background image failed to load");
+                    Diag.Error(ex, "[Appearance] background image failed to load");
                     _bgSource = null;
                 }
             }
@@ -1134,7 +1134,7 @@ internal sealed class MainWindow : IDisposable
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, "[Appearance] background crop failed");
+            Diag.Error(ex, "[Appearance] background crop failed");
             return _bgSource;
         }
     }

@@ -70,13 +70,13 @@ public sealed class CompletionStore
     public void Load()
     {
         try { Directory.CreateDirectory(_dir); }
-        catch (Exception ex) { Plugin.Log.Error(ex, "Could not create config directory"); }
+        catch (Exception ex) { Diag.Error(ex, "Could not create config directory"); }
 
         _permanent = ReadFile(_permanentPath) ?? new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         _current   = ReadFile(_currentPath)   ?? new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         _raceTimes = ReadTimes(_raceTimePath) ?? new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
 
-        Plugin.Log.Information(
+        Diag.Info(
             $"[Completions] loaded {_current.Count} current, {_permanent.Count} permanent, "
           + $"{_raceTimes.Count} race time(s).");
     }
@@ -99,7 +99,7 @@ public sealed class CompletionStore
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, $"Failed to read {path}");
+            Diag.Error(ex, $"Failed to read {path}");
             return null;
         }
     }
@@ -118,7 +118,7 @@ public sealed class CompletionStore
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, $"Failed to write {path}");
+            Diag.Error(ex, $"Failed to write {path}");
         }
     }
 
@@ -143,7 +143,7 @@ public sealed class CompletionStore
         {
             // Non-fatal on purpose: a damaged current file must not take the plugin down, and
             // permanent can usually repopulate it.
-            Plugin.Log.Error(ex, $"Failed to read {path}");
+            Diag.Error(ex, $"Failed to read {path}");
             return null;
         }
     }
@@ -166,7 +166,7 @@ public sealed class CompletionStore
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex, $"Failed to write {path}");
+            Diag.Error(ex, $"Failed to write {path}");
         }
     }
 
@@ -266,7 +266,7 @@ public sealed class CompletionStore
     {
         _current.Clear();
         SaveCurrent();
-        Plugin.Log.Information(
+        Diag.Info(
             $"[Completions] current wiped; {_permanent.Count} entries still held in permanent storage.");
     }
 
@@ -285,7 +285,7 @@ public sealed class CompletionStore
         }
 
         if (added > 0) SaveCurrent();
-        Plugin.Log.Information($"[Completions] restored {added} completion(s) from permanent storage.");
+        Diag.Info($"[Completions] restored {added} completion(s) from permanent storage.");
         return added;
     }
 
