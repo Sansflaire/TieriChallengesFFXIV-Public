@@ -164,18 +164,42 @@ work. The cheap monster-location source remains `MonsterNoteTarget.PlaceNameZone
 Wrists/LeftRing/RightRing`, `ModelMainHand/OffHand`, a complete `Dye*`/`Dye2*` set, plus
 `Race`/`Tribe`/`Gender`/`HairStyle`/`SkinColor` and the rest of the character sliders.
 
-**Two storage modes, and missing the second reads as a naked NPC:**
+**Equipment lives in TWO places and they LAYER — this is not either/or.**
 
-- **Inline models** — `ModelBody` etc. populated, `NpcEquip = 0` (e.g. Mother Miounne).
-- **Shared equip set** — all `Model*` are 0 and **`NpcEquip` points at the real gear**
-  (e.g. Gontrant, `NpcEquip=142`). Reading only the inline columns reports "(none)" for every
-  slot on these NPCs, which is wrong, not empty.
+`ENpcBase` has inline `Model*` columns AND an `NpcEquip` row ref. An earlier draft of this
+section called them alternative "storage modes" and picked one by asking whether any inline model
+was non-zero. **That is wrong**, and the Apartment Merchant proves it: `ENpcBase 1018091` has
+`ModelHead` set inline *and* `NpcEquip = 192` carrying everything else. Choosing inline reported
+five empty slots on a fully dressed NPC.
 
-**Model → item name is a reverse lookup and it is lossy.** Building a map from
-`Item.ModelMain` (low 16 bits = model id, next 16 = variant) resolves some slots outright —
-"Dated Velveteen Halfgloves (Black)", "Dated Cotton Halfrobe" — but many NPC models have **no
-player-equippable item at all** and correctly resolve to nothing. Any feature built on this must
-present "NPC-exclusive" as a normal outcome rather than a failure.
+The correct rule, verified against Glamourer:
+
+```
+for each slot:  inline Model* if non-zero, else the NpcEquip row's value
+                (dyes resolve the same way, independently per slot)
+```
+
+**Model → item name MUST be keyed by (slot, model, variant).** Keying on model+variant alone is
+a silent correctness bug: model `6/1` is both *Dated Straw Hat* and *Dated Taupe Sheepskin
+Jerkin*, and a first-one-wins dictionary reported the NPC wearing a straw hat on its **body**.
+Filter candidates by `Item.EquipSlotCategory` — `Head`/`Body`/`Gloves`/`Legs`/`Feet`/`MainHand`
+== 1 — before matching.
+
+**Worked example — Apartment Merchant, Lily Hills Apartment Lobby (Lavender Beds, terr 574):**
+
+| Slot | Resolved | Glamourer |
+|---|---|---|
+| Head | `Unknown (28-90)` | ✅ identical |
+| Body | Dated Taupe Sheepskin Jerkin *(dye: Mud Green)* | ✅ |
+| Hands | Storm Private's Ringbands | ✅ |
+| Legs | Dated Canvas Shepherd's Slops (Brown) | ✅ |
+| Feet | Dated Leather Crakows (Green) | ✅ |
+| Main | Nothing | ✅ |
+
+Six of six, dye included. Glamourer independently prints `Unknown (28-90)` for the head, so it
+resolves NPC-exclusive models the same way and by the same convention.
+
+**`65535` means "explicitly hidden"**, not "empty" — distinct from `0`.
 
 ### Live in-game alternative
 
