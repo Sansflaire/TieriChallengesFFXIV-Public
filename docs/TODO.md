@@ -153,7 +153,6 @@ started right now. Update the indented line in the same edit that changes a depe
   - ⛔ Blocked by: **I35**
 
 ### Cheap wins — no dependencies, any time
-- [ ] **I38** 🤖 ⚡ Sync jitter (0–300 s) — ~3 lines
 - [ ] **I39** 🤖 ⚡ Sync cooldown + "Last synced HH:MM" label
 
 ---
@@ -166,18 +165,17 @@ Listed in **rule 3 priority order**, so the top item is the default recommendati
 
 | # | Item | Why it ranks here |
 |---|---|---|
-| 1 | **I38** Sync jitter | (a) quick — ~3 lines |
-| 2 | **I39** Sync cooldown + "last synced" label | (a) quick, pure UX, no dependencies |
-| 3 | **R6** What Lumina's `ItemDrop` is | (a) quick — metadata read, closes a loose end |
-| 4 | **I7** Exclusion data as data, not a constant | (a) small, (c) core/data |
-| 5 | **I16** Local account secret | (a) small, (c) core |
-| 6 | **I17** Account tier setting | (a) small, (c) core |
-| 7 | **I18** Obfuscated local Token cache | (a) small, (c) core |
-| 8 | **I1** Kill hook + `Enemy` condition | (b) **biggest unblocker** — frees R3, I3, and the 1.0 enemy milestone. Harder than the above, so it ranks below them |
-| 9 | **I23** D1 schema | (b) unblocks ten server items, but (c) demotes it — it is host work |
-| 10 | **A1** Generate + back up `TOKEN_PEPPER` | 🔒 unblocks I26; do before anything needs it |
-| 11 | **A2** `ADMIN_KEY`, `LODESTONE_UA` | 🔒 unblocks I27 |
-| 12 | **R5** Garland Tools terms | Research; unblocks A3, but the answer may be "ask a human" |
+| 1 | **I39** Sync cooldown + "last synced" label | (a) quick, pure UX, no dependencies |
+| 2 | **R6** What Lumina's `ItemDrop` is | (a) quick — metadata read, closes a loose end |
+| 3 | **I7** Exclusion data as data, not a constant | (a) small, (c) core/data |
+| 4 | **I16** Local account secret | (a) small, (c) core |
+| 5 | **I17** Account tier setting | (a) small, (c) core |
+| 6 | **I18** Obfuscated local Token cache | (a) small, (c) core |
+| 7 | **I1** Kill hook + `Enemy` condition | (b) **biggest unblocker** — frees R3, I3, and the 1.0 enemy milestone. Harder than the above, so it ranks below them |
+| 8 | **I23** D1 schema | (b) unblocks ten server items, but (c) demotes it — it is host work |
+| 9 | **A1** Generate + back up `TOKEN_PEPPER` | 🔒 unblocks I26; do before anything needs it |
+| 10 | **A2** `ADMIN_KEY`, `LODESTONE_UA` | 🔒 unblocks I27 |
+| 11 | **R5** Garland Tools terms | Research; unblocks A3, but the answer may be "ask a human" |
 
 ### 🙋 Needs Trist — only offer these when he says he is available
 
@@ -214,3 +212,4 @@ Moved here with the date and the answer — never deleted.
 | Identity model — name + world + IP? | **IP dropped.** Identity is a local 128-bit secret; `name@world` is a label. Removes the rename problem with no popup. | 2026-08-26 |
 | Does the GitHub 60/hr API limit trap a sync-spamming player? | **No.** `FetchAsync` already falls through to `raw.githubusercontent`, which is unlimited. Only consequence is ~5 min staleness. | 2026-08-26 |
 | Build the live-probe harness | Shipped dev-only (`/tchallenges probe`), verified absent from the Release DLL. | 2026-08-26 |
+| **I38** Sync jitter | **Done.** Routine auto-sync now waits a random 0–300 s (`Plugin.StartAutoSync`). **The first-ever sync is deliberately NOT delayed** — one client is not a herd, and an empty list for five minutes on install would trade a real cost for an imaginary one. Needed a `CancellationTokenSource` too: the delay was fire-and-forget, so a dev reload left a task sleeping up to 5 min and waking inside a disposed plugin. Both flavours build clean. | 2026-08-26 |

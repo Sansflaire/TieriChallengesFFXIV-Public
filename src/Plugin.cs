@@ -302,18 +302,7 @@ public sealed class Plugin : IDalamudPlugin
         _tracker.Attach();
 
         // Pick up new official challenges shortly after load, without blocking startup.
-        if (_config.AutoSync)
-        {
-            _ = System.Threading.Tasks.Task.Run(async () =>
-            {
-                var r = await _sync.SyncAsync();
-                if (r.Ok && (r.Added > 0 || r.Updated > 0))
-                {
-                    Log.Information($"[Sync] auto-sync: {r.Message}");
-                    _tracker.Invalidate();
-                }
-            });
-        }
+        if (_config.AutoSync) StartAutoSync();
 
 #if DEV_BUILD
         _creatorWindow = new ChallengeCreatorWindow(_config, _store, SaveConfig, _tracker, _toastQueue);
@@ -377,8 +366,76 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    /// <summary>
+    /// Cancels the pending auto-sync delay when the plugin unloads. Without it the jittered wait
+    /// below is fire-and-forget: a dev reload every few minutes would leave a task sleeping for up
+    /// to <see cref="AutoSyncJitterSeconds"/>, waking inside a disposed plugin to touch a config
+    /// and a tracker that are gone.
+    /// </summary>
+    private readonly System.Threading.CancellationTokenSource _shutdown = new();
+
+    /// <summary>
+    /// Upper bound on the random delay before a routine auto-sync, in seconds.
+    ///
+    /// <para><b>Why jitter at all.</b> Plugin load is normally spread across the day, but the
+    /// events that matter are correlated: a plugin update, a Dalamud hotfix or a game patch has
+    /// everyone reload inside the same few minutes, and every client then fetches at once. The
+    /// hourly quest rotation planned in <c>docs/Challenge Tokens and Quests.md</c> makes this
+    /// worse by construction — a fixed rotation boundary synchronises every client on the
+    /// planet — so the spreading belongs here, before anything depends on it.</para>
+    /// </summary>
+    private const int AutoSyncJitterSeconds = 300;
+
+    /// <summary>
+    /// Fetch the official catalogue in the background, after a random delay.
+    ///
+    /// <para><b>The first sync is never delayed.</b> A player who has never synced has no
+    /// challenges at all, and making them stare at an empty list for up to five minutes to solve a
+    /// crowding problem they are not part of gets the trade backwards — one client is not a herd.
+    /// Jitter applies only to routine re-syncs, where the data is already on disk and a few
+    /// minutes' staleness costs nothing.</para>
+    /// </summary>
+    private void StartAutoSync()
+    {
+        bool firstEver = _config.LastSyncUtc == DateTime.MinValue;
+
+        _ = System.Threading.Tasks.Task.Run(async () =>
+        {
+            try
+            {
+                if (!firstEver)
+                {
+                    int delay = System.Random.Shared.Next(AutoSyncJitterSeconds + 1);
+                    Diag.Debug($"[Sync] auto-sync in {delay}s (jittered).");
+                    await System.Threading.Tasks.Task
+                        .Delay(TimeSpan.FromSeconds(delay), _shutdown.Token)
+                        .ConfigureAwait(false);
+                }
+
+                var r = await _sync.SyncAsync().ConfigureAwait(false);
+                if (r.Ok && (r.Added > 0 || r.Updated > 0))
+                {
+                    Diag.Info($"[Sync] auto-sync: {r.Message}");
+                    _tracker.Invalidate();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Plugin unloaded while waiting. Normal, and not worth a log line.
+            }
+            catch (Exception ex)
+            {
+                Diag.Error($"[Sync] auto-sync failed: {ex.Message}");
+            }
+        });
+    }
+
     public void Dispose()
     {
+        // Ahead of everything else: the auto-sync task touches _config and _tracker, so it has to
+        // be told to stop before either is torn down.
+        _shutdown.Cancel();
+
         PluginInterface.UiBuilder.OpenConfigUi -= OnOpenMainUi;
         PluginInterface.UiBuilder.OpenMainUi   -= OnOpenMainUi;
         PluginInterface.UiBuilder.Draw         -= DrawUI;
@@ -400,6 +457,7 @@ public sealed class Plugin : IDalamudPlugin
         LiveProbe.Detach();
 #endif
         _mainWindow?.Dispose();
+        _shutdown.Dispose();
         SaveConfig();
 
         Log.Info("TieriChallengesFFXIV unloaded.");
