@@ -2806,6 +2806,23 @@ internal sealed class MainWindow : IDisposable
         // How far through it is rides beside the difficulty meter instead — see StepLabel below.
         string title = spoilered ? "??? Challenge"
                       : string.IsNullOrWhiteSpace(def.Title) ? "(unnamed challenge)" : def.Title;
+
+        // The kind reads as a word in front of the name rather than as a coloured pill out on the
+        // right. The pill was the widest control on the row, sat furthest from the name it was
+        // describing, and duplicated what the row's colour already says. Never while spoilered:
+        // "Quest:" tells the player a hidden challenge has multiple steps, which is exactly the
+        // shape of thing the mask withholds — and the pill was withheld for the same reason.
+        if (!spoilered)
+        {
+            string kind = def.Theme switch
+            {
+                ChallengeTheme.Quest     => "Quest: ",
+                ChallengeTheme.Adventure => "Adventure: ",
+                _                        => string.Empty,
+            };
+            title = kind + title;
+        }
+
         if (def.Number > 0) title = $"#{def.Number}  {title}";
 
         // Id'd so the right-click handler can tell WHICH challenge the pointer is over. Carries no
@@ -2999,21 +3016,6 @@ internal sealed class MainWindow : IDisposable
             }
         }
 
-        // Quest / adventure: a way into the full requirement sheet. The row can only ever show the
-        // leg the player is on, so without this the shape of a five-step chain is invisible.
-        // Withheld while spoilered — the sheet is the most detailed thing the mask has to hide.
-        if (def.HasObjectiveList && !spoilered)
-        {
-            string objId = def.Id;
-            var themed = ThemeColor(def.Theme);
-            controls.AppendChild(Pill("obj:" + objId, def.Theme == ChallengeTheme.Quest ? "QUEST" : "STEPS",
-                                      themed, () =>
-            {
-                _controlClickPending = true;
-                OnOpenObjectives?.Invoke(objId);
-            }));
-        }
-
         // Locally authored challenges are badged, always and in every build, so an official
         // challenge and a homemade one are never confused.
         if (!def.IsOfficial) controls.AppendChild(StaticPill("CUSTOM", Neutral));
@@ -3049,7 +3051,15 @@ internal sealed class MainWindow : IDisposable
         }
 
         controls.AppendChild(HintPillFor(def, hintOpen, spoilered));
-        controls.AppendChild(StatusPillFor(def, done, spoilered));
+        // For a quest or adventure the state pill doubles as the route into the objective sheet.
+        // Withheld while spoilered, exactly as the old QUEST pill was — that sheet is the most
+        // detailed thing the mask has to hide.
+        string objId = def.Id;
+        Action? openObjectives = def.HasObjectiveList && !spoilered
+            ? () => { _controlClickPending = true; OnOpenObjectives?.Invoke(objId); }
+            : null;
+
+        controls.AppendChild(StatusPillFor(def, done, spoilered, openObjectives));
         rightCol.AppendChild(controls);
 
         // Difficulty meter, and — beside it — how far through a quest chain the player is.
@@ -3152,7 +3162,17 @@ internal sealed class MainWindow : IDisposable
     /// Right-hand status pill: DONE, live step progress for multi-area challenges
     /// (e.g. "2/4"), or the tracking state.
     /// </summary>
-    private Node StatusPillFor(ChallengeDef def, bool done, bool spoilered)
+    /// <summary>
+    /// The right-hand state pill — "0/2", "DONE", "TRACKING".
+    /// </summary>
+    /// <remarks>
+    /// <para><b>For a quest or adventure this pill IS the way into the objective sheet.</b> There
+    /// used to be a separate QUEST / STEPS pill beside it; it was the widest control on the row and
+    /// said what the row's own colour and title prefix already say. Folding the click onto the
+    /// progress readout removes a control without removing a route — and "0 of 2, show me which
+    /// two" is the question a player already has when they look at this number.</para>
+    /// </remarks>
+    private Node StatusPillFor(ChallengeDef def, bool done, bool spoilered, Action? onClick = null)
     {
         string text;
         PColor color;
@@ -3203,7 +3223,20 @@ internal sealed class MainWindow : IDisposable
             }
         }
 
-        return StaticPill(text, color);
+        if (onClick == null) return StaticPill(text, color);
+
+        // Same shape, but it takes a click — so it owes the hover cue of DESIGN_SYSTEM §7.2, and
+        // PointerEvents must be cleared: StaticPill sets None, which blocks the node AND every
+        // descendant, and would leave this silently unclickable.
+        var pill = StaticPill(text, color).WithId("obj:" + def.Id);
+        pill.WithStyle(s =>
+        {
+            s.PointerEvents        = PointerEvents.Auto;
+            s.HoverBackgroundColor = color.WithOpacity(0.30f);
+            s.HoverBorderColor     = color.WithOpacity(0.85f);
+        });
+        pill.OnClick += _ => onClick();
+        return pill;
     }
 
     // ── Small builders ───────────────────────────────────────────────────────

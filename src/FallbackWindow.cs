@@ -425,6 +425,17 @@ internal sealed class FallbackWindow
                 string shownTitle = spoilered ? "??? Challenge"
                     : string.IsNullOrWhiteSpace(def.Title) ? "(unnamed challenge)" : def.Title;
 
+                // The kind reads in front of the name, matching MainWindow.ChallengeRow. Never
+                // while spoilered: "Quest:" would tell the player a hidden challenge has several
+                // steps, which is the shape of thing the mask withholds.
+                if (!spoilered)
+                    shownTitle = def.Theme switch
+                    {
+                        ChallengeTheme.Quest     => "Quest: "     + shownTitle,
+                        ChallengeTheme.Adventure => "Adventure: " + shownTitle,
+                        _                        => shownTitle,
+                    };
+
                 ImGui.TextColored(focused    ? ColAccent
                                  : done      ? ColOk
                                  : spoilered ? ColMuted
@@ -524,12 +535,14 @@ internal sealed class FallbackWindow
                     }
                 }
 
-                // Quest / adventure sheet, in parity with the Panache row.
+                // Quest / adventure sheet. Labelled "Objectives" rather than repeating the kind:
+                // the title now carries "Quest:" / "Adventure:", so a button saying the same word
+                // again described itself instead of what pressing it does. Plain ImGui has no
+                // equivalent of the Panache row's clickable state pill, so this stays a button.
                 if (!spoilered && def.HasObjectiveList)
                 {
                     ImGui.SameLine();
-                    string label = def.Theme == ChallengeTheme.Quest ? "Quest" : "Steps";
-                    if (ImGui.SmallButton($"{label}##obj_{def.Id}")) OnOpenObjectives?.Invoke(def.Id);
+                    if (ImGui.SmallButton($"Objectives##obj_{def.Id}")) OnOpenObjectives?.Invoke(def.Id);
                 }
 
                 // Race controls, in parity with the Panache row. This is the only way to start a
