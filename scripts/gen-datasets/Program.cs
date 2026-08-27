@@ -611,14 +611,25 @@ foreach (var i in items)
         isUntradable = i.IsUntradable,
         stats,
         expansion = U,
-        acquisition = craftable.Contains(i.RowId) ? "Crafted" : U
+        // `craftable` is GAME TRUTH and no overlay ever writes it. `acquisition` is the
+        // composed, human-readable answer and IS overlay-owned.
+        //
+        // They are split for idempotency, not for tidiness: the acquisition overlay is built
+        // by reading this dataset back, so if craftability only existed as the string
+        // "Crafted" inside `acquisition`, the first overlay pass would overwrite it and the
+        // second pass would no longer be able to tell a crafted item from any other. Keeping
+        // the boolean untouched means the composed string can be rebuilt identically forever.
+        craftable = craftable.Contains(i.RowId),
+        acquisition = U
     });
 }
 Write("gear.json",
     "Every equippable item with slot, required level, jobs and stats.",
-    "PARTIAL - 'expansion' is ??? for EVERY entry (Item carries no ExVersion). 'acquisition' is only "
-  + "known for crafted items; dungeon drops, relic chains, tomestone gear, raid drops and vendor gear "
-  + "are all ??? and need external data.",
+    "PARTIAL - 'expansion' is ??? for EVERY entry (Item carries no ExVersion). 'craftable' is "
+  + "game truth (Recipe.ItemResult). 'acquisition' is COMPOSED by the curated overlay from "
+  + "craftable plus duty/monster/FATE cross-references - see scripts/acquisition/. Anything "
+  + "still ??? is an item none of those sources mentions: relic steps, tomestone and vendor "
+  + "purchases, seasonal and Gold Saucer rewards.",
     new[] { "expansion", "acquisition (except Crafted)" },
     gear, gear.Count);
 

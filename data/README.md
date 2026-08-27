@@ -83,7 +83,9 @@ could supply it.
 | `places-of-interest` | `description` | 239 of 6,435 | Zone pages are inconsistent about documenting landmarks |
 | `places-of-interest` | coordinate conversion **unproven** | all 6,435 | Spot-checked only; `rawX`/`rawY` retained so a fix is free (**A14**) |
 | `gatherables` | `isCollectable`, `isTimedNode`, `isLegendaryNode` | 0 of 4,198 | Not expressed in a form this generator reads |
-| `gear` | `expansion`, `acquisition` | 0 / partial | `Item` carries no `ExVersion`; drop/relic/tome sources are not client-side |
+| `gear` | `acquisition` | **12,608** of 28,992 | Composed by joining `duties.itemsFound`, `monsters.drops` and `fates.rewards` against gear names, plus the game-derived `craftable` flag |
+| `gear` | `acquisition` for the other 16,384 | — | Not a failed match: these come from relic steps, tomestones, vendors, seasonal events, Gold Saucer and PvP — sources none of our datasets cover |
+| `gear` | `expansion` | 0 of 28,992 | `Item` carries no `ExVersion` |
 | `npcs` | `level`, `isTargetable` | 0 of 30,878 | **Irreducible.** Neither exists client-side |
 | `npcs` | `hairColorName` | 0 | Palette is `chara/xls/charamake/human.cmp`, a raw file with no Excel sheet |
 

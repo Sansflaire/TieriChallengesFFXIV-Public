@@ -86,8 +86,11 @@ started right now. Update the indented line in the same edit that changes a depe
       it. Cheap, and no new fetching.
 - [ ] **A7** 🙋 **Fill `data/gatherables.json`** — `isCollectable`, `isTimedNode`,
       `isLegendaryNode` are ??? for all 4,198 entries.
-- [ ] **A8** 🙋 **Fill `data/gear.json`** — `expansion` (all 28,992) and `acquisition` (all except
-      crafted) are ???.
+- [ ] **A8** 🙋 **Fill the rest of `data/gear.json`** — `acquisition` is now **12,608 of 28,992**
+      (crafted 6,702 · duty 5,897 · monster drop 53 · FATE 8), composed by joining the datasets
+      we already have. The remaining 16,384 need sources we do not cover at all: relic steps,
+      tomestone and vendor purchases, seasonal events, Gold Saucer, PvP. `expansion` is still
+      ??? for all 28,992 (`Item` carries no `ExVersion`).
 - [ ] **A9** 🙋 **Fill the rest of `data/fates.json`** — **largely done.** The Console Games
       Wiki supplied `monsters` (771), `bosses` (445), `rewards` (1,165) and **chain order**
       (233 — only that many FATEs are chained), plus zone/coords/type for 1,193 of 1,712. Those
@@ -253,6 +256,7 @@ Moved here with the date and the answer — never deleted.
 | **Places of Interest dataset** | **Built, and from GAME data not the wiki.** `MapMarker` via `Map.MapMarkerRange` gives **6,435 named landmarks across 339 zones** with real map coordinates - settlements, gates, guilds, camps, rivers, aetheryte plazas. The wiki only adds prose (239). Includes the requested `location` column (the zone). | 2026-08-27 |
 | **Bosses in their own column** | `duties.bosses` split from `duties.monsters` (156 duties), plus `monsters.isBoss` / `bossKind` for 667 monsters. Boss status is in **no game sheet** - it comes from the wiki's 14 boss subcategories. | 2026-08-27 |
 | Is `Fate.Location` a `Level` row? | **No.** All 1,697 values sit inside `Level`'s RowId range and match nothing in it - not RowId, not Object, not EventId. It is an **LGB layer-object id**. This is why `fates.json` shipped with `zone=???` on all 1,712 rows, silently. FATE location must come from the wiki. | 2026-08-27 |
+| **gear.acquisition** | **Composed by a local join, no fetching.** `duties.itemsFound` + `monsters.drops` + `fates.rewards` matched against gear names, plus the game-derived `craftable` flag: **12,608 of 28,992**. Required splitting `craftable` (game truth, never overlaid) from `acquisition` (overlay-owned) - the script reads the file it feeds, so craftability could not live only as the string "Crafted" or the second pass would lose it. | 2026-08-27 |
 | **A13** Duty bosses | **Done, and better than planned.** Rather than 33 Fandom duty-articles, the Console Games Wiki has a page per duty: `bosses` 156 -> **362 of 373**, `unlockQuest` 259 -> **309**, plus objectives, entrance+coords, time limit, roulette, base EXP. Joined on `id-gt == garlandId` - an EXACT id match, 379 by id and 0 by name. A boss is marked by its difficulty ICON in the heading, not by a ==Bosses== section (only 137 of 529 pages have one). | 2026-08-27 |
 | **Monster DROPS** | **Solved by an external source.** ffxiv.consolegameswiki.com has one page per enemy with a Loot section: **1,129 monsters with loot, 3,172 explicitly None, 4,185 still ???**. Also raised zones 755 -> 8,503 and level -> 6,384. "No drops" is now recorded as `None`, NOT `???` - most monsters drop nothing and a false unknown would send the generator hunting for data that does not exist. | 2026-08-27 |
 | FATE chain ordering | **Not irreducible after all.** `FATEChain` groups a chain but never sequences it; the Console Games Wiki's `prev-fate`/`next-fate` is the sequence. 233 FATEs are actually chained. | 2026-08-27 |
