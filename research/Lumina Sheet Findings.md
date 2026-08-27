@@ -120,3 +120,66 @@ The probe lives at `scratchpad/itemdrop/` (temporary, not in the repo). It needs
 because I assumed the schema had to come from the in-game probe's report. It did not — schema is
 in the assembly, and only row data needs the client. That mistaken assumption would have parked a
 solved question behind an unrelated task.
+
+---
+
+## 6. Offline game-data access — what is actually reachable
+
+Verified 2026-08-26 by opening `sqpack` directly with `new GameData(path)` — **no running game
+required**. Read-only, and permitted by the scope rules in CLAUDE.md §2.
+
+```
+sqpack exists: True        GameData opened OK
+Item         52,801 rows      BNpcName     15,001 rows
+ENpcResident 59,851 rows      ENpcBase     59,851 rows
+Level        61,346 rows
+```
+
+Real data comes back — items resolve to names and ilvls, `BNpcName` to creature names
+("sandskin peiste", "basilisk"), `ENpcResident` to NPC names.
+
+### Lists of things: yes, comprehensively
+
+Every one of the 1,198 sheets is readable offline. Items, monsters, NPCs, recipes, gathering
+items, zones, quests, emotes, mounts.
+
+### Locations: yes for NPCs, partly for monsters
+
+`Level` is the placement sheet: **`X` `Y` `Z` `Yaw` `Radius` + `Territory` + `Map` + `Object`**.
+Joining `Level.Object` → `ENpcResident` gives a named NPC at world coordinates:
+
+```
+Gontrant        — New Gridania (terr 132) @ (25.0, -8.0, 108.1)
+Mother Miounne  — New Gridania (terr 132) @ (23.8, -8.0, 115.9)
+```
+
+**Monsters are the gap.** `Level` covers event NPCs and objects, not roaming `BNpc` spawns —
+those live in the territory **LGB** layer files, which Lumina can parse but which are far more
+work. The cheap monster-location source remains `MonsterNoteTarget.PlaceNameZone` /
+`PlaceNameLocation` (zone-level, Hunting Log only). See §3.
+
+### NPC outfits: yes, as models — item names only sometimes
+
+`ENpcBase` carries a full appearance and wardrobe: `ModelHead/Body/Hands/Legs/Feet/Ears/Neck/
+Wrists/LeftRing/RightRing`, `ModelMainHand/OffHand`, a complete `Dye*`/`Dye2*` set, plus
+`Race`/`Tribe`/`Gender`/`HairStyle`/`SkinColor` and the rest of the character sliders.
+
+**Two storage modes, and missing the second reads as a naked NPC:**
+
+- **Inline models** — `ModelBody` etc. populated, `NpcEquip = 0` (e.g. Mother Miounne).
+- **Shared equip set** — all `Model*` are 0 and **`NpcEquip` points at the real gear**
+  (e.g. Gontrant, `NpcEquip=142`). Reading only the inline columns reports "(none)" for every
+  slot on these NPCs, which is wrong, not empty.
+
+**Model → item name is a reverse lookup and it is lossy.** Building a map from
+`Item.ModelMain` (low 16 bits = model id, next 16 = variant) resolves some slots outright —
+"Dated Velveteen Halfgloves (Black)", "Dated Cotton Halfrobe" — but many NPC models have **no
+player-equippable item at all** and correctly resolve to nothing. Any feature built on this must
+present "NPC-exclusive" as a normal outcome rather than a failure.
+
+### Live in-game alternative
+
+For an NPC standing in front of the player, the sheet route is unnecessary and sometimes wrong
+(instanced or story-swapped appearances). The live actor's `Character` struct carries the same
+equipment data for **any** actor, not just the local player — the plugin already reads the player's
+via `PlayerStateReader.ReadEquipment`. Not exercised against a non-player actor here.
