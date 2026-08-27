@@ -216,7 +216,12 @@ internal sealed class FallbackWindow
         if (syncBlocked) ImGui.EndDisabled();
 
         // The label the cooldown replaced still has to be reachable, so it moves to the tooltip.
-        if (ImGui.IsItemHovered() && _config.LastSyncUtc != DateTime.MinValue)
+        //
+        // AllowWhenDisabled is load-bearing, not defensive: a plain IsItemHovered() returns false
+        // for anything inside BeginDisabled, so the tooltip would have been hidden in exactly the
+        // state that prompts the question — button greyed out, player wanting to know why.
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)
+            && _config.LastSyncUtc != DateTime.MinValue)
             ImGui.SetTooltip($"Last synced {CompletionStore.FormatTimeOfDay(_config.LastSyncUtc)}");
 
         if (SuggestionService.IsConfigured)

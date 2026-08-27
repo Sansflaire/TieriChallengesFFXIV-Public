@@ -399,6 +399,12 @@ public sealed class Plugin : IDalamudPlugin
     {
         bool firstEver = _config.LastSyncUtc == DateTime.MinValue;
 
+        // Captured HERE, not inside the task. Reading _shutdown.Token from the task body races
+        // Dispose: on a fast reload the source can already be disposed by the time the task is
+        // scheduled, and the property throws ObjectDisposedException — which the catch below would
+        // then report as a sync failure and log through a plugin that has already unloaded.
+        var token = _shutdown.Token;
+
         _ = System.Threading.Tasks.Task.Run(async () =>
         {
             try
@@ -408,9 +414,14 @@ public sealed class Plugin : IDalamudPlugin
                     int delay = System.Random.Shared.Next(AutoSyncJitterSeconds + 1);
                     Diag.Debug($"[Sync] auto-sync in {delay}s (jittered).");
                     await System.Threading.Tasks.Task
-                        .Delay(TimeSpan.FromSeconds(delay), _shutdown.Token)
+                        .Delay(TimeSpan.FromSeconds(delay), token)
                         .ConfigureAwait(false);
                 }
+
+                // The jitter widened the unload window from milliseconds to up to five minutes,
+                // so re-check before touching config and tracker rather than relying on the
+                // Delay's own cancellation alone.
+                if (token.IsCancellationRequested) return;
 
                 var r = await _sync.SyncAsync().ConfigureAwait(false);
                 if (r.Ok && (r.Added > 0 || r.Updated > 0))

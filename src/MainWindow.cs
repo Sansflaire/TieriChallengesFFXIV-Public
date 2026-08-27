@@ -2161,9 +2161,13 @@ internal sealed class MainWindow : IDisposable
         {
             new(syncLabel, () =>
             {
-                // Re-tested at click time, not trusted from the label: the menu is built once per
-                // frame but the cooldown expires between frames.
-                if (_sync.IsRunning || _sync.CooldownRemaining > 0) return;
+                // Only IsRunning short-circuits. A cooldown click is deliberately allowed through
+                // to SyncAsync so its refusal reaches chat: PanacheUI has no disabled state, so
+                // the item stays clickable however it is coloured, and swallowing the click here
+                // made a greyed item that did NOTHING AT ALL when pressed — indistinguishable
+                // from a broken button. The service is the thing that enforces the cooldown; this
+                // just makes sure the player is told.
+                if (_sync.IsRunning) return;
                 _ = System.Threading.Tasks.Task.Run(async () =>
                 {
                     var r = await _sync.SyncAsync();
