@@ -38,11 +38,33 @@ internal sealed class DatasetViewer
     /// <summary>Rows drawn per page. Paging is what makes every row reachable without a clipper.</summary>
     private const int PageSize = 500;
 
-    /// <summary>Columns are derived from this many entries — enough to catch optional fields.</summary>
-    private const int ColumnSampleSize = 300;
+    // NOTE: columns are discovered over EVERY entry, not a sample. A 300-entry sample silently
+    // dropped any field that first appears later - the curated duties fields (unlockQuest,
+    // itemsFound, timeLimitMinutes) are added per-entry and are exactly that shape, so the data
+    // would have been present in the file and invisible in the grid. The full scan is one
+    // HashSet.Add per property, which is nothing next to parsing the file that produced them.
 
-    /// <summary>Longest cell string kept. Nested objects can be enormous; the grid is for scanning.</summary>
+    /// <summary>
+    /// Longest cell string DISPLAYED. Cells are stored in full and clipped only when drawn.
+    ///
+    /// <para>Storing them clipped was a real defect: the search blob was built from the clipped
+    /// text, so an item late in a long comma-separated list simply could not be found. The whole
+    /// point of packing every drop into one cell is that it is searchable.</para>
+    /// </summary>
     private const int MaxCellLength = 160;
+
+    /// <summary>
+    /// Cap on the string handed to CalcTextSize when sizing a column. Anything this long already
+    /// exceeds <see cref="MaxColumnWidth"/>, so measuring a 5,000-character item list would burn
+    /// the time and arrive at the same clamp.
+    /// </summary>
+    private const int MaxMeasureLength = 200;
+
+    /// <summary>
+    /// Separates cells inside a row's search blob. ASCII Unit Separator: it cannot occur in the
+    /// data, so a search term can never accidentally span two columns.
+    /// </summary>
+    private const char BlobSeparator = '\u001f';
 
     private static readonly Vector4 ColUnknown = new(1.00f, 0.55f, 0.25f, 1f);
     private static readonly Vector4 ColWarn    = new(1.00f, 0.75f, 0.30f, 1f);
@@ -281,10 +303,11 @@ internal sealed class DatasetViewer
 
             string RealName(string key) => aliasMap?[key] is { } real ? real.ToString() : key;
 
-            // Stored keys in first-seen order, so columns keep the generator's ordering.
+            // Stored keys in first-seen order, so columns keep the generator's ordering. Every
+            // entry is scanned - see the note on the removed ColumnSampleSize.
             var keys = new List<string>();
             var seen = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var e in entries.Take(ColumnSampleSize).OfType<JObject>())
+            foreach (var e in entries.OfType<JObject>())
                 foreach (var p in e.Properties())
                     if (seen.Add(p.Name)) keys.Add(p.Name);
 
@@ -311,12 +334,19 @@ internal sealed class DatasetViewer
                 for (int c = 0; c < stored; c++)
                 {
                     cells[c] = Flatten(e[keys[c]]);
-                    blob.Append(cells[c]).Append('');
+                    blob.Append(cells[c]).Append(BlobSeparator);
                 }
 
                 // Synthesised: stripped precisely BECAUSE they never vary.
                 for (int c = stored; c < unknownEnd; c++) cells[c] = "???";
                 for (int c = unknownEnd; c < _columns.Length; c++) cells[c] = constCells[c - unknownEnd];
+
+                // Constants go into the blob too. They are real values that happen to be uniform,
+                // and the box says "Search all columns" - searching for "level" and getting
+                // nothing because unlockType was hoisted out would be a lie. The ??? columns are
+                // left out deliberately: every row would match "???" and the term is useless.
+                for (int c = unknownEnd; c < _columns.Length; c++)
+                    blob.Append(cells[c]).Append(BlobSeparator);
 
                 _rows.Add(cells);
                 _blobs.Add(blob.ToString().ToLowerInvariant());
@@ -409,8 +439,9 @@ internal sealed class DatasetViewer
             _ => t.ToString(),
         };
 
-        s = s.Replace('\n', ' ').Replace('\r', ' ');
-        return s.Length > MaxCellLength ? s.Substring(0, MaxCellLength) + "…" : s;
+        // Deliberately NOT truncated - see MaxCellLength. Clipping happens at draw time so that
+        // search and the tooltip both see the whole value.
+        return s.Replace('\n', ' ').Replace('\r', ' ');
     }
 
     /// <summary>
@@ -519,10 +550,13 @@ internal sealed class DatasetViewer
             && typed.Length > 0 && numericOk)
         {
             double.TryParse(typed, NumberStyles.Any, CultureInfo.InvariantCulture, out var val);
+            // Both reads guarded. The index is reset on unload so it should never be stale, but
+            // one of these was guarded and the other was not, which is the kind of asymmetry that
+            // becomes a crash the first time someone adds a code path that resizes the targets.
             _filters.Add(new ColumnFilter
             {
                 Columns = _newCol < _targetColumns.Length ? _targetColumns[_newCol] : Array.Empty<int>(),
-                Label = _filterTargets[_newCol],
+                Label = _newCol < _filterTargets.Length ? _filterTargets[_newCol] : "?",
                 Op = _newOp,
                 Text = typed,
                 Value = val,
@@ -612,7 +646,6 @@ internal sealed class DatasetViewer
         ImGui.TextDisabled(DataDirectory);
         ImGui.Separator();
 
-        _catalogue ??= null;
         if (_catalogue is null) ScanCatalogue();
 
         if (_catalogueError.Length > 0)
@@ -720,6 +753,15 @@ internal sealed class DatasetViewer
             ApplyFilter();
         }
 
+        // Forces a re-measure and a brand new table id. If the columns are wrong on open but
+        // right after pressing this, the measurement is fine and the application is at fault.
+        ImGui.SameLine();
+        if (ImGui.Button("Fit columns", new Vector2(100, 0)))
+        {
+            _widthsReady = false;
+            _loadSeq++;
+        }
+
         DrawFilters();
 
         int pages = Math.Max(1, (_filtered.Count + PageSize - 1) / PageSize);
@@ -737,14 +779,29 @@ internal sealed class DatasetViewer
 
         ImGui.Spacing();
 
-        if (_filtered.Count == 0)
+        if (_columns.Length == 0)
         {
-            ImGui.TextDisabled("Nothing matches that search.");
+            // ImGui requires at least one column; an empty dataset would otherwise assert inside
+            // BeginTable rather than showing anything useful.
+            ImGui.TextDisabled("This dataset has no columns — it is empty or malformed.");
             return;
         }
 
+        if (_filtered.Count == 0)
+        {
+            ImGui.TextDisabled("Nothing matches the current search and filters.");
+            return;
+        }
+
+        // SizingFixedFit is deliberately NOT set. It tells ImGui to auto-fit columns to content,
+        // which overrides the explicit per-column widths below - the columns came out ~380px
+        // wide regardless of holding "1" or "False".
+        //
+        // NoSavedSettings matters too: ImGui persists table column widths in imgui.ini keyed by
+        // table id, and a restored layout would silently win over a freshly computed one.
         var flags = ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable
-                  | ImGuiTableFlags.ScrollX | ImGuiTableFlags.ScrollY | ImGuiTableFlags.SizingFixedFit;
+                  | ImGuiTableFlags.ScrollX | ImGuiTableFlags.ScrollY
+                  | ImGuiTableFlags.NoSavedSettings;
 
         // One CalcTextSize per column, once per dataset. Cannot happen at load time - there is no
         // ImGui context there - so it is deferred to the first frame that draws the grid.
@@ -752,7 +809,9 @@ internal sealed class DatasetViewer
         {
             for (int c = 0; c < _columns.Length; c++)
             {
-                float w = ImGui.CalcTextSize(_widest[c]).X + 18f;   // + cell padding
+                string probe = _widest[c].Length > MaxMeasureLength
+                             ? _widest[c].Substring(0, MaxMeasureLength) : _widest[c];
+                float w = ImGui.CalcTextSize(probe).X + 18f;   // + cell padding
                 _widths[c] = Math.Clamp(w, 40f, MaxColumnWidth);
             }
             _widthsReady = true;
@@ -760,9 +819,13 @@ internal sealed class DatasetViewer
 
         if (!ImGui.BeginTable($"##tc_ds_grid_{_loadSeq}", _columns.Length, flags)) return;
 
-        ImGui.TableSetupScrollFreeze(1, 1);   // keep the first column and the header visible
         for (int c = 0; c < _columns.Length; c++)
             ImGui.TableSetupColumn(_columns[c], ImGuiTableColumnFlags.WidthFixed, _widths[c]);
+
+        // AFTER the column setup, not before. ImGui documents this ordering and the previous code
+        // had it backwards, which corrupts the column layout - this is the likeliest reason the
+        // widths were ignored entirely.
+        ImGui.TableSetupScrollFreeze(1, 1);   // keep the first column and the header visible
         ImGui.TableHeadersRow();
 
         int start = _page * PageSize;
@@ -780,11 +843,22 @@ internal sealed class DatasetViewer
                 // "???" is the whole point of these files — make it impossible to miss.
                 bool unknown = v == "???" || v.Contains("\"???\"", StringComparison.Ordinal);
                 if (unknown) ImGui.PushStyleColor(ImGuiCol.Text, ColUnknown);
-                ImGui.TextUnformatted(v);
+
+                bool clipped = v.Length > MaxCellLength;
+                ImGui.TextUnformatted(clipped ? v.Substring(0, MaxCellLength) + "…" : v);
+
                 if (unknown) ImGui.PopStyleColor();
 
-                if (v.Length >= MaxCellLength && ImGui.IsItemHovered())
-                    ImGui.SetTooltip(v);
+                // The tooltip shows the WHOLE value, which for an itemsFound cell is the entire
+                // drop list. Wrapped, because a 400-item single line is not a tooltip.
+                if (clipped && ImGui.IsItemHovered())
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.PushTextWrapPos(560f);
+                    ImGui.TextUnformatted(v);
+                    ImGui.PopTextWrapPos();
+                    ImGui.EndTooltip();
+                }
             }
         }
 

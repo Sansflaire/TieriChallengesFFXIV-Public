@@ -202,14 +202,13 @@ foreach (var c in cfc)
         // 30067 (Weapon's Refrain) and 30155 (AAC Heavyweight M1 Savage). Stored so any future
         // cross-check is a direct lookup rather than a name search.
         garlandId = c.Content.RowId,
-        unlock = new
-        {
-            recordedInGameData = recorded,
-            unlockType = (int)c.UnlockType,
-            criteriaId = c.UnlockCriteria.RowId,
-            quest = questName,
-            note = recorded ? "" : "NOT in game data - use live UIState/QuestManager"
-        },
+        // Flat, one column each - a nested object renders as raw JSON in a grid cell, which is
+        // the exact complaint that got the recipe unlock flattened. Same defect, same fix.
+        unlockRecordedInGameData = recorded,
+        unlockType = (int)c.UnlockType,
+        unlockCriteriaId = c.UnlockCriteria.RowId,
+        unlockQuestFromGameData = questName,
+
         monsters = U,
         itemsFound = U
     });
