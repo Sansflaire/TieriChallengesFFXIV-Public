@@ -20,6 +20,8 @@ This file records *method*.
 | 4 | NPCs and where they stand | `npcs` |
 | 5 | **NPC equipment — the full correct algorithm** | `equip` |
 | 6 | Is this territory an instance? | `instance` |
+| 6A | **Unlocks — sheets can't answer these** | `unlocks` |
+| 6B | Recipe level, fish, gear requirements | `reqs` |
 | 7 | Traps, collected | `traps` |
 
 ---
@@ -337,6 +339,112 @@ Plugin.Condition[ConditionFlag.BoundByDuty]      // already modelled as GameStat
 That catches solo duties and cutscene lockouts the sheet lookup alone would miss. Use the sheet
 to ask "*is this territory* a duty", the flag to ask "*is the player currently* bound by one".
 
+
+<!-- SECTION:unlocks -->
+## 6A. Unlocks — the sheets CANNOT answer these
+
+**Unlock state is per-player, so it is live-only, always.** No sheet knows what *this* player has
+done. The sheets can at best say *which* quest gates something; only the running client says
+whether it was completed.
+
+### Duties (dungeons, raids, Occult Crescent…)
+
+`ContentFinderCondition.UnlockCriteria` + `UnlockType` — **and it is badly incomplete**:
+
+```
+duties named: 857        with an UnlockCriteria: 102
+UnlockType:   0 × 754    1 × 100    2 × 1    3 × 1    4 × 1
+```
+
+| Duty | UnlockType | UnlockCriteria |
+|---|---|---|
+| Sastasha | 0 | **0 — nothing recorded** |
+| Copperbell Mines | 0 | **0 — nothing recorded** |
+| the Occult Crescent: South Horn | 1 | 70847 → a `Quest` row |
+| the Occult Crescent: North Horn | 1 | 71047 → a `Quest` row |
+
+So **88% of duties record no unlock criteria at all.** Occult Crescent happens to be one of the
+100 that do (`UnlockType == 1` ⇒ `UnlockCriteria` is a `Quest` row id). Ordinary dungeons like
+Sastasha are not. `UnlockCriteria` is an **untyped `RowRef`** whose target sheet depends on
+`UnlockType`, so never resolve it without checking the type first.
+
+**Conclusion: do not build unlock logic on this sheet.** Use the live APIs.
+
+### The live APIs — all verified present in the installed FFXIVClientStructs
+
+| Question | API |
+|---|---|
+| Is this duty/content unlocked? | `UIState.IsUnlockLinkUnlocked`, `UIState.IsUnlockLinkUnlockedOrQuestCompleted` |
+| Is a quest done? | `QuestManager.IsQuestComplete` |
+| Is a Master book owned? | `PlayerState.IsSecretRecipeBookUnlocked` |
+
+⚠️ Verified only that these **symbols exist** in the DLL — signatures and semantics are not
+exercised. Confirm against a live character before shipping a gate on any of them.
+
+**Is a recipe available to the player?** Three independent conditions, all live:
+1. `PlayerState.IsSecretRecipeBookUnlocked(book)` if `Recipe.SecretRecipeBook != 0`
+2. crafting class level ≥ `RecipeLevelTable.ClassJobLevel`
+3. Specialist state if `IsSpecializationRequired`
+
+`SecretRecipeBook` is tiny — **111 books**, and each *is an item*: `SecretRecipeBook.Item`
+(book 1 "Master Carpenter I" → item 7778, same name).
+
+<!-- SECTION:reqs -->
+## 6B. Level and job requirements
+
+### Recipe level — `RecipeLevelTable.ClassJobLevel`
+
+```csharp
+var t = gd.GetExcelSheet<RecipeLevelTable>().GetRow(recipe.RecipeLevelTable.RowId);
+byte level = t.ClassJobLevel;    // also: Stars, Difficulty, Durability, Quality
+```
+
+Verified: *Acacia Ring* (Woodworking) `ClassJobLevel=96, stars=0`. **`ClassJobLevel` is the
+required level; `RowId` is the internal recipe level and is NOT the same number.**
+
+### Fish — what, where, and at what level
+
+```csharp
+var fp = gd.GetExcelSheet<FishParameter>();   // 2,512 rows → 2,461 distinct items
+var fs = gd.GetExcelSheet<FishingSpot>();     // 576 spots
+```
+
+`FishParameter.FishingSpot` → `FishingSpot`, which carries `PlaceName`, `TerritoryType`,
+`X`/`Z`, `Radius`, `Rare`, and **`GatheringLevel`** — the required Fisher level.
+
+| Fish | Spot | Lvl | Terr |
+|---|---|---|---|
+| Malm Kelp | Limsa Lominsa Upper Decks | 1 | 128 |
+| Crayfish | The Vein | 5 | 148 |
+| Chub | Rogue River | 1 | 134 |
+
+⚠️ **The level lives on the SPOT, not the fish** (`FishingSpot.GatheringLevel`).
+`FishParameter.GatheringItemLevel` is a *convert-table* ref, not a level.
+`FishingSpot.Item` is also a `Collection` — spot → many fish, the reverse direction.
+`IsInLog` marks Fishing Log entries; `OceanStars` is ocean-fishing rarity.
+
+### Gear — equip level and job
+
+```csharp
+item.LevelEquip                  // required character level
+item.LevelItem.RowId             // item level (ilvl) — a DIFFERENT number
+item.ClassJobCategory            // which jobs, as a named category
+item.EquipSlotCategory.RowId != 0  // is it equippable at all → 28,992 items
+```
+
+| Item | LevelEquip | ilvl | Jobs |
+|---|---|---|---|
+| Woolen Cowl | 47 | 47 | All Classes |
+| Aetherial Woolen Cowl | **45** | **47** | All Classes |
+| Hetairos Mail | 50 | 60 | GLA MRD LNC PLD WAR DRG DRK GNB RPR |
+| Strategos Bliaud | 50 | 60 | Disciple of Magic |
+
+⚠️ **`LevelEquip` ≠ `LevelItem`** — the Aetherial Woolen Cowl is ilvl 47 but equippable at 45.
+Using ilvl as a level gate is wrong.
+
+`ClassJobCategory.Name` is a display string ("Disciple of Magic", "All Classes", or an explicit
+job list). For a machine check, read that row's per-job booleans rather than parsing the name.
+
 <!-- SECTION:traps -->
 ## 7. Traps, collected
 
@@ -350,3 +458,7 @@ to ask "*is this territory* a duty", the flag to ask "*is the player currently* 
 8. **Blank rows everywhere.** Filter on name length.
 9. **Grepping a DLL matches substrings.** `ItemDrop` was `ItemDropRate` on a levequest struct. Reflect, don't grep.
 10. **Check every slot before claiming a match.** Reporting "6 of 6" while silently skipping five slots is worse than reporting five.
+11. **Unlock state is never in a sheet.** It is per-player and live-only. `ContentFinderCondition.UnlockCriteria` is empty for 754 of 857 duties, and is an untyped `RowRef` gated on `UnlockType`.
+12. **`LevelEquip` ≠ `LevelItem`.** Required level and item level are different columns and routinely differ.
+13. **Fishing level is on the SPOT**, not the fish — `FishingSpot.GatheringLevel`.
+14. **Don't guess column names.** `ContentFinderCondition.UnlockQuest` does not exist (it is `UnlockCriteria`); the guess cost a build. Dump the columns first — §0 has the one-liner.
