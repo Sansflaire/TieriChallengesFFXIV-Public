@@ -48,6 +48,7 @@ internal sealed class DatasetViewer
     private static readonly Vector4 ColWarn    = new(1.00f, 0.75f, 0.30f, 1f);
     private static readonly Vector4 ColOk      = new(0.45f, 0.90f, 0.50f, 1f);
     private static readonly Vector4 ColDim     = new(0.60f, 0.60f, 0.60f, 1f);
+    private static readonly Vector4 ColNumeric = new(0.45f, 0.75f, 1.00f, 1f);
 
     // ── Catalogue ────────────────────────────────────────────────────────────
 
@@ -79,22 +80,40 @@ internal sealed class DatasetViewer
     private int _page;
 
     /// <summary>
-    /// One per-column rule. <see cref="Exclude"/> flips it: Include keeps only rows whose cell
-    /// contains the text, Exclude drops them. Matching is substring and case-insensitive, so
-    /// "black" finds Blacksmith without anyone having to type the whole word.
+    /// How a column filter compares. The first two are substring text matches; the rest parse both
+    /// the cell and the entered value as numbers.
+    /// </summary>
+    private enum FilterOp { Include, Exclude, Gt, Ge, Lt, Le, Eq }
+
+    private static readonly string[] OpLabels =
+        { "INCLUDE", "EXCLUDE", ">", ">=", "<", "<=", "=" };
+
+    private static bool IsNumericOp(FilterOp op) => op >= FilterOp.Gt;
+
+    /// <summary>
+    /// One per-column rule. Text ops match a case-insensitive substring, so "black" finds
+    /// Blacksmith. Numeric ops parse the cell; a cell that is not a number simply fails them,
+    /// which is what makes two rules on one column behave as a range.
     /// </summary>
     private sealed class ColumnFilter
     {
         public int Column;
-        public bool Exclude;
+        public FilterOp Op;
         public string Text = string.Empty;
+
+        /// <summary>Parsed once at add time rather than per row, per filter, per rebuild.</summary>
+        public double Value;
     }
 
-    /// <summary>Filters are ANDed. Two Includes on the same column therefore mean "contains both".</summary>
+    /// <summary>
+    /// Filters are ANDed - with each other and with the search box. That is what makes a range
+    /// expressible at all: ">= 1" plus "&lt; 12" on one column is 1-11, whereas ORing them would
+    /// match everything.
+    /// </summary>
     private readonly List<ColumnFilter> _filters = new();
 
     private int _newCol;
-    private bool _newExclude;
+    private FilterOp _newOp = FilterOp.Include;
     private string _newText = string.Empty;
     private string _loadError = string.Empty;
     private bool _loading;
@@ -336,8 +355,30 @@ internal sealed class DatasetViewer
             {
                 if (f.Text.Length == 0) continue;
                 string cell = f.Column < cells.Length ? cells[f.Column] : string.Empty;
-                bool hit = cell.Contains(f.Text, StringComparison.OrdinalIgnoreCase);
-                if (f.Exclude ? hit : !hit) { ok = false; break; }
+
+                bool pass;
+                if (IsNumericOp(f.Op))
+                {
+                    // A non-numeric cell FAILS every numeric comparison rather than passing by
+                    // default. "recipeLevel >= 1" must not quietly keep rows whose value is "???"
+                    // or a word - a range filter that silently admits unknowns is worse than none.
+                    pass = double.TryParse(cell, NumberStyles.Any, CultureInfo.InvariantCulture, out var n)
+                        && f.Op switch
+                        {
+                            FilterOp.Gt => n >  f.Value,
+                            FilterOp.Ge => n >= f.Value,
+                            FilterOp.Lt => n <  f.Value,
+                            FilterOp.Le => n <= f.Value,
+                            _           => Math.Abs(n - f.Value) < 0.000001,
+                        };
+                }
+                else
+                {
+                    bool hit = cell.Contains(f.Text, StringComparison.OrdinalIgnoreCase);
+                    pass = f.Op == FilterOp.Exclude ? !hit : hit;
+                }
+
+                if (!pass) { ok = false; break; }
             }
 
             if (ok) _filtered.Add(i);
@@ -362,10 +403,10 @@ internal sealed class DatasetViewer
 
         ImGui.SameLine();
         ImGui.SetNextItemWidth(110);
-        if (ImGui.BeginCombo("##tc_ds_fmode", _newExclude ? "EXCLUDE" : "INCLUDE"))
+        if (ImGui.BeginCombo("##tc_ds_fmode", OpLabels[(int)_newOp]))
         {
-            if (ImGui.Selectable("INCLUDE", !_newExclude)) _newExclude = false;
-            if (ImGui.Selectable("EXCLUDE", _newExclude)) _newExclude = true;
+            for (int i = 0; i < OpLabels.Length; i++)
+                if (ImGui.Selectable(OpLabels[i], (int)_newOp == i)) _newOp = (FilterOp)i;
             ImGui.EndCombo();
         }
 
@@ -374,12 +415,26 @@ internal sealed class DatasetViewer
         bool submitted = ImGui.InputTextWithHint("##tc_ds_ftext", "text to match…", ref _newText, 128,
                                                 ImGuiInputTextFlags.EnterReturnsTrue);
 
+        string typed = _newText.Trim();
+        bool numericOk = !IsNumericOp(_newOp)
+                       || double.TryParse(typed, NumberStyles.Any, CultureInfo.InvariantCulture, out _);
+
         ImGui.SameLine();
-        if ((ImGui.Button("Add filter", new Vector2(90, 0)) || submitted) && _newText.Trim().Length > 0)
+        if ((ImGui.Button("Add filter", new Vector2(90, 0)) || submitted)
+            && typed.Length > 0 && numericOk)
         {
-            _filters.Add(new ColumnFilter { Column = _newCol, Exclude = _newExclude, Text = _newText.Trim() });
+            double.TryParse(typed, NumberStyles.Any, CultureInfo.InvariantCulture, out var val);
+            _filters.Add(new ColumnFilter { Column = _newCol, Op = _newOp, Text = typed, Value = val });
             _newText = string.Empty;
             ApplyFilter();
+        }
+
+        // Refusing silently would read as a broken button.
+        if (typed.Length > 0 && !numericOk)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, ColUnknown);
+            ImGui.TextUnformatted($"\"{typed}\" is not a number - " + OpLabels[(int)_newOp] + " needs one.");
+            ImGui.PopStyleColor();
         }
 
         if (_filters.Count == 0) return;
@@ -393,8 +448,9 @@ internal sealed class DatasetViewer
             if (ImGui.Button("x", new Vector2(22, 0))) remove = i;
             ImGui.SameLine();
 
-            ImGui.PushStyleColor(ImGuiCol.Text, f.Exclude ? ColUnknown : ColOk);
-            ImGui.TextUnformatted(f.Exclude ? "EXCLUDE" : "INCLUDE");
+            ImGui.PushStyleColor(ImGuiCol.Text,
+                f.Op == FilterOp.Exclude ? ColUnknown : IsNumericOp(f.Op) ? ColNumeric : ColOk);
+            ImGui.TextUnformatted(OpLabels[(int)f.Op]);
             ImGui.PopStyleColor();
 
             ImGui.SameLine();
