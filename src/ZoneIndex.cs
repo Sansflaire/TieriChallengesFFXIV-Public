@@ -373,7 +373,17 @@ internal static class ZoneIndex
     public static string ZoneName(uint territoryId)
     {
         if (territoryId == AnyZone) return "Not tied to a zone";
-        return Names.TryGetValue(territoryId, out var name) ? name : $"Territory {territoryId}";
+        if (Names.TryGetValue(territoryId, out var name)) return name;
+
+        // Not in the index — ask the sheet before giving up.
+        //
+        // `Names` is built from the AETHERYTE list, so it only ever holds zones you can teleport to.
+        // Anywhere without an aethernet shard is absent: apartment lobbies, private chambers, most
+        // instances. Those territories have a perfectly good PlaceName in TerritoryType; nothing was
+        // reading it, so a challenge in an apartment displayed as "Territory 574" everywhere a zone
+        // name appears — the objective sheet, the detail title, the teleport tooltip.
+        string sheet = PlayerStateReader.ZoneName((ushort)territoryId);
+        return string.IsNullOrWhiteSpace(sheet) ? $"Territory {territoryId}" : sheet;
     }
 
     /// <summary>

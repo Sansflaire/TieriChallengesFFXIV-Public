@@ -2801,8 +2801,9 @@ internal sealed class MainWindow : IDisposable
 
         // The number is not spoiler information — only ordering — so it survives the mask.
         //
-        // For a chain, def.Title is already the CURRENT step's wording (ChallengeCatalog.FaceOf),
-        // so the row reads as the leg the player is on rather than the series name.
+        // This is the CHALLENGE's name, including for a chain. It used to be the current step's, so
+        // a quest row read "#7  Step 2" and the thing's actual name appeared nowhere in the list.
+        // How far through it is rides beside the difficulty meter instead — see StepLabel below.
         string title = spoilered ? "??? Challenge"
                       : string.IsNullOrWhiteSpace(def.Title) ? "(unnamed challenge)" : def.Title;
         if (def.Number > 0) title = $"#{def.Number}  {title}";
@@ -2872,15 +2873,6 @@ internal sealed class MainWindow : IDisposable
             }
         }
 #endif
-
-        // A chain says where in the series it is, ahead of the step's own description — "Step 2 of
-        // 5" is the fact a quest row exists to carry, and def.Detail below already belongs to that
-        // step. Suppressed when the author hid progress, for chains whose length is a spoiler.
-        if (!done && def.StepLabel.Length > 0)
-        {
-            sub      = $"{def.StepLabel}  ·  {sub}";
-            subColor = QuestBlue;
-        }
 
         // A race the player is standing at the line of stops describing itself and starts asking.
         // This is the in-window route to starting one, and the ONLY route once the corner prompt
@@ -3060,10 +3052,51 @@ internal sealed class MainWindow : IDisposable
         controls.AppendChild(StatusPillFor(def, done, spoilered));
         rightCol.AppendChild(controls);
 
-        // Difficulty meter. Hidden entirely on a spoilered row — how hard something is is a
-        // strong hint about what it involves, which is the shape of thing the mask withholds.
-        if (def.HasDifficulty && !spoilered)
-            rightCol.AppendChild(StarRow(def.Difficulty));
+        // Difficulty meter, and — beside it — how far through a quest chain the player is.
+        //
+        // "Step 2 of 5" used to be prepended to the DESCRIPTION line, which cost the description
+        // width on the row where the description matters most and put a progress counter in the
+        // middle of a sentence. It belongs with the other at-a-glance metadata.
+        //
+        // Both are hidden on a spoilered row: how hard something is, and how long it runs, are both
+        // strong hints about what it involves, which is the shape of thing the mask withholds.
+        if (!spoilered)
+        {
+            string stepLabel = done ? string.Empty : def.StepLabel;
+            bool   hasStars  = def.HasDifficulty;
+
+            if (stepLabel.Length > 0 || hasStars)
+            {
+                var meta = new Node().WithStyle(s =>
+                {
+                    s.Flow       = Flow.Horizontal;
+                    s.WidthMode  = SizeMode.Fit;
+                    s.HeightMode = SizeMode.Fit;
+                    s.Gap        = PillGap;
+
+                    // Safe here for the same reason as the controls row above: this container is
+                    // Fit to its own contents and never grows with the row, so centring cannot
+                    // drift the way it would against a row that a wrapped hint has made taller.
+                    s.AlignItems = AlignItems.Center;
+                });
+
+                if (stepLabel.Length > 0)
+                {
+                    meta.AppendChild(new Node().WithText(stepLabel).WithStyle(s =>
+                    {
+                        s.WidthMode     = SizeMode.Fit;
+                        s.HeightMode    = SizeMode.Fit;
+                        s.FontSize      = SubFontSize;
+                        s.Color         = QuestBlue;
+                        s.PointerEvents = PointerEvents.None;
+                    }));
+                }
+
+                if (hasStars) meta.AppendChild(StarRow(def.Difficulty));
+
+                rightCol.AppendChild(meta);
+            }
+        }
 
         row.AppendChild(rightCol);
         return row;

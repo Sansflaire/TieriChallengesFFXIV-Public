@@ -257,6 +257,32 @@ internal static unsafe class PlayerStateReader
         catch { return (0, 0, 0, string.Empty); }
     }
 
+    /// <summary>
+    /// Which territory a Map row belongs to, or 0.
+    ///
+    /// <para>The reverse of <see cref="MapIdFor"/>, and unlike it this direction is unambiguous:
+    /// several maps can belong to one territory (a housing ward and its subdivision), but a map
+    /// belongs to exactly one territory.</para>
+    ///
+    /// <para><b>Why it is needed.</b> An area records the map it was captured on but not the
+    /// territory, while the thing that OWNS the area — a challenge, or one step of a chain — records
+    /// the territory but not the map. When those two disagree the challenge is untrackable: the
+    /// tracker only evaluates in the recorded territory, where the recorded coordinates are nowhere
+    /// near the player. This is what lets the disagreement be detected and settled in favour of the
+    /// captured position, which is the value that was measured rather than inherited.</para>
+    /// </summary>
+    public static ushort TerritoryOfMap(uint mapId)
+    {
+        if (mapId == 0) return 0;
+        try
+        {
+            _mapSheet ??= Plugin.DataManager.GetExcelSheet<LSheets.Map>();
+            var row = _mapSheet?.GetRowOrDefault(mapId);
+            return row == null ? (ushort)0 : (ushort)row.Value.TerritoryType.RowId;
+        }
+        catch { return 0; }
+    }
+
     public static string ZoneName(ushort territory)
     {
         if (territory == 0) return string.Empty;

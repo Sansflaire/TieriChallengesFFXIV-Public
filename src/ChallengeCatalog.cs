@@ -45,7 +45,11 @@ public sealed record ChallengeDef(
     bool          ShowProgress = true,
     bool          AllowMapPin = false)
 {
-    /// <summary>A quest chain. The Title/Detail/Hint above are the CURRENT step's, not the chain's.</summary>
+    /// <summary>
+    /// A quest chain. Title/Detail/Hint above are the CHALLENGE's own — the series name and blurb —
+    /// never the current step's. Which leg the player is on travels separately, in
+    /// <see cref="StepLabel"/>, so a row always says what challenge it is.
+    /// </summary>
     public bool IsChain => Theme == ChallengeTheme.Quest && StepTotal > 0;
 
     /// <summary>
@@ -395,6 +399,121 @@ public static class ChallengeCatalog
     /// <summary>True if the string is a real GUID — used to spot pre-GUID ids during migration.</summary>
     public static bool IsGuid(string? id) => Guid.TryParse(id, out _);
 
+    // ── Zone/area agreement ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Make a challenge's recorded zone — and each of its chain steps' — agree with where its areas
+    /// were actually captured. Returns true if anything was rewritten.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>This only ever touches a challenge that cannot possibly work.</b> The territory says
+    /// where the tracker will evaluate; the area's captured map says where the coordinates are. When
+    /// they agree, nothing happens here. When they disagree the challenge is untrackable in both
+    /// directions at once — never evaluated in the zone the player is standing in, and never inside
+    /// the volume in the zone it is filed under — so there is no working configuration to break.</para>
+    ///
+    /// <para><b>How the disagreement arises.</b> The zone is captured once, when the first area is
+    /// placed, and deliberately never re-read from the player afterwards, so that editing a Gridania
+    /// challenge while standing in Limsa does not relocate it. That rule is right, but it protects
+    /// the wrong thing for a CHAIN STEP: a new step inherits the challenge's zone, and the whole
+    /// purpose of a step is to be somewhere else. Capture its position in another zone and the area
+    /// records the new map while the step keeps the inherited territory.</para>
+    ///
+    /// <para>The map wins because it was MEASURED, standing on the spot. The territory was inherited.
+    /// An area with no captured map id says nothing either way and is left alone.</para>
+    /// </remarks>
+    public static bool RebindZonesToAreas(CustomChallenge c)
+    {
+        if (c == null) return false;
+
+        bool changed = false;
+
+        if (c.ChainSteps != null)
+            foreach (var step in c.ChainSteps)
+                changed |= RebindStep(step);
+
+        // A chain's own territory is not derived from areas at all — its STEPS carry the content,
+        // and its own Areas/Requirements are either empty or (for anything authored before the
+        // Creator stopped copying the shared editor buffer) a stray duplicate of one step. Deriving
+        // from those would file the whole quest under whichever step was last open in the editor.
+        // Where a quest STARTS is the meaningful answer, so take the first step's zone.
+        if (c.IsChain)
+        {
+            var    steps = c.ChainSteps;
+            ushort first = steps is { Count: > 0 } && steps[0] != null ? steps[0].TerritoryId : (ushort)0;
+            if (first != 0 && first != c.TerritoryId)
+            {
+                c.TerritoryId   = first;
+                c.TerritoryName = PlayerStateReader.ZoneName(first);
+                changed = true;
+            }
+
+            // Drop the stray top-level volume older drafts copied out of the shared editor buffer.
+            // Provably unread for a chain — the tracker dispatches IsChain ahead of Kind,
+            // CompositeIsWellFormed asks about ChainSteps, and MapPinService resolves the current
+            // step first — so this is a phantom that would only ever be published and puzzled over.
+            if (c.Areas.Count > 0)
+            {
+                Plugin.Log.Information(
+                    $"[Zones] \"{c.Title}\": dropped {c.Areas.Count} stray top-level area(s); "
+                  + "a chain's content lives on its steps.");
+                c.Areas.Clear();
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        // The challenge's own areas, for the non-chain kinds. Same reasoning: a challenge whose
+        // territory disagrees with its captured position is one that can never fire.
+        ushort own = TerritoryFromAreas(c.Requirements, c.Areas);
+        if (own != 0 && own != c.TerritoryId)
+        {
+            Plugin.Log.Information(
+                $"[Zones] \"{c.Title}\": zone {c.TerritoryId} disagreed with its captured position "
+              + $"(really territory {own}); rebound.");
+
+            c.TerritoryId   = own;
+            c.TerritoryName = PlayerStateReader.ZoneName(own);
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    private static bool RebindStep(ChainStep? step)
+    {
+        if (step == null) return false;
+
+        ushort fromMap = TerritoryFromAreas(step.Requirements, null);
+        if (fromMap == 0 || fromMap == step.TerritoryId) return false;
+
+        Plugin.Log.Information(
+            $"[Zones] step \"{step.Title}\": zone {step.TerritoryId} disagreed with its captured "
+          + $"position (really territory {fromMap}); rebound.");
+
+        step.TerritoryId   = fromMap;
+        step.TerritoryName = PlayerStateReader.ZoneName(fromMap);
+        return true;
+    }
+
+    /// <summary>The territory implied by the first area carrying a captured map id, or 0.</summary>
+    private static ushort TerritoryFromAreas(
+        List<AreaRequirement>? reqs, List<ChallengeArea>? areas)
+    {
+        if (reqs != null)
+            foreach (var r in reqs)
+                if (r?.Area is { MapId: not 0 })
+                    return PlayerStateReader.TerritoryOfMap(r.Area.MapId);
+
+        if (areas != null)
+            foreach (var a in areas)
+                if (a is { MapId: not 0 })
+                    return PlayerStateReader.TerritoryOfMap(a.MapId);
+
+        return 0;
+    }
+
     // ── Chains ───────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -430,23 +549,11 @@ public static class ChallengeCatalog
         return c.TerritoryId;
     }
 
-    /// <summary>
-    /// How a chain presents itself right now: the CURRENT step's wording, not the chain's.
-    /// A chain's own Title/Detail are the series name and blurb; the row has to show the leg the
-    /// player is actually on, or a five-step quest reads identically at every stage.
-    /// </summary>
-    public static (string Title, string Detail, string Hint) FaceOf(CustomChallenge c)
-    {
-        var step = CurrentStep(c);
-        if (step == null) return (c.Title ?? string.Empty, c.Detail ?? string.Empty, c.Hint ?? string.Empty);
-
-        // A step that leaves a field blank falls back to the chain's — an author who writes one
-        // hint for the whole quest should not have it vanish on step two.
-        return (
-            string.IsNullOrWhiteSpace(step.Title)  ? c.Title  ?? string.Empty : step.Title,
-            string.IsNullOrWhiteSpace(step.Detail) ? c.Detail ?? string.Empty : step.Detail,
-            string.IsNullOrWhiteSpace(step.Hint)   ? c.Hint   ?? string.Empty : step.Hint);
-    }
+    // There was a FaceOf() here that made a chain present as its CURRENT STEP — the row's title was
+    // the step's title, so a quest read "Step 2" in the list with the challenge's real name nowhere
+    // on screen. Trist's call, 2026-08-26: a row identifies the CHALLENGE, and the step is context
+    // the row carries alongside it, never a replacement for its name. Combined now stamps the
+    // challenge's own Title/Detail/Hint, and how far through it is travels separately as StepLabel.
 
     /// <summary>
     /// Built-in and user-authored challenges together, in the player's chosen order. The Number
@@ -499,16 +606,15 @@ public static class ChallengeCatalog
                 if (!Loadable(o)) continue;
                 if (!seen.Add(o.Id)) continue;
 
-                var (oTitle, oDetail, oHint) = FaceOf(o);
                 list.Add((o.SortOrder, new ChallengeDef(
                     o.Id,
                     string.IsNullOrWhiteSpace(o.Category) ? "Miscellaneous" : o.Category,
-                    oTitle,
-                    oDetail,
+                    o.Title  ?? string.Empty,
+                    o.Detail ?? string.Empty,
                     o.Kind,
                     IsCustom: false,
                     Source:     ChallengeSource.Official,
-                    Hint:       oHint,
+                    Hint:       o.Hint ?? string.Empty,
                     Difficulty: o.Difficulty,
                     Theme:      o.Theme,
                     StepNumber: CurrentStepNumber(o),
@@ -531,16 +637,15 @@ public static class ChallengeCatalog
                 ? ChallengeSource.Official
                 : ChallengeSource.Custom;
 
-            var (cTitle, cDetail, cHint) = FaceOf(c);
             list.Add((c.SortOrder, new ChallengeDef(
                 c.Id,
                 string.IsNullOrWhiteSpace(c.Category) ? "Miscellaneous" : c.Category,
-                cTitle,
-                cDetail,
+                c.Title  ?? string.Empty,
+                c.Detail ?? string.Empty,
                 c.Kind,
                 IsCustom:   source == ChallengeSource.Custom,
                 Source:     source,
-                Hint:       cHint,
+                Hint:       c.Hint ?? string.Empty,
                 Difficulty: c.Difficulty,
                 Theme:      c.Theme,
                 StepNumber: CurrentStepNumber(c),

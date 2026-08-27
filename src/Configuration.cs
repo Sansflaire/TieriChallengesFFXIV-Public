@@ -699,6 +699,15 @@ public sealed class Configuration : IPluginConfiguration
             changed = true;
         }
 
+        // (0b) Repair any challenge whose recorded zone disagrees with where its areas were
+        //      captured. Only ever rewrites something that is currently IMPOSSIBLE — the tracker
+        //      evaluates in the recorded territory, where the recorded coordinates are nowhere near
+        //      the player, so such a challenge cannot fire in either place. A chain step is the
+        //      common case: it inherits the challenge's zone at creation, and the entire point of a
+        //      step is to be somewhere else.
+        foreach (var c in CustomChallenges)
+            if (ChallengeCatalog.RebindZonesToAreas(c)) changed = true;
+
         // (1) Give pre-GUID authored challenges a permanent identity, remembering the old id so
         //     its completion can be carried across.
         var remapped = new Dictionary<string, string>(StringComparer.Ordinal);

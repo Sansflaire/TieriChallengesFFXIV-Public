@@ -96,7 +96,10 @@ internal sealed class ObjectiveWindow
         int current = Math.Clamp(Plugin.Progress.ChainStep(c.Id), 0, c.ChainSteps.Count);
         bool done   = _store.IsComplete(c.Id);
 
-        ImGui.TextColored(Blue, "QUEST");
+        // "Quest: <name>", not a bare "QUEST". The kind alone told the player nothing they could not
+        // see from the colour, and the challenge's actual name was nowhere on this sheet except the
+        // window's title bar — which is easy to miss and gone entirely when the window is docked.
+        ImGui.TextColored(Blue, $"Quest: {TitleFor(c)}");
         ImGui.SameLine();
         ImGui.TextDisabled(done
             ? "Complete"
@@ -178,7 +181,8 @@ internal sealed class ObjectiveWindow
                                        : _tracker.SatisfiedStops(c.Id, !c.SessionOnly);
         int satisfied = Math.Min(stops.Count, reqs.Count);
 
-        ImGui.TextColored(Green, "ADVENTURE");
+        // Same shape as the quest header above, so the two sheets read alike.
+        ImGui.TextColored(Green, $"Adventure: {TitleFor(c)}");
         ImGui.SameLine();
         ImGui.TextDisabled(done ? "Complete" : $"{satisfied} of {reqs.Count} objectives");
 
@@ -261,14 +265,19 @@ internal sealed class ObjectiveWindow
         }
     }
 
-    /// <summary>The condition lines for one stop, in the same words the creator shows.</summary>
+    /// <summary>
+    /// The condition lines for one stop, in the same words the creator shows.
+    /// </summary>
+    /// <remarks>
+    /// A presence-only stop prints NOTHING. It used to print "· be here", which is true of every
+    /// stop in the plugin — you are always required to be there — so it added a line to every
+    /// objective while distinguishing none of them. The step's description and hint are what say
+    /// where "here" is; this list is for the extra conditions layered on top, and when there are
+    /// none the honest rendering is silence.
+    /// </remarks>
     private static void DrawConditions(AreaRequirement req)
     {
-        if (req?.Conditions == null || req.Conditions.Count == 0)
-        {
-            ImGui.TextDisabled("   · be here");
-            return;
-        }
+        if (req?.Conditions == null || req.Conditions.Count == 0) return;
 
         foreach (var cond in req.Conditions)
             ImGui.TextDisabled($"   · {cond.Describe()}");

@@ -87,7 +87,6 @@ internal sealed class ChallengeCreatorWindow
     private string _territoryName = string.Empty;
 
     private bool _switchToCreate;
-    private bool _tabAlwaysOpen = true;
 
     /// <summary>In-world wireframe renderer. Owned here because it visualises this draft.</summary>
     public readonly AreaOverlay Overlay = new();
@@ -212,8 +211,17 @@ internal sealed class ChallengeCreatorWindow
             var createFlags = _switchToCreate ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
             _switchToCreate = false;
 
+            // No `ref bool` here, and that is the entire point.
+            //
+            // The p_open overload was used purely to reach the flags parameter, so that
+            // _switchToCreate could select this tab after "Edit" is pressed on the Existing tab.
+            // Passing p_open ALSO draws a close button on the tab, and ImGui writes false into the
+            // bool when it is clicked. The field was called _tabAlwaysOpen and nothing ever set it
+            // back to true, so one click permanently deleted the Create/Edit tab — the only way to
+            // author anything — for the rest of the session, with no way back short of reloading
+            // the plugin. Take the flags-only overload; there is nothing here to close.
             string createLabel = _editingId == null ? "Create" : "Edit";
-            if (ImGui.BeginTabItem($"{createLabel}###tc_tab_create", ref _tabAlwaysOpen, createFlags))
+            if (ImGui.BeginTabItem($"{createLabel}###tc_tab_create", createFlags))
             {
                 DrawCreateTab();
                 ImGui.EndTabItem();
@@ -599,6 +607,10 @@ internal sealed class ChallengeCreatorWindow
 
             if (_mode == AreaMode.Single) break;
         }
+
+        // Immediately, while authoring — not only at save — so the step list shows the zone the
+        // position is really in rather than the one it inherited from the challenge.
+        ChallengeCatalog.RebindZonesToAreas(new CustomChallenge { ChainSteps = { step } });
     }
 
     /// <summary>Load a step into the shared draft fields, committing whatever was there first.</summary>
@@ -1902,7 +1914,14 @@ internal sealed class ChallengeCreatorWindow
             foreach (var s in _chainSteps) draft.ChainSteps.Add(s.Clone());
         }
 
-        foreach (var a in _areas) draft.Areas.Add(a.Clone());
+        // Not for a chain. `_areas` is the SHARED editor buffer and currently holds whichever step
+        // happens to be loaded, so copying it here shipped a stray duplicate of that one step's
+        // volume at the top level — exactly the nonsense the Requirements guard below was written to
+        // prevent, in the one field it did not cover. Harmless to the tracker, which dispatches a
+        // chain ahead of Kind, but it is meaningless data in a published file and it made the
+        // challenge look as though it had content of its own.
+        if (_chainSteps.Count == 0)
+            foreach (var a in _areas) draft.Areas.Add(a.Clone());
 
         // Composite stops are assembled from the parallel draft lists. Deep-copied for the same
         // reason LoadDraft deep-copies areas: the draft must stay independent of what is stored,
@@ -1949,6 +1968,12 @@ internal sealed class ChallengeCreatorWindow
             // duplicate volumes with no meaning attached to their order.
             draft.Areas.Clear();
         }
+
+        // Last, once every area is on the draft: settle the zone against where the areas were
+        // actually captured. A chain step inherits the challenge's zone when it is created, so a
+        // step placed in a different zone would otherwise ship with a territory it was never in —
+        // and a challenge whose territory disagrees with its own coordinates can never fire.
+        ChallengeCatalog.RebindZonesToAreas(draft);
 
         // Now that the draft is fully populated. See the placeholder note above.
         draft.MinPluginVersion = ChallengeCatalog.RequiredFor(draft).ToString();
