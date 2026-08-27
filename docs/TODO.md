@@ -67,6 +67,20 @@ started right now. Update the indented line in the same edit that changes a depe
       Trist will help. Without it, Hunt routes are capped at that small low-level pool and
       high-level Hunt routes have no zone source at all.
   - ⛔ Blocked by: **R5** *(same redistribution question as the materials list)*
+- [ ] **A5** 🙋 **Fill `data/duties.json`** — `monsters` and `itemsFound` are ??? for all 373
+      entries; `unlock` is missing for 754 of 857 duties in game data. Needs external sources.
+- [ ] **A6** 🙋 **Fill `data/monsters.json`** — 14,560 entries, and `level`/`drops`/`abilities`/
+      `mapLocation`/`inInstance` are ??? for **every one**. Supersedes nothing; A4 (zones) is the
+      first column of this same file.
+- [ ] **A7** 🙋 **Fill `data/gatherables.json`** — `isCollectable`, `isTimedNode`,
+      `isLegendaryNode` are ??? for all 4,198 entries.
+- [ ] **A8** 🙋 **Fill `data/gear.json`** — `expansion` (all 28,992) and `acquisition` (all except
+      crafted) are ???.
+- [ ] **A9** 🙋 **Fill `data/fates.json`** — `monsters`, `monsterAbilities`, bronze/silver/gold
+      `rewards` and chain **ordering** are ??? for all 1,712 entries.
+- [ ] **A10** 🙋 **Decide the generated-vs-curated split** (`data/README.md`). Regeneration
+      currently overwrites the whole file, so it would destroy hand-entered data. **Decide before
+      any manual filling starts**, or A5–A9 get wiped by the next patch refresh.
 
 ## 🔨 Implement
 
