@@ -11,12 +11,12 @@ Generated 2026-08-26. Regenerate with `scripts/gen-datasets/` (see below).
 
 | File | Entries | Size | Complete? |
 |---|---:|---:|---|
-| `duties.json` | 373 | 107 KB | ⚠️ partial |
+| `duties.json` | 373 | 105 KB | ⚠️ partial |
 | `monsters.json` | 14,560 | 767 KB | 🔴 **needs verification throughout** |
-| `recipes-level-based.json` | 9,577 | 4.5 MB | ✅ complete |
+| `recipes-level-based.json` | 9,577 | 2.5 MB | ✅ complete |
 | `gatherables.json` | 4,198 | 503 KB | ⚠️ partial |
 | `gear.json` | 28,992 | 7.2 MB | ⚠️ partial |
-| `fates.json` | 1,712 | 800 KB | ⚠️ partial |
+| `fates.json` | 1,712 | 686 KB | ⚠️ partial |
 | `npcs.json` | 30,878 | 14.3 MB | ⚠️ partial |
 
 ---
@@ -80,7 +80,7 @@ Background and method: [`../research/Game Data Cookbook.md`](../research/Game%20
 
 ## ⚠️ Regeneration will churn git history
 
-These total ~28 MB. Regenerating rewrites every file, so each regeneration adds ~28 MB of new
+These total ~26 MB. Regenerating rewrites every file, so each regeneration adds ~28 MB of new
 blobs to history permanently.
 
 **Recommended before any hand-editing begins: split generated from curated.**
@@ -108,9 +108,13 @@ what you see there is real field names and `???` columns exactly as if they were
    real information.
 2. **Keys are aliased** (`"a"`, `"b"`, …) with a `fieldAliases` legend. Long descriptive names are
    worth having once, not once per row.
-3. **No indentation.**
+3. **Constant fields are hoisted** into `omittedConstant`. A field carrying the *same* value on
+   every entry is stored once — always-`???` is just the case where that value is `???`. This
+   alone took `recipes-level-based.json` from 4.5 MB to 2.5 MB, because `unlockType`,
+   `unlockBook` and `unlockNote` are identical on all 9,577 rows.
+4. **No indentation.**
 
-Result: **67 MB → 28 MB**, with `monsters.json` going 3.5 MB → 767 KB.
+Result: **67 MB → 26 MB**, with `monsters.json` going 3.5 MB → 767 KB.
 
 **Editing by hand?** Use the legend at the top of the file to find the alias for the field you
 want. If that proves annoying in practice, the aliasing is one flag in the generator.
@@ -130,6 +134,22 @@ Equipment uses the Glamourer-validated algorithm in
 [`../research/Game Data Cookbook.md`](../research/Game%20Data%20Cookbook.md) §5 — inline
 `ENpcBase` models layered over `NpcEquip` per slot, with the item lookup keyed by
 `(slot, model, variant)`.
+
+## Column groups
+
+A dataset may declare `columnGroups`, letting one filter span several columns. `recipes-level-based`
+declares:
+
+```json
+"columnGroups": { "ingredient (any)": ["ingredient1", … , "ingredient8"] }
+```
+
+In the viewer that appears as its own filter target. **INCLUDE** matches if *any* slot contains the
+text; **EXCLUDE** requires that *none* does — the only reading that makes "hide recipes using Fire
+Shard" work when the shard could be in any of the eight slots.
+
+Ingredients are flat `ingredient1…8` columns rather than a nested array: 8 is the measured maximum
+across all recipes, not an assumption from the sheet's padded fixed-width array.
 
 ## Regenerating
 

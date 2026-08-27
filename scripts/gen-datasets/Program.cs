@@ -41,7 +41,8 @@ string Zone(uint tid) => terr.GetRowOrDefault(tid) is { } t
 ///
 /// The viewer reverses all three, so what a human sees is unchanged — "???" included.
 /// </summary>
-void Write(string file, string desc, string? needs, string[] unknown, object entries, int count)
+void Write(string file, string desc, string? needs, string[] unknown, object entries, int count,
+           Dictionary<string, string[]>? groups = null)
 {
     var path = Path.Combine(OUT, file);
 
@@ -68,7 +69,30 @@ void Write(string file, string desc, string? needs, string[] unknown, object ent
     }
     alwaysUnknown.ExceptWith(everKnown);   // "always" means never once known
 
-    var kept = order.Where(k => !alwaysUnknown.Contains(k)).ToList();
+    // Generalisation of the same idea: a field carrying the SAME value on every entry is stored
+    // once in the header instead of N times. always-??? is just the case where that value is
+    // "???". Costs nothing to restore and turns a repeated boilerplate note into one string.
+    var constant = new Dictionary<string, JsonNode?>(StringComparer.Ordinal);
+    if (arr.Count > 1)
+    {
+        foreach (var k in order)
+        {
+            if (alwaysUnknown.Contains(k)) continue;
+            string? first = null;
+            bool same = true, present = true;
+            foreach (var n in arr)
+            {
+                if (n is not JsonObject o || !o.TryGetPropertyValue(k, out var v)) { present = false; break; }
+                string txt = v?.ToJsonString() ?? "null";
+                if (first is null) first = txt;
+                else if (txt != first) { same = false; break; }
+            }
+            if (present && same && first is not null)
+                constant[k] = JsonNode.Parse(first);
+        }
+    }
+
+    var kept = order.Where(k => !alwaysUnknown.Contains(k) && !constant.ContainsKey(k)).ToList();
     var alias = new Dictionary<string, string>(StringComparer.Ordinal);
     for (int i = 0; i < kept.Count; i++) alias[kept[i]] = Alias(i);
 
@@ -94,6 +118,12 @@ void Write(string file, string desc, string? needs, string[] unknown, object ent
         ["omittedAlwaysUnknown"] = new JsonArray(
             alwaysUnknown.OrderBy(x => order.IndexOf(x)).Select(x => (JsonNode?)x).ToArray()),
         ["unknownMarker"] = U,
+        ["omittedConstant"] = new JsonObject(
+            constant.Select(kv => new KeyValuePair<string, JsonNode?>(kv.Key, kv.Value?.DeepClone()))),
+        ["columnGroups"] = groups is null
+            ? new JsonObject()
+            : new JsonObject(groups.Select(kv => new KeyValuePair<string, JsonNode?>(
+                  kv.Key, new JsonArray(kv.Value.Select(x => (JsonNode?)x).ToArray())))),
         ["fieldAliases"] = new JsonObject(alias.Select(kv =>
             new KeyValuePair<string, JsonNode?>(kv.Value, kv.Key))),
         ["count"] = count,
@@ -102,7 +132,7 @@ void Write(string file, string desc, string? needs, string[] unknown, object ent
 
     File.WriteAllText(path, doc.ToJsonString(JO));
     Console.WriteLine($"  {file,-30} {count,6} entries  {new FileInfo(path).Length / 1024,7} KB"
-                    + $"  (-{alwaysUnknown.Count} always-??? fields)");
+                    + $"  (-{alwaysUnknown.Count} ???, -{constant.Count} constant)");
 }
 
 /// <summary>a…z, then aa, ab… Short, stable, and legible in a diff.</summary>
@@ -216,7 +246,9 @@ Write("monsters.json",
 var rec = gd.GetExcelSheet<Recipe>();
 var rlt = gd.GetExcelSheet<RecipeLevelTable>();
 var ctr = gd.GetExcelSheet<CraftType>();
-var recs = new List<object>();
+var recs = new List<Dictionary<string, object?>>();
+var recipeIngredients = new List<List<string>>();
+int maxIngredients = 0;
 foreach (var r in rec)
 {
     if (r.ItemResult.RowId == 0) continue;
@@ -224,41 +256,54 @@ foreach (var r in rec)
         || r.Quest.RowId != 0 || r.StatusRequired.RowId != 0 || r.ItemRequired.RowId != 0) continue;
 
     var lt = rlt.GetRowOrDefault(r.RecipeLevelTable.RowId);
-    var ing = new List<object>();
+    var ing = new List<string>();
     for (int k = 0; k < r.Ingredient.Count; k++)
     {
         var g = r.Ingredient[k];
         byte a = r.AmountIngredient[k];
         if (g.RowId == 0 || a == 0) continue;
-        ing.Add(new { itemId = g.RowId, name = IName(g.RowId), amount = (int)a });
+        ing.Add($"{a}x {IName(g.RowId)}");
     }
-    recs.Add(new
+    if (ing.Count > maxIngredients) maxIngredients = ing.Count;
+    recipeIngredients.Add(ing);
+
+    recs.Add(new Dictionary<string, object?>
     {
-        recipeId = r.RowId,
-        craftType = T(ctr.GetRowOrDefault(r.CraftType.RowId)?.Name),
-        resultItemId = r.ItemResult.RowId,
-        resultName = IName(r.ItemResult.RowId),
-        resultAmount = (int)r.AmountResult,
-        recipeLevel = (int)(lt?.ClassJobLevel ?? 0),
-        stars = (int)(lt?.Stars ?? 0),
-        difficulty = (int)(lt?.Difficulty ?? 0),
-        durability = (int)(lt?.Durability ?? 0),
-        canHq = r.CanHq,
-        canQuickSynth = r.CanQuickSynth,
-        unlock = new
-        {
-            type = "level",
-            classJobLevel = (int)(lt?.ClassJobLevel ?? 0),
-            book = (string?)null,
-            note = "plain level-based: no book, quest, status, held-item or specialist requirement"
-        },
-        ingredients = ing
+        ["recipeId"] = r.RowId,
+        ["craftType"] = T(ctr.GetRowOrDefault(r.CraftType.RowId)?.Name),
+        ["resultItemId"] = r.ItemResult.RowId,
+        ["resultName"] = IName(r.ItemResult.RowId),
+        ["resultAmount"] = (int)r.AmountResult,
+        ["recipeLevel"] = (int)(lt?.ClassJobLevel ?? 0),
+        ["stars"] = (int)(lt?.Stars ?? 0),
+        ["difficulty"] = (int)(lt?.Difficulty ?? 0),
+        ["durability"] = (int)(lt?.Durability ?? 0),
+        ["canHq"] = r.CanHq,
+        ["canQuickSynth"] = r.CanQuickSynth,
+        // Flat, one column each. A nested unlock object rendered as raw JSON in a grid cell and
+        // was unreadable at a glance - which is the only thing a grid is for.
+        ["unlockType"] = "level",
+        ["unlockClassJobLevel"] = (int)(lt?.ClassJobLevel ?? 0),
+        ["unlockBook"] = null,
+        ["unlockNote"] = "no book, quest, status, held-item or specialist gate",
     });
 }
+
+// Ingredients become ingredient1..N so each sits in its own sortable, filterable column. The
+// count is measured rather than assumed - the sheet's array is fixed-width and padded, so the
+// real maximum is a property of the data, not of the schema.
+for (int i = 0; i < recs.Count; i++)
+    for (int k = 0; k < maxIngredients; k++)
+        recs[i]["ingredient" + (k + 1)] = k < recipeIngredients[i].Count ? recipeIngredients[i][k] : null;
+
+var recipeGroups = new Dictionary<string, string[]>
+{
+    ["ingredient (any)"] = Enumerable.Range(1, maxIngredients).Select(k => "ingredient" + k).ToArray(),
+};
 Write("recipes-level-based.json",
     "Plain level-based recipes ONLY. Master/Expert/Specialist/quest/status/item-gated recipes are "
   + "excluded by construction, so every entry here is safe for a generated quest.",
-    null, Array.Empty<string>(), recs, recs.Count);
+    null, Array.Empty<string>(), recs, recs.Count, recipeGroups);
 
 // ---------------- 4. GATHERABLES + FISH ----------------
 var gi   = gd.GetExcelSheet<GatheringItem>();

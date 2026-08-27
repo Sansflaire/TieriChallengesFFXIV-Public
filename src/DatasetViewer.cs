@@ -97,13 +97,21 @@ internal sealed class DatasetViewer
     /// </summary>
     private sealed class ColumnFilter
     {
-        public int Column;
+        /// <summary>One index normally; every member index for a group target like "ingredient (any)".</summary>
+        public int[] Columns = Array.Empty<int>();
+        public string Label = string.Empty;
         public FilterOp Op;
         public string Text = string.Empty;
 
         /// <summary>Parsed once at add time rather than per row, per filter, per rebuild.</summary>
         public double Value;
     }
+
+    /// <summary>Dropdown labels: every real column, then any group declared by the dataset.</summary>
+    private string[] _filterTargets = Array.Empty<string>();
+
+    /// <summary>Column indices behind each entry of <see cref="_filterTargets"/>.</summary>
+    private int[][] _targetColumns = Array.Empty<int[]>();
 
     /// <summary>
     /// Filters are ANDed - with each other and with the search box. That is what makes a range
@@ -255,9 +263,17 @@ internal sealed class DatasetViewer
                 foreach (var p in e.Properties())
                     if (seen.Add(p.Name)) keys.Add(p.Name);
 
-            // Real columns first, then the stripped always-??? ones appended.
-            _columns = keys.Select(RealName).Concat(omitted).ToArray();
+            // Fields hoisted out because they carry the SAME value on every entry. Restored as
+            // ordinary columns showing that value - the reader should not have to know or care
+            // that the file stored it once.
+            var constants = root["omittedConstant"] as JObject;
+            var constNames = constants?.Properties().Select(pr => pr.Name).ToArray() ?? Array.Empty<string>();
+            var constCells = constants?.Properties().Select(pr => Flatten(pr.Value)).ToArray() ?? Array.Empty<string>();
+
+            // Real columns, then the always-??? ones, then the constant ones.
+            _columns = keys.Select(RealName).Concat(omitted).Concat(constNames).ToArray();
             int stored = keys.Count;
+            int unknownEnd = stored + omitted.Length;
 
             _rows = new List<string[]>(entries.Count);
             _blobs = new List<string>(entries.Count);
@@ -273,12 +289,35 @@ internal sealed class DatasetViewer
                     blob.Append(cells[c]).Append('');
                 }
 
-                // Synthesised: stripped precisely BECAUSE they are ??? on every entry.
-                for (int c = stored; c < _columns.Length; c++) cells[c] = "???";
+                // Synthesised: stripped precisely BECAUSE they never vary.
+                for (int c = stored; c < unknownEnd; c++) cells[c] = "???";
+                for (int c = unknownEnd; c < _columns.Length; c++) cells[c] = constCells[c - unknownEnd];
 
                 _rows.Add(cells);
                 _blobs.Add(blob.ToString().ToLowerInvariant());
             }
+
+            // Filter targets: every column, plus any group the dataset declares. A group lets one
+            // rule span several columns - "ingredient (any)" searches all eight slots at once,
+            // which is the only sane way to ask "which recipes use Cotton Yarn".
+            var targets = new List<string>(_columns);
+            var targetCols = new List<int[]>();
+            for (int i = 0; i < _columns.Length; i++) targetCols.Add(new[] { i });
+
+            if (root["columnGroups"] is JObject groups)
+            {
+                foreach (var g in groups.Properties())
+                {
+                    var members = (g.Value as JArray)?
+                        .Select(x => Array.IndexOf(_columns, x.ToString()))
+                        .Where(ix => ix >= 0).ToArray() ?? Array.Empty<int>();
+                    if (members.Length == 0) continue;
+                    targets.Add(g.Name);
+                    targetCols.Add(members);
+                }
+            }
+            _filterTargets = targets.ToArray();
+            _targetColumns = targetCols.ToArray();
 
             _open = info;
             _page = 0;
@@ -312,6 +351,8 @@ internal sealed class DatasetViewer
         // Column indices are meaningless against a different dataset - a stale filter would
         // silently point at whatever column happened to land in that slot.
         _filters.Clear();
+        _filterTargets = Array.Empty<string>();
+        _targetColumns = Array.Empty<int[]>();
         _newCol = 0;
         _newText = string.Empty;
     }
@@ -353,8 +394,7 @@ internal sealed class DatasetViewer
 
             foreach (var f in _filters)
             {
-                if (f.Text.Length == 0) continue;
-                string cell = f.Column < cells.Length ? cells[f.Column] : string.Empty;
+                if (f.Text.Length == 0 || f.Columns.Length == 0) continue;
 
                 bool pass;
                 if (IsNumericOp(f.Op))
@@ -362,8 +402,14 @@ internal sealed class DatasetViewer
                     // A non-numeric cell FAILS every numeric comparison rather than passing by
                     // default. "recipeLevel >= 1" must not quietly keep rows whose value is "???"
                     // or a word - a range filter that silently admits unknowns is worse than none.
-                    pass = double.TryParse(cell, NumberStyles.Any, CultureInfo.InvariantCulture, out var n)
-                        && f.Op switch
+                    // A group passes if ANY member satisfies the comparison.
+                    pass = false;
+                    foreach (int ci in f.Columns)
+                    {
+                        string cell = ci < cells.Length ? cells[ci] : string.Empty;
+                        if (!double.TryParse(cell, NumberStyles.Any, CultureInfo.InvariantCulture, out var n))
+                            continue;
+                        bool m = f.Op switch
                         {
                             FilterOp.Gt => n >  f.Value,
                             FilterOp.Ge => n >= f.Value,
@@ -371,10 +417,20 @@ internal sealed class DatasetViewer
                             FilterOp.Le => n <= f.Value,
                             _           => Math.Abs(n - f.Value) < 0.000001,
                         };
+                        if (m) { pass = true; break; }
+                    }
                 }
                 else
                 {
-                    bool hit = cell.Contains(f.Text, StringComparison.OrdinalIgnoreCase);
+                    // INCLUDE passes if ANY member contains it; EXCLUDE requires that NONE does,
+                    // which is the only reading that makes "hide recipes using Fire Shard" work
+                    // when the shard could be in any of the eight ingredient slots.
+                    bool hit = false;
+                    foreach (int ci in f.Columns)
+                    {
+                        string cell = ci < cells.Length ? cells[ci] : string.Empty;
+                        if (cell.Contains(f.Text, StringComparison.OrdinalIgnoreCase)) { hit = true; break; }
+                    }
                     pass = f.Op == FilterOp.Exclude ? !hit : hit;
                 }
 
@@ -390,14 +446,14 @@ internal sealed class DatasetViewer
     /// <summary>The filter builder plus the list of active rules.</summary>
     private void DrawFilters()
     {
-        if (_columns.Length == 0) return;
+        if (_filterTargets.Length == 0) return;
 
-        ImGui.SetNextItemWidth(200);
-        string colLabel = _newCol < _columns.Length ? _columns[_newCol] : "column";
+        ImGui.SetNextItemWidth(220);
+        string colLabel = _newCol < _filterTargets.Length ? _filterTargets[_newCol] : "column";
         if (ImGui.BeginCombo("##tc_ds_fcol", colLabel))
         {
-            for (int i = 0; i < _columns.Length; i++)
-                if (ImGui.Selectable(_columns[i], i == _newCol)) _newCol = i;
+            for (int i = 0; i < _filterTargets.Length; i++)
+                if (ImGui.Selectable(_filterTargets[i], i == _newCol)) _newCol = i;
             ImGui.EndCombo();
         }
 
@@ -424,7 +480,14 @@ internal sealed class DatasetViewer
             && typed.Length > 0 && numericOk)
         {
             double.TryParse(typed, NumberStyles.Any, CultureInfo.InvariantCulture, out var val);
-            _filters.Add(new ColumnFilter { Column = _newCol, Op = _newOp, Text = typed, Value = val });
+            _filters.Add(new ColumnFilter
+            {
+                Columns = _newCol < _targetColumns.Length ? _targetColumns[_newCol] : Array.Empty<int>(),
+                Label = _filterTargets[_newCol],
+                Op = _newOp,
+                Text = typed,
+                Value = val,
+            });
             _newText = string.Empty;
             ApplyFilter();
         }
@@ -454,8 +517,7 @@ internal sealed class DatasetViewer
             ImGui.PopStyleColor();
 
             ImGui.SameLine();
-            string col = f.Column < _columns.Length ? _columns[f.Column] : "?";
-            ImGui.TextUnformatted($"{col} : \"{f.Text}\"");
+            ImGui.TextUnformatted($"{f.Label} : \"{f.Text}\"");
 
             ImGui.PopID();
         }
