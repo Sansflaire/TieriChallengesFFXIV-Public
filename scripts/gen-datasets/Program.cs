@@ -148,15 +148,25 @@ Console.WriteLine("writing:");
 // ---------------- 1. DUTIES ----------------
 var cfc = gd.GetExcelSheet<ContentFinderCondition>();
 var ctype = gd.GetExcelSheet<ContentType>();
+var cmt = gd.GetExcelSheet<ContentMemberType>();
 var duties = new List<object>();
 foreach (var c in cfc)
 {
     if (T(c.Name).Length == 0) continue;
     uint ct = c.ContentType.RowId;
     if (ct != 2 && ct != 4 && ct != 5 && ct != 28 && ct != 37) continue;
+
+    // Party size comes from ContentMemberType, NOT QueueMaxPlayers - that column is 0 for every
+    // duty in the game and an earlier version of this file classified raids with it, which meant
+    // the alliance/normal split was decided by a value that is always zero.
+    var mt = cmt.GetRowOrDefault(c.ContentMemberType.RowId);
+    int perParty = mt is { } m1 ? m1.MembersPerParty : 0;
+    int parties  = mt is { } m2 ? Math.Max((int)m2.PartyCount, 1) : 1;
+    int partySize = perParty * parties;
+
     string kind = ct == 2 ? "Dungeon" : ct == 4 ? "Trial" : ct == 28 ? "Ultimate"
                 : ct == 37 ? "Chaotic Alliance Raid"
-                : (c.QueueMaxPlayers >= 24 ? "Alliance Raid" : "Normal Raid");
+                : (partySize >= 24 ? "Alliance Raid" : "Normal Raid");
 
     bool recorded = c.UnlockCriteria.RowId != 0;
     string questName = U;
@@ -177,9 +187,21 @@ foreach (var c in cfc)
         expansion = T(exv.GetRowOrDefault(c.RequiredExVersion.RowId)?.Name),
         levelRequired = (int)c.ClassJobLevelRequired,
         levelSync = (int)c.ClassJobLevelSync,
-        itemLevelRequired = (int)c.ItemLevelRequired,
-        partySize = (int)c.QueueMaxPlayers,
+
+        // BOTH item-level bounds. They are separate columns and a duty rarely has both: an
+        // Ultimate carries only the sync ceiling, a Savage tier only the entry floor. Reading one
+        // and calling it "the" item level is how a 0 gets mistaken for a missing value.
+        itemLevelMin = (int)c.ItemLevelRequired,
+        itemLevelMaxSync = (int)c.ItemLevelSync,
+
+        partySize,
+        partiesInAlliance = parties,
         highEndDuty = c.HighEndDuty,
+
+        // ContentFinderCondition.Content IS Garland Tools' instance id - verified against
+        // 30067 (Weapon's Refrain) and 30155 (AAC Heavyweight M1 Savage). Stored so any future
+        // cross-check is a direct lookup rather than a name search.
+        garlandId = c.Content.RowId,
         unlock = new
         {
             recordedInGameData = recorded,
@@ -199,6 +221,10 @@ Write("duties.json",
   + "those need live UIState/QuestManager or external data.",
     new[] { "monsters", "itemsFound", "unlock (when recordedInGameData=false)" },
     duties, duties.Count);
+
+Console.WriteLine($"    duties: {duties.Count} rows, "
+                + $"{cfc.Count(c => T(c.Name).Length > 0 && (c.ContentType.RowId is 2 or 4 or 5 or 28 or 37) && c.ItemLevelRequired > 0)} with a min ilvl, "
+                + $"{cfc.Count(c => T(c.Name).Length > 0 && (c.ContentType.RowId is 2 or 4 or 5 or 28 or 37) && c.ItemLevelSync > 0)} with a sync ceiling");
 
 // ---------------- 2. MONSTERS ----------------
 var bnpc = gd.GetExcelSheet<BNpcName>();
