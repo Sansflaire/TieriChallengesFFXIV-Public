@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lumina;
@@ -241,7 +242,36 @@ void Write(string file, string desc, string? needs, string[] unknown, object ent
         ["entries"] = slim,
     };
 
-    File.WriteAllText(path, doc.ToJsonString(JO));
+    // A LOCKED FILE MUST NOT ABORT THE WHOLE RUN.
+    //
+    // npcs.json is 14 MB and an editor or indexer that has it open maps it into memory, which
+    // makes Windows refuse the write with "cannot be performed on a file with a user-mapped
+    // section open". Left unhandled that killed generation partway, so every dataset AFTER the
+    // locked one silently never regenerated - the run looked like it had simply crashed at the
+    // end. Retry briefly, then skip this one file loudly and carry on with the rest.
+    var text = doc.ToJsonString(JO);
+    Exception? last = null;
+    for (int attempt = 0; attempt < 4; attempt++)
+    {
+        try
+        {
+            File.WriteAllText(path, text);
+            last = null;
+            break;
+        }
+        catch (IOException ex)
+        {
+            last = ex;
+            Thread.Sleep(400 * (attempt + 1));
+        }
+    }
+    if (last is not null)
+    {
+        Console.WriteLine($"  !! {file,-27} NOT WRITTEN - {last.Message.Split(':')[0]}");
+        Console.WriteLine($"  !! close whatever has it open and re-run; other datasets are unaffected");
+        return;
+    }
+
     Console.WriteLine($"  {file,-30} {count,6} entries  {new FileInfo(path).Length / 1024,7} KB"
                     + $"  (-{alwaysUnknown.Count} ???, -{constant.Count} constant)");
 }

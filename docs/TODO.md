@@ -92,10 +92,11 @@ started right now. Update the indented line in the same edit that changes a depe
       `isLegendaryNode` are ??? for all 4,198 entries.
 - [ ] **A8** 🙋 **Fill `data/gear.json`** — `expansion` (all 28,992) and `acquisition` (all except
       crafted) are ???.
-- [ ] **A9** 🙋 **Fill the rest of `data/fates.json`** — zone/coords/time limit/type now come
-      from the wiki for **872 of 1,712**. Still ???: `monsters` and `rewards` (**irreducible** —
-      server-side), chain **ordering** (`FATEChain` groups but does not sequence), and the 123
-      FATEs whose name is shared with another so nothing can disambiguate them.
+- [ ] **A9** 🙋 **Fill the rest of `data/fates.json`** — **largely done.** The Console Games
+      Wiki supplied `monsters` (771), `bosses` (445), `rewards` (1,165) and **chain order**
+      (233 — only that many FATEs are chained), plus zone/coords/type for 1,193 of 1,712. Those
+      three were previously recorded as irreducible; they were irreducible *from the client*.
+      Remaining: 206 FATEs whose name is shared and whose zone did not resolve it.
 - [ ] **A11** 🙋 **Fill `data/npcs.json`** — `level`, `isTargetable` and `hairColorName` are ???
       for all 30,878 entries. Hair colour needs the `human.cmp` palette decoded (no Excel sheet);
       level and targetability are not in client data at all.
@@ -256,5 +257,7 @@ Moved here with the date and the answer — never deleted.
 | **Places of Interest dataset** | **Built, and from GAME data not the wiki.** `MapMarker` via `Map.MapMarkerRange` gives **6,435 named landmarks across 339 zones** with real map coordinates - settlements, gates, guilds, camps, rivers, aetheryte plazas. The wiki only adds prose (239). Includes the requested `location` column (the zone). | 2026-08-27 |
 | **Bosses in their own column** | `duties.bosses` split from `duties.monsters` (156 duties), plus `monsters.isBoss` / `bossKind` for 667 monsters. Boss status is in **no game sheet** - it comes from the wiki's 14 boss subcategories. | 2026-08-27 |
 | Is `Fate.Location` a `Level` row? | **No.** All 1,697 values sit inside `Level`'s RowId range and match nothing in it - not RowId, not Object, not EventId. It is an **LGB layer-object id**. This is why `fates.json` shipped with `zone=???` on all 1,712 rows, silently. FATE location must come from the wiki. | 2026-08-27 |
+| **Monster DROPS** | **Solved by an external source.** ffxiv.consolegameswiki.com has one page per enemy with a Loot section: **1,129 monsters with loot, 3,172 explicitly None, 4,185 still ???**. Also raised zones 755 -> 8,503 and level -> 6,384. "No drops" is now recorded as `None`, NOT `???` - most monsters drop nothing and a false unknown would send the generator hunting for data that does not exist. | 2026-08-27 |
+| FATE chain ordering | **Not irreducible after all.** `FATEChain` groups a chain but never sequences it; the Console Games Wiki's `prev-fate`/`next-fate` is the sequence. 233 FATEs are actually chained. | 2026-08-27 |
 | **A6** Fill `data/monsters.json` | **Largely done.** 3,504 of 14,560 entries curated: level (3,401), hp, hitbox, abilities, family, creatureClass, zones, duties, fates, quests, dungeonEnemy/Boss. `drops` stays ??? forever — server-side, settled at Q11. Garland was correctly ruled out; the wiki was the right source. | 2026-08-27 |
 | Where do instance monsters come from? | **`Final Fantasy XIV enemies/<class>` subpages**, not the ~9,000 individual enemy pages — those are redirects. 19 subpages, **23 requests**, 5,294 rows. Four parsing traps documented in `scripts/wiki/README.md`; every one produced plausible-but-wrong data rather than an error. | 2026-08-27 |

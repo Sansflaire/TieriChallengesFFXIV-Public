@@ -12,11 +12,11 @@ Generated 2026-08-26. Regenerate with `scripts/gen-datasets/` (see below).
 | File | Entries | Size | Complete? |
 |---|---:|---:|---|
 | `duties.json` | 373 | 375 KB | ⚠️ partial — curated from Garland + wiki |
-| `monsters.json` | 14,560 | 1.4 MB | ⚠️ partial — 3,504 curated from the wiki |
+| `monsters.json` | 14,560 | 3.0 MB | ⚠️ partial — 8,473 curated (2 wikis) |
 | `recipes-level-based.json` | 9,577 | 2.5 MB | ✅ complete |
 | `gatherables.json` | 4,198 | 503 KB | ⚠️ partial |
 | `gear.json` | 28,992 | 7.2 MB | ⚠️ partial |
-| `fates.json` | 1,712 | 686 KB | ⚠️ partial |
+| `fates.json` | 1,712 | 952 KB | ⚠️ partial — 1,193 curated |
 | `npcs.json` | 30,878 | 14.3 MB | ⚠️ partial |
 | `places-of-interest.json` | 6,435 | 1.1 MB | ✅ game-derived; descriptions partial |
 
@@ -53,6 +53,11 @@ Every file has the same envelope:
 *this monster drops nothing*. Any consumer must treat `???` as unknown and refuse to reason from
 it — that distinction is the entire point of the marker.
 
+**And "nothing" is a THIRD state, written as a real value.** Most monsters drop nothing, so
+`drops = "None"` means *documented, and it drops nothing* — a fact, not a gap. Marking those
+`???` would invent thousands of false unknowns and send a generator hunting for data that does
+not exist. Three states, all distinct: a value · `"None"` · `"???"`.
+
 ---
 
 ## What is missing, and why
@@ -63,19 +68,22 @@ could supply it.
 
 | Dataset | Still missing | Coverage now | Why / status |
 |---|---|---|---|
-| `monsters` | `drops` | 0 of 14,560 | **Irreducible.** Loot is server-side; all 1,198 sheet types scanned, every `BNpc*` sheet has zero item refs |
-| `monsters` | `level`, `abilities`, `zones` | 3,401 / 3,516 / 755 of 14,560 | The wiki documents the notable ~3,500. The rest need another source |
-| `monsters` | `mapLocation` (exact spawn coords) | 0 | Needs **LGB layer-file parsing** — not an Excel sheet. Zone-level location is covered |
-| `duties` | `bosses` / `monsters` | 156 / 176 of 373 | Missing ones are mostly Trials + Raids; wiki documents those bosses on duty-article pages, not enemy tables |
-| `duties` | `unlockQuest` | 259 of 373 | The 114 are largely Savage/Extreme unlocked by clearing the normal version — indistinguishable from missing |
-| `duties` | whole content types | 373 rows | Deep dungeons, Eureka/Bozja/Diadem, treasure dungeons, Variant/Criterion are **excluded by the generator's filter** (TODO A12) |
-| `fates` | `zone`, coords, `timeLimit`, `fateType` | 872 of 1,712 | 123 unmatched because the name is shared and our zone column was `???`; 717 not on the wiki page |
-| `fates` | `monsters`, `rewards`, chain **order** | 0 | **Irreducible from client data.** Spawn tables and reward tiers are server-side; `FATEChain` groups but does not sequence |
-| `places-of-interest` | `description`, `placeKind` | 239 of 6,435 | Zone pages are inconsistent about documenting landmarks |
-| `places-of-interest` | coordinate conversion **unproven** | all 6,435 | Spot-checked only. `rawX`/`rawY` retained so a fix is free — see `docs/Pending Verification.md` |
+| `monsters` | `drops` | 1,129 listed · 3,172 explicitly **None** · 4,185 `???` | Server-side in the client; the Console Games Wiki supplies it. **Most monsters genuinely drop nothing** and that is recorded as `None`, not `???` |
+| `monsters` | `zones` / `mapLocation` | **8,503** / 8,433 of 14,560 | Was 259. Zone + in-game coordinates |
+| `monsters` | `level` | **6,384** | |
+| `monsters` | `abilities` | 1,196 | Only the Fandom tables carry these, and they are sparsely filled |
+| `monsters` | exact spawn coords | n/a | Would need LGB layer-file parsing. **Explicitly out of scope** |
+| `duties` | `bosses` / `monsters` | 156 / 176 of 373 | Rest are Trials + Raids — **TODO A13** fetches those pages |
+| `duties` | `unlockQuest` | 259 of 373 | The 114 are largely Savage/Extreme cleared via the normal version |
+| `duties` | whole content types | 373 rows | Deep dungeons, Eureka/Bozja/Diadem, treasure, Variant/Criterion excluded by the generator filter (**A12**) |
+| `fates` | `rewards` / `fateType` | **1,165** / 1,193 of 1,712 | EXP, gil, seals, gemstones, item rewards |
+| `fates` | `monsters` / `bosses` | 771 / **445** | |
+| `fates` | `chainOrder` | 233 | Only that many FATEs are chained at all; `FATEChain` groups but never sequences |
+| `fates` | 206 unmatched | — | Shared name and zone did not resolve it — skipped rather than guessed |
+| `places-of-interest` | `description` | 239 of 6,435 | Zone pages are inconsistent about documenting landmarks |
+| `places-of-interest` | coordinate conversion **unproven** | all 6,435 | Spot-checked only; `rawX`/`rawY` retained so a fix is free (**A14**) |
 | `gatherables` | `isCollectable`, `isTimedNode`, `isLegendaryNode` | 0 of 4,198 | Not expressed in a form this generator reads |
-| `gear` | `expansion` | 0 of 28,992 | `Item` carries no `ExVersion`; derivable from patch data with work |
-| `gear` | `acquisition` except crafted | partial | Drop/relic/tome/vendor sources are not in client data |
+| `gear` | `expansion`, `acquisition` | 0 / partial | `Item` carries no `ExVersion`; drop/relic/tome sources are not client-side |
 | `npcs` | `level`, `isTargetable` | 0 of 30,878 | **Irreducible.** Neither exists client-side |
 | `npcs` | `hairColorName` | 0 | Palette is `chara/xls/charamake/human.cmp`, a raw file with no Excel sheet |
 
@@ -99,6 +107,10 @@ Anything the game files cannot supply lives in an **overlay**, joined by id:
 data/curated/duties.json        ← Garland Tools    (unlockQuest, itemsFound, fights, coffers)
 data/curated/duties.wiki.json   ← Final Fantasy Wiki (monsters)
 data/curated/monsters.json      ← Final Fantasy Wiki (level, zones, duties, abilities, …)
+data/curated/monsters.boss.json ← Final Fantasy Wiki (isBoss, bossKind)
+data/curated/monsters.cgw.json  ← Console Games Wiki (DROPS, locations, aggression, hunt rank)
+data/curated/fates.cgw.json     ← Console Games Wiki (boss, enemies, rewards, chain order)
+data/curated/fates.wiki.json    ← Final Fantasy Wiki (zone, coords, type, spawn conditions)
 ```
 
 **An overlay is an INPUT to generation, not a patch applied afterwards.** The generator reads
@@ -120,7 +132,7 @@ files — …)`** banner above the grid. Curated data is treated as authoritativ
 so it is never reviewed as though it had come out of sqpack.
 
 Pipelines: [`scripts/garland/`](../scripts/garland/README.md) ·
-[`scripts/wiki/`](../scripts/wiki/README.md)
+[`scripts/wiki/`](../scripts/wiki/README.md) · [`scripts/cgw/`](../scripts/cgw/README.md)
 
 ## Schema 2 — three lossless size reductions
 

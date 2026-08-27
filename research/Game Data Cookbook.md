@@ -24,6 +24,7 @@ This file records *method*.
 | 6B | Recipe level, fish, gear requirements | `reqs` |
 | 6C | **Monster locations — the wiki, joined by BNpcName id** | `wiki` |
 | 6D | **Places of interest + map coordinates** | `poi` |
+| 6E | **Monster loot + FATE detail — Console Games Wiki** | `cgw` |
 | 7 | Traps, collected | `traps` |
 
 ---
@@ -522,6 +523,27 @@ RowId range and match **nothing** in it — not `RowId`, not `Object`, not `Even
 layer-object id. `fates.json` carried `zone = ???` on all 1,712 rows for this reason, silently.
 FATE zone and coordinates come from the wiki instead (§6C).
 
+<!-- SECTION:cgw -->
+## 6E. Monster loot and FATE detail — the Console Games Wiki
+
+`https://ffxiv.consolegameswiki.com/mediawiki/api.php` — **note the `/mediawiki/` path**;
+`/api.php` and `/w/api.php` both 404.
+
+One page per enemy (`Category:Enemies`, 9,242) and per FATE (`Category:FATEs`, 1,472), each with
+machine-readable templates. This is the **only source found for monster loot**, and its FATE
+infobox carries boss, enemies, rewards and `prev-fate`/`next-fate` — the chain SEQUENCE that
+`FATEChain` groups but never orders.
+
+**Take titles from the category, never from your own names.** Our monster names are lowercase
+internal ones; MediaWiki titles are case-sensitive after the first letter, so title-casing
+silently misses every "Dorgono the Bedeviled".
+
+**"No drops" is not "unknown".** A page with a Loot section and no rows is *documented as
+dropping nothing* — record that as `None`, and reserve `???` for pages that document nothing.
+Most monsters drop nothing, so conflating the two invents thousands of false unknowns.
+
+Detail: [`scripts/cgw/README.md`](../scripts/cgw/README.md).
+
 <!-- SECTION:traps -->
 ## 7. Traps, collected
 
@@ -547,4 +569,7 @@ FATE zone and coordinates come from the wiki instead (§6C).
 21. **An anchor is not a title.** `Azys Lla#Castrum Solus` fetches nothing; split on `#` first.
 22. **Only `|-` starts a table row — a `!` cell does not.** FATE rows are `!name` followed by four `|` cells; treating the `!` as a header break tore every row in two, put 2,000 FATE names in the header, and matched zero. A row is a header row only when ALL its cells are `!` cells.
 23. **`[[File:...]]` is markup, not text.** Left in, a name cleans to `20px|Battle FATE. On the Lamb`.
+24. **Infobox fields are not one per line.** Some pages write several on one line, so `^\s*\|\s*key\s*=\s*(.*)$` captures the REST OF THE LINE as the value - `zone = "| location-x ="` shipped that way. Split on depth-0 pipes. Fixing it also raised monster `level` coverage from 4,753 to 8,175, so it had been eating fields everywhere.
+25. **Decode from the template, not from the value's shape.** `aggression = p1` renders "Passive" because `Template:NPC infobox` tests the FIRST CHARACTER for `p` and treats the rest as a rank. Read the template rather than pattern-matching the values.
+26. **A locked file must not abort a batch job.** A 14 MB dataset held open by an editor threw "user-mapped section open" and killed generation partway, so every dataset after it silently never regenerated. Retry, then skip loudly and continue.
 18. **Wrong-but-plausible is the failure mode of scraping.** Every one of 15-17 produced confident, well-formed, wrong values rather than an exception. Spot-check parsed output against the raw source before trusting a single number.
