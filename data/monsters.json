@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-08-27T14:13:00.3952565Z",
+  "generated": "2026-08-27T14:16:20.8440589Z",
   "source": "FFXIV sqpack via Lumina. Regenerate: see data/README.md",
   "description": "Every named battle NPC in the game.",
   "needsVerification": "NEEDS VERIFICATION - THE ENTIRE FILE. level, drops, abilities, mapLocation and inInstance are ??? for every single entry, and zones exist for only ~259 of them (the Hunting Log, 1.8%). Mob loot tables are server-side and absent from client data. All of this must come from external sources - see TODO A4.",

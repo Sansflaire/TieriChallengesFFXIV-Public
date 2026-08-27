@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-08-27T14:13:00.6341392Z",
+  "generated": "2026-08-27T14:16:21.0667504Z",
   "source": "FFXIV sqpack via Lumina. Regenerate: see data/README.md",
   "description": "Every gatherable item (Miner/Botanist) and fish (Fisher), with node type, required level and locations.",
   "needsVerification": "PARTIAL - isCollectable, isTimedNode and isLegendaryNode are ??? for EVERY entry; none of the three is expressed in a way this generator reads. ~100 Miner/Botanist items also have no gatheringType (timed/Diadem/Island nodes) - treat that as unknown, NOT as \u0027not gatherable\u0027.",

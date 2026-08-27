@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-08-27T14:13:00.3401404Z",
+  "generated": "2026-08-27T14:16:20.7906030Z",
   "source": "FFXIV sqpack via Lumina. Regenerate: see data/README.md",
   "description": "Dungeons, trials, normal/alliance raids, ultimates and chaotic alliance raids.",
   "needsVerification": "PARTIAL - \u0027monsters\u0027 and \u0027itemsFound\u0027 are ??? for EVERY entry and must be compiled manually. \u0027unlock.recordedInGameData=false\u0027 means the game files hold no unlock criteria (754 of 857 duties); those need live UIState/QuestManager or external data.",

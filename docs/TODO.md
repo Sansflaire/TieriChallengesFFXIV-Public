@@ -78,6 +78,9 @@ started right now. Update the indented line in the same edit that changes a depe
       crafted) are ???.
 - [ ] **A9** 🙋 **Fill `data/fates.json`** — `monsters`, `monsterAbilities`, bronze/silver/gold
       `rewards` and chain **ordering** are ??? for all 1,712 entries.
+- [ ] **A11** 🙋 **Fill `data/npcs.json`** — `level`, `isTargetable` and `hairColorName` are ???
+      for all 30,878 entries. Hair colour needs the `human.cmp` palette decoded (no Excel sheet);
+      level and targetability are not in client data at all.
 - [ ] **A10** 🙋 **Decide the generated-vs-curated split** (`data/README.md`). Regeneration
       currently overwrites the whole file, so it would destroy hand-entered data. **Decide before
       any manual filling starts**, or A5–A9 get wiped by the next patch refresh.

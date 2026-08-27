@@ -390,4 +390,146 @@ Write("fates.json",
     new[] { "monsters", "monsterAbilities", "rewards.*", "chain ordering" },
     fates, fates.Count);
 
+// ---------------- 7. NPCs ----------------
+// Equipment resolution is the Glamourer-validated algorithm from research/Game Data Cookbook.md
+// section 5: inline ENpcBase models layered OVER NpcEquip per slot, and an item lookup keyed by
+// (slot, model, variant) because model ids are only unique within a slot.
+var enpcRes = gd.GetExcelSheet<ENpcResident>();
+var enpcBase = gd.GetExcelSheet<ENpcBase>();
+var npcEquip = gd.GetExcelSheet<NpcEquip>();
+var lvlAll = gd.GetExcelSheet<Level>();
+var stain = gd.GetExcelSheet<Stain>();
+var raceSheet = gd.GetExcelSheet<Race>();
+var tribeSheet = gd.GetExcelSheet<Tribe>();
+
+var modelMap = new Dictionary<(string, ushort, ushort), string>();
+foreach (var it in items)
+{
+    if (T(it.Name).Length == 0) continue;
+    ulong m = it.ModelMain;
+    if (m == 0) continue;
+    var c = it.EquipSlotCategory.ValueNullable;
+    if (c is null) continue;
+    string slot = c.Value.Head == 1 ? "Head" : c.Value.Body == 1 ? "Body"
+                : c.Value.Gloves == 1 ? "Hands" : c.Value.Legs == 1 ? "Legs"
+                : c.Value.Feet == 1 ? "Feet" : c.Value.Ears == 1 ? "Ears"
+                : c.Value.Neck == 1 ? "Neck" : c.Value.Wrists == 1 ? "Wrists"
+                : (c.Value.FingerL == 1 || c.Value.FingerR == 1) ? "Ring"
+                : c.Value.MainHand == 1 ? "Main" : c.Value.OffHand == 1 ? "Off" : "";
+    if (slot.Length == 0) continue;
+    var key = (slot, (ushort)(m & 0xFFFF), (ushort)((m >> 16) & 0xFFFF));
+    if (!modelMap.ContainsKey(key)) modelMap[key] = T(it.Name);
+}
+
+string LookSlot(string slot, uint model)
+{
+    ushort id = (ushort)(model & 0xFFFF), v = (ushort)((model >> 16) & 0xFFFF);
+    if (id == 0) return "Nothing";
+    if (id == 65535) return "hidden";
+    return modelMap.TryGetValue((slot, id, v), out var n) ? n : $"Unknown ({id}-{v})";
+}
+string DyeName(uint id) => id == 0 ? "" : T(stain.GetRowOrDefault(id)?.Name);
+
+// NPC row id -> every placement
+var placements = new Dictionary<uint, List<Level>>();
+foreach (var l in lvlAll)
+{
+    if (l.Object.RowId < 1000000 || l.Territory.RowId == 0) continue;
+    if (!placements.TryGetValue(l.Object.RowId, out var lst)) { lst = new(); placements[l.Object.RowId] = lst; }
+    lst.Add(l);
+}
+
+var npcs = new List<object>();
+foreach (var n in enpcRes)
+{
+    string name = T(n.Singular);
+    if (name.Length == 0) continue;
+    var bOpt = enpcBase.GetRowOrDefault(n.RowId);
+    if (bOpt is null) continue;
+    var b = bOpt.Value;
+    var e = npcEquip.GetRowOrDefault(b.NpcEquip.RowId);
+
+    uint Pick(uint inline, Func<NpcEquip, uint> fromSet)
+        => inline != 0 ? inline : (e is { } ee ? fromSet(ee) : 0u);
+    uint PickDye(uint inline, Func<NpcEquip, uint> fromSet)
+        => inline != 0 ? inline : (e is { } ee ? fromSet(ee) : 0u);
+
+    var slots = new (string label, string slot, uint model, uint dye)[]
+    {
+        ("head",      "Head",   Pick(b.ModelHead,      x => x.ModelHead),      PickDye(b.DyeHead.RowId,      x => x.DyeHead.RowId)),
+        ("body",      "Body",   Pick(b.ModelBody,      x => x.ModelBody),      PickDye(b.DyeBody.RowId,      x => x.DyeBody.RowId)),
+        ("hands",     "Hands",  Pick(b.ModelHands,     x => x.ModelHands),     PickDye(b.DyeHands.RowId,     x => x.DyeHands.RowId)),
+        ("legs",      "Legs",   Pick(b.ModelLegs,      x => x.ModelLegs),      PickDye(b.DyeLegs.RowId,      x => x.DyeLegs.RowId)),
+        ("feet",      "Feet",   Pick(b.ModelFeet,      x => x.ModelFeet),      PickDye(b.DyeFeet.RowId,      x => x.DyeFeet.RowId)),
+        ("ears",      "Ears",   Pick(b.ModelEars,      x => x.ModelEars),      PickDye(b.DyeEars.RowId,      x => x.DyeEars.RowId)),
+        ("neck",      "Neck",   Pick(b.ModelNeck,      x => x.ModelNeck),      PickDye(b.DyeNeck.RowId,      x => x.DyeNeck.RowId)),
+        ("wrists",    "Wrists", Pick(b.ModelWrists,    x => x.ModelWrists),    PickDye(b.DyeWrists.RowId,    x => x.DyeWrists.RowId)),
+        ("rightRing", "Ring",   Pick(b.ModelRightRing, x => x.ModelRightRing), PickDye(b.DyeRightRing.RowId, x => x.DyeRightRing.RowId)),
+        ("leftRing",  "Ring",   Pick(b.ModelLeftRing,  x => x.ModelLeftRing),  PickDye(b.DyeLeftRing.RowId,  x => x.DyeLeftRing.RowId)),
+        ("mainHand",  "Main",   Pick((uint)b.ModelMainHand, x => (uint)x.ModelMainHand), PickDye(b.DyeMainHand.RowId, x => x.DyeMainHand.RowId)),
+        ("offHand",   "Off",    Pick((uint)b.ModelOffHand,  x => (uint)x.ModelOffHand),  PickDye(b.DyeOffHand.RowId,  x => x.DyeOffHand.RowId)),
+    };
+    // Only NON-EMPTY slots are emitted. A slot absent from "equipment" is empty — that is
+    // documented in the header. Serialising all twelve for all 30,878 NPCs produced a 60 MB file,
+    // past GitHub's 50 MB warning threshold, and ~70% of it was the word "Nothing".
+    var equipment = new Dictionary<string, object>();
+    foreach (var s in slots)
+    {
+        string item = LookSlot(s.slot, s.model);
+        if (item == "Nothing") continue;
+        string dye = DyeName(s.dye);
+        equipment[s.label] = item.StartsWith("Unknown (")
+            ? new { item, modelId = (object)s.model, dye }   // keep the id: it is the only handle
+            : (object)new { item, dye };
+    }
+
+    var locs = new List<object>();
+    if (placements.TryGetValue(n.RowId, out var pls))
+        foreach (var l in pls)
+        {
+            var tt = terr.GetRowOrDefault(l.Territory.RowId);
+            locs.Add(new
+            {
+                territoryId = l.Territory.RowId,
+                zone = Zone(l.Territory.RowId),
+                x = MathF.Round(l.X, 1),
+                y = MathF.Round(l.Y, 1),
+                z = MathF.Round(l.Z, 1),
+                inInstance = tt is { } t2 && t2.ContentFinderCondition.RowId != 0,
+                expansion = tt is { } t3 ? T(exv.GetRowOrDefault(t3.ExVersion.RowId)?.Name) : U
+            });
+        }
+
+    npcs.Add(new
+    {
+        id = n.RowId,
+        name,
+        locations = locs.Count > 0 ? (object)locs : U,
+        race = T(raceSheet.GetRowOrDefault(b.Race.RowId)?.Masculine),
+        tribe = T(tribeSheet.GetRowOrDefault(b.Tribe.RowId)?.Masculine),
+        gender = b.Gender == 0 ? "male" : "female",
+        hairStyleId = (int)b.HairStyle,
+        hairColorIndex = (int)b.HairColor,
+        hairColorName = U,
+        skinColorIndex = (int)b.SkinColor,
+        eyeColorIndex = (int)b.EyeColor,
+        modelChara = b.ModelChara.RowId,
+        npcEquipRow = b.NpcEquip.RowId,
+        level = U,
+        isTargetable = U,
+        equipment
+    });
+}
+Write("npcs.json",
+    "Every named event NPC with resolved equipment, placements, race/tribe/gender and appearance ids.",
+    "PARTIAL - 'level' and 'isTargetable' are ??? for EVERY entry (neither is in client data). "
+  + "A slot ABSENT from 'equipment' is EMPTY (omitted to keep the file a sane size); ??? is never "
+  + "used inside equipment. "
+  + "'hairColorName' is ??? because the colour palette lives in chara/xls/charamake/human.cmp, a raw "
+  + "file with no Excel sheet - only the raw hairColorIndex is available. Equipment reading "
+  + "'Unknown (id-variant)' means NPC-exclusive gear with no player-equippable item, which is normal, "
+  + "not an error. NPCs with no Level row have locations=??? (instanced//cutscene-only spawns).",
+    new[] { "level", "isTargetable", "hairColorName", "locations (when ???)" },
+    npcs, npcs.Count);
+
 Console.WriteLine("\ndone.");

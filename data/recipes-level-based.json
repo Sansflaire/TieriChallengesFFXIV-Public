@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-08-27T14:13:00.4928808Z",
+  "generated": "2026-08-27T14:16:20.9426329Z",
   "source": "FFXIV sqpack via Lumina. Regenerate: see data/README.md",
   "description": "Plain level-based recipes ONLY. Master/Expert/Specialist/quest/status/item-gated recipes are excluded by construction, so every entry here is safe for a generated quest.",
   "needsVerification": null,

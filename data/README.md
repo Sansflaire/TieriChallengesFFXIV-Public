@@ -17,6 +17,7 @@ Generated 2026-08-26. Regenerate with `scripts/gen-datasets/` (see below).
 | `gatherables.json` | 4,198 | 1.7 MB | ⚠️ partial |
 | `gear.json` | 28,992 | 17.8 MB | ⚠️ partial |
 | `fates.json` | 1,712 | 1.5 MB | ⚠️ partial |
+| `npcs.json` | 30,878 | 33.8 MB | ⚠️ partial |
 
 ---
 
@@ -64,6 +65,9 @@ it — that distinction is the entire point of the marker.
 | `gear` | `acquisition` except crafted | Drop/relic/tome/vendor sources are not in client data |
 | `fates` | `monsters`, `monsterAbilities`, all `rewards` | FATE spawn tables and reward tiers are server-side |
 | `fates` | chain **ordering** | `FATEChain` groups them; the sequence is not stored |
+| `npcs` | `level`, `isTargetable` | Neither exists client-side |
+| `npcs` | `hairColorName` | The palette is `chara/xls/charamake/human.cmp`, a raw file with no Excel sheet — only the raw index is available |
+| `npcs` | `locations` for some | NPCs with no `Level` row are instanced or cutscene-only |
 
 **`recipes-level-based.json` is the only complete file.** It is also the only one safe to build
 on today without external data.
@@ -74,7 +78,7 @@ Background and method: [`../research/Game Data Cookbook.md`](../research/Game%20
 
 ## ⚠️ Regeneration will churn git history
 
-These total ~34 MB. Regenerating rewrites every file, so each regeneration adds ~34 MB of new
+These total ~67 MB. Regenerating rewrites every file, so each regeneration adds ~67 MB of new
 blobs to history permanently.
 
 **Recommended before any hand-editing begins: split generated from curated.**
@@ -95,6 +99,20 @@ JSON is written **indented on purpose**: these are meant to be opened and edited
 Compact output would roughly halve the size and make that far harder.
 
 ---
+
+## `npcs.json` — two conventions worth knowing
+
+- **A slot absent from `equipment` is EMPTY.** All twelve slots serialised for all 30,878 NPCs
+  produced a 60 MB file, ~70% of which was the word `"Nothing"`. `???` is never used inside
+  `equipment` — absence is the only "nothing here" signal.
+- **`"Unknown (28-90)"` means NPC-exclusive gear** with no player-equippable item. That is a
+  normal result, not a failure, and `modelId` is retained for exactly those entries because it is
+  the only handle on them. Glamourer prints the same string for the same models.
+
+Equipment uses the Glamourer-validated algorithm in
+[`../research/Game Data Cookbook.md`](../research/Game%20Data%20Cookbook.md) §5 — inline
+`ENpcBase` models layered over `NpcEquip` per slot, with the item lookup keyed by
+`(slot, model, variant)`.
 
 ## Regenerating
 

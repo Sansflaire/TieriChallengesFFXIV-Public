@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-08-27T14:13:00.8666188Z",
+  "generated": "2026-08-27T14:16:21.2820674Z",
   "source": "FFXIV sqpack via Lumina. Regenerate: see data/README.md",
   "description": "Every equippable item with slot, required level, jobs and stats.",
   "needsVerification": "PARTIAL - \u0027expansion\u0027 is ??? for EVERY entry (Item carries no ExVersion). \u0027acquisition\u0027 is only known for crafted items; dungeon drops, relic chains, tomestone gear, raid drops and vendor gear are all ??? and need external data.",

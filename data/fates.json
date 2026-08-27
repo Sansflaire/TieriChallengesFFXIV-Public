@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-08-27T14:13:01.0872148Z",
+  "generated": "2026-08-27T14:16:21.4796512Z",
   "source": "FFXIV sqpack via Lumina. Regenerate: see data/README.md",
   "description": "Every named FATE, with level range, zone, and whether it belongs to a FATE chain.",
   "needsVerification": "PARTIAL - \u0027monsters\u0027, \u0027monsterAbilities\u0027 and all of \u0027rewards\u0027 (bronze/silver/gold/itemReward) are ??? for EVERY entry; FATE spawn tables and reward tiers are not in the client sheets. \u0027chain.isChained\u0027 comes from Fate.FATEChain and IS game data, but the ORDER of FATEs within a chain is ???. \u0027eventItemReward\u0027 is a raw EventItem row id where present, not a normal item.",
