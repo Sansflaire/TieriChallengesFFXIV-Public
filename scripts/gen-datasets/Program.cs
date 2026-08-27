@@ -221,14 +221,6 @@ foreach (var c in cfc)
                 : ct == 37 ? "Chaotic Alliance Raid"
                 : (partySize >= 24 ? "Alliance Raid" : "Normal Raid");
 
-    bool recorded = c.UnlockCriteria.RowId != 0;
-    string questName = U;
-    if (recorded && c.UnlockType == 1)
-    {
-        var q = T(quest.GetRowOrDefault(c.UnlockCriteria.RowId)?.Name);
-        if (q.Length > 0) questName = q;
-    }
-
     duties.Add(new
     {
         id = c.RowId,
@@ -255,12 +247,14 @@ foreach (var c in cfc)
         // 30067 (Weapon's Refrain) and 30155 (AAC Heavyweight M1 Savage). Stored so any future
         // cross-check is a direct lookup rather than a name search.
         garlandId = c.Content.RowId,
-        // Flat, one column each - a nested object renders as raw JSON in a grid cell, which is
-        // the exact complaint that got the recipe unlock flattened. Same defect, same fix.
-        unlockRecordedInGameData = recorded,
-        unlockType = (int)c.UnlockType,
-        unlockCriteriaId = c.UnlockCriteria.RowId,
-        unlockQuestFromGameData = questName,
+        // ONE unlock column, defaulting to ??? and filled from the curated overlay.
+        //
+        // The game files simply do not carry this for duties: of 373 dungeons/trials/raids,
+        // exactly ONE has any UnlockCriteria at all, and its UnlockType is 2 rather than 1, so it
+        // does not even reference a quest. Four columns describing that absence - three of them
+        // constant, one of them ??? on every single row - was noise pretending to be data.
+        // Unlock is curated by necessity, and the header records that it is.
+        unlockQuest = U,
 
         monsters = U,
         itemsFound = U
@@ -268,10 +262,12 @@ foreach (var c in cfc)
 }
 Write("duties.json",
     "Dungeons, trials, normal/alliance raids, ultimates and chaotic alliance raids.",
-    "PARTIAL - 'monsters' and 'itemsFound' are ??? for EVERY entry and must be compiled manually. "
-  + "'unlock.recordedInGameData=false' means the game files hold no unlock criteria (754 of 857 duties); "
-  + "those need live UIState/QuestManager or external data.",
-    new[] { "monsters", "itemsFound", "unlock (when recordedInGameData=false)" },
+    "PARTIAL - 'monsters' is ??? for EVERY entry; Garland exposes no creature names and it needs "
+  + "another source (TODO A6). 'unlockQuest' is CURATED: the game files carry unlock criteria for "
+  + "exactly 1 of these 373 duties, so it is external research by necessity, not by preference. "
+  + "A ??? there means we do not know - some Savage and Extreme tiers are unlocked by clearing "
+  + "the normal version rather than by any quest, and that is indistinguishable from missing.",
+    new[] { "monsters", "unlockQuest (where ???)" },
     duties, duties.Count);
 
 Console.WriteLine($"    duties: {duties.Count} rows, "
