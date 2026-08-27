@@ -541,18 +541,25 @@ internal sealed class Dialogs
                       + DiagnosticLog.Dump()
                     : string.Empty;
 
+                // Braced deliberately. This guard is what enforces the blocklist, and without braces
+                // it governs exactly one statement — so the next line added below it would send
+                // anyway, silently, and the drop would look like it still worked because the UI
+                // above already reports success.
                 if (!dropped)
-                _ = System.Threading.Tasks.Task.Run(async () =>
                 {
-                    var (ok, status) = bug
-                        ? await SuggestionService.SendBugReportAsync(msg, contact, character, logText)
-                        : await SuggestionService.SendAsync(msg, contact, character);
+                    // Fire and forget onto the thread pool: the draw loop must never await a socket.
+                    _ = System.Threading.Tasks.Task.Run(async () =>
+                    {
+                        var (ok, status) = bug
+                            ? await SuggestionService.SendBugReportAsync(msg, contact, character, logText)
+                            : await SuggestionService.SendAsync(msg, contact, character);
 
-                    _suggestOk      = ok;
-                    _suggestStatus  = status;
-                    _suggestSending = false;
-                    if (ok) _suggestText = string.Empty;
-                });
+                        _suggestOk      = ok;
+                        _suggestStatus  = status;
+                        _suggestSending = false;
+                        if (ok) _suggestText = string.Empty;
+                    });
+                }
             }
             if (!canSend) ImGui.EndDisabled();
 

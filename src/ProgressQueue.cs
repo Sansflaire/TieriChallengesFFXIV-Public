@@ -25,14 +25,12 @@ namespace TieriChallengesFFXIV;
 public sealed class ProgressQueue
 {
     /// <summary>
-    /// Five seconds on screen end to end, as specified. The fade is carved out of that budget
-    /// rather than added to it, so the popup is fully gone at the five-second mark instead of
-    /// lingering to 5.8.
-    /// </summary>
-    /// <summary>
     /// How long a notification stays up, from Settings. A static rather than a const so the
     /// preference reaches both queues without either taking a config reference — they are pure
     /// timing state and deliberately know nothing about the plugin around them.
+    ///
+    /// <para>End to end, not on top of the fade: <see cref="HoldSeconds"/> carves the fade out of
+    /// this budget, so the popup is fully gone at the mark rather than lingering past it.</para>
     /// </summary>
     public static float TotalSeconds { get; set; } = 5.0f;
 

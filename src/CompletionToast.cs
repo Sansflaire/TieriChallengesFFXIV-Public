@@ -28,8 +28,11 @@ internal sealed class CompletionToast : IDisposable
 {
     private const int   SurfaceW    = 560;
     private const int   SurfaceH    = 132;
-    /// <summary>Set from Settings — see ProgressQueue.TotalSeconds for why this is a static.</summary>
-    public static float HoldSeconds { get; set; } = 5.0f;
+    // There was a `public static float HoldSeconds` here that Settings assigned to and NOTHING ever
+    // read — the completion banner's timing lives in ToastQueue, which owns the clock. It is a knob
+    // on ToastQueue now. Do not add a duration field back to this class: this type draws the popup,
+    // the queue decides how long it is on screen, and a second copy of that number is exactly how
+    // the setting came to be silently ignored.
 
     private const float FadeSeconds = 0.9f;
 

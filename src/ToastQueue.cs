@@ -17,8 +17,24 @@ namespace TieriChallengesFFXIV;
 /// </summary>
 public sealed class ToastQueue
 {
-    private const float HoldSeconds = 5.0f;
+    /// <summary>
+    /// How long the completion banner stays up, from Settings. A static for the same reason as
+    /// <see cref="ProgressQueue.TotalSeconds"/> — the queues are pure timing state and deliberately
+    /// hold no config reference.
+    /// </summary>
+    /// <remarks>
+    /// <b>This used to be a <c>const 5.0f</c>, and the setting did nothing to the completion
+    /// banner.</b> Settings wrote its value to <c>CompletionToast.HoldSeconds</c>, which was read by
+    /// nothing at all — a write-only property whose doc comment said "Set from Settings", sitting
+    /// next to the const that actually governed the timing. Everything looked wired up: the slider
+    /// moved, the value was saved, applied at startup, and had no effect whatsoever.
+    /// </remarks>
+    public static float TotalSeconds { get; set; } = 5.0f;
+
     private const float FadeSeconds = 0.9f;
+
+    /// <summary>Fully-opaque time. Never negative, however short the total is set.</summary>
+    private static float HoldSeconds => MathF.Max(0.2f, TotalSeconds - FadeSeconds);
 
     private readonly Queue<CompletionEvent> _queue = new();
     private CompletionEvent? _current;

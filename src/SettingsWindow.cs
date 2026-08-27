@@ -206,11 +206,19 @@ internal sealed class SettingsWindow
                          + "clock always shows.");
     }
 
-    /// <summary>Push the configured duration into both toast timers.</summary>
+    /// <summary>
+    /// Push the configured duration into both toast timers.
+    /// </summary>
+    /// <remarks>
+    /// The second line used to target <c>CompletionToast.HoldSeconds</c>, which nothing read — the
+    /// completion banner was governed by a const inside <see cref="ToastQueue"/>. Both queues now
+    /// expose the same <c>TotalSeconds</c> knob, and each is genuinely the value its own timing is
+    /// computed from.
+    /// </remarks>
     public void ApplyDurations()
     {
-        ProgressQueue.TotalSeconds  = _config.PopupSeconds;
-        CompletionToast.HoldSeconds = _config.PopupSeconds;
+        ProgressQueue.TotalSeconds = _config.PopupSeconds;
+        ToastQueue.TotalSeconds    = _config.PopupSeconds;
     }
 
     // ── Colours ──────────────────────────────────────────────────────────────
