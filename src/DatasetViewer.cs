@@ -200,13 +200,26 @@ internal sealed class DatasetViewer
                 return;
             }
 
-            // Columns: union over a sample, so a field only some entries carry still gets a column.
-            var cols = new List<string>();
+            // The file is written slim (schema 2): keys are aliased, and any field that is "???"
+            // on EVERY entry is stripped and named once in the header. Both are reversed here, so
+            // the grid shows real field names and the ??? columns exactly as if they had been
+            // stored 30,000 times. Schema 1 files still load — the alias map is simply absent.
+            var aliasMap = root["fieldAliases"] as JObject;
+            var omitted = (root["omittedAlwaysUnknown"] as JArray)?
+                          .Select(x => x.ToString()).ToArray() ?? Array.Empty<string>();
+
+            string RealName(string key) => aliasMap?[key] is { } real ? real.ToString() : key;
+
+            // Stored keys in first-seen order, so columns keep the generator's ordering.
+            var keys = new List<string>();
             var seen = new HashSet<string>(StringComparer.Ordinal);
             foreach (var e in entries.Take(ColumnSampleSize).OfType<JObject>())
                 foreach (var p in e.Properties())
-                    if (seen.Add(p.Name)) cols.Add(p.Name);
-            _columns = cols.ToArray();
+                    if (seen.Add(p.Name)) keys.Add(p.Name);
+
+            // Real columns first, then the stripped always-??? ones appended.
+            _columns = keys.Select(RealName).Concat(omitted).ToArray();
+            int stored = keys.Count;
 
             _rows = new List<string[]>(entries.Count);
             _blobs = new List<string>(entries.Count);
@@ -215,11 +228,16 @@ internal sealed class DatasetViewer
             {
                 var cells = new string[_columns.Length];
                 var blob = new StringBuilder(128);
-                for (int c = 0; c < _columns.Length; c++)
+
+                for (int c = 0; c < stored; c++)
                 {
-                    cells[c] = Flatten(e[_columns[c]]);
+                    cells[c] = Flatten(e[keys[c]]);
                     blob.Append(cells[c]).Append('');
                 }
+
+                // Synthesised: stripped precisely BECAUSE they are ??? on every entry.
+                for (int c = stored; c < _columns.Length; c++) cells[c] = "???";
+
                 _rows.Add(cells);
                 _blobs.Add(blob.ToString().ToLowerInvariant());
             }

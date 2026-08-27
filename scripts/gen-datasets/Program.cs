@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Lumina;
 using Lumina.Excel.Sheets;
 
@@ -11,7 +13,7 @@ var OUT = @"C:\Users\trist\AppData\Roaming\XIVLauncher\devPlugins\TieriChallenge
 Directory.CreateDirectory(OUT);
 
 var gd = new GameData(@"C:\Program Files (x86)\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\game\sqpack");
-var JO = new JsonSerializerOptions { WriteIndented = true };
+var JO = new JsonSerializerOptions { WriteIndented = false };
 
 string T(object? o) => o?.ToString() ?? "";
 
@@ -26,22 +28,89 @@ string IName(uint id) => items.GetRowOrDefault(id) is { } i ? T(i.Name) : U;
 string Zone(uint tid) => terr.GetRowOrDefault(tid) is { } t
     ? (pn.GetRowOrDefault(t.PlaceName.RowId) is { } p ? T(p.Name) : U) : U;
 
+/// <summary>
+/// Serialises a dataset, shrinking it three ways without losing a single fact:
+///
+/// 1. A field that is "???" on EVERY entry is stripped from the entries and named once in
+///    <c>omittedAlwaysUnknown</c>. Storing the same "???" 30,000 times carries no information the
+///    header does not already carry. A field that is "???" only SOMETIMES keeps its literal
+///    "???", because there the per-row value is real information.
+/// 2. Keys are aliased to short tokens with a <c>fieldAliases</c> legend. Long descriptive names
+///    are worth having exactly once, not once per row.
+/// 3. No indentation. These are machine-generated and read through the in-game viewer.
+///
+/// The viewer reverses all three, so what a human sees is unchanged — "???" included.
+/// </summary>
 void Write(string file, string desc, string? needs, string[] unknown, object entries, int count)
 {
     var path = Path.Combine(OUT, file);
-    File.WriteAllText(path, JsonSerializer.Serialize(new
+
+    var arr = JsonSerializer.SerializeToNode(entries) as JsonArray ?? new JsonArray();
+
+    // Key order of first appearance, so aliases are stable and the viewer's columns keep the
+    // order the generator wrote them in.
+    var order = new List<string>();
+    var seenKey = new HashSet<string>(StringComparer.Ordinal);
+    var alwaysUnknown = new HashSet<string>(StringComparer.Ordinal);
+    var everKnown = new HashSet<string>(StringComparer.Ordinal);
+
+    foreach (var n in arr)
     {
-        schemaVersion = 1,
-        generated = DateTime.UtcNow.ToString("o"),
-        source = "FFXIV sqpack via Lumina. Regenerate: see data/README.md",
-        description = desc,
-        needsVerification = needs,
-        unknownFields = unknown,
-        unknownMarker = U,
-        count,
-        entries
-    }, JO));
-    Console.WriteLine($"  {file,-30} {count,6} entries  {new FileInfo(path).Length / 1024,7} KB");
+        if (n is not JsonObject o) continue;
+        foreach (var kv in o)
+        {
+            if (seenKey.Add(kv.Key)) order.Add(kv.Key);
+            bool isUnknown = kv.Value is JsonValue v
+                             && v.TryGetValue<string>(out var s) && s == U;
+            if (isUnknown) alwaysUnknown.Add(kv.Key);
+            else everKnown.Add(kv.Key);
+        }
+    }
+    alwaysUnknown.ExceptWith(everKnown);   // "always" means never once known
+
+    var kept = order.Where(k => !alwaysUnknown.Contains(k)).ToList();
+    var alias = new Dictionary<string, string>(StringComparer.Ordinal);
+    for (int i = 0; i < kept.Count; i++) alias[kept[i]] = Alias(i);
+
+    var slim = new JsonArray();
+    foreach (var n in arr)
+    {
+        if (n is not JsonObject o) continue;
+        var t = new JsonObject();
+        foreach (var k in kept)
+            if (o.TryGetPropertyValue(k, out var val))
+                t[alias[k]] = val?.DeepClone();
+        slim.Add(t);
+    }
+
+    var doc = new JsonObject
+    {
+        ["schemaVersion"] = 2,
+        ["generated"] = DateTime.UtcNow.ToString("o"),
+        ["source"] = "FFXIV sqpack via Lumina. Regenerate: see data/README.md",
+        ["description"] = desc,
+        ["needsVerification"] = needs,
+        ["unknownFields"] = new JsonArray(unknown.Select(x => (JsonNode?)x).ToArray()),
+        ["omittedAlwaysUnknown"] = new JsonArray(
+            alwaysUnknown.OrderBy(x => order.IndexOf(x)).Select(x => (JsonNode?)x).ToArray()),
+        ["unknownMarker"] = U,
+        ["fieldAliases"] = new JsonObject(alias.Select(kv =>
+            new KeyValuePair<string, JsonNode?>(kv.Value, kv.Key))),
+        ["count"] = count,
+        ["entries"] = slim,
+    };
+
+    File.WriteAllText(path, doc.ToJsonString(JO));
+    Console.WriteLine($"  {file,-30} {count,6} entries  {new FileInfo(path).Length / 1024,7} KB"
+                    + $"  (-{alwaysUnknown.Count} always-??? fields)");
+}
+
+/// <summary>a…z, then aa, ab… Short, stable, and legible in a diff.</summary>
+static string Alias(int i)
+{
+    var sb = new StringBuilder();
+    do { sb.Insert(0, (char)('a' + i % 26)); i = i / 26 - 1; } while (i >= 0);
+    return sb.ToString();
 }
 
 Console.WriteLine("writing:");
