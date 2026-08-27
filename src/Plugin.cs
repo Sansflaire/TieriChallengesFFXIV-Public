@@ -155,6 +155,9 @@ public sealed class Plugin : IDalamudPlugin
     /// </summary>
     private readonly LiveProbeWindow _probeWindow = new();
 
+    /// <summary>Browses the JSON reference datasets in <c>data/</c>. Dev-only, see the class doc.</summary>
+    private readonly DatasetViewer _datasetViewer = new();
+
     /// <summary>
     /// Null when PanacheUI could not load — it is a Panache surface, and merely constructing one
     /// resolves the library. The chat commands remain the fallback in that case.
@@ -313,6 +316,8 @@ public sealed class Plugin : IDalamudPlugin
         if (_mainWindow != null)
         {
             _mainWindow.OnOpenCreator   = () => _creatorWindow.IsVisible = true;
+            _mainWindow.OnOpenDatasets  = () => _datasetViewer.IsVisible = true;
+            _mainWindow.OnOpenProbe     = () => _probeWindow.IsVisible = true;
             _mainWindow.OnOpenSoundTest = () =>
             {
                 if (_soundTestWindow != null) _soundTestWindow.IsVisible = true;
@@ -466,6 +471,7 @@ public sealed class Plugin : IDalamudPlugin
 #if DEV_BUILD
         _soundTestWindow?.Dispose();
         LiveProbe.Detach();
+        _datasetViewer.Unload();
 #endif
         _mainWindow?.Dispose();
         _shutdown.Dispose();
@@ -545,6 +551,10 @@ public sealed class Plugin : IDalamudPlugin
 
                 case "probe":
                     _probeWindow.IsVisible = !_probeWindow.IsVisible;
+                    break;
+
+                case "datasets":
+                    _datasetViewer.IsVisible = !_datasetViewer.IsVisible;
                     break;
 
                 case "sounds":
@@ -689,6 +699,9 @@ public sealed class Plugin : IDalamudPlugin
         catch (Exception ex) { Log.Error(ex, "Race prompt draw exception"); }
 
 #if DEV_BUILD
+        try { _datasetViewer.Draw(); }
+        catch (Exception ex) { Diag.Error($"[Datasets] window failed: {ex.Message}"); }
+
         try { _probeWindow.Draw(); }
         catch (Exception ex) { Diag.Error($"[Probe] window failed: {ex.Message}"); }
 

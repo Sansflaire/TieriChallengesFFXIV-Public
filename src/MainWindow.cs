@@ -148,6 +148,12 @@ internal sealed class MainWindow : IDisposable
     /// <summary>Wired by Plugin. Dev builds only, same as <see cref="OnOpenCreator"/>.</summary>
     public Action? OnOpenSoundTest;
 
+    /// <summary>Wired by Plugin. Opens the JSON dataset browser. Dev builds only.</summary>
+    public Action? OnOpenDatasets;
+
+    /// <summary>Wired by Plugin. Opens the live-game investigation harness. Dev builds only.</summary>
+    public Action? OnOpenProbe;
+
 #endif
 
     /// <summary>
@@ -2210,6 +2216,8 @@ internal sealed class MainWindow : IDisposable
             menus.Add(new MenuDef("Developer", new List<MenuItem>
             {
                 new("Challenge Creator", () => OnOpenCreator?.Invoke(), Accent, Ico.Creator),
+                new("Dataset Viewer", () => OnOpenDatasets?.Invoke(), Neutral, Ico.None),
+                new("Live Probe", () => OnOpenProbe?.Invoke(), Neutral, Ico.None),
                 new("Preview public build", () =>
                 {
                     _config.PublicPreview = true;
