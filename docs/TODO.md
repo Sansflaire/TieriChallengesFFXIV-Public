@@ -41,6 +41,12 @@ started right now. Update the indented line in the same edit that changes a depe
   - ⛔ Blocked by: **I1** *(no hook exists to test)*
 - [ ] **R4** 🙋 Turn-in / vendor detection — is `ItemRemoved` + vendor addon reliable?
 - [ ] **R5** 🤖 Garland Tools terms — may we redistribute their data in the Sync repo?
+- [ ] **R7** 🙋 **Fandom licensing.** Wiki text is **CC-BY-SA**, and `origin` here is the PUBLIC
+      repo — so `data/curated/monsters.json`, `duties.wiki.json` and `scripts/wiki/cache/` are
+      already published. Attribution IS recorded (every overlay carries a `source` line, surfaced
+      in the header and the viewer's CURATED banner), which likely satisfies BY. **Share-alike is
+      the open question**, and it may want a `LICENSE`/attribution note in the repo root. Same
+      shape as R5; decide both together. Not a blocker — flagged, not assumed resolved.
 
 ## 📋 Review & decide — needs Trist
 
@@ -62,16 +68,18 @@ started right now. Update the indented line in the same edit that changes a depe
 - [ ] **A2** 🤖 ⚡🔒 Create `ADMIN_KEY` and `LODESTONE_UA`
 - [ ] **A3** 🙋 Seed the materials list — one-time dev-side extraction pass
   - ⛔ Blocked by: **V2** *(no schema to extract into)*, **R5** *(redistribution unresolved)*
-- [ ] **A4** 🙋 **Compile our own monster→zone list.** The game gives zones for only **259
-      monsters (1.8% of 14,560 named)** — the Hunting Log, low-level only. Needs online data;
-      Trist will help. Without it, Hunt routes are capped at that small low-level pool and
-      high-level Hunt routes have no zone source at all.
-  - ⛔ Blocked by: **R5** *(same redistribution question as the materials list)*
-- [ ] **A5** 🙋 **Fill `data/duties.json`** — `monsters` and `itemsFound` are ??? for all 373
-      entries; `unlock` is missing for 754 of 857 duties in game data. Needs external sources.
-- [ ] **A6** 🙋 **Fill `data/monsters.json`** — 14,560 entries, and `level`/`drops`/`abilities`/
-      `mapLocation`/`inInstance` are ??? for **every one**. Supersedes nothing; A4 (zones) is the
-      first column of this same file.
+- [ ] **A5** 🙋 **Fill the rest of `data/duties.json`** — `unlockQuest` is ??? for 114 of 373
+      (mostly Savage/Extreme tiers unlocked by clearing the normal version, which is
+      indistinguishable from missing data). `monsters` is ??? for 166, mostly **Trials (70) and
+      Raids (76)** — the wiki documents primal/raid bosses on their own pages rather than in the
+      enemy tables `scripts/wiki` reads. Dungeons are nearly done (18 of 103 missing).
+- [ ] **A12** 🤖 **Widen the duty content-type filter.** `duties.json` holds only Dungeons /
+      Trials / Raids / Ultimate / Chaotic (373 rows). The wiki sweep referenced **76 duty names
+      we simply do not carry**: deep dungeons (Palace of the Dead, Eureka Orthos), field ops
+      (Eureka, Bozja, Zadnor, the Diadem), treasure dungeons (the Aquapolis, Excitatron 6000),
+      and Variant/Criterion (Aloalo Island). Each is real challenge surface, and the monster data
+      for them is **already sitting in the wiki cache** — widening the filter alone would attach
+      it. Cheap, and no new fetching.
 - [ ] **A7** 🙋 **Fill `data/gatherables.json`** — `isCollectable`, `isTimedNode`,
       `isLegendaryNode` are ??? for all 4,198 entries.
 - [ ] **A8** 🙋 **Fill `data/gear.json`** — `expansion` (all 28,992) and `acquisition` (all except
@@ -81,9 +89,6 @@ started right now. Update the indented line in the same edit that changes a depe
 - [ ] **A11** 🙋 **Fill `data/npcs.json`** — `level`, `isTargetable` and `hairColorName` are ???
       for all 30,878 entries. Hair colour needs the `human.cmp` palette decoded (no Excel sheet);
       level and targetability are not in client data at all.
-- [ ] **A10** 🙋 **Decide the generated-vs-curated split** (`data/README.md`). Regeneration
-      currently overwrites the whole file, so it would destroy hand-entered data. **Decide before
-      any manual filling starts**, or A5–A9 get wiped by the next patch refresh.
 
 ## 🔨 Implement
 
@@ -184,15 +189,16 @@ Listed in **rule 3 priority order**, so the top item is the default recommendati
 
 | # | Item | Why it ranks here |
 |---|---|---|
-| 1 | **I7** Exclusion data as data, not a constant | (a) small, (c) core/data |
-| 2 | **I16** Local account secret | (a) small, (c) core |
-| 3 | **I17** Account tier setting | (a) small, (c) core |
-| 4 | **I18** Obfuscated local Token cache | (a) small, (c) core |
-| 5 | **I1** Kill hook + `Enemy` condition | (b) **biggest unblocker** — frees R3, I3, and the 1.0 enemy milestone. Harder than the above, so it ranks below them |
-| 6 | **I23** D1 schema | (b) unblocks ten server items, but (c) demotes it — it is host work |
-| 7 | **A1** Generate + back up `TOKEN_PEPPER` | 🔒 unblocks I26; do before anything needs it |
-| 8 | **A2** `ADMIN_KEY`, `LODESTONE_UA` | 🔒 unblocks I27 |
-| 9 | **R5** Garland Tools terms | Research; unblocks A3, but the answer may be "ask a human" |
+| 1 | **A12** Widen the duty content-type filter | (a) small, (c) data. The monster data for the missing 76 duties is **already in the wiki cache** — no fetching, just a filter |
+| 2 | **I7** Exclusion data as data, not a constant | (a) small, (c) core/data |
+| 3 | **I16** Local account secret | (a) small, (c) core |
+| 4 | **I17** Account tier setting | (a) small, (c) core |
+| 5 | **I18** Obfuscated local Token cache | (a) small, (c) core |
+| 6 | **I1** Kill hook + `Enemy` condition | (b) **biggest unblocker** — frees R3, I3, and the 1.0 enemy milestone. Harder than the above, so it ranks below them |
+| 7 | **I23** D1 schema | (b) unblocks ten server items, but (c) demotes it — it is host work |
+| 8 | **A1** Generate + back up `TOKEN_PEPPER` | 🔒 unblocks I26; do before anything needs it |
+| 9 | **A2** `ADMIN_KEY`, `LODESTONE_UA` | 🔒 unblocks I27 |
+| 10 | **R5** Garland Tools terms | Research; unblocks A3, but the answer may be "ask a human" |
 
 ### 🙋 Needs Trist — only offer these when he says he is available
 
@@ -234,3 +240,7 @@ Moved here with the date and the answer — never deleted.
 | **Q11 re-verified exhaustively** | Scanned **all 1,198 sheet types**, not four guessed names. No `drop`/`loot`/`spoil`/`booty` type exists; every `reward`/`treasure` match is a scripted reward. **Every `BNpc*` sheet has zero item references** — a mob row cannot point at an item. Settled; do not re-investigate. | 2026-08-26 |
 | **I39** Sync cooldown + last-synced label | **Done.** 10 s cooldown lives in `ChallengeSyncService` (`CooldownSeconds`, `CooldownRemaining`) so button, chat command and auto-sync all obey **one** rule rather than three copies. Panache menu folds state + last-synced time into the single existing item ("Sync now — last 14:32" / "Synced 14:32 — wait 7s"); Fallback shows "Wait Ns" with the time in a tooltip. New `CompletionStore.FormatTimeOfDay` keeps the UTC→local conversion in one place. Both flavours clean. | 2026-08-26 |
 | **I38** Sync jitter | **Done.** Routine auto-sync now waits a random 0–300 s (`Plugin.StartAutoSync`). **The first-ever sync is deliberately NOT delayed** — one client is not a herd, and an empty list for five minutes on install would trade a real cost for an imaginary one. Needed a `CancellationTokenSource` too: the delay was fire-and-forget, so a dev reload left a task sleeping up to 5 min and waking inside a disposed plugin. Both flavours build clean. | 2026-08-26 |
+| **A10** Generated-vs-curated split | **Resolved and shipped.** `data/curated/` overlays are an **input to generation**, not a patch applied after, so regeneration is idempotent and can never destroy curated work. A dataset may carry **several** overlays (`duties.json` + `duties.wiki.json`) so two research pipelines re-run independently. Provenance reaches the header (`curatedFields`/`curatedSource`) and the viewer's CURATED banner. | 2026-08-26 |
+| **A4** Monster→zone list | **Done via the Final Fantasy Wiki** (`scripts/wiki/`). Zones went **259 → 755**, and 1,628 monsters gained a duty location. The wiki publishes the **`BNpcName` row id**, so the join is exact, not fuzzy — verified: all 5,035 ids exist in our dataset, 98.3% with matching names. | 2026-08-27 |
+| **A6** Fill `data/monsters.json` | **Largely done.** 3,504 of 14,560 entries curated: level (3,401), hp, hitbox, abilities, family, creatureClass, zones, duties, fates, quests, dungeonEnemy/Boss. `drops` stays ??? forever — server-side, settled at Q11. Garland was correctly ruled out; the wiki was the right source. | 2026-08-27 |
+| Where do instance monsters come from? | **`Final Fantasy XIV enemies/<class>` subpages**, not the ~9,000 individual enemy pages — those are redirects. 19 subpages, **23 requests**, 5,294 rows. Four parsing traps documented in `scripts/wiki/README.md`; every one produced plausible-but-wrong data rather than an error. | 2026-08-27 |

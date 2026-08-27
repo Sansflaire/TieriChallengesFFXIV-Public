@@ -1,0 +1,632 @@
+{
+ "schemaVersion": 1,
+ "dataset": "duties",
+ "keyField": "id",
+ "source": "finalfantasy.fandom.com \"Final Fantasy XIV enemies\" subpages, swept 2026-08-27",
+ "description": "CURATED overlay for duties.json - the \"monsters\" column only. Separate file from curated/duties.json (Garland) so the two sources never overwrite each other. Built from the Spawn column of the wiki enemy tables.",
+ "warning": "Only duties the wiki names in a Spawn cell get a monster list. A duty absent here keeps ??? and is genuinely undocumented, not empty.",
+ "entryCount": 207,
+ "entries": {
+  "1": {
+   "monsters": "Coeurl O' Nine Tails, Mitetrap, Mun-Tuy Sapling, Prison Pteroc, Prisoner's Delight, Warden's Whip"
+  },
+  "2": {
+   "monsters": "Ak-Inik Varlet, Ak-Mena Groundsman, Ak-Mena Varlet, Dalamud Priest, Octavel the Unforgiving, Skeleton Soldier"
+  },
+  "3": {
+   "monsters": "Errant Soul, Gyges the Great, Hecatoncheir Stonebreaker, Hecatoncheir Stonehauler, Ichorous Drip, Ichorous Ire, Kottos, Pit Hippocerf, Stone Servant"
+  },
+  "4": {
+   "monsters": "Baleen Guard, Black Bat, Captain Madison, Chopper, Denn the Orcatoothed, Scurvy Dog, Shade Seeker, Shalloweye Reaver, Shallowscale Reaver"
+  },
+  "5": {
+   "monsters": "Coincounter, Eftstool, Goldvine, Lily of the Vale, Locksmith, Miser's Mistress, Morbol Seedling, Poisoned Peasant, Vale Bat"
+  },
+  "6": {
+   "monsters": "Attack Hound, Attic Bat, Divan Mold, Manor Servitor, Manor Steward, Servitor's Lantern"
+  },
+  "7": {
+   "monsters": "Coliseum Python, Damantus, Noxius, Pit Peiste, Rudis Beak, Thunderclap Guivre"
+  },
+  "8": {
+   "monsters": "Aiatar, Ashdrake, Blue Back, Comet Chaser, Deep Jungle Coeurl, Great Yellow Pelican, Gully Galago, Inferno Drake, Mud Biast, Painted Colibri, Raveled Raincatcher, Sable Back, Tempest Biast, Violet Back, Wyrmhound"
+  },
+  "9": {
+   "monsters": "Temple Bat, Temple Croc, The Accused, The Condemned"
+  },
+  "10": {
+   "monsters": "Bronze Buzzard, Corrupted Nymian, Corrupted Nymian Curate, Keeper of Halidom, Soldier of Nym, Tonberry, Tonberry King, Tonberry Slasher, Tonberry Stalker, Treasure Hunter"
+  },
+  "11": {
+   "monsters": "Carrier Ziz, Chudo-Yudo, Dragon Aevis, Dravanian Outflyer, Dravanian Outwalker, Isgebind, Koshchei, Lesser Wyvern"
+  },
+  "12": {
+   "monsters": "Canyon Condor, Chimera, Quicksand Basilisk, Sabotender Desertor, Sand Bat, Slipsand"
+  },
+  "13": {
+   "monsters": "Betrayed Soul, Diamond-tooth Hedgemole, Forsaken Soul, Hellsbound Warrior, Lava Drake, Recluse Hippogryph"
+  },
+  "14": {
+   "monsters": "Lunatic Follower, Lunatic Priest, Recluse Hippogryph"
+  },
+  "15": {
+   "monsters": "12th Legion Eques, 7th Cohort Eques, 8th Cohort Centurion, 8th Cohort Decurion, 8th Cohort Eques, 8th Cohort Hoplomachus, 8th Cohort Medicus, 8th Cohort Sagittarius, 8th Cohort Signifer, Imperial War Hound, Livia sas Junius, Magitek Colossus, Magitek Colossus Rubricatus, Magitek Death Claw, Magitek Reaper, Magitek Vanguard, Magitek Vanguard F-1, Magitek Vanguard H-1, The Black Eft"
+  },
+  "16": {
+   "monsters": "1st Cohort Eques, 1st Cohort Hoplomachus, 1st Cohort Medicus, 1st Cohort Primi Ordines, 1st Cohort Sagittarius, 1st Cohort Signifer, Lahabrea, Magitek Bit, Magitek Colossus, Magitek Death Claw, Magitek Reaper, Magitek Vanguard H-1, Mark II Magitek Colossus, The Ultima Weapon"
+  },
+  "17": {
+   "monsters": "Bhoot, Corrupted Slime, Drifting Soul, Screamer, Siren, Symond the Unsinkable, Tyrant, Zombie Barber, Zombie Sailor, Zombie Storm Private, Zombie Storm Sergeant, Zombie War Hound, Zu, Zu Cockerel, Zu Pullet"
+  },
+  "18": {
+   "monsters": "Errant Revenant, Hecatoncheir Mastermind, Hecatoncheir Quakequeller, Hecatoncheir Rocksplitter, Hecatoncheir Rockvaulter, Hecatoncheir Skullcrusher, Hecatoncheir Stonehoarder, Hecatoncheir Tremorward, Hecatoncheir Wallcrasher, Mining Dross, Ouranos, Pit Hippogryph, Septic Slime"
+  },
+  "19": {
+   "monsters": "Manor Butler, Manor Footman, Manor Steward"
+  },
+  "20": {
+   "monsters": "Deep Jungle Coeurl, Eoraptor, Gobbie Beak, Gobmachine G-VI, Gully Galago, Illuminati Commander, Illuminati Footman, Illuminati Glider, Illuminati Marksman, Illuminati Sniper, Illuminati Soldier, Magitek Vangob G-III, Painted Colibri, Raveled Raincatcher"
+  },
+  "21": {
+   "monsters": "Catoblepas, Champion Archer, Champion Conjurer, Champion Gladiator, Champion Lancer, Coliseum Lemur, Fighting Vulture, Franz the Fair, Gold Bear, Halatali Bat, Mumuepo the Beholden, Narasimha, Pit Basilisk, Pit Coeurl, Pit Coeurl Pup, Pit Torama, Pit Wolf, Pyracmon, U'linbho the Sand Devil"
+  },
+  "22": {
+   "monsters": "Baalzephon, Decaying Gourmand, Demonstool"
+  },
+  "23": {
+   "monsters": "Harpeia, Sasquatch, Sifaka, Smallfoot Sifaka, Zuzeca"
+  },
+  "24": {
+   "monsters": "Avere Bravearm, Best Man, Bridesmaid, Dantalion, Flyblown Failure, Groom-to-be, Liavinne, Phantom Knight, Phantom Soldier, Spare Lung, Spare Soul, Spare Will"
+  },
+  "25": {
+   "monsters": "Craving Harrier, Cuca Fera, Dragonfly Hunter, Giruveganaus, Gorynich, Gowrow, Haranguing Harrier, Jura Aevis, Maundering Harrier, Paleoaevis, Shield Dragon, Silent Moss the Solemn, Sordes, Storm Biast, Vigil Heir"
+  },
+  "26": {
+   "monsters": "Belah'dian Knight, Belah'dian Soul, Desert Viper, Sabotender Campeador, Sabotender Emperatriz, Sabotender Guardia, Sabotender Soldado, Temple Fox, Temple Mummy, Traveled Tomb Raider"
+  },
+  "27": {
+   "monsters": "Chary Harrier, Dove Aevis, Fenrir, Hybrid Gator, Ibex, Northern Bateleur, Snowcloak Goobbue, Snowcloak Wolf, Snowclops, White Bear, Yeti"
+  },
+  "28": {
+   "monsters": "Captain's Guard, Captain's Leech, Captain's Slave, Drowned Boatswain, Drowned Courtesan, Drowned Lodesman, Drowned Powder Monkey, Drowned Topman, Drowned Wench"
+  },
+  "29": {
+   "monsters": "Bloodmoon Martyr, Bloodmoon Sacrifice, Cankerous Gobbet, Demonic Rose, Foxglove, Grey Wolf, Hedgerow Ochu, Knotty Treant, Lordstool, Megalotragus, Suppuration, Void Syrup"
+  },
+  "30": {
+   "monsters": "Circling Condor, Combat Wivre, Frumious Koheel Ja, Manxome Molaa Ja Ja, Pack Ziz, Pteroc Pointer, Purulent Abscess, Purulent Pustule, Silverscales Lurker, Silverscales Sophist, Silverscales Stabler, Silverscales Warder, Silverscales Zenist, Slithy Zolool Ja"
+  },
+  "31": {
+   "monsters": "Gubal Falcon, Skatene"
+  },
+  "32": {
+   "monsters": "6th Cohort Centurion, 6th Cohort Colossus, 6th Cohort Eques, 6th Cohort Signifer, 6th Cohort Vanguard, Astraea, Einhander, Loyal Biast, Loyal Dragonfly, Loyal Wyvern, Magitek Gunship, Midgardsormr, Mirage Dragon, Silver Falcon"
+  },
+  "33": {
+   "monsters": "Blue Buzzard, Canu Vanu, Divine Dhalmel, Divine Sordes, Grandfather Treant, Lan'zoii Vundu, Nat'zoii Vundu, Neverreap Toco Toco, Nunyenunc, Nunyenunc's Shadow, Vuk'zoii Vundu, Waukkeon"
+  },
+  "34": {
+   "monsters": "Ser Adelphel Brightblade, Vault Auditor, Vault Deacon, Vault Ostiary, Vault Priest"
+  },
+  "35": {
+   "monsters": "Clockwork Alarum, Clockwork Predator, Clockwork Reservoir, Continuum Conservator, Flawed Naga, Flawed Shabti, Flawless Chimera, Flawless Empuse, Flawless Naga, Iksalion, Immortalized Clockwork Dreadnaught, Immortalized Clockwork Knight, Immortalized Clockwork Soldier, Immortalized Death Claw, Immortalized Interceptor Drone, Manikin Conjurer, Minotaur, Phantom Ray, Retooled Enforcement Droid, Shabti, The Curator, Urstrix"
+  },
+  "36": {
+   "monsters": "Dusk Wolf, Fading Soul, Frostbitten Archer, Frostbitten Chirurgeon, Frostbitten Conscript, Frostbitten Officer, Frostbitten Sentry, Frostbitten Soldier, Frostbitten War Hound, Frozen Chirurgeon, Frozen Knight, Icetrap, Nestless Falcon, Opinicus, Ser Yuhelmeric, Stronghold Mylodon, Towering Oliphant"
+  },
+  "37": {
+   "monsters": "Abalathian Fox, Abalathian Vulture, Blood of the Mountain, Blooming Ochu, Chyme of the Mountain, Cryodragon, Deep-mountain Gallimimus, Deep-mountain Wyvern, Ergodragon, Myath, Pyrodragon, Raskovnik, Rheum of the Mountain, Sacred Biast, Sacred Drake, Tioman, Wounded Cryodragon, Wounded Pyrodragon"
+  },
+  "38": {
+   "monsters": "6th Legion Eques, 6th Legion Magitek Vanguard H-1, 6th Legion Medicus, 6th Legion Optio, 6th Legion Tesserarius, Ascian Prime, Bioculture Node, Clockwork Avenger, Clockwork Hunter, Clockwork Repurposer, Cloned Conjurer, Cloned Thaumaturge, Critical Bug, Cultured Bowyer, Cultured Chimera, Cultured Cobra, Cultured Dancer, Cultured Empuse, Cultured Mirrorknight, Cultured Naga, Cultured Reptoid, Cultured Shabti, Enforcement Droid 210, Facility Dreadnaught, Harmachis, Igeyorhm, Lahabrea, Magitek Turret I, Magitek Turret II, Monitoring Drone, Precultured Biomass, Scrambled Engineer, Scrambled Iron Claw, Scrambled Iron Giant, Scrambled Paladin"
+  },
+  "39": {
+   "monsters": "Aery Biast, Aery Diresaur, Aery Drake, Aery Vouivre, Aery Wyvern, Ahleh, Cloud Chaser, Down Wyvern, Dran Sorn Gahr, Gyascutus, Lesser Aery Dragon, Leyak, Liegedrake, Liegetail, Nehd Sorn Gahr, Nidhogg, Nidhogg Broodling, Oskh, Rangda, Slumbering Dragon, Smoldering Dragon"
+  },
+  "40": {
+   "monsters": "8th Order Alchemist, 8th Order Bedesman, 8th Order Furnaceman, 8th Order Patriarch Be Gu, 8th Order Pickman, 8th Order Roundsman, Construct 8, Corrupted Gel, Corrupted Slime, Corrupted Wolf"
+  },
+  "41": {
+   "monsters": "Belladonna, Biloko, Blooming Ochu, Grizzly Host, Korpokkur, Lily of the Saint, Malboro Terra, Rose Garden, Royal Oak, Southern Seas Colibri, Tangled Narbrooi, Thavnairian Tortoise, Withered Melia"
+  },
+  "66": {
+   "monsters": "Furryfoot Kupli Kipp, Pukla Puki the Pomburner, Pukna Pako the Tailturner, Puksi Piko the Shaggysong, Ruffletuft Kupta Kapa, Whiskerwall Kupdi Koop, Woolywart Kupqu Kogi"
+  },
+  "68": {
+   "monsters": "Magitek Bit, The Ultima Weapon"
+  },
+  "72": {
+   "monsters": "Wavespine Sahagin, Wavetooth Sahagin"
+  },
+  "73": {
+   "monsters": "Wavespine Sahagin, Wavetooth Sahagin"
+  },
+  "74": {
+   "monsters": "Dhorme Chimera"
+  },
+  "75": {
+   "monsters": "Hydra, Wyvern"
+  },
+  "76": {
+   "monsters": "Crossing Bateleur, Crossing Hippocerf, Gilgamesh"
+  },
+  "84": {
+   "monsters": "Nabriales"
+  },
+  "85": {
+   "monsters": "Gilgamesh"
+  },
+  "88": {
+   "monsters": "Lan'maii Vundu, So'sanuwa, Ul'sanuwa, Vuk'maii Vundu"
+  },
+  "89": {
+   "monsters": "Lan'maii Vundu, Nat'maii Vundu, So'sanuwa, Ul'sanuwa, Vuk'maii Vundu"
+  },
+  "92": {
+   "monsters": "Bone Dragon, Iron Claws, Iron Giant, King Behemoth, Phlegethon, Platinal, Sandman"
+  },
+  "93": {
+   "monsters": "ADS, Attack Node, Caduceus, Dark Matter Coeurl, Dark Matter Pelican, Dark Matter Pteroc, Dark Matter Slime, Defense Node, Patrol Node"
+  },
+  "94": {
+   "monsters": "ADS, Attack Node, Defense Node, Disposal Node, Monitoring Node, Quarantine Node, Sanitary Node"
+  },
+  "95": {
+   "monsters": "Dreadguard"
+  },
+  "96": {
+   "monsters": "Clockwork Bug, Clockwork Dreadnaught, Clockwork Knight, Clockwork Soldier, Spinner-rook"
+  },
+  "97": {
+   "monsters": "Asclepius, Dreadknight, Hygieia, The Scourge of Meracydia, Twintania"
+  },
+  "98": {
+   "monsters": "Acidic Honey, Dark Matter Bulb, Dark Matter Roselet, Rafflesia"
+  },
+  "99": {
+   "monsters": "Allagan Cobra, Dreadguard, Lamia Bowyer, Lamia Dancer, Lamia Deathdancer, Lamia Fatedealer, Lamia Prosector, Maintenance Module, Melusine, Proto-chimera, Renaud"
+  },
+  "100": {
+   "monsters": "Clockwork Bug, Clockwork Dreadnaught, Clockwork Footman, Clockwork Warrior, Shaper-rook, Surveillance Module, The Avatar"
+  },
+  "101": {
+   "monsters": "The Ghost of Meracydia"
+  },
+  "102": {
+   "monsters": "Acheron, Amon, Clockwork Squire, Clockwork Wright, Doga's Clone, Experimental By-product #33, Experimental By-product #66, Experimental By-product #99, Glasya Labolas, Gomory, Green Dragon, Haokah, Kichiknebik, Kunoichi, Red Dragon, Scylla, Spanner-rook, Unei's Clone, Xande, Yellow Dragon"
+  },
+  "103": {
+   "monsters": "Acidic Honey, Dark Matter Bulb, Dark Matter Roselet, Rafflesia"
+  },
+  "104": {
+   "monsters": "Allagan Cobra, Dreadguard, Lamia Bowyer, Lamia Dancer, Lamia Deathdancer, Lamia Fatedealer, Lamia Prosector, Maintenance Module, Melusine, Proto-chimera, Renaud"
+  },
+  "105": {
+   "monsters": "Clockwork Bug, Clockwork Dreadnaught, Clockwork Footman, Clockwork Warrior, Shaper-rook, Surveillance Module, The Avatar"
+  },
+  "106": {
+   "monsters": "The Ghost of Meracydia"
+  },
+  "107": {
+   "monsters": "Allagan Naga, Clockwork Spider, Dark Matter Slime, Daughter of Imdugud, Imdugud, Lamia Bellydancer, Lamia Sharper, Son of Imdugud"
+  },
+  "108": {
+   "monsters": "Electric Node, Gravity Node, Kaliya, Scouting Node, Security Node, Spanner-rook, Valiant, Weapons Node"
+  },
+  "109": {
+   "monsters": "Bennu"
+  },
+  "110": {
+   "monsters": "The Blood of Meracydia, The Gust of Meracydia, The Pain of Meracydia, The Shadow of Meracydia, The Sin of Meracydia, The Storm of Meracydia"
+  },
+  "111": {
+   "monsters": "Cerberus, Dragonfire Fly, Five-headed Dragon, Garm, Poison Slime, Queen Scylla, Sacrificed Soldier, Thor, Two-headed Dragon, Wolfsbane, Xande's Clone"
+  },
+  "112": {
+   "monsters": "Alarum, Faust, Oppressor, Oppressor 0.5, Sturm Doll"
+  },
+  "113": {
+   "monsters": "Boomtype Magitek Gobwalker G-VII, Gordian Footman, Gordian Hardhelm, Gordian Hardmind, Gordian Sniper, Gordian Soldier, Jagd Doll, Magitek Gobwidow G-IX"
+  },
+  "114": {
+   "monsters": "Gear Lubricant, Liquid Limb, Living Liquid"
+  },
+  "115": {
+   "monsters": "Jagd Doll, Panzer Doll, The Manipulator"
+  },
+  "116": {
+   "monsters": "Alarum, Faust, Oppressor, Oppressor 0.5, Sturm Doll"
+  },
+  "117": {
+   "monsters": "Boomtype Magitek Gobwalker G-VII, Gordian Hardhelm, Gordian Hardmind, Gordian Sniper, Gordian Soldier, Jagd Doll, Magitek Gobwidow G-IX"
+  },
+  "118": {
+   "monsters": "Gear Lubricant, Liquid Limb, Living Liquid"
+  },
+  "119": {
+   "monsters": "Jagd Doll, Panzer Doll, Steam Bit, Straf Doll, The Manipulator"
+  },
+  "120": {
+   "monsters": "Ark Anzu, Ark Morbol, Cetus, Cloudlarker, Dexter, Echidna, Hybodus, Hybodus Pup, Sinister"
+  },
+  "136": {
+   "monsters": "Glassy-eyed Cobra, Gobbledygroper, Hummelfaust, Ratfinx Twinkledinks"
+  },
+  "137": {
+   "monsters": "Blaster, Blaster Mirage, Boomtype Magitek Gobwalker G-VII, Brawler, Midan Glider, Midan Soldier, Swindler, Vortexer"
+  },
+  "138": {
+   "monsters": "Alarum, Lumbertype Magitek Vangob G-III, Midan Ambusher, Midan Brandisher, Midan Tinkerer, Panzer Doll, Quickthinx Allthoughts, Shanoa, Sturm Doll"
+  },
+  "139": {
+   "monsters": "Blaster, Blaster Mirage, Brawler, Brute Justice, Onslaughter, Swindler, Vortexer"
+  },
+  "140": {
+   "monsters": "Amdapori Corpse, Amdapori Gargoyle, Mhachi Corpse, Rift Dragon"
+  },
+  "141": {
+   "monsters": "Tamed Hropken"
+  },
+  "147": {
+   "monsters": "Glassy-eyed Cobra, Glassy-eyed Minotaur, Glassy-eyed Shabti, Gobbledygawker, Gobbledygroper, Hummelfaust, Ratfinx Twinkledinks, Yorn Pig"
+  },
+  "148": {
+   "monsters": "Blaster, Blaster Mirage, Boomtype Magitek Gobwalker G-VII, Brawler, Midan Gunner, Midan Hardhelm, Midan Hardmind, Midan Soldier, Swindler, Vortexer"
+  },
+  "149": {
+   "monsters": "Alarum, Boomtype Magitek Gobwalker G-VII, Engine Oil, Lumbertype Magitek Vangob G-III, Panzer Doll, Quickthinx Allthoughts, Shanoa, Sturm Doll"
+  },
+  "150": {
+   "monsters": "Blaster, Blaster Mirage, Brawler, Brute Justice, Onslaughter, Swindler, Vortexer"
+  },
+  "168": {
+   "monsters": "Black Mage Corpse, Calofisteri, Mhachi Bhoot, Mhachi Ghost, Sarcosuchus, Shriveled Talon, Singularity Ripple, Singularity Trace"
+  },
+  "169": {
+   "monsters": "Nidhogg, Shadow Brobinyak, Shadow Dragon, Shadow Falak"
+  },
+  "170": {
+   "monsters": "Nidhogg, Shadow Brobinyak, Shadow Dragon, Shadow Falak"
+  },
+  "171": {
+   "monsters": "Blizzard Dragon, Captain Mogsun, Chieftain Moglin, Garden Cloudtrap, Garden Melia, Garden Sankchinni, Holy Wyvern, Hraesvelgr, Hraesvelgr Broodling, Kargas, Pomguard Pomchopper, Pomguard Pomcrier, Pomguard Pomfluffer, Pomguard Pomfryer, Pomguard Pompiercer, Pomguard Pompincher, Poqhiraj, Sanctuary Tsanahale, Sohr Khai Anzu, Sohr Khai Buzzard, Sohr Khai Cockerel"
+  },
+  "172": {
+   "monsters": "Battle Bird, Battle Coeurl, Battle Raptor, Jungle Sasquatch, Jungle Tiger, Training Coeurl, Training Jackal, Waruochs"
+  },
+  "182": {
+   "monsters": "Abalathian Hornbill, Chasm Cobra, Chasm Harpeia, Dotoli Ciloc, Floating Turret, Ixali Stitcher, Nuzal Hueloc, Siege Goobbue, Tozol Huatotl, Warballoon, Xelphatol Bravewing, Xelphatol Fatecaller, Xelphatol Fogcaller, Xelphatol Skycaller, Xelphatol Strongbeak, Xelphatol Swiftbeak, Xelphatol Watchwolf, Xelphatol Whirltalon, Xelphatol Windtalon"
+  },
+  "183": {
+   "monsters": "The First Demiurge, The Second Demiurge"
+  },
+  "184": {
+   "monsters": "The First Demiurge, The Second Demiurge"
+  },
+  "186": {
+   "monsters": "Alexandrian Glider, Faust Z, Full-metal Faust, Gobtank Scrap, Panzer Doll Scrap, Refurbisher 0, Vangob Scrap"
+  },
+  "187": {
+   "monsters": "Alexandrian Collider, Alexandrian Hider, Alexandrian Slider, Alexandrian Strider, Boomtype Magitek Gobwalker G-VII, Goblin of Fortune, Gobpress R-VI, Lamebrix Strikebocks"
+  },
+  "188": {
+   "monsters": "Actuator, Actuator 0, Claster, Cruise Chaser, E.D.D."
+  },
+  "190": {
+   "monsters": "Alarum, Faust Z, Full-metal Faust, Gobtank Scrap, Panzer Doll Scrap, Refurbisher 0, Vangob Scrap"
+  },
+  "191": {
+   "monsters": "Boomtype Magitek Gobwalker G-VII, Goblin of Fortune, Gobpress R-VI, Hedge Gobknight, Lamebrix Strikebocks, Lameprix Strikedocks"
+  },
+  "192": {
+   "monsters": "Claster, Cruise Chaser, E.D.D."
+  },
+  "196": {
+   "monsters": "Behemoth Ward, Liquid Flame, Strix"
+  },
+  "219": {
+   "monsters": "3rd Cohort Canis Pugnax, 3rd Cohort Eques, 3rd Cohort Hoplomachus, 3rd Cohort Sagittarius, 3rd Cohort Signifer, Adamantite Claw, Armored Weapon, Magitek Colossus, Magitek Gunship, Magitek Predator, Magitek Reaper, Magitek Sky Armor, Magitek Slasher, Magitek Vanguard D-1, Sky Armor Reinforcement, Sword-wielding Loyalist, The Griffin"
+  },
+  "220": {
+   "monsters": "Allagan Dreadnaught, Dun Scaith Dragon, Proto Bit, Proto Ultima, Shadowcourt Hound"
+  },
+  "221": {
+   "monsters": "Abalathian Vulture, Blood of the Mountain, Blooming Chichu, Gowrow, Mountaintop Hropken, Mountaintop Miacid, Mountaintop Opken, Nesting Anzu, The Leightonward"
+  },
+  "223": {
+   "monsters": "Execrated Thew, Execrated Will, Execrated Wit"
+  },
+  "224": {
+   "monsters": "Execrated Thew, Execrated Wile, Execrated Will, Execrated Wit"
+  },
+  "235": {
+   "monsters": "Naishi-no-Kami, Palace Guard, Ruby Princess"
+  },
+  "236": {
+   "monsters": "Coeurl Prana, Coeurl Smriti, Coeurl Sruti, Dancing Bear, Gyr Abanian Vulture, Gyr Abanian Zu, Temple Coeurl, Temple Mossling, Temple Pup, The Way of the Blade"
+  },
+  "238": {
+   "monsters": "Albatros, Banshee, Fleshless Captive, Lorelei, Lugat, Rotting Captive, Skinless Deckhand, Skinless Skipper, The Governor, The Groveller, Undead Warden, Warden's Hound"
+  },
+  "240": {
+   "monsters": "Canyon Dzo, Corpsecleaner Eagle, Eastern Buzzard, Garula, Greater Gulo Gulo, Halgai Shoot, Mettling Matamata, Steppe Eagle, Yol"
+  },
+  "241": {
+   "monsters": "Doman Armored Weapon, Doman Canis Pugnax, Doman Colossus, Doman Gunship, Doman Hoplomachus, Doman Reaper, Doman Sky Armor, Doman Slasher, Doman Vanguard, Hypertuned Grynewaht, Magitek Hexadrone, Magitek Rearguard, Rearguard Mine"
+  },
+  "242": {
+   "monsters": "12th Legion Armored Weapon, 12th Legion Avenger, 12th Legion Bit, 12th Legion Canis Pugnax, 12th Legion Colossus, 12th Legion Death Claw, 12th Legion Hoplomachus, 12th Legion Optio, 12th Legion Packer, 12th Legion Rearguard, 12th Legion Roader, 12th Legion Signifer, 12th Legion Slasher, 12th Legion Vanguard, Hypertuned, Inferno, Magna Roader, Number XXIV, Subject Number XXIV"
+  },
+  "247": {
+   "monsters": "12th Legion Avenger, 12th Legion Canis Pugnax, 12th Legion Centurion, 12th Legion Colossus, 12th Legion Hexadrone, 12th Legion Hoplomachus, 12th Legion Predator, 12th Legion Rearguard, 12th Legion Roader, 12th Legion Slasher, Magitek Scorpion, Prototype Bit, Prototype Death Claw"
+  },
+  "252": {
+   "monsters": "Alte Roite"
+  },
+  "254": {
+   "monsters": "Great Dragon, Halicarnassus"
+  },
+  "256": {
+   "monsters": "Alte Roite"
+  },
+  "258": {
+   "monsters": "Great Dragon, Halicarnassus, Iron Giant"
+  },
+  "262": {
+   "monsters": "Daigoro, Karasu Tengu, Yojimbo"
+  },
+  "263": {
+   "monsters": "Dreaming Kshatriya"
+  },
+  "264": {
+   "monsters": "Dreaming Brahmin, Dreaming Kshatriya, Dreaming Shudra"
+  },
+  "279": {
+   "monsters": "Rotting Royal"
+  },
+  "280": {
+   "monsters": "Twintania"
+  },
+  "281": {
+   "monsters": "Black Chocobo, Red Chocobo, Seasoned Seeq Bandit, Shiftless Seeq Bandit, Sizable Seeq Bandit, Sniffing Seeq Bandit, Staunch Seeq Bandit, Stout Seeq Bandit"
+  },
+  "284": {
+   "monsters": "Boltstorm Nue, Hellfire Shikigami, Hellish Lion, Left Hand of the Spring, Right Hand of the Spring, Shikigami of the Spring, Stillwind Nue"
+  },
+  "285": {
+   "monsters": "Biomanufactured Brobinyak, Motherbit, Proto-chimera, Servomechanical Minotaur, The Ultima Beast"
+  },
+  "286": {
+   "monsters": "Ghost, Putrid Passenger"
+  },
+  "288": {
+   "monsters": "Dadaluma"
+  },
+  "292": {
+   "monsters": "Ghost, Putrid Passenger"
+  },
+  "294": {
+   "monsters": "Dadaluma"
+  },
+  "474": {
+   "monsters": "Garula, Rathalos, Steppe Coeurl, Steppe Sheep, Steppe Yamaa"
+  },
+  "475": {
+   "monsters": "Garula, Rathalos, Steppe Coeurl, Steppe Sheep, Steppe Yamaa"
+  },
+  "536": {
+   "monsters": "Dragon Hornbill, Dragon Weasel, Otengu, Servant of the Sage, White Baboon"
+  },
+  "537": {
+   "monsters": "Specter of the Matriarch, Specter of the Patriarch"
+  },
+  "538": {
+   "monsters": "Specter of the Matriarch, Specter of the Patriarch"
+  },
+  "539": {
+   "monsters": "Lahabrea, The Ultima Weapon"
+  },
+  "550": {
+   "monsters": "Construct 7, Construct 7.1"
+  },
+  "584": {
+   "monsters": "Blooming Biloko, Dorpokkur, Muddy Dorpokkur, Nullchu, Raskovnik, Sprawling Sankchinni, Tokkapchi, Withered Belladonna, Withered Kaluk"
+  },
+  "585": {
+   "monsters": "Charred Dreadnaught, Charred Droid, Charred Drone, Charred Paladin, Defective Drone, Mining Drone, Repurposed Dreadnaught"
+  },
+  "588": {
+   "monsters": "Midgardsormr"
+  },
+  "589": {
+   "monsters": "Level Checker, Omega"
+  },
+  "590": {
+   "monsters": "Omega-F, Omega-M"
+  },
+  "592": {
+   "monsters": "Midgardsormr"
+  },
+  "593": {
+   "monsters": "Level Checker, Omega"
+  },
+  "594": {
+   "monsters": "Omega, Omega-F, Omega-M"
+  },
+  "595": {
+   "monsters": "Gilgamesh, Yojimbo"
+  },
+  "611": {
+   "monsters": "Mark III-B Magitek Colossus, Prometheus, Schola Armored Weapon, Schola Avenger, Schola Canis Pugnax, Schola Colossus, Schola Colossus Rubricatus, Schola Gunship, Schola Hexadrone, Schola Mark II Colossus, Schola Predator, Schola Rearguard, Schola Scorpion, Schola Sky Armor"
+  },
+  "636": {
+   "monsters": "Harpy, Monastic Ghost, Monastic Skeleton, Tainted Soul, Taintless Soul"
+  },
+  "649": {
+   "monsters": "Dohnfast Anemone, Dohnfast Moss Fungus, Dohnfast Rowan, Griaule, Honeyhunter, Painted Sapling"
+  },
+  "651": {
+   "monsters": "Acro Bat, Batsquatch, Razana, Ronkan Dreamer"
+  },
+  "655": {
+   "monsters": "Alpha Zaghnal, Beta Zaghnal, Clockwork Ark Knight, Enforcement Droid 209, Mark CXLIV Thermocoil Boilbuster, Mithridates, Search Drone, Servomechanical Minotaur, Surplus Kaliya, The Tycoon, Vitalized Iksalion, Vitalized Reptoid, Vitalized Shabti, Zaghnal"
+  },
+  "656": {
+   "monsters": "Greater Armadillo, Pack Armadillo, Well Armadillo"
+  },
+  "657": {
+   "monsters": "Mustardseed, Peaseblossom"
+  },
+  "658": {
+   "monsters": "Mustardseed, Peaseblossom"
+  },
+  "661": {
+   "monsters": "Engendered Bandersnatch, Engendered Cactuar Giant, Engendered Lycopersicum, Engendered Pegasus, Engendered Shark, Engendered Snapweed, Laboratory Eggplant, Laboratory Garlic, Laboratory Onion, Laboratory Queen, Laboratory Tomato, Morbol Marquis"
+  },
+  "684": {
+   "monsters": "Nyx"
+  },
+  "685": {
+   "monsters": "Nyx"
+  },
+  "687": {
+   "monsters": "Hades, Shadow of the Ancients"
+  },
+  "692": {
+   "monsters": "Cosmos Snapweed, Cosmos Witchweed, Cosmos Ya-te-veo, Draco Statue, Leannan Sith, Lord Tolthewil, Lover's Ring, Ser Hamonth, Ser Intheran, Ser Javyth, Ser Mothbert"
+  },
+  "693": {
+   "monsters": "Ascian Prime's Shade, Hades, Igeyorhm's Shade, Lahabrea, Lahabrea's Shade, Nabriales's Shade, Shadow of the Ancients"
+  },
+  "694": {
+   "monsters": "Brute Justice, Cruise Chaser, Jagd Doll, Living Liquid, Shanoa"
+  },
+  "700": {
+   "monsters": "9S-operated Walking Fortress, Engels, Flight Unit, Goliath Tank, Hobbes, Multi-leg Medium Model, Reverse-jointed Goliath, Serial-jointed Command Model, Serial-jointed Service Model, Small Biped, Small Exploder, Small Flyer, Small Stubby"
+  },
+  "714": {
+   "monsters": "Anyder Diviner, Anyder Grappler, Anyder Harpooner, Kyklops, Panopt Ousia, Queen's Harpooner, Rukshs Dheem"
+  },
+  "717": {
+   "monsters": "The Ruby Weapon"
+  },
+  "718": {
+   "monsters": "The Ruby Weapon"
+  },
+  "736": {
+   "monsters": "724P-operated Superior Flight Unit (A-lpha), 767P-operated Superior Flight Unit (B-eta), 772P-operated Superior Flight Unit (C-hi), 813P-operated Aegis Unit, 905P-operated Heavy Artillery Unit, Compound 2P, Flight Unit, Heavy Artillery Unit, Light Artillery Unit, The Compound, YoRHa Close-combat Unit: Blade, YoRHa Close-combat Unit: Martial, YoRHa Close-combat Unit: Spear"
+  },
+  "737": {
+   "monsters": "Necrobomb"
+  },
+  "746": {
+   "monsters": "Cave Hropken, Cave Opken, Exoray, Mudman, Pyroduct Eldthurs, Relict Slime, Relict Syrup"
+  },
+  "758": {
+   "monsters": "Eden's Promise"
+  },
+  "759": {
+   "monsters": "Eden's Promise, Oracle of Darkness"
+  },
+  "762": {
+   "monsters": "The Emerald Weapon"
+  },
+  "763": {
+   "monsters": "The Emerald Weapon"
+  },
+  "777": {
+   "monsters": "Amhuluk, Armored Telodragon, Lesser Telodragon, Magitek Core, Mark II Telotek Colossus, Telobrobinyak, Teloclaw, Telodragon, Telodragonet, Telotek Predator, Telotek Reaper, Telotek Sky Armor, Telotek Vanguard, Telotulihand, Telovouivre, Tempered Imperial"
+  },
+  "779": {
+   "monsters": "2P, 2P-operated Flight Unit, False Idol, Gretel, Hansel, Her Inflorescence, Knave of Hearts, Meng-Zi, Red Girl, Xun-Zi"
+  },
+  "781": {
+   "monsters": "The Diamond Weapon"
+  },
+  "782": {
+   "monsters": "The Diamond Weapon"
+  },
+  "783": {
+   "monsters": "Mark II Zot Colossus, Tempered Imperial, Zot Armored Fiend, Zot Armored Weapon, Zot Death Claw, Zot Gunship, Zot Hypertuned, Zot Predator, Zot Roader, Zot Sky Armor"
+  },
+  "784": {
+   "monsters": "Arch-Lambda, Beta Invader, Delta Invader, Hybrid Dragon, Lambda Invader, Level Tricker, Omega Frame, Omicron Invader, Proto-Omega, Stigma-4"
+  },
+  "785": {
+   "monsters": "Babil Armored Weapon, Babil Avenger, Babil Bit, Babil Canis Pugnax, Babil Colossus, Babil Death Machine, Babil Gunship, Babil Helldiver, Babil Hexadrone, Babil Hypertuned Specimen, Babil Nimrod, Babil Predator, Babil Reaper, Babil Rearguard, Babil Roader, Babil Satellite, Babil Sky Armor, Babil Slasher, Lugae"
+  },
+  "786": {
+   "monsters": "Amon the Undying, Ilberd the Unrelenting, Sinking Arrogance, Sinking Cynicism, Sinking Dishonesty, Sinking Dissension, Sinking Partiality, Sinking Regret, Sinking Resentment"
+  },
+  "787": {
+   "monsters": "Hermes, Ktiseos Aello, Ktiseos Alkyone, Ktiseos Daidalion, Ktiseos Erinys, Ktiseos Lailaps, Ktiseos Leon, Ktiseos Okyupete, Ktiseos Ophiotauros, Ktiseos Panther, Ktiseos Stymphalide"
+  },
+  "788": {
+   "monsters": "Darkscale, Hraesvelgr, Nidhogg, Vedrfolnir"
+  },
+  "792": {
+   "monsters": "Freedom Fighter, Peacekeeper, Warped Flesh, Xenoflora"
+  },
+  "794": {
+   "monsters": "Smiley Lunatender, Smiley Panopt, Smiley Thinker, Smiley Wanderer, Smiley Weeper, The Big Cheese"
+  },
+  "808": {
+   "monsters": "Erichthonios"
+  },
+  "809": {
+   "monsters": "Erichthonios"
+  },
+  "822": {
+   "monsters": "Haam Auk, Haam Troll"
+  },
+  "823": {
+   "monsters": "Durante, Frenzied Behemoth, Frenzied Goblin, Memoriate of Darkness, Voidmoon Panopt"
+  },
+  "830": {
+   "monsters": "Magitek Bit, The Ultima Weapon"
+  },
+  "844": {
+   "monsters": "Alzadaal's Asvattha"
+  },
+  "869": {
+   "monsters": "Necroserf, Troian Butler"
+  },
+  "883": {
+   "monsters": "Hephaistos"
+  },
+  "884": {
+   "monsters": "Hephaistos"
+  },
+  "908": {
+   "monsters": "Alpha Omega, Omega, Omega-F, Omega-M"
+  },
+  "911": {
+   "monsters": "Euphrosynos Behemoth"
+  },
+  "940": {
+   "monsters": "Themis"
+  },
+  "941": {
+   "monsters": "Themis"
+  },
+  "942": {
+   "monsters": "Athena"
+  },
+  "943": {
+   "monsters": "Athena, Pallas Athena"
+  },
+  "995": {
+   "monsters": "Zoraal Ja"
+  },
+  "996": {
+   "monsters": "Zoraal Ja"
+  },
+  "1006": {
+   "monsters": "Oracle of Darkness, Pandora"
+  },
+  "1022": {
+   "monsters": "Gimme Cat, Mu, Yan"
+  }
+ }
+}

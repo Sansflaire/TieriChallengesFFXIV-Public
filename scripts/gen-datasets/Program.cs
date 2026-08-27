@@ -56,25 +56,52 @@ void Write(string file, string desc, string? needs, string[] unknown, object ent
     // idempotent and lossless no matter how often it runs.
     //
     // The generator NEVER writes to data/curated. It is hand-owned and read-only from here.
+    // A dataset may have SEVERAL overlays, one per external source:
+    //
+    //     curated/duties.json         <- Garland Tools sweep  (unlockQuest, itemsFound, ...)
+    //     curated/duties.wiki.json    <- Final Fantasy Wiki   (monsters)
+    //
+    // They are separate files on purpose. One file per source means two independent research
+    // pipelines can each re-run without either destroying the other's work - which is the same
+    // failure that made curated data an input to generation in the first place (TODO A10).
+    // Applied in a fixed order: the bare name first, then the suffixed ones alphabetically, so
+    // the result never depends on directory enumeration order.
     var curatedFields = new List<string>();
-    string curatedSource = "";
+    var curatedSources = new List<string>();
     int curatedApplied = 0;
-    var curatedPath = Path.Combine(OUT, "curated", file);
+    var curDir = Path.Combine(OUT, "curated");
+    var stem = Path.GetFileNameWithoutExtension(file);
 
-    if (File.Exists(curatedPath))
+    var overlayPaths = new List<string>();
+    if (Directory.Exists(curDir))
     {
+        var exact = Path.Combine(curDir, file);
+        if (File.Exists(exact)) overlayPaths.Add(exact);
+        foreach (var f in Directory.GetFiles(curDir, "*.json").OrderBy(x => x, StringComparer.Ordinal))
+        {
+            var n = Path.GetFileName(f);
+            if (n.StartsWith(stem + ".", StringComparison.Ordinal) && n != file)
+                overlayPaths.Add(f);
+        }
+    }
+
+    foreach (var curatedPath in overlayPaths)
+    {
+        var shortName = Path.GetFileName(curatedPath);
         try
         {
             var cur = JsonNode.Parse(File.ReadAllText(curatedPath)) as JsonObject;
-            curatedSource = cur?["source"]?.GetValue<string>() ?? "";
+            var src = cur?["source"]?.GetValue<string>() ?? "";
+            var key = cur?["keyField"]?.GetValue<string>() ?? curatedKey;
             var byKey = cur?["entries"] as JsonObject;
+            int applied = 0;
 
             if (byKey is not null)
             {
                 foreach (var n in arr)
                 {
                     if (n is not JsonObject o) continue;
-                    if (!o.TryGetPropertyValue(curatedKey, out var kv) || kv is null) continue;
+                    if (!o.TryGetPropertyValue(key, out var kv) || kv is null) continue;
                     var patch = byKey[kv.ToJsonString().Trim('"')] as JsonObject;
                     if (patch is null) continue;
 
@@ -83,18 +110,21 @@ void Write(string file, string desc, string? needs, string[] unknown, object ent
                         o[kvp.Key] = kvp.Value?.DeepClone();
                         if (!curatedFields.Contains(kvp.Key)) curatedFields.Add(kvp.Key);
                     }
-                    curatedApplied++;
+                    applied++;
                 }
             }
-            Console.WriteLine($"    curated: {curatedApplied} entries patched from curated/{file}");
+            curatedApplied += applied;
+            if (src.Length > 0) curatedSources.Add(src);
+            Console.WriteLine($"    curated: {applied} entries patched from curated/{shortName}");
         }
         catch (Exception ex)
         {
             // Loud, not silent. A malformed overlay must never look like "there was no overlay".
-            Console.WriteLine($"    !! curated/{file} FAILED TO LOAD: {ex.Message}");
-            Console.WriteLine($"    !! regenerated WITHOUT curated data - do not commit this output");
+            Console.WriteLine($"    !! curated/{shortName} FAILED TO LOAD: {ex.Message}");
+            Console.WriteLine($"    !! regenerated WITHOUT that curated data - do not commit this output");
         }
     }
+    string curatedSource = string.Join(" | ", curatedSources);
 
     // Key order of first appearance, so aliases are stable and the viewer's columns keep the
     // order the generator wrote them in.
@@ -262,8 +292,9 @@ foreach (var c in cfc)
 }
 Write("duties.json",
     "Dungeons, trials, normal/alliance raids, ultimates and chaotic alliance raids.",
-    "PARTIAL - 'monsters' is ??? for EVERY entry; Garland exposes no creature names and it needs "
-  + "another source (TODO A6). 'unlockQuest' is CURATED: the game files carry unlock criteria for "
+    "PARTIAL - 'monsters' is CURATED from the Final Fantasy Wiki and covers 207 of these 373. The "
+  + "166 without one are mostly Trials and Raids, whose bosses the wiki documents on pages outside "
+  + "the enemy tables this was built from. 'unlockQuest' is CURATED: the game files carry unlock criteria for "
   + "exactly 1 of these 373 duties, so it is external research by necessity, not by preference. "
   + "A ??? there means we do not know - some Savage and Extreme tiers are unlocked by clearing "
   + "the normal version rather than by any quest, and that is indistinguishable from missing.",
@@ -309,11 +340,13 @@ foreach (var b in bnpc)
 }
 Write("monsters.json",
     "Every named battle NPC in the game.",
-    "NEEDS VERIFICATION - THE ENTIRE FILE. level, drops, abilities, mapLocation and inInstance are ??? "
-  + "for every single entry, and zones exist for only ~259 of them (the Hunting Log, 1.8%). "
-  + "Mob loot tables are server-side and absent from client data. All of this must come from external "
-  + "sources - see TODO A4.",
-    new[] { "level", "drops", "abilities", "mapLocation", "inInstance", "zones (~98% of entries)" },
+    "PARTIAL. The client supplies only id and name; zones for ~259 entries come from the Hunting "
+  + "Log. EVERYTHING ELSE IS CURATED from the Final Fantasy Wiki (see curatedFields) and carries "
+  + "that source's caveats - the wiki states plainly that its classifications are part conjecture, "
+  + "and its levels/HP/abilities are editor-recorded rather than extracted. It documents the "
+  + "notable ~3,500 of these 14,560, so most entries still have nothing. 'drops' stays ??? for "
+  + "every entry: mob loot tables are server-side and absent from client data (Q11, settled).",
+    new[] { "drops", "mapLocation", "inInstance", "level / zones / abilities (most entries)" },
     mons, mons.Count);
 
 // ---------------- 3. LEVEL-BASED RECIPES ----------------

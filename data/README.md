@@ -11,8 +11,8 @@ Generated 2026-08-26. Regenerate with `scripts/gen-datasets/` (see below).
 
 | File | Entries | Size | Complete? |
 |---|---:|---:|---|
-| `duties.json` | 373 | 105 KB | ⚠️ partial |
-| `monsters.json` | 14,560 | 767 KB | 🔴 **needs verification throughout** |
+| `duties.json` | 373 | 375 KB | ⚠️ partial — curated from Garland + wiki |
+| `monsters.json` | 14,560 | 1.4 MB | ⚠️ partial — 3,504 curated from the wiki |
 | `recipes-level-based.json` | 9,577 | 2.5 MB | ✅ complete |
 | `gatherables.json` | 4,198 | 503 KB | ⚠️ partial |
 | `gear.json` | 28,992 | 7.2 MB | ⚠️ partial |
@@ -83,19 +83,36 @@ Background and method: [`../research/Game Data Cookbook.md`](../research/Game%20
 These total ~26 MB. Regenerating rewrites every file, so each regeneration adds ~28 MB of new
 blobs to history permanently.
 
-**Recommended before any hand-editing begins: split generated from curated.**
+## Curated overlays — `data/curated/` (this is DONE, and it is the pipeline)
+
+Anything the game files cannot supply lives in an **overlay**, joined by id:
 
 ```
-data/generated/   ← regenerated freely, never hand-edited
-data/curated/     ← small overlay files, hand-maintained, joined by id
+data/curated/duties.json        ← Garland Tools    (unlockQuest, itemsFound, fights, coffers)
+data/curated/duties.wiki.json   ← Final Fantasy Wiki (monsters)
+data/curated/monsters.json      ← Final Fantasy Wiki (level, zones, duties, abilities, …)
 ```
 
-Otherwise the first regeneration silently overwrites hand-entered work, which is a much worse
-outcome than repository size. The overlay is also tiny, reviewable in a diff, and survives a
-game patch — the generated half does not.
+**An overlay is an INPUT to generation, not a patch applied afterwards.** The generator reads
+`curated/` while building, so regenerating is idempotent and lossless no matter how often it
+runs. The earlier design patched the finished file, which meant the next regeneration silently
+destroyed every curated value — the failure this layout exists to prevent (TODO A10, resolved).
 
-**Not done yet** — flagged for Trist rather than decided unilaterally, since it changes the
-layout he asked for.
+**The generator never writes to `curated/`.** Those files are hand- or script-owned and
+read-only from the generator's side.
+
+**One file per source.** A dataset may carry several overlays: the bare `<name>.json` is applied
+first, then any `<name>.<source>.json` alphabetically. That is why the Garland and wiki sweeps
+can each re-run without either destroying the other's work. Each records its own `source`
+string, and the generated header lists them all in `curatedSource`.
+
+Provenance is carried through to the header (`curatedFields`, `curatedSource`,
+`curatedEntryCount`) and the in-game Dataset Viewer prints a **`CURATED (external, not game
+files — …)`** banner above the grid. Curated data is treated as authoritative *and* labelled,
+so it is never reviewed as though it had come out of sqpack.
+
+Pipelines: [`scripts/garland/`](../scripts/garland/README.md) ·
+[`scripts/wiki/`](../scripts/wiki/README.md)
 
 ## Schema 2 — three lossless size reductions
 

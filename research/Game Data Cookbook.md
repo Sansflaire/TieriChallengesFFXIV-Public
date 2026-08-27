@@ -22,6 +22,7 @@ This file records *method*.
 | 6 | Is this territory an instance? | `instance` |
 | 6A | **Unlocks — sheets can't answer these** | `unlocks` |
 | 6B | Recipe level, fish, gear requirements | `reqs` |
+| 6C | **Monster locations — the wiki, joined by BNpcName id** | `wiki` |
 | 7 | Traps, collected | `traps` |
 
 ---
@@ -445,6 +446,34 @@ Using ilvl as a level gate is wrong.
 `ClassJobCategory.Name` is a display string ("Disciple of Magic", "All Classes", or an explicit
 job list). For a machine check, read that row's per-job booleans rather than parsing the name.
 
+<!-- SECTION:wiki -->
+## 6C. Monster locations — the wiki, joined by BNpcName id
+
+**The client cannot answer "where does this monster live?"** The Hunting Log (`MonsterNote`)
+covers 259 of 14,560 named mobs — 1.8%, all low level. Loot tables are server-side (§3, Q11).
+Garland Tools has instance fights and coffers but **zero creature names**.
+
+The Final Fantasy Wiki has both, and it publishes the **`BNpcName` row id** beside every
+creature — so this is an **exact key join, not name matching**.
+
+```
+https://finalfantasy.fandom.com/api.php
+  ?action=query&list=allpages&apprefix=Final Fantasy XIV enemies/   -> 19 subpages
+  ?action=parse&page=<subpage>&prop=wikitext                        -> the tables
+```
+
+**Do not crawl the ~9,000 individual enemy pages.** They are redirects into 19 family subpages
+(`Final Fantasy XIV enemies/Forgekin` etc.). The whole corpus is **23 requests**.
+
+Table columns: `Name | Pic | BNpc(Name, Base) | Level | HP | Hitbox | Abilities | Spawn`. The
+Spawn cell holds `{{icon|ffxiv|duty|the twinning}}` / `zone` / `fate` / `quest` / `levequest`
+templates — that is the location data.
+
+**Verify the join before building on it.** Ours: all 5,035 ids present in our dataset, 98.3%
+with matching names. The 1.7% are wiki display names vs internal names, not a bad join.
+
+Implementation and the four parsing traps: [`scripts/wiki/README.md`](../scripts/wiki/README.md).
+
 <!-- SECTION:traps -->
 ## 7. Traps, collected
 
@@ -462,3 +491,7 @@ job list). For a machine check, read that row's per-job booleans rather than par
 12. **`LevelEquip` ≠ `LevelItem`.** Required level and item level are different columns and routinely differ.
 13. **Fishing level is on the SPOT**, not the fish — `FishingSpot.GatheringLevel`.
 14. **Don't guess column names.** `ContentFinderCondition.UnlockQuest` does not exist (it is `UnlockCriteria`); the guess cost a build. Dump the columns first — §0 has the one-liner.
+15. **HTML/wiki tables need a real grid, not line parsing.** `rowspan` is how a wiki records "this mob appears in five duties"; reading rows line-by-line loses four of the five and invents four nameless mobs. Expand into a grid first, header included (the header itself uses `colspan`).
+16. **A nested table is cell content, not structure.** Breaking on its `|}` truncated a 303-row table to 13. And when the nesting sits under `colspan="2"`, BOTH columns receive the same blob — reading either as a scalar gave level `1` for a level 20-24 mob.
+17. **Don't locate a table by its own text.** 41 tables on one page shared two distinct 200-char prefixes, so `find(table[:200])` returned the first every time and mis-attributed every section heading. Carry real offsets.
+18. **Wrong-but-plausible is the failure mode of scraping.** Every one of 15-17 produced confident, well-formed, wrong values rather than an exception. Spot-check parsed output against the raw source before trusting a single number.
