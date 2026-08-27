@@ -1,81 +1,55 @@
-"""Fold the Garland sweep cache into data/duties.json.
+"""Turn the Garland sweep cache into data/curated/duties.json.
 
-Curated third-party data is merged into the generated file here rather than fetched by the
-generator: the generator must stay runnable offline and must not depend on someone else's
-service. Re-running gen-datasets will overwrite these fields, which is exactly the problem
-TODO A10 (generated vs curated split) exists to solve - until it is decided, run this after
-every regeneration.
+This writes a CURATED OVERLAY, never the generated dataset.
+
+    scripts/gen-datasets   reads data/curated/duties.json  ->  data/duties.json
+
+The overlay is an INPUT to generation, so regenerating is idempotent and can never destroy
+curated work. The earlier design patched data/duties.json after the fact, which meant the next
+regeneration silently wiped everything this script had done - see TODO A10.
+
+Re-run this only when the sweep cache changes. Then re-run gen-datasets to fold it in.
 """
 import json
 import os
 
-ROOT = r'C:\Users\trist\AppData\Roaming\XIVLauncher\devPlugins\TieriChallengesFFXIV'
 HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 CACHE = os.path.join(HERE, 'garland-instances.json')
+OUT_DIR = os.path.join(ROOT, 'data', 'curated')
+OUT = os.path.join(OUT_DIR, 'duties.json')
 DUTIES = os.path.join(ROOT, 'data', 'duties.json')
 
 cache = json.load(open(CACHE, encoding='utf-8'))
+
+# The overlay is keyed by the generated dataset's own key field ("id" = ContentFinderCondition
+# row). The cache is keyed by garlandId, so the generated file supplies the mapping.
 d = json.load(open(DUTIES, encoding='utf-8'))
-
-alias = d['fieldAliases']                      # alias -> real
-inv = {v: k for k, v in alias.items()}         # real  -> alias
-nxt = [0]
-
-
-def new_alias():
-    """Continue the generator's a..z, aa.. scheme from wherever it stopped."""
-    used = set(alias.keys())
-    i = 0
-    while True:
-        s, n = '', i
-        while True:
-            s = chr(ord('a') + n % 26) + s
-            n = n // 26 - 1
-            if n < 0:
-                break
-        if s not in used:
-            used.add(s)
-            return s
-        i += 1
-
-
-def ensure(real):
-    if real in inv:
-        return inv[real]
-    a = new_alias()
-    alias[a] = real
-    inv[real] = a
-    return a
-
-
-# New curated columns
-A_UNLOCK_Q = ensure('unlockQuest')
-A_ITEMS = ensure('itemsFound')
-A_COFFERS = ensure('cofferCount')
-A_FIGHTS = ensure('fightCount')
-A_TIME = ensure('timeLimitMinutes')
-A_PATCH = ensure('patch')
-A_SRC = ensure('curatedSource')
-
-gid_key = inv['garlandId']
-name_key = inv['name']
-
-filled = {'unlock': 0, 'items': 0, 'fights': 0, 'time': 0, 'missing': 0}
-
+inv = {v: k for k, v in d['fieldAliases'].items()}
+gid_key, id_key = inv['garlandId'], inv['id']
+gid_to_id = {}
 for e in d['entries']:
-    gid = e.get(gid_key)
-    g = cache.get(str(gid)) if gid else None
-    if not g:
-        filled['missing'] += 1
+    g, i = e.get(gid_key), e.get(id_key)
+    if g is not None and i is not None:
+        gid_to_id[str(g)] = i
+
+entries = {}
+stats = {'unlockQuest': 0, 'itemsFound': 0, 'fightCount': 0, 'timeLimitMinutes': 0, 'unmapped': 0}
+
+for gid, g in cache.items():
+    key = gid_to_id.get(str(gid))
+    if key is None:
+        stats['unmapped'] += 1
         continue
 
-    uq = g.get('unlockQuestName') or ''
-    if uq:
-        e[A_UNLOCK_Q] = uq
-        filled['unlock'] += 1
+    patch = {}
 
-    # Every item obtainable inside: the general reward pool plus each coffer and fight chest,
-    # de-duplicated by id and kept as "name" strings so the grid is readable.
+    if g.get('unlockQuestName'):
+        patch['unlockQuest'] = g['unlockQuestName']
+        stats['unlockQuest'] += 1
+
+    # Every item obtainable inside, as ONE comma-separated block: the grid shows a single
+    # searchable cell and the plugin can substring-match without walking a list.
     items = {}
     for it in g.get('rewards') or []:
         if it.get('name'):
@@ -89,38 +63,46 @@ for e in d['entries']:
             if it.get('name'):
                 items[it['id']] = it['name']
     if items:
-        # ONE comma-separated block rather than an array: the grid shows it as a single
-        # searchable cell, and the plugin can substring-match it without walking a list.
-        e[A_ITEMS] = ', '.join(sorted(items.values()))
-        filled['items'] += 1
+        patch['itemsFound'] = ', '.join(sorted(items.values()))
+        stats['itemsFound'] += 1
 
-    if g.get('coffers'):
-        e[A_COFFERS] = len(g['coffers'])
     if g.get('fights'):
-        e[A_FIGHTS] = len(g['fights'])
-        filled['fights'] += 1
+        patch['fightCount'] = len(g['fights'])
+        stats['fightCount'] += 1
+    if g.get('coffers'):
+        patch['cofferCount'] = len(g['coffers'])
     if g.get('timeLimitMinutes'):
-        e[A_TIME] = g['timeLimitMinutes']
-        filled['time'] += 1
+        patch['timeLimitMinutes'] = g['timeLimitMinutes']
+        stats['timeLimitMinutes'] += 1
     if g.get('patch') is not None:
-        e[A_PATCH] = g['patch']
-    e[A_SRC] = 'garlandtools.org'
+        patch['patch'] = g['patch']
 
-# The header must stop claiming these are unknown.
-d['unknownFields'] = ['monsters (Garland does not expose mob lists)',
-                      'unlock for duties with no unlockQuest on either source']
-d['needsVerification'] = (
-    'PARTIAL - unlock, itemsFound, fightCount, timeLimitMinutes and patch are CURATED from '
-    'garlandtools.org, not from game files, and are only as current as the sweep date. '
-    "'monsters' remains ??? for every entry: Garland does not publish mob lists, so it needs a "
-    'different source entirely (TODO A6). Re-running scripts/gen-datasets OVERWRITES all curated '
-    'fields - re-run scripts/merge-garland afterwards until TODO A10 splits generated from curated.')
-d['curatedFrom'] = 'garlandtools.org instance docs'
-d['omittedAlwaysUnknown'] = [x for x in d.get('omittedAlwaysUnknown', []) if x != 'itemsFound']
+    if patch:
+        entries[str(key)] = patch
 
-json.dump(d, open(DUTIES, 'w', encoding='utf-8'), ensure_ascii=False)
+os.makedirs(OUT_DIR, exist_ok=True)
+doc = {
+    'schemaVersion': 1,
+    'dataset': 'duties',
+    'keyField': 'id',
+    'source': 'garlandtools.org instance docs, swept 2026-08-26',
+    'description': (
+        'CURATED overlay for duties.json. NOT from game files. Read by scripts/gen-datasets '
+        'during generation, never written by it. Safe to hand-edit: regenerating folds this in '
+        'rather than overwriting it.'),
+    'warning': (
+        "'monsters' is deliberately absent: Garland exposes fight structure and chest contents "
+        'but no creature names, confirmed across all 368 fetched instances. It needs a different '
+        'source entirely - see TODO A6.'),
+    'entryCount': len(entries),
+    'entries': entries,
+}
+json.dump(doc, open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 
-print('merged %d cached instances into %d duties' % (len(cache), len(d['entries'])))
-for k, v in filled.items():
-    print('   %-8s %d' % (k, v))
-print('file size: %.0f KB' % (os.path.getsize(DUTIES) / 1024))
+print('wrote %s' % os.path.relpath(OUT, ROOT))
+print('  overlay entries : %d' % len(entries))
+for k, v in stats.items():
+    print('  %-16s %d' % (k, v))
+print('  size            : %.0f KB' % (os.path.getsize(OUT) / 1024))
+print()
+print('now re-run scripts/gen-datasets to fold this into data/duties.json')

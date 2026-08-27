@@ -42,11 +42,59 @@ string Zone(uint tid) => terr.GetRowOrDefault(tid) is { } t
 /// The viewer reverses all three, so what a human sees is unchanged — "???" included.
 /// </summary>
 void Write(string file, string desc, string? needs, string[] unknown, object entries, int count,
-           Dictionary<string, string[]>? groups = null)
+           Dictionary<string, string[]>? groups = null, string curatedKey = "id")
 {
     var path = Path.Combine(OUT, file);
 
     var arr = JsonSerializer.SerializeToNode(entries) as JsonArray ?? new JsonArray();
+
+    // ---- curated overlay -------------------------------------------------------------
+    // Data that CANNOT come from game files (external sources, hand research) lives in
+    // data/curated/<file> and is folded in HERE, during generation. That is the whole point:
+    // regenerating a dataset used to silently destroy it, because the merge happened afterwards
+    // and nothing re-ran it. Now the overlay is an input to generation, so regeneration is
+    // idempotent and lossless no matter how often it runs.
+    //
+    // The generator NEVER writes to data/curated. It is hand-owned and read-only from here.
+    var curatedFields = new List<string>();
+    string curatedSource = "";
+    int curatedApplied = 0;
+    var curatedPath = Path.Combine(OUT, "curated", file);
+
+    if (File.Exists(curatedPath))
+    {
+        try
+        {
+            var cur = JsonNode.Parse(File.ReadAllText(curatedPath)) as JsonObject;
+            curatedSource = cur?["source"]?.GetValue<string>() ?? "";
+            var byKey = cur?["entries"] as JsonObject;
+
+            if (byKey is not null)
+            {
+                foreach (var n in arr)
+                {
+                    if (n is not JsonObject o) continue;
+                    if (!o.TryGetPropertyValue(curatedKey, out var kv) || kv is null) continue;
+                    var patch = byKey[kv.ToJsonString().Trim('"')] as JsonObject;
+                    if (patch is null) continue;
+
+                    foreach (var kvp in patch)
+                    {
+                        o[kvp.Key] = kvp.Value?.DeepClone();
+                        if (!curatedFields.Contains(kvp.Key)) curatedFields.Add(kvp.Key);
+                    }
+                    curatedApplied++;
+                }
+            }
+            Console.WriteLine($"    curated: {curatedApplied} entries patched from curated/{file}");
+        }
+        catch (Exception ex)
+        {
+            // Loud, not silent. A malformed overlay must never look like "there was no overlay".
+            Console.WriteLine($"    !! curated/{file} FAILED TO LOAD: {ex.Message}");
+            Console.WriteLine($"    !! regenerated WITHOUT curated data - do not commit this output");
+        }
+    }
 
     // Key order of first appearance, so aliases are stable and the viewer's columns keep the
     // order the generator wrote them in.
@@ -126,6 +174,11 @@ void Write(string file, string desc, string? needs, string[] unknown, object ent
                   kv.Key, new JsonArray(kv.Value.Select(x => (JsonNode?)x).ToArray())))),
         ["fieldAliases"] = new JsonObject(alias.Select(kv =>
             new KeyValuePair<string, JsonNode?>(kv.Value, kv.Key))),
+        // Provenance: which columns are NOT from game files. The viewer surfaces this so curated
+        // data is never mistaken for extracted data when reviewing.
+        ["curatedFields"] = new JsonArray(curatedFields.Select(x => (JsonNode?)x).ToArray()),
+        ["curatedSource"] = curatedSource,
+        ["curatedEntryCount"] = curatedApplied,
         ["count"] = count,
         ["entries"] = slim,
     };

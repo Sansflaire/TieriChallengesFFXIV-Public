@@ -81,6 +81,8 @@ internal sealed class DatasetViewer
         public string Description = string.Empty;
         public string? NeedsVerification;
         public string[] UnknownFields = Array.Empty<string>();
+        public string[] CuratedFields = Array.Empty<string>();
+        public string CuratedSource = string.Empty;
         public int Count;
         public long Bytes;
         public string? HeaderError;
@@ -140,7 +142,12 @@ internal sealed class DatasetViewer
     /// with CalcTextSize would be absurd; picking the longest string by character count and
     /// measuring only that is one call per column and lands in the right place.
     /// </summary>
-    private string[] _widest = Array.Empty<string>();
+    private string[][] _widest = Array.Empty<string[]>();
+
+    /// <summary>How many long cells per column get measured. Cheap, and removes the proxy error.</summary>
+    private const int WidthCandidates = 6;
+
+    private static readonly Comparison<string> ByLengthDesc = (a, b) => b.Length.CompareTo(a.Length);
 
     /// <summary>Pixel width per column. Filled on the first draw, when an ImGui context exists.</summary>
     private float[] _widths = Array.Empty<float>();
@@ -262,6 +269,15 @@ internal sealed class DatasetViewer
                             ? a.Select(x => x.ToString()).ToArray()
                             : Array.Empty<string>();
                         break;
+                    case "curatedFields":
+                        jr.Read();
+                        info.CuratedFields = JToken.Load(jr) is JArray cf
+                            ? cf.Select(x => x.ToString()).ToArray()
+                            : Array.Empty<string>();
+                        break;
+                    case "curatedSource":
+                        info.CuratedSource = jr.ReadAsString() ?? string.Empty;
+                        break;
                 }
             }
         }
@@ -352,12 +368,25 @@ internal sealed class DatasetViewer
                 _blobs.Add(blob.ToString().ToLowerInvariant());
             }
 
-            // Widest content per column, header included so a short column never clips its own name.
-            _widest = new string[_columns.Length];
-            for (int c = 0; c < _columns.Length; c++) _widest[c] = _columns[c];
+            // Width candidates per column: the header plus the longest few cells. Character count
+            // alone is only a proxy for pixel width - "WWWW" is far wider than "iiiiiiii" - so the
+            // top candidates are all measured and the widest in PIXELS wins.
+            _widest = new string[_columns.Length][];
+            var pool = new List<string>[_columns.Length];
+            for (int c = 0; c < _columns.Length; c++) pool[c] = new List<string> { _columns[c] };
+
             foreach (var cells in _rows)
-                for (int c = 0; c < cells.Length && c < _widest.Length; c++)
-                    if (cells[c].Length > _widest[c].Length) _widest[c] = cells[c];
+                for (int c = 0; c < cells.Length && c < pool.Length; c++)
+                {
+                    var lst = pool[c];
+                    if (lst.Count < WidthCandidates) { lst.Add(cells[c]); lst.Sort(ByLengthDesc); }
+                    else if (cells[c].Length > lst[^1].Length)
+                    {
+                        lst[^1] = cells[c];
+                        lst.Sort(ByLengthDesc);
+                    }
+                }
+            for (int c = 0; c < _columns.Length; c++) _widest[c] = pool[c].ToArray();
 
             _widths = new float[_columns.Length];
             _widthsReady = false;
@@ -416,7 +445,7 @@ internal sealed class DatasetViewer
 
         // Column indices are meaningless against a different dataset - a stale filter would
         // silently point at whatever column happened to land in that slot.
-        _widest = Array.Empty<string>();
+        _widest = Array.Empty<string[]>();
         _widths = Array.Empty<float>();
         _widthsReady = false;
         _filters.Clear();
@@ -613,7 +642,14 @@ internal sealed class DatasetViewer
 
     public void Draw()
     {
-        if (!IsVisible) return;
+        // Strict rule: exactly one dataset resident, and it is freed the moment it stops being
+        // looked at. Closing the window used to leave npcs.json (14 MB on disk, several hundred
+        // parsed) sitting in the game's heap indefinitely.
+        if (!IsVisible)
+        {
+            if (_open is not null) Unload();
+            return;
+        }
 
         ImGui.SetNextWindowSize(new Vector2(1100, 700), ImGuiCond.FirstUseEver);
         if (!ImGui.Begin("Dataset Viewer (dev)##tc_datasets", ref IsVisible))
@@ -738,6 +774,16 @@ internal sealed class DatasetViewer
             ImGui.PopStyleColor();
         }
 
+        // Provenance. Curated columns are NOT from the game files and carry whatever error their
+        // external source has; reviewing them as though they were extracted would be a mistake.
+        if (d.CuratedFields.Length > 0)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, ColNumeric);
+            ImGui.TextWrapped($"CURATED (external, not game files{(d.CuratedSource.Length > 0 ? " — " + d.CuratedSource : "")}): "
+                            + string.Join(", ", d.CuratedFields));
+            ImGui.PopStyleColor();
+        }
+
         ImGui.Separator();
 
         ImGui.SetNextItemWidth(360);
@@ -809,10 +855,15 @@ internal sealed class DatasetViewer
         {
             for (int c = 0; c < _columns.Length; c++)
             {
-                string probe = _widest[c].Length > MaxMeasureLength
-                             ? _widest[c].Substring(0, MaxMeasureLength) : _widest[c];
-                float w = ImGui.CalcTextSize(probe).X + 18f;   // + cell padding
-                _widths[c] = Math.Clamp(w, 40f, MaxColumnWidth);
+                float w = 0f;
+                foreach (var cand in _widest[c])
+                {
+                    string probe = cand.Length > MaxMeasureLength
+                                 ? cand.Substring(0, MaxMeasureLength) : cand;
+                    float cw = ImGui.CalcTextSize(probe).X;
+                    if (cw > w) w = cw;
+                }
+                _widths[c] = Math.Clamp(w + 18f, 40f, MaxColumnWidth);   // + cell padding
             }
             _widthsReady = true;
         }
