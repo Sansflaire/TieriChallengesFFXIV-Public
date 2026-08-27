@@ -6,9 +6,11 @@ gaps. One page per enemy and per FATE, with machine-readable templates.
 ```
 fetch.py         -> cache/_members.json, _pages.json     9,242 enemy pages, 204 requests
 fetch_fates.py   -> cache/_fates.json                    1,472 FATE pages,   33 requests
+fetch_duties.py  -> cache/_duties.json                     529 duty pages,   23 requests
        |
 parse.py         -> data/curated/monsters.cgw.json       8,473 entries
 parse_fates.py   -> data/curated/fates.cgw.json          1,193 entries
+parse_duties.py  -> data/curated/duties.zcgw.json          369 entries
 ```
 
 **The API is at `/mediawiki/api.php`** — `/api.php` and `/w/api.php` both 404.
@@ -71,6 +73,33 @@ chainOrder **233** (only that many FATEs are actually chained).
 resolve it. 64 exist on the wiki but not in our dataset.
 
 ---
+
+## Duty pages — where duty bosses actually live
+
+`duties.bosses` was 156 of 373 when derived from the Fandom enemy tables' Spawn column, which
+documents trash mobs well and Trial/Raid bosses barely at all. These pages answer it directly:
+**362 of 373**, plus `unlockQuest` 309 (was 259), `objectives`, `entrance` + coordinates,
+`timeLimitMinutes`, `roulette` and `baseExp`.
+
+**The join is EXACT.** `{{Duty infobox | id-gt = 13}}` is the Garland Tools id, which
+`duties.json` already carries as `garlandId`. No name matching, so no "(Savage)" / "(Extreme)" /
+"(Unreal)" / "(Duty)" guessing: **379 matched by id, 0 by name.** The 112 unmatched pages are
+content types `duties.json` does not carry (deep dungeons, guildhests, field ops — see A12).
+
+The overlay is named `duties.zcgw.json` so it sorts **after** `duties.wiki.json` and wins where
+both know a duty. That is deliberate: for bosses this source is simply better.
+
+### A boss is marked by its ICON, not by its section
+
+Only 137 of 529 pages have a `==Bosses==` section, but 230 have boss headings. The reliable
+marker is the difficulty icon in the heading:
+
+```
+===[[File:Aggressive difficulty r5.png|32px|link=]] [[All-seeing Eye]]===
+```
+
+Keying on the section found bosses for 121 duties. Keying on the icon finds them wherever the
+page puts them: **360**.
 
 ## Bosses keep their own column
 

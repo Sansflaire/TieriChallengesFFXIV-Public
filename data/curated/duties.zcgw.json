@@ -1,0 +1,2502 @@
+{
+ "schemaVersion": 1,
+ "dataset": "duties",
+ "keyField": "id",
+ "source": "ffxiv.consolegameswiki.com duty pages (dungeons/trials/raids/...), swept 2026-08-27",
+ "description": "CURATED overlay for duties.json from the FFXIV Console Games Wiki: bosses, enemies, objectives, unlock quest, entrance and time limit. Joined on id-gt == garlandId, an exact id match.",
+ "warning": "Bosses come from the ==Bosses== subheadings, which is where this wiki records them; the Fandom enemy tables barely cover Trial/Raid bosses. Applied AFTER duties.wiki.json alphabetically, so where both know a duty this source wins - it is the better one for bosses.",
+ "entryCount": 369,
+ "entries": {
+  "74": {
+   "bosses": "Dhorme Chimera",
+   "unlockQuest": "A Relic Reborn",
+   "timeLimitMinutes": "60",
+   "entrance": "Coerthas Central Highlands (32.1, 7.2)",
+   "roulette": "trials"
+  },
+  "75": {
+   "bosses": "Hydra",
+   "unlockQuest": "A Relic Reborn",
+   "timeLimitMinutes": "60",
+   "entrance": "Eastern Thanalan (14.7, 30.2)",
+   "roulette": "trials"
+  },
+  "1019": {
+   "bosses": "Party Animal: Dancing Green",
+   "unlockQuest": "The Dancing King",
+   "timeLimitMinutes": "90",
+   "entrance": "Greenroom (6.1, 5.6)",
+   "roulette": "normal raids"
+  },
+  "1020": {
+   "bosses": "Party Animal: Dancing Green",
+   "timeLimitMinutes": "90"
+  },
+  "1021": {
+   "bosses": "Art at War: Sugar Riot",
+   "unlockQuest": "Art at War",
+   "timeLimitMinutes": "90",
+   "entrance": "Greenroom (6.1, 5.6)",
+   "roulette": "normal raids"
+  },
+  "1022": {
+   "bosses": "Art at War: Sugar Riot",
+   "timeLimitMinutes": "90"
+  },
+  "1023": {
+   "bosses": "Twisted Vengeance: Brute Abombinator",
+   "unlockQuest": "Twisted Vengeance",
+   "timeLimitMinutes": "90",
+   "roulette": "normal raids"
+  },
+  "1024": {
+   "bosses": "Twisted Vengeance: Brute Abombinator",
+   "timeLimitMinutes": "90"
+  },
+  "1025": {
+   "bosses": "Lone Wolf: The Howling Blade",
+   "unlockQuest": "The Lone Wolf",
+   "timeLimitMinutes": "90",
+   "entrance": "Greenroom (6.1, 5.6)",
+   "roulette": "normal raids"
+  },
+  "1026": {
+   "bosses": "Lone Wolf: The Howling Blade",
+   "timeLimitMinutes": "120"
+  },
+  "1068": {
+   "bosses": "Sweet-toothed Sadist: Vamp Fatale",
+   "unlockQuest": "The Breathtaker",
+   "timeLimitMinutes": "90",
+   "entrance": "Greenroom (6.1, 5.6)",
+   "roulette": "normal raids"
+  },
+  "1069": {
+   "bosses": "Sweet-toothed Sadist: Vamp Fatale, Add: Coffinmaker",
+   "timeLimitMinutes": "90"
+  },
+  "1070": {
+   "bosses": "Daring Devils: The Xtremes (Red Hot and Deep Blue)",
+   "unlockQuest": "Daring Devils",
+   "timeLimitMinutes": "90",
+   "entrance": "Greenroom (6.1, 5.6)",
+   "roulette": "normal raids"
+  },
+  "1071": {
+   "bosses": "Daring Devils: The Xtremes (Red Hot and Deep Blue)",
+   "timeLimitMinutes": "90"
+  },
+  "1072": {
+   "bosses": "Iron Fist: The Tyrant",
+   "unlockQuest": "Iron Fist",
+   "timeLimitMinutes": "90",
+   "entrance": "Greenroom (6.1, 5.6)",
+   "roulette": "normal raids"
+  },
+  "1073": {
+   "bosses": "Iron Fist: The Tyrant",
+   "timeLimitMinutes": "90"
+  },
+  "1074": {
+   "bosses": "Glory Incarnate: The Lindwurm",
+   "unlockQuest": "Glory Incarnate",
+   "timeLimitMinutes": "90",
+   "entrance": "Greenroom (6.1, 5.6)",
+   "roulette": "normal raids"
+  },
+  "1075": {
+   "bosses": "Glory Incarnate: The Lindwurm",
+   "timeLimitMinutes": "120"
+  },
+  "985": {
+   "bosses": "Claw in the Dark: Black Cat",
+   "unlockQuest": "The Claw in the Dark",
+   "timeLimitMinutes": "90",
+   "entrance": "Greenroom (6.1, 5.6)",
+   "roulette": "normal raids"
+  },
+  "986": {
+   "bosses": "Claw in the Dark: Black Cat",
+   "timeLimitMinutes": "90"
+  },
+  "987": {
+   "bosses": "Sweet Poison: Honey B. Lovely",
+   "unlockQuest": "Sweet Poison",
+   "timeLimitMinutes": "90",
+   "entrance": "Greenroom (6.1, 5.6)",
+   "roulette": "normal raids"
+  },
+  "988": {
+   "bosses": "Sweet Poison: Honey B. Lovely",
+   "timeLimitMinutes": "90"
+  },
+  "989": {
+   "bosses": "Vile Heat: Brute Bomber",
+   "unlockQuest": "Vile Heat",
+   "timeLimitMinutes": "90",
+   "entrance": "Greenroom (6.1, 5.6)",
+   "roulette": "normal raids"
+  },
+  "990": {
+   "bosses": "Vile Heat: Brute Bomber",
+   "timeLimitMinutes": "90"
+  },
+  "991": {
+   "bosses": "Neoteric Witch: Wicked Thunder",
+   "unlockQuest": "The Neoteric Witch",
+   "timeLimitMinutes": "90",
+   "entrance": "Greenroom (6.1, 5.6)",
+   "roulette": "normal raids"
+  },
+  "992": {
+   "bosses": "Neoteric Witch: Wicked Thunder",
+   "timeLimitMinutes": "120"
+  },
+  "883": {
+   "bosses": "Perfect Imperfection: Hephaistos",
+   "unlockQuest": "One Final Wish",
+   "timeLimitMinutes": "90",
+   "entrance": "The Gates of Pandaemonium (21.4, 22.0)",
+   "roulette": "normal raids"
+  },
+  "884": {
+   "bosses": "Perfect Imperfection: Hephaistos",
+   "timeLimitMinutes": "120"
+  },
+  "872": {
+   "bosses": "Mythic Creation: Proto-Carbuncle",
+   "unlockQuest": "Masks of the Father",
+   "timeLimitMinutes": "90",
+   "entrance": "The Gates of Pandaemonium (21.4, 22.0)",
+   "roulette": "normal raids"
+  },
+  "873": {
+   "bosses": "Mythic Creation: Proto-Carbuncle",
+   "timeLimitMinutes": "90"
+  },
+  "876": {
+   "bosses": "Hemitheos: Agdistis",
+   "unlockQuest": "Servant of Violence",
+   "timeLimitMinutes": "90",
+   "entrance": "The Gates of Pandaemonium (21.4, 22.0)",
+   "roulette": "normal raids"
+  },
+  "877": {
+   "bosses": "Hemitheos: Agdistis",
+   "timeLimitMinutes": "90"
+  },
+  "880": {
+   "bosses": "Hemitheos: Hegemone",
+   "unlockQuest": "A Keyward's Gaol",
+   "timeLimitMinutes": "90",
+   "entrance": "The Gates of Pandaemonium (21.4, 22.0)",
+   "roulette": "normal raids"
+  },
+  "881": {
+   "bosses": "Hemitheos: Hegemone",
+   "timeLimitMinutes": "90"
+  },
+  "866": {
+   "bosses": "Byregot, Rhalgr's Emissary, Rhalgr, Lion of Aglaia and Lioness of Aglaia, Azeyma, The Traders: Nald'thal",
+   "objectives": "Clear Ingenuity's Foothold | Clear the Path | Clear the Monument to Destruction | Clear the Endless City | Clear the Circle of Inquiry | Clear the Twin Halls",
+   "unlockQuest": "The Realm of the Gods",
+   "timeLimitMinutes": "120",
+   "entrance": "The Omphalos (8.2,6.3)",
+   "roulette": "alliance raid"
+  },
+  "661": {
+   "bosses": "Cladoselache and Doliodus, Marquis Morbol, Guardian Force: Quetzalcoatl, Cladoselache, Doliodus",
+   "objectives": "Arrive in Ichthyology | Clear Ichthyology | Arrive in Phytobiology | Clear Phytobiology | Arrive in Phantomology | Defeat Quetzalcoatl",
+   "unlockQuest": "Akadaemia Anyder (Quest)",
+   "timeLimitMinutes": "90",
+   "entrance": "The Tempest (20.0, 33.1)",
+   "roulette": "High-level Dungeons"
+  },
+  "247": {
+   "bosses": "Magitek Scorpion, Aulus mal Asina, Zenos yae Galvus",
+   "objectives": "Eliminate the imperials | Defeat the magitek scorpion | Eliminate all obstacles | Slay Aulus mal Asina | Arrive in the Hall of the Griffin | Defeat Zenos yae Galvus",
+   "unlockQuest": "Stormblood (Quest)",
+   "timeLimitMinutes": "90",
+   "entrance": "The Lochs (33.0, 22.8)",
+   "roulette": "High-level Dungeons"
+  },
+  "114": {
+   "bosses": "Living Liquid",
+   "unlockQuest": "Tinker, Seeker, Soldier, Spy",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (23,26)",
+   "roulette": "Normal Raid"
+  },
+  "118": {
+   "bosses": "Living Liquid",
+   "unlockQuest": "A Song of Steam and Steel",
+   "timeLimitMinutes": "90"
+  },
+  "138": {
+   "bosses": "Quickthinx Allthoughts",
+   "unlockQuest": "Toppling the Tyrant",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (20,26)",
+   "roulette": "normal raid"
+  },
+  "149": {
+   "bosses": "Quickthinx Allthoughts",
+   "unlockQuest": "A Refrain for the Undaunted",
+   "timeLimitMinutes": "90"
+  },
+  "187": {
+   "bosses": "Lamebrix Strikebocks",
+   "unlockQuest": "Biggs and Wedge's Excellent Adventure",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (23,23)",
+   "roulette": "normal raid"
+  },
+  "191": {
+   "bosses": "Lamebrix Strikebocks",
+   "unlockQuest": "Who Lives, Who Dies, Who Retells Your Story",
+   "timeLimitMinutes": "90"
+  },
+  "115": {
+   "bosses": "The Manipulator",
+   "unlockQuest": "The Pulsing Heart",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (23,26)",
+   "roulette": "normal raid"
+  },
+  "119": {
+   "bosses": "The Manipulator",
+   "unlockQuest": "A Song of Steam and Steel",
+   "timeLimitMinutes": "90"
+  },
+  "139": {
+   "bosses": "Onslaughter, Brawler & Vortexer, Swindler & Blaster, Brute Justice",
+   "unlockQuest": "One Step Behind",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (20,26)",
+   "roulette": "normal raid"
+  },
+  "150": {
+   "unlockQuest": "A Refrain for the Undaunted",
+   "timeLimitMinutes": "90"
+  },
+  "113": {
+   "unlockQuest": "Steel and Steam",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (23,26)",
+   "roulette": "Normal Raid"
+  },
+  "117": {
+   "unlockQuest": "A Song of Steam and Steel",
+   "timeLimitMinutes": "90"
+  },
+  "137": {
+   "bosses": "Blaster, Brawler, Swindler, Vortexer",
+   "unlockQuest": "The Folly of Youth",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (20,26)",
+   "roulette": "normal raid"
+  },
+  "148": {
+   "bosses": "Blaster, Brawler, Swindler, Vortexer",
+   "unlockQuest": "A Refrain for the Undaunted",
+   "timeLimitMinutes": "90"
+  },
+  "186": {
+   "bosses": "Refurbisher 0",
+   "unlockQuest": "The Coeurl and the Colossus",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (23,23)",
+   "roulette": "normal raid"
+  },
+  "190": {
+   "bosses": "Faust Z, Refurbisher 0",
+   "unlockQuest": "Who Lives, Who Dies, Who Retells Your Story",
+   "timeLimitMinutes": "90"
+  },
+  "112": {
+   "bosses": "Faust, Oppressor",
+   "unlockQuest": "Disarmed",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (23,26)",
+   "roulette": "normal raid"
+  },
+  "116": {
+   "bosses": "Faust, Oppressor",
+   "unlockQuest": "A Song of Steam and Steel",
+   "timeLimitMinutes": "90"
+  },
+  "136": {
+   "bosses": "Ratfinx Twinkledinks",
+   "unlockQuest": "Rearmed",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (20,26)",
+   "roulette": "normal raid"
+  },
+  "147": {
+   "bosses": "Faust and Hummelfaust, Ratfinx Twinkledinks",
+   "unlockQuest": "A Refrain for the Undaunted",
+   "timeLimitMinutes": "90"
+  },
+  "188": {
+   "bosses": "Cruise Chaser",
+   "unlockQuest": "Thus Spake Quickthinx",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (23,23)",
+   "roulette": "normal raid"
+  },
+  "192": {
+   "bosses": "Cruise Chaser",
+   "unlockQuest": "Who Lives, Who Dies, Who Retells Your Story",
+   "timeLimitMinutes": "90"
+  },
+  "189": {
+   "bosses": "Alexander Prime",
+   "unlockQuest": "Judgment Day",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (23,23)",
+   "roulette": "normal raid"
+  },
+  "193": {
+   "bosses": "Alexander Prime",
+   "unlockQuest": "Who Lives, Who Dies, Who Retells Your Story",
+   "timeLimitMinutes": "90"
+  },
+  "827": {
+   "bosses": "Antivirus X, Amalgam, Bleeding-edge Technology: Eliminator",
+   "unlockQuest": "Dawntrail (Quest)",
+   "timeLimitMinutes": "90",
+   "entrance": "Living Memory (21.5, 28.5)",
+   "roulette": "Level Cap Dungeons"
+  },
+  "587": {
+   "bosses": "Chaos",
+   "unlockQuest": "In the Beginning, There Was Chaos",
+   "timeLimitMinutes": "90",
+   "entrance": "The Interdimensional Rift (20.5, 24.4)",
+   "roulette": "normal raids"
+  },
+  "591": {
+   "bosses": "Chaos",
+   "timeLimitMinutes": "90"
+  },
+  "588": {
+   "bosses": "Midgardsormr",
+   "unlockQuest": "And Like Fire Was His Mane",
+   "timeLimitMinutes": "90",
+   "entrance": "The Interdimensional Rift (20.5, 24.4)",
+   "baseExp": "70,878",
+   "roulette": "normal raids"
+  },
+  "592": {
+   "bosses": "Midgardsormr",
+   "timeLimitMinutes": "90"
+  },
+  "589": {
+   "bosses": "Omega",
+   "unlockQuest": "In the End, There Is Omega",
+   "timeLimitMinutes": "90",
+   "entrance": "The Interdimensional Rift (21.1, 24.1)",
+   "roulette": "normal raids"
+  },
+  "593": {
+   "bosses": "Omega",
+   "timeLimitMinutes": "90"
+  },
+  "590": {
+   "bosses": "Omega-M & Omega-F",
+   "unlockQuest": "In the End, There Is Omega",
+   "timeLimitMinutes": "90",
+   "entrance": "The Interdimensional Rift (6.1, 6.1)",
+   "roulette": "normal raids"
+  },
+  "594": {
+   "bosses": "Omega-M & Omega-F, Omega",
+   "timeLimitMinutes": "120"
+  },
+  "844": {
+   "bosses": "Ambujam, Armored Chariot, Looming Warden: Kapikulu",
+   "monsters": "Alzadaal's Langur, Alzadaal's Qutrub, Alzadaal's Vajralangula, Alzadaal's Asvattha, Bounty Craklaw, Bounty Rockfin, Bounty Monk, Bounty Xzomit, Bounty Ogrebon, Alzadaal's Rampart, Shallows Monk, Shallows Xzomit, Shallows Ogrebon, Bounty Ruszor, Bounty Vepar, Bounty Uragnite, Clawtrap Alzadaal XIV, Radiant Crab, Alzadaal's Guardian, Alzadaal's Acrolith, Mystic Weapon (Enemy), Alzadaal's Mimic",
+   "objectives": "Arrive at the undersea entrance | Clear the undersea entrance | Arrive at the Threshold of Bounty | Clear the Threshold of Bounty | Arrive at Weaver's Warding | Defeat the Kapikulu",
+   "unlockQuest": "Alzadaal's Legacy (Quest)",
+   "timeLimitMinutes": "90",
+   "entrance": "Thavnair (16.0,33.6)",
+   "roulette": "High-level Dungeons"
+  },
+  "652": {
+   "bosses": "The First Beast, Terminus Bellwether, Chthonic Riddle: Therion",
+   "monsters": "Terminus Pursuer, Terminus Stalker, Terminus Crier, Terminus Sprinter, Terminus Detonator, Terminus Roiler, Fallen Star, Terminus Shadower, Terminus Howler, Terminus Flesher, Terminus Shriver, Terminus Beholder, Terminus Twitcher, Terminus Reaper, Terminus Lacerator, Terminus Drainer, Terminus Vanquisher, Terminus Slitherer, Terminus Idolizer",
+   "objectives": "Bear witness to the first doom | Endure the first doom | Bear witness to the second doom | Endure the second doom | Bear witness to the third doom | Defeat Therion",
+   "unlockQuest": "Shadowbringers (Quest)",
+   "timeLimitMinutes": "90",
+   "entrance": "The Tempest (12.9, 38.6)",
+   "roulette": "High-level Dungeons"
+  },
+  "14": {
+   "bosses": "Lunatic Priest and Psycheflayer, Demon Wall, Anantaboga",
+   "monsters": "Lunatic Follower, Soul Collector, Recluse Hippogryph, Dullahan, Stone Marionette, Marble Marionette, Megalith Marionette, Hound Light, Brontotaur, Vodoriga Sleeper, Bloodlapper, Succubus (Enemy), Smolenkos, Dark Helot",
+   "objectives": "Clear the Gier Hall | Clear the Bloody Transept | Defeat Anantaboga",
+   "unlockQuest": "Ghosts of Amdapor",
+   "timeLimitMinutes": "90",
+   "entrance": "South Shroud (24.8, 24.9)",
+   "roulette": "High-level Dungeons"
+  },
+  "29": {
+   "bosses": "Anchag, Boogyman, Ferdiad",
+   "monsters": "Circling Condor, Hedgerow Ochu, Leafminer, Grey Wolf, Megalotragus (Mob), Foreboding Statue, Ruins Wamoura, Demonic Rose, Foxglove (Enemy), Lordstool, Knotty Treant, Ruins Wamouracampa, Luminescence, Bloodmoon Sacrifice, Void Syrup, Faultfinder, Skainsmate, Vodoriga Slicer, Gneissic Gargoyle, Bloodlapper, Wicked Jester, Suppuration, Troubadour (Enemy), Cankerous Gobbet",
+   "objectives": "Defeat Anchag | Defeat the Boogyman | Defeat Ferdiad",
+   "unlockQuest": "For Keep's Sake",
+   "timeLimitMinutes": "90",
+   "entrance": "South Shroud (24,24)",
+   "roulette": "High-level Dungeons"
+  },
+  "940": {
+   "bosses": "Ephemeral Justice: Themis",
+   "unlockQuest": "The Emissary's Judgment",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dæmons' Nest (6.1, 5.8)",
+   "roulette": "normal raids"
+  },
+  "941": {
+   "bosses": "Ephemeral Justice: Themis",
+   "timeLimitMinutes": "90"
+  },
+  "936": {
+   "bosses": "Mythic Creation: Kokytos",
+   "unlockQuest": "Eater of Souls",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dæmons' Nest (6.1, 5.8)",
+   "roulette": "normal raids"
+  },
+  "937": {
+   "bosses": "Mythic Creation: Kokytos",
+   "timeLimitMinutes": "90"
+  },
+  "938": {
+   "bosses": "Dæmoniac Dungeon: Pandæmonium",
+   "unlockQuest": "Pandæmonium Awakens",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dæmons' Nest (6.1, 5.8)",
+   "roulette": "normal raids"
+  },
+  "939": {
+   "bosses": "Dæmoniac Dungeon: Pandæmonium",
+   "timeLimitMinutes": "90"
+  },
+  "942": {
+   "bosses": "Theos: Athena",
+   "unlockQuest": "A Mother's Touch",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dæmons' Nest (6.1, 5.8)",
+   "roulette": "normal raids"
+  },
+  "943": {
+   "bosses": "Theos: Athena, Pallas Athena",
+   "timeLimitMinutes": "120"
+  },
+  "714": {
+   "bosses": "Unknown, Kyklops, Merciless Matriarch: Rukshs Dheem",
+   "monsters": "Trench Danbania, Trench Xzomit, Trench Phuabo, Trench Dagonite, Trench Yovra, Anyder Squib, Anyder Clionid, Anyder Leech, Anyder Diviner, Anyder Grappler, Anyder Harpooner, Panopt Ousia, Io Ousia, Queen's Harpooner",
+   "objectives": "Arrive at Katharsis | Clear Katharsis | Arrive at Doxa | Clear Doxa | Arrive at Noesis | Defeat Rukshs Dheem",
+   "unlockQuest": "Beneath the Surface",
+   "timeLimitMinutes": "90",
+   "entrance": "Kholusia (10.7, 36.1)",
+   "roulette": "High-level Dungeons"
+  },
+  "808": {
+   "bosses": "Warder of the Condemned: Erichthonios",
+   "unlockQuest": "Where Familiars Dare",
+   "timeLimitMinutes": "90",
+   "entrance": "The Gates of Pandaemonium (21.4,22.0)",
+   "roulette": "normal raids"
+  },
+  "809": {
+   "bosses": "Warder of the Condemned: Erichthonios",
+   "timeLimitMinutes": "90"
+  },
+  "800": {
+   "bosses": "Hemitheos: Hesperos",
+   "unlockQuest": "Who Wards the Warders?",
+   "timeLimitMinutes": "90",
+   "entrance": "The Gates of Pandaemonium (21.4,18.0)",
+   "roulette": "normal raids"
+  },
+  "801": {
+   "bosses": "Hemitheos: Hesperos",
+   "timeLimitMinutes": "120"
+  },
+  "810": {
+   "bosses": "Mythic Creation: The Hippokampos",
+   "unlockQuest": "Under the Surface",
+   "timeLimitMinutes": "90",
+   "entrance": "The Gates of Pandaemonium (21.4, 18.0)",
+   "roulette": "normal raids"
+  },
+  "811": {
+   "bosses": "Mythic Creation: The Hippokampos",
+   "timeLimitMinutes": "90"
+  },
+  "806": {
+   "bosses": "Mythic Creation: The Phoinix",
+   "unlockQuest": "The Fires of Creation",
+   "timeLimitMinutes": "90",
+   "entrance": "The Gates of Pandaemonium (21.4,18.0)",
+   "roulette": "normal raids"
+  },
+  "807": {
+   "bosses": "Mythic Creation: The Phoinix",
+   "timeLimitMinutes": "90"
+  },
+  "219": {
+   "bosses": "Magitek Predator, Armored Weapon, The Griffin",
+   "monsters": "3rd Cohort Sagittarius, 3rd Cohort Secutor, 3rd Cohort Hoplomachus, Magitek Sky Armor (enemy), 3rd Cohort Canis Pugnax, 3rd Cohort Laquearius, 3rd Cohort Signifer, Sky Armor Reinforcement, Magitek Slasher (Enemy), Adamantite Claw, Magitek Colossus (Enemy), Magitek Vanguard D-1, Magitek Reaper (Enemy), Magitek Gunship (Baelsar's Wall), 3rd Cohort Eques, Sword-wielding Loyalist, Axe-wielding Loyalist, Lance-wielding Loyalist, Blade of the Griffin",
+   "objectives": "Imperial identification keys: 0 | Clear all barricades. 0/1 | Defeat the magitek predator. 0/1 | Slay all the imperial defenders. 0/1 | Defeat the armored weapon. 0/1 | Clear the parapet. 0/1 | Defeat the Griffin. 0/1",
+   "unlockQuest": "Griffin, Griffin on the Wall",
+   "timeLimitMinutes": "90",
+   "entrance": "East Shroud (22.3,31.3)",
+   "roulette": "High-level Dungeons"
+  },
+  "240": {
+   "bosses": "Garula, Bardam, Yol",
+   "monsters": "Halgai Shoot, Canyon Dzo, Greater Gulo Gulo, Wall of Bardam, Mettling Dhara, Steppe Eagle, Eastern Buzzard, Khun Gurvel, Hunter of Bardam, Throwing Spear, Star Shard, Looming Shadow, Warrior of Bardam, Holly Blue, Khun Shavar (Enemy), Mettling Matamata, Corpsecleaner Eagle, Left Wing, Right Wing",
+   "objectives": "Arrive at Bardam's Hunt | Defeat Garula | Arrive at the Rebirth of Bardam the Brave | Defeat Bardam | Arrive in the Voiceless Muse | Defeat Yol",
+   "unlockQuest": "In the Footsteps of Bardam the Brave",
+   "timeLimitMinutes": "90",
+   "entrance": "The Azim Steppe (11.3, 11.1)",
+   "baseExp": "420,000",
+   "roulette": "leveling"
+  },
+  "85": {
+   "bosses": "Gilgamesh & Enkidu",
+   "unlockQuest": "Her Last Vow",
+   "timeLimitMinutes": "60",
+   "entrance": "South Shroud (24.8, 24.9)",
+   "roulette": "trials"
+  },
+  "76": {
+   "bosses": "Gilgamesh",
+   "unlockQuest": "The Three Collectors",
+   "timeLimitMinutes": "60",
+   "entrance": "Coerthas Central Highlands (31.2, 31.0)",
+   "roulette": "trials"
+  },
+  "8": {
+   "bosses": "Great Yellow Pelican, Inferno Drake, Hellbender, Deep Jungle Coeurl, Aiatar",
+   "monsters": "Gully Galago, Painted Colibri, Raveled Raincatcher, Violet Back, Mud Biast, Comet Chaser, Ashdrake, Surf Eft, Swamp Pugil, Wyrmhound",
+   "objectives": "Meet a Longstop ally | Access Brayflox's Runstop | Access Mudstop Watergush | Arrive in the heart of the Longstop | Defeat Aiatar",
+   "unlockQuest": "The Things We Do for Cheese",
+   "timeLimitMinutes": "90",
+   "entrance": "Eastern La Noscea (14,24)",
+   "roulette": "leveling"
+  },
+  "20": {
+   "bosses": "Illuminati Commander, Magitek Vangob G-III, Gobmachine G-VI",
+   "monsters": "Eoraptor, Illuminati Soldier, Deep Jungle Coeurl, Raveled Raincatcher, Gully Galago, Illuminati Sniper, Illuminati Glider, Painted Colibri, Illuminati Marksman, Deep Jungle Torama, Illuminati Footman, Gobbie Beak",
+   "objectives": "Clear Runstop Frontblock | Liberate captured goblins | Clear Brayflox's Drossdump | Open Swiftmake Checkgates | Defeat the gobmachine G-VI",
+   "unlockQuest": "Curds and Slay",
+   "timeLimitMinutes": "90",
+   "entrance": "Eastern La Noscea (14,24)",
+   "roulette": "High-level Dungeons"
+  },
+  "242": {
+   "bosses": "Magna Roader, Subject Number XXIV, Inferno, Historical",
+   "monsters": "12th Legion Laquearius, 12th Legion Avenger, 12th Legion Vanguard, 12th Legion Bit, 12th Legion Canis Pugnax, 12th Legion Hoplomachus, 12th Legion Signifer, 12th Legion Optio, Magitek Pod, Hypertuned (Enemy), 12th Legion Roader, 12th Legion Slasher, 12th Legion Rearguard, 12th Legion Armored Weapon, 12th Legion Colossus, 12th Legion Death Claw, 12th Legion Packer",
+   "objectives": "Clear the storage compound | Dismantle the magna roader | Clear the testing compound | Defeat Subject Number XXIV | Clear the central compound | Defeat Inferno",
+   "unlockQuest": "The Price of Freedom",
+   "timeLimitMinutes": "90",
+   "entrance": "The Peaks (30.1, 31.4)",
+   "roulette": "leveling"
+  },
+  "537": {
+   "bosses": "The Lady of the Moon: Tsukuyomi",
+   "unlockQuest": "The Primary Agreement",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "762": {
+   "bosses": "Mark V Anti-Eikon Warmachina: The Emerald Weapon",
+   "unlockQuest": "Blood of Emerald",
+   "timeLimitMinutes": "60",
+   "entrance": "Western Thanalan (12.0, 13.1)",
+   "roulette": "Trials"
+  },
+  "763": {
+   "bosses": "Mark V Anti-Eikon Warmachina: The Emerald Weapon",
+   "unlockQuest": "Weapon of Choice",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "15": {
+   "bosses": "The Black Eft, Magitek Vanguard F-1, Livia sas Junius",
+   "monsters": "Imperial War Hound, 8th Cohort Hoplomachus, 8th Cohort Signifer, 8th Cohort Sagittarius, 8th Cohort Eques, 8th Cohort Decurion, 8th Cohort Laquearius, Magitek Colossus (Enemy), 8th Cohort Secutor, 8th Cohort Medicus, Magitek Vanguard, Magitek Death Claw",
+   "objectives": "Arrive at the central crossing | Clear the central crossing | Arrive at Area V | Clear Area V | Arrive at the parade ground | Defeat Livia sas Junius",
+   "unlockQuest": "Rock the Castrum",
+   "timeLimitMinutes": "90",
+   "entrance": "Northern Thanalan (15.5,16.8)",
+   "baseExp": "172,570",
+   "roulette": "main scenario"
+  },
+  "717": {
+   "bosses": "Mark III Anti-Eikon Warmachina: The Ruby Weapon",
+   "unlockQuest": "Ruby Doomsday",
+   "timeLimitMinutes": "60",
+   "entrance": "Eorzean Alliance Headquarters (6.2, 6.1)",
+   "roulette": "Trials"
+  },
+  "718": {
+   "bosses": "Mark III Anti-Eikon Warmachina: The Ruby Weapon",
+   "unlockQuest": "Weapon of Choice",
+   "timeLimitMinutes": "60",
+   "entrance": "Eorzean Alliance Headquarters (6.2, 6.1)",
+   "roulette": "Mentor"
+  },
+  "183": {
+   "bosses": "The Goddess: Sophia",
+   "unlockQuest": "Balance unto All",
+   "timeLimitMinutes": "60",
+   "entrance": "Azys Lla (25.4, 22.5, 8.4)",
+   "roulette": "Trials"
+  },
+  "184": {
+   "bosses": "The Goddess: Sophia",
+   "unlockQuest": "A Deific Simulacrum",
+   "timeLimitMinutes": "60",
+   "entrance": "Azys Lla (25.4, 22.5, 8.4)",
+   "roulette": "Mentor"
+  },
+  "134": {
+   "bosses": "The Fiend: Sephirot",
+   "unlockQuest": "When the Bough Wakes",
+   "timeLimitMinutes": "60",
+   "entrance": "Azys Lla (25.4, 22.5, 8.4)",
+   "roulette": "Trials"
+  },
+  "135": {
+   "bosses": "The Fiend: Sephirot",
+   "unlockQuest": "A Fiendish Likeness",
+   "timeLimitMinutes": "60",
+   "entrance": "Azys Lla (25.4, 22.5, 8.4)",
+   "roulette": "Mentor"
+  },
+  "223": {
+   "bosses": "The Demon: Zurvan",
+   "unlockQuest": "The Last Pillar to Fall",
+   "timeLimitMinutes": "60",
+   "entrance": "Azys Lla (25.4, 22.5, 8.4)",
+   "roulette": "Trials"
+  },
+  "224": {
+   "bosses": "The Demon: Zurvan",
+   "unlockQuest": "A Demonic Duplicate",
+   "timeLimitMinutes": "60",
+   "entrance": "Azys Lla (25.4, 22.5, 8.4)",
+   "roulette": "mentor"
+  },
+  "3": {
+   "unlockQuest": "And We Shall Call It Eureka",
+   "timeLimitMinutes": "180",
+   "entrance": "Kugane (8.5, 14.2)"
+  },
+  "18": {
+   "bosses": "Hecatoncheir Mastermind, Gogmagolem and Biggy, Ouranos",
+   "monsters": "Chalcopyrite Coblyn, Hecatoncheir Skullcrusher, Errant Revenant, Hecatoncheir Tremorward, Collapsed Rock, Spriggan Miner, Hecatoncheir Stonehoarder, Hecatoncheir Quakequeller, Mining Dross, Flambeau, Hecatoncheir Rockvaulter, Hecatoncheir Rocksplitter, Hecatoncheir Wallcrasher, Fulminator, Kindling Sprite, Shattering Cap, Copperbell Nix, Ancient Uragnite, Pit Hippogryph, Septic Slime",
+   "objectives": "Clear the Screaming Dark | Clear the Crying Dark | Defeat Ouranos",
+   "unlockQuest": "Out of Sight, Out of Mine",
+   "timeLimitMinutes": "90",
+   "entrance": "Western Thanalan (27, 17)",
+   "roulette": "High-level Dungeons"
+  },
+  "12": {
+   "bosses": "Myrmidon Princess, Giant Tunnel Worm, Chimera",
+   "monsters": "Myrmidon Sentry, Sand Bat, Quicksand Basilisk, Shrapnel (Cutter's Cry), Myrmidon Soldier, Myrmidon Guard, Myrmidon Marshal, Sandstorm, Sandshell, Sabotender Desertor, Canyon Condor, Slipsand, Arkose Golem, Schorl Doblyn, Spriggan Crier, Cacophony",
+   "objectives": "Slay all the enemies | Slay all the enemies | Clear the Feeding Pit | Clear the Sunken Antechamber | Defeat the chimera",
+   "unlockQuest": "Dishonor Before Death",
+   "timeLimitMinutes": "90",
+   "entrance": "Central Thanalan (15,14)",
+   "roulette": "leveling"
+  },
+  "1094": {
+   "timeLimitMinutes": "120"
+  },
+  "252": {
+   "bosses": "Alte Roite",
+   "unlockQuest": "Into the Deltascape",
+   "timeLimitMinutes": "90",
+   "roulette": "normal raid"
+  },
+  "256": {
+   "bosses": "Alte Roite",
+   "timeLimitMinutes": "90"
+  },
+  "253": {
+   "bosses": "Catastrophe",
+   "unlockQuest": "A Catastrophe Waiting",
+   "timeLimitMinutes": "90",
+   "roulette": "normal raid"
+  },
+  "257": {
+   "bosses": "Catastrophe",
+   "timeLimitMinutes": "90"
+  },
+  "254": {
+   "bosses": "Halicarnassus",
+   "unlockQuest": "The Croak Queen",
+   "timeLimitMinutes": "90",
+   "roulette": "normal raid"
+  },
+  "258": {
+   "bosses": "Halicarnassus",
+   "timeLimitMinutes": "90"
+  },
+  "255": {
+   "bosses": "Exdeath",
+   "unlockQuest": "A Void at All Costs",
+   "timeLimitMinutes": "90",
+   "roulette": "normal raids"
+  },
+  "259": {
+   "bosses": "Exdeath, Neo Exdeath",
+   "timeLimitMinutes": "120"
+  },
+  "30": {
+   "bosses": "Frumious Koheel Ja, Slithy Zolool Ja, Manxome Molaa Ja Ja",
+   "monsters": "Silverscales Warder, Pack Ziz, Bronze Pugil, Pteroc Pointer, Silverscales Lurker, Sacred Spear, Silverscales Stabler, Sacred Standard, Silverscales Sophist, Combat Wivre, Purulent Abscess, Purulent Pustule, Bavaroid Waste, Wivre Fodder, Silverscales Zenist, Sacred Idol",
+   "objectives": "Save the fleeing tonberries | Defeat Frumious Koheel Ja | Breach the defensive line | Defeat Slithy Zolool Ja | Free the imprisoned tonberries | Clear the Bellows | Defeat Manxome Molaa Ja Ja",
+   "unlockQuest": "Not Easy Being Green",
+   "timeLimitMinutes": "90",
+   "entrance": "Upper La Noscea (26,22)",
+   "roulette": "High-level Dungeons"
+  },
+  "31": {
+   "bosses": "Demon Tome, Byblos, The Everliving Bibliotaph",
+   "monsters": "Meganeura, Sentient Inkhorn, Gubal Falcon, Sentient Tome, Marolith (enemy), Spandule, Page 64, Spine Duster, Pseudo Sprite, Tomeshifter Imp, Skatene (enemy), Vodoriga Biblioclast, Logos (enemy), Speedreader, Bibliophile, Bibliomancer, Biblioklept",
+   "objectives": "Defeat the demon tome. | Defeat Byblos. | Defeat the Everliving Bibliotaph.",
+   "unlockQuest": "Forbidden Knowledge",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (28,37)",
+   "roulette": "leveling"
+  },
+  "649": {
+   "bosses": "Aenc Thon, Lord of the Lingering Gaze, Griaule, Lakelord: Aenc Thon, Lord of the Lengthsome Gait",
+   "monsters": "Dohnfast Anemone, Dohnfast Fuath, Dohnfast Basket, Cadmium Morpho, Cobalt Morpho, Crimson Morpho, Dohnfast Etainmoth, Dohnfast Echevore, Dohnfast Rowan, Honeymaker, Honeyhunter, Dohnfast Moss Fungus, Painted Sapling, Painted Root, Dohnfast Undine, Dohnfast Kelpie, Naiad, Liar's Lyre",
+   "objectives": "Arrive at Teag Gye. | Clear Teag Gye. | Arrive in the Atelier. | Clear the Atelier. | Arrive in the throne room. | Defeat Aenc Thon, Lord of the Lengthsome Gait.",
+   "unlockQuest": "The Key to the Castle",
+   "timeLimitMinutes": "90",
+   "entrance": "Il Mheg (24.1, 30.5)",
+   "roulette": "Leveling"
+  },
+  "241": {
+   "bosses": "Magitek Rearguard, Magitek Hexadrone, Hypertuned Grynewaht",
+   "monsters": "Doman Hoplomachus, Doman Laquierius, Doman Eques, Doman Slasher, Doman Colossus, Doman Sky Armor, Doman Gunship, Doman Vanguard, Doman Canis Pugnax, Doman Secutor, Doman Reaper, Doman Shadow, Doman Hastatus, Doman Armored Weapon",
+   "objectives": "Arrive at the Third Armory | Defeat the magitek rearguard | Arrive at the Training Grounds | Defeat the magitek hexadrone | Arrive at the Hall of the Scarlet Swallow | Defeat Hypertuned Grynewaht",
+   "unlockQuest": "The Die Is Cast",
+   "timeLimitMinutes": "90",
+   "entrance": "Yanxia (14.0, 14.2)",
+   "roulette": "leveling"
+  },
+  "788": {
+   "unlockQuest": "I Wandered Sharlayan as a Minstrel",
+   "timeLimitMinutes": "120"
+  },
+  "220": {
+   "bosses": "Deathgaze Hollow, Ferdiad Hollow, Proto Ultima, Scathach, Diabolos",
+   "objectives": "Defeat Deathgaze Hollow | Arrive at the Rostrum | Defeat Ferdiad Hollow | Arrive in the Queen's Graces | Defeat Scathach | Defeat Diabolos | Defeat Diabolos Hollow",
+   "unlockQuest": "Where Shadows Reign",
+   "timeLimitMinutes": "120",
+   "entrance": "The Parrock (7.0, 7.1)",
+   "roulette": "alliance raid"
+  },
+  "13": {
+   "bosses": "All-seeing Eye, Taulurd, Batraal",
+   "monsters": "Diamond-tooth Hedgemole, Betrayed Soul, Alpgrot Orobon, Mouche Volante, Bone Nix, Forsaken Soul, Lava Drake, Deepvoid Slave, Hellsbound Warrior, Corrupted Crystal",
+   "objectives": "Open the Grand Hall gate | Clear the Feasting Hall | Deactivate the level IV magitek field | Defeat Batraal",
+   "unlockQuest": "Fort of Fear",
+   "timeLimitMinutes": "90",
+   "entrance": "Coerthas Central Highlands (20,28)",
+   "baseExp": "125,000",
+   "roulette": "leveling"
+  },
+  "684": {
+   "bosses": "Antithesis Manifest: Voidwalker",
+   "unlockQuest": "One Fell Swoop",
+   "timeLimitMinutes": "90",
+   "entrance": "The Core (23.4, 23.2)",
+   "roulette": "normal raids"
+  },
+  "685": {
+   "bosses": "Antithesis Manifest: Voidwalker",
+   "timeLimitMinutes": "90"
+  },
+  "682": {
+   "bosses": "Heritor of the Whorl: Leviathan",
+   "unlockQuest": "Nor Any Drop to Drink",
+   "timeLimitMinutes": "90",
+   "entrance": "The Core (23.4, 23.2)",
+   "roulette": "normal raids"
+  },
+  "683": {
+   "bosses": "Heritor of the Whorl: Leviathan",
+   "timeLimitMinutes": "90"
+  },
+  "653": {
+   "bosses": "Keeper of Knowledge: Eden Prime",
+   "unlockQuest": "Deploy the Core",
+   "timeLimitMinutes": "90",
+   "entrance": "The Core (23.4, 23.2)",
+   "roulette": "normal raids"
+  },
+  "654": {
+   "bosses": "Keeper of Knowledge: Eden Prime",
+   "timeLimitMinutes": "90"
+  },
+  "689": {
+   "bosses": "Heritor of Crags: Titan",
+   "unlockQuest": "Super Seismic",
+   "timeLimitMinutes": "90",
+   "entrance": "The Core (23.4, 23.2)",
+   "roulette": "normal raids"
+  },
+  "690": {
+   "bosses": "Heritor of Crags: Titan - Abilities and Timeline",
+   "timeLimitMinutes": "120"
+  },
+  "751": {
+   "bosses": "Dread Hope: Fatebreaker",
+   "unlockQuest": "Voice of the Soul",
+   "timeLimitMinutes": "90",
+   "entrance": "The Core (23.4, 23.2)",
+   "roulette": "normal raids"
+  },
+  "752": {
+   "bosses": "Dread Hope: The Fatebreaker",
+   "timeLimitMinutes": "90"
+  },
+  "758": {
+   "bosses": "Utopian Vision: Eden's Promise",
+   "unlockQuest": "Voice of the Soul",
+   "timeLimitMinutes": "90",
+   "entrance": "The Core (23.4, 23.2)",
+   "roulette": "normal raids"
+  },
+  "759": {
+   "bosses": "Utopian Vision: Eden's Promise, Oracle of Darkness",
+   "timeLimitMinutes": "120"
+  },
+  "747": {
+   "bosses": "Ravening Antihero: Shadowkeeper",
+   "unlockQuest": "Shadows of the Past",
+   "timeLimitMinutes": "90",
+   "entrance": "The Empty (5.8, 6.5)",
+   "roulette": "normal raids"
+  },
+  "748": {
+   "bosses": "Ravening Antihero: The Shadowkeeper",
+   "timeLimitMinutes": "90"
+  },
+  "749": {
+   "bosses": "Abyssal Abhorrence: Cloud of Darkness",
+   "unlockQuest": "Fear of the Dark",
+   "timeLimitMinutes": "90",
+   "entrance": "The Core (23.4, 23.2)",
+   "roulette": "normal raids"
+  },
+  "750": {
+   "bosses": "Abyssal Abhorrence: Cloud of Darkness",
+   "timeLimitMinutes": "90"
+  },
+  "715": {
+   "bosses": "Heritor of Levin: Ramuh",
+   "unlockQuest": "Blood and Thunder",
+   "timeLimitMinutes": "90",
+   "entrance": "The Core (23.4, 23.2)",
+   "roulette": "normal raids"
+  },
+  "716": {
+   "bosses": "Heritor of Levin: Ramuh - Abilities and Timeline",
+   "timeLimitMinutes": "90"
+  },
+  "719": {
+   "bosses": "Heritors of Fury: Garuda & Ifrit",
+   "unlockQuest": "Into the Firestorm",
+   "timeLimitMinutes": "90",
+   "entrance": "The Core (23.4, 23.2)",
+   "roulette": "normal raids"
+  },
+  "720": {
+   "bosses": "Heritors of Fury: Garuda & Ifrit",
+   "timeLimitMinutes": "90"
+  },
+  "726": {
+   "bosses": "Antithesis Conscient: The Idol of Darkness",
+   "unlockQuest": "Heart of Darkness",
+   "timeLimitMinutes": "90",
+   "entrance": "The Core (23.4, 23.2)",
+   "roulette": "normal raids"
+  },
+  "727": {
+   "bosses": "Antithesis Conscient: The Idol of Darkness",
+   "timeLimitMinutes": "90"
+  },
+  "728": {
+   "bosses": "Heritor of Frost: Shiva",
+   "unlockQuest": "On Thin Ice",
+   "timeLimitMinutes": "90",
+   "roulette": "normal raids"
+  },
+  "729": {
+   "bosses": "Heritor of Frost: Shiva",
+   "timeLimitMinutes": "120"
+  },
+  "263": {
+   "bosses": "Lady of Bliss: Lakshmi",
+   "unlockQuest": "The Lady of Bliss",
+   "timeLimitMinutes": "60",
+   "entrance": "The Fringes (28.1,19.4)",
+   "roulette": "Trials"
+  },
+  "264": {
+   "bosses": "Lady of Bliss: Lakshmi",
+   "unlockQuest": "Songs in the Key of Kugane",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "911": {
+   "bosses": "Nophica, Althyk and Nymeia, Halone, The Lover: Menphina",
+   "unlockQuest": "Return to the Phantom Realm",
+   "timeLimitMinutes": "120",
+   "entrance": "The Omphalos (4.3, 7.7)",
+   "roulette": "Alliance Raids"
+  },
+  "995": {
+   "bosses": "King of Resolve: Zoraal Ja",
+   "unlockQuest": "The Resilient Son",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "996": {
+   "bosses": "King of Resolve: Zoraal Ja",
+   "timeLimitMinutes": "60"
+  },
+  "1006": {
+   "timeLimitMinutes": "120"
+  },
+  "7": {
+   "bosses": "Firemane, Thunderclap Guivre, Pit Peiste, Tangata",
+   "monsters": "Heckler Imp, Doctore, Gas Bomb, Scythe Mantis, Coliseum Python, Lightning Sprite, Rudis Beak, Damantus, Noxius",
+   "objectives": "Clear the Hall of the Cesti | Activate the chain winch | Clear the Hall of the Secutores | Defeat Tangata",
+   "unlockQuest": "Hallo Halatali",
+   "timeLimitMinutes": "90",
+   "entrance": "Eastern Thanalan (14.7, 30.2)",
+   "baseExp": "46,221",
+   "roulette": "Leveling"
+  },
+  "21": {
+   "bosses": "Pyracmon, Catoblepas, Silent Moss the Solemn, Franz the Fair, Langloisiert the Lionheart, and U'linbho the Sand Devil, Mumuepo the Beholden and Narasimha",
+   "monsters": "Pit Basilisk, Pit Wolf, Halatali Bat, Mammet Heckler 022H, Mammet Supporter 022S, Pit Coeurl Pup, Pit Coeurl, Pit Torama, Coliseum Lemur, Fighting Vulture, Gold Bear, Tainted Eye, Champion Lancer, Champion Gladiator, Champion Conjurer, Champion Marauder, Champion Archer",
+   "objectives": "Defeat the mammets | Defeat Pyracmon | Defeat the caged beasts | Defeat the catoblepas | Defeat the gladiators | Complete the final test",
+   "unlockQuest": "This Time's for Fun",
+   "timeLimitMinutes": "90",
+   "entrance": "Eastern Thanalan (14.7, 30.2)",
+   "roulette": "High-level Dungeons"
+  },
+  "6": {
+   "unlockQuest": "And We Shall Call It Pyros",
+   "timeLimitMinutes": "180",
+   "entrance": "Kugane (8.5, 14.2)"
+  },
+  "19": {
+   "bosses": "Manor Jester, Ash, Halicarnassus",
+   "monsters": "Altered Wailer (Demon), Manor Acrobat, Manor Claviger, Manor Warden, Manor Sentry (Haukke Manor Hard), Manor Butler, Altered Wailer (Taurus), Manor Sentry, Taurus Minion, Manor Footman, Congealed Blood, Writhing Statue, Manor Maidservant, Lady Amandine",
+   "objectives": "Clear the White Hall | Clear the Red Hall | Defeat Halicarnassus",
+   "unlockQuest": "Maniac Manor",
+   "timeLimitMinutes": "90",
+   "entrance": "Central Shroud (9,22)",
+   "roulette": "High-level Dungeons"
+  },
+  "1076": {
+   "bosses": "Siege Engine: Doomtrain",
+   "unlockQuest": "Where We Call Home",
+   "timeLimitMinutes": "60",
+   "entrance": "Bentini Depot (5.6, 6.1)",
+   "roulette": "Trials"
+  },
+  "1077": {
+   "bosses": "Siege Engine: Doomtrain",
+   "timeLimitMinutes": "60"
+  },
+  "596": {
+   "bosses": "Auspice: Suzaku",
+   "unlockQuest": "The Fire-bird Down Below",
+   "timeLimitMinutes": "60",
+   "entrance": "Reisen Temple (6.3, 6.8)",
+   "roulette": "Trials"
+  },
+  "597": {
+   "bosses": "Auspice: Suzaku",
+   "unlockQuest": "Songs in the Key of Kugane",
+   "timeLimitMinutes": "60",
+   "entrance": "Reisen Temple (6.3, 6.8)",
+   "roulette": "Mentor"
+  },
+  "284": {
+   "bosses": "Otake-maru, Kamaitachi, Genbu",
+   "monsters": "Hellish Gasame, Nurikabe, Hellish Lion, Hellish Shikigami, Grand Nurikabe, Hellish Naked Yumemi, Hellish Yumemi, Kaja of the Seven Flames, Sea Scorpion, Uwabami, Kaja, Tsumuji-kaze, Reisen Apa, Reisen Tatsunoko, Shikigami of the Spring, Left Hand of the Spring, Right Hand of the Spring, Boltstorm Nue, Stillwind Nue, Chelonian Gate (Enemy)",
+   "objectives": "Arrive at Demonsgate. | Clear Demonsgate. | Arrive in the Furnace. | Clear the Furnace. | Arrive on the Polished Shell. | Defeat Genbu.",
+   "unlockQuest": "An Auspicious Encounter",
+   "timeLimitMinutes": "90",
+   "entrance": "The Ruby Sea (26.9, 38.4)",
+   "roulette": "High-level Dungeons"
+  },
+  "676": {
+   "bosses": "Forgiven Dissonance, Tesleen, the Forgiven, Lightwarden: Philia",
+   "monsters": "Forgiven Conceit, Forgiven Clamor, Forgiven Folly, Forgiven Ignorance, Forgiven Deceit, Switch Gremlin, Forgiven Disobedience, Forgiven Cowardice, Forgiven Enmity",
+   "objectives": "Arrive at the Wound. | Clear the Wound. | Arrive in the Auction. | Clear the Auction. | Arrive in the Manor House Courtyard. | Defeat Philia.",
+   "unlockQuest": "The Lightwardens",
+   "timeLimitMinutes": "90",
+   "entrance": "Lakeland (35.1, 7.1)",
+   "roulette": "Leveling"
+  },
+  "23": {
+   "bosses": "Sasquatch, Sjoorm, Kraken",
+   "objectives": "Defeat the sifakas | Slay the sasquatch | Find the stone tablets | Slay Sjoorm | Navigate the geysers | Dismember the arms and tentacles",
+   "unlockQuest": "King of the Hull",
+   "timeLimitMinutes": "90",
+   "entrance": "Lower La Noscea (26, 36)",
+   "roulette": "High-level Dungeons"
+  },
+  "172": {
+   "unlockQuest": "Unfamiliar Territory",
+   "timeLimitMinutes": "180",
+   "entrance": "Phantom Village (4.5, 6.6)"
+  },
+  "826": {
+   "bosses": "Prime Punutiy, Drowsie, Apex Predator: Apollyon",
+   "monsters": "Bird of Ihuykatumu, Ihuykatumu Orobon, Ihuykatumu Wivre, Ihuykatumu Bat, Ihuykatumu Widowmaker, Ihuykatumu Doblyn, Ihuykatumu Treant, Mimiclot (Green), Mimiclot (Blue), Mimiclot (Red), Ihuykatumu Puma, Ihuykatumu Tomaton, Ihuykatumu Maip",
+   "objectives": "Arrive at the punutiy pool. 0/1 | Clear the punutiy pool. 0/1 | Arrive at Drowsie's grotto. 0/1 | Clear Drowsie's grotto. 0/1 | Arrive at Breathcatch. 0/1 | Defeat Apollyon. 0/1",
+   "unlockQuest": "For All Turali",
+   "timeLimitMinutes": "90",
+   "entrance": "Tuliyollal (16.7, 14.1)",
+   "roulette": "Leveling"
+  },
+  "1015": {
+   "bosses": "Prishe of the Distant Chains, Fafnir the Forgotten, The Ark Angels, Kindred Rage: Shadow Lord",
+   "monsters": "Goblin Replica, Vanguard's Slime, Vanguard Pathfinder, Elder Goobbue (Jeuno), Bark Spider, Death Cap, Robber Crab (Jeuno), Aquarius, Skimmer (Jeuno), Groundskeeper (Jeuno), Sprinkler, Flamingo, Despot",
+   "unlockQuest": "An Otherworldly Encounter",
+   "timeLimitMinutes": "120",
+   "entrance": "Yak T'el (10.9, 34.8)",
+   "roulette": "Alliance Raids"
+  },
+  "787": {
+   "bosses": "Lyssa, Ladon Lord, Winged Defiance: Hermes",
+   "monsters": "Ktiseos Leon, Ktiseos Ophion, Ktiseos Panther, Ktiseos Ktenos, Ktiseos Lykos, Ktiseos Chione, Ktiseos Daidalion, Ktiseos Okyupete, Ktiseos Gryps, Ktiseos Hippocerf, Ktiseos Hippogryph, Ktiseos Lailaps, Ktiseos Ophiotauros, Pyric Sphere, Ktiseos Stymphalide, Ktiseos Alkyone, Ktiseos Erinys, Ktiseos Aello",
+   "objectives": "Arrive at the Frozen Sphere | Clear the Frozen Sphere | Arrive at the Concept Review | Clear the Concept Review | Arrive at the Celestial Sphere | Defeat Hermes",
+   "unlockQuest": "Caging the Messenger",
+   "timeLimitMinutes": "90",
+   "entrance": "Elpis (13.2, 6.1, 4.9)",
+   "roulette": "Leveling"
+  },
+  "262": {
+   "bosses": "Zuiko-maru, Dojun-maru, Yojimbo",
+   "monsters": "Joi Blade, Joi Genin, Joi Kiyofusa, Joi Jonin, Harakiri Kosho, Karakuri Onmitsu (Enemy), Joi Summoner, Joi Koja, Elite Onmitsu, Karasu Tengu, Harakiri Hanya, Karakuri Hanya (Enemy), Daigoro, Dragon's Head",
+   "objectives": "Arrive at the Keisen Garden | Defeat Zuiko-maru | Arrive at the Budokan Training Grounds | Defeat Dojun-maru | Arrive at the Noh Theater | Defeat Yojimbo",
+   "unlockQuest": "King of the Castle",
+   "timeLimitMinutes": "90",
+   "entrance": "Kugane (12.6, 6.1)",
+   "baseExp": "225,000",
+   "roulette": "High-level Dungeons"
+  },
+  "595": {
+   "bosses": "Yojimbo",
+   "unlockQuest": "The Past Is Never Past",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "896": {
+   "bosses": "Albion, Galatea Magna, Drowned King: Cagnazzo",
+   "monsters": "Caladrius, Caladrius Maturus, Albus Griffin, Albus Canis Lupinus, Albus Bear, Visitant Bloodguard, Visitant Vodoriga, Rock of Albus, Galatea Parva, Visitant Taurus, Albus Serpent, Albus Craklaw, Visitant Satana, Visitant Monk, Fearsome Flotsam",
+   "unlockQuest": "King of the Mountain",
+   "timeLimitMinutes": "90",
+   "entrance": "Garlemald (30.8, 35.8)",
+   "roulette": "High-level Dungeons"
+  },
+  "656": {
+   "bosses": "Greater Armadillo, Amphibious Talos, Lightwarden: Storge",
+   "monsters": "Well Armadillo, Royal Bladebearer, Royal Cupbearer, Well Lizard, Morningstar, Pack Armadillo, Well Huldu, Royal Custard, Well Phoebad, Forgiven Grudge, Forgiven Vainglory, Forgiven Bribery, Forgiven Indecency, Rhapsodic Nail",
+   "objectives": "Arrive at Terminus. | Clear Terminus. | Arrive at Malikah's Gift. | Clear Malikah's Gift. | Arrive at Unquestioned Acceptance. | Defeat Storge.",
+   "unlockQuest": "A Fresh Start",
+   "timeLimitMinutes": "90",
+   "entrance": "Amh Araeng (11.7, 31.2)",
+   "roulette": "Leveling"
+  },
+  "746": {
+   "bosses": "Mudman, Nixie, Porcine Porcelain: Mother Porxie",
+   "monsters": "Exoray, Relict Werewood, Cave Mantis, Cave Tarantula Hawk, Spriggan Quarrier, Spriggan Stonebearer, Sonny of Ziggy, Mud Bubble, Cave Pugil, Cave Gelatin, Cave Opken, Cave Hropken, Icicle, Unfinished Nixie, Lava Phoebad, Relict Flan, Relict Licorice, Pyroduct Eldthurs, Relict Slime, Relict Syrup, Relict Bavarois, Relict Marshmallow, Relict Pudding, Molten Phoebad",
+   "objectives": "Arrive at the Claydot Cauldron | Clear the Claydot Cauldron | Arrive at the Clearnote Cauldron | Clear the Clearnote Cauldron | Arrive at the Kilnfire Cauldron | Defeat the mother porxie",
+   "unlockQuest": "Like Master&#44; Like Pupil",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (30.2, 18.2)",
+   "roulette": "High-level Dungeons"
+  },
+  "725": {
+   "bosses": "The Last Word: Varis yae Galvus",
+   "unlockQuest": "The Bozja Incident",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "1064": {
+   "bosses": "Treno Catoblepas, Amdusias, Survivor of Storms: Thundergust Griffin",
+   "monsters": "Mistwake Petromole, Mistwake Crawler, Mistwake Bat, Mistwake Gemkeeper, Mistwake Zemzelett, Mistwake Rock, Mistwake Golem, Mistwake Plasma, Mistwake Coeurl, Mistwake Jabberwock, Thunder Spirit, Mistwake Spirit",
+   "unlockQuest": "Beyond the Mountains",
+   "timeLimitMinutes": "90",
+   "entrance": "Alexandria Crater (6.2, 5.6)",
+   "roulette": "Expert"
+  },
+  "886": {
+   "bosses": "Autarch of Flame: Rubicante",
+   "unlockQuest": "Desires Untold",
+   "timeLimitMinutes": "60",
+   "entrance": "Khadga (5.3, 6.1)",
+   "roulette": "Trials"
+  },
+  "924": {
+   "bosses": "Autarch of Flame: Rubicante",
+   "unlockQuest": "I Wandered Sharlayan as a Minstrel",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "659": {
+   "bosses": "Forgiven Cruelty, Forgiven Whimsy, Consort of Sin: Forgiven Obscenity",
+   "monsters": "Forgiven Jealousy, Forgiven Hypocrisy, Forgiven Ambition, Forgiven Conformity, Forgiven Extortion, Forgiven Apathy, Forgiven Prejudice, Forgiven Venery, Forgiven Revelry",
+   "objectives": "Arrive on the Perished Path. | Clear the Perished Path. | Arrive at the White Gate. | Clear the White Gate. | Arrive at the Winding Flare. | Defeat the forgiven obscenity.",
+   "unlockQuest": "Extinguishing the Last Light",
+   "timeLimitMinutes": "90",
+   "entrance": "Kholusia (18, 4.6)",
+   "roulette": "Leveling"
+  },
+  "33": {
+   "unlockQuest": "A New Playing Field",
+   "timeLimitMinutes": "180",
+   "entrance": "Gangos (6.4, 5.7)"
+  },
+  "825": {
+   "bosses": "Herpekaris, Deceiver, Innovation's Excess: Ambrose the Undeparted",
+   "monsters": "Origenics Eyeclops, Origenics Katobleps, Origenics Sentry S9, Origenics Sentry S10, Origenics Turret, Origenics Aerostat, Origenics Sentry G9, Origenics Sentry G10, Origenics Eyeborg, Origenics Automatoise",
+   "unlockQuest": "The Resilient Son",
+   "timeLimitMinutes": "90",
+   "entrance": "Heritage Found (9.2, 10.1)",
+   "roulette": "Leveling"
+  },
+  "777": {
+   "bosses": "Amhuluk, Magitek Fortress, Telotherium: Lunar Bahamut",
+   "monsters": "Tempered Imperial, Telotulihand, Telovouivre, Lesser Telodragon, Telodragonet, Debris, Telotek Reaper, Teloclaw, Telobrobinyak, Telotek Sky Armor, Telodragon, Telotek Predator, Mark II Telotek Colossus, Telotek Vanguard, Armored Telodragon",
+   "objectives": "Arrive at the gathering ring | Clear the gathering ring | Arrive at the scalekin pen | Clear the scalekin pen | Arrive at Sunseat | Defeat Lunar Bahamut",
+   "unlockQuest": "The Flames of War",
+   "timeLimitMinutes": "90",
+   "entrance": "Ul'dah - Steps of Nald (10.7, 11.4)",
+   "roulette": "High-level Dungeons"
+  },
+  "17": {
+   "bosses": "Symond the Unsinkable, Zu, Tyrant, Siren",
+   "monsters": "Sirius Leech, Sirius Pugil, Sirius Elbst, Sirius Uragnite, Zombie Sailor, Zombie Barber, Zombie War Hound, Bhoot (Enemy), Corrupted Sprite (Pharos Sirius), Drifting Soul, Corrupted Slime, Screamer, Zu Egg, Zu Pullet, Zu Cockerel, Corrupted Pudding, Zombie Storm Private, Zombie Storm Sergeant",
+   "objectives": "Clear the Aether Pump | Clear the Second Spire | Clear the Fuel Chamber | Clear the Aether Compressor | Defeat the Siren",
+   "unlockQuest": "Sirius Business",
+   "timeLimitMinutes": "90",
+   "entrance": "Western La Noscea (16,30)",
+   "roulette": "High-level Dungeons"
+  },
+  "40": {
+   "bosses": "Ghrah Luminary, 8th Order Patriarch Be Gu, Progenitrix and Progenitor",
+   "monsters": "Corruption (Bird), Corrupted Flan, Corrupted Slime, Corrupted Sprite (Pharos Sirius), Corrupted Wolf, Corruption (Spider), Time Bomb, Construct 8 (Enemy), Coral Doblyn, 8th Order Roundsman, Simple Bomb Incubator, 8th Order Pickman, Corrupted Gel, 8th Order Furnaceman, Alchemy Engine, 8th Order Bedesman, Time Grenade, Living Rock (Enemy), 8th Order Alchemist, Lava Bomb, Grey Bomb, Remedy Bomb",
+   "objectives": "Arrive in the fuel chamber | Slay the Ghrah Luminary | Arrive in the second spire | Slay 8th Order Patriarch Be Gu | Arrive at Incubator 66 | Secure Incubator 66",
+   "unlockQuest": "Things Are Getting Sirius",
+   "timeLimitMinutes": "90",
+   "entrance": "Limsa Lominsa Upper Decks (10,11)",
+   "roulette": "High-level Dungeons"
+  },
+  "1030": {
+   "bosses": "Queen's Knight: Zelenia",
+   "unlockQuest": "Descent to the Foundation",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "1031": {
+   "bosses": "Queen's Knight: Zelenia",
+   "timeLimitMinutes": "60"
+  },
+  "41": {
+   "bosses": "Rose Garden, Queen Hawk, Belladonna",
+   "monsters": "Malboro Terra, Southern Seas Colibri, Korpokkur (Enemy), Blooming Ochu, Rose Hip, Arboretum Crawler, Thavnairian Tortoise, Velveteen Ant, Worker Hawk, Garden Bee Cloud, Honeycomb, Orn Hornet, Knight Hawk, Biloko (Enemy), Tangled Narbrooi, Grizzly Host, Withered Melia, Royal Oak",
+   "objectives": "Clear Telmatology | Prune the Rose Garden | Clear Eremology | Slay the Queen Hawk | Clear the Study | Defeat Belladonna",
+   "unlockQuest": "An Overgrown Ambition",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (10,23)",
+   "roulette": "High-level Dungeons"
+  },
+  "584": {
+   "bosses": "Nullchu, Lakhamu, Tokkapchi",
+   "monsters": "Sprawling Sankchinni, Withered Belladonna, Immaculate Apa, Raskovnik (Saint Mocainne's Arboretum Hard), Dorpokkur, Blooming Biloko, Arboretum Leech, Withered Kaluk, Silt Golem, Arboretum Bifericeras, Arboretum Slug, Muddy Mata, Mud Slime, Muddy Dorpokkur",
+   "objectives": "Arrive in Zymology | Clear Zymology | Arrive in the Soil Bed | Clear the Soil Bed | Arrive in Kingsloam | Defeat Tokkapchi",
+   "unlockQuest": "Secret of the Ooze",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (10.1, 23.7, 1.0)",
+   "roulette": "High-level Dungeons"
+  },
+  "1058": {
+   "bosses": "Faithbound Kirin, Ultima, the Feared and Omega, the One, Kam'lanaut, Legacy of the Zilart: Eald'narche",
+   "monsters": "Orcish Grappler, Poisonhand Gnadgad, Forest Funguar (Vana'diel), Goblin Fisher, Scarab Beetle, Goblin Thug, Jaggedy-eared Jack, Forest Hare, Detector, Light Elemental, Clipper (Vana'diel), Kraken (Vana'diel), Greater Pugil, Acrophies, Banshee (Vana'diel), Giant Ranger, Giant Ascetic, Alkyoneus",
+   "unlockQuest": "Dreams of Paradise",
+   "timeLimitMinutes": "120",
+   "entrance": "Lower Jeuno (6.3, 7.2)",
+   "roulette": "Alliance Raids"
+  },
+  "4": {
+   "unlockQuest": "And We Shall Call It Pagos",
+   "timeLimitMinutes": "180",
+   "entrance": "Kugane (8.5, 14.2)"
+  },
+  "28": {
+   "bosses": "Karlabos, Captain Madison, Kraken",
+   "objectives": "Defeat Karlabos | Clear the Pull | Defeat Captain Madison | Defeat First Mate Haerstymm | Defeat the Kraken",
+   "unlockQuest": "It's Definitely Pirates",
+   "timeLimitMinutes": "90",
+   "entrance": "Western La Noscea (28,21)",
+   "roulette": "High-level Dungeons"
+  },
+  "1118": {
+   "unlockQuest": "Fantastic Mr. Faux",
+   "timeLimitMinutes": "60"
+  },
+  "235": {
+   "bosses": "Amikiri, Ruby Princess, Shisui Yohi",
+   "monsters": "Hatsugyo, Violet Coralshell, Hikagiri, Ango, Mutsu, Amikiri Leg, Kamikiri, Palace Guard, Captain of the Guard, Blue Unkiu, Violet Tatsunoko, Bald Kraken, Violet Shark, Churn, Naishi-no-Kami, Naishi-no-jo",
+   "objectives": "Clear the Sogyoku Piscary | Defeat Amikiri | Clear the Kogyoku Palace | Defeat the Ruby Princess | Clear the Shisui Temple | Defeat the Shisui Yohi",
+   "unlockQuest": "The Palace of Lost Souls",
+   "timeLimitMinutes": "90",
+   "entrance": "The Ruby Sea (2.2, 36.6, -9.0)",
+   "baseExp": "375,000",
+   "roulette": "leveling"
+  },
+  "286": {
+   "bosses": "Phantom Train",
+   "unlockQuest": "No Slowing Down",
+   "timeLimitMinutes": "90",
+   "entrance": "The Yawn",
+   "roulette": "normal raids"
+  },
+  "292": {
+   "bosses": "Phantom Train - Phase 1",
+   "timeLimitMinutes": "90"
+  },
+  "287": {
+   "bosses": "Chadarnook",
+   "unlockQuest": "An Unfinished Masterpiece",
+   "timeLimitMinutes": "90",
+   "entrance": "The Yawn",
+   "roulette": "normal raids"
+  },
+  "293": {
+   "bosses": "Chadarnook",
+   "timeLimitMinutes": "90"
+  },
+  "288": {
+   "bosses": "Guardian",
+   "unlockQuest": "Won't Let You Pass",
+   "timeLimitMinutes": "90",
+   "entrance": "The Yawn",
+   "roulette": "normal raids"
+  },
+  "294": {
+   "bosses": "Guardian",
+   "timeLimitMinutes": "90"
+  },
+  "289": {
+   "bosses": "Kefka",
+   "unlockQuest": "Test World of Ruin",
+   "timeLimitMinutes": "90",
+   "entrance": "The Yawn",
+   "roulette": "normal raids"
+  },
+  "295": {
+   "bosses": "Kefka",
+   "timeLimitMinutes": "120"
+  },
+  "794": {
+   "bosses": "Face, Frameworker, Smilemaker: The Big Cheese",
+   "monsters": "Smiley Wanderer, Smiley Weeper, Smiley Lunatender, Smiley Panopt, Smiley Thinker, Smiley Scraper, Smiley Metalloid, Smiley Kisser, Smiley Daphnia, Printed Worker, Smiley Supporter, Smiley Dynamite, Smiley Regolith, Smiley Sweeper",
+   "objectives": "Arrive at Smileport | Clear Smileport | Arrive at the Welcome Wheel | Clear the Welcome Wheel | Arrive at the Frame | Defeat the Big Cheese",
+   "unlockQuest": "Cutting the Cheese",
+   "timeLimitMinutes": "90",
+   "entrance": "Mare Lamentorum (11.8,22.6)",
+   "roulette": "High-level Dungeons"
+  },
+  "27": {
+   "unlockQuest": "Where Eagles Nest",
+   "timeLimitMinutes": "180",
+   "entrance": "Gangos (6.4, 5.7)"
+  },
+  "37": {
+   "bosses": "Raskovnik, Myath, Tioman",
+   "monsters": "Flying Killer, Abalathian Vulture, Blooming Ochu, Drakespur, Pollen Cluster, Dravanian Hornet, Eruca (enemy), Abalathian Fox, Sacred Drake, Pyrodragon, Overgrown Difflugia, Abalathian Tursus, Ice Boulder, Glacier Sprite, Cryodragon, Chyme of the Mountain, Deep-mountain Gallimimus, Sacred Biast, Deep-mountain Wyvern, Ergodragon, Wounded Cryodragon, Wounded Pyrodragon",
+   "objectives": "Defeat Raskovnik. | Defeat Myath. | Defeat Tioman.",
+   "unlockQuest": "Mourn in Passing",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Forelands (8,6)",
+   "baseExp": "210,000",
+   "roulette": "leveling"
+  },
+  "221": {
+   "bosses": "The Leightonward, Gowrow, Lava Scorpion",
+   "monsters": "Nesting Anzu, Abalathian Vulture, Blooming Chichu, Mountaintop Miacid, Mountaintop Hropken, Mountaintop Opken, Overgrown Difflugia, Abalathian Ogrebon, Giant Netherworm, Netherworm, Abalathian Clay Golem, Blood of the Mountain, Lava Crab (Enemy), Volcano Anala, The Scorpion's Claw, The Scorpion's Tail",
+   "objectives": "Arrive at the Wound. 0/1 | Defeat The Leightonward. 0/1 | Arrive in the Fever. 0/1 | Defeat Gowrow. 0/1 | Clear the Heart. 0/1 | Defeat the lava scorpion. 0/1",
+   "unlockQuest": "The Fires of Sohm Al",
+   "timeLimitMinutes": "90",
+   "entrance": "The Churning Mists (26.1,36.7)",
+   "roulette": "High-level Dungeons"
+  },
+  "171": {
+   "bosses": "Chieftain Moglin, Poqhiraj, Hraesvelgr",
+   "monsters": "Cloud Gardener, Garden Cloudtrap, Sanctuary Skipper, Enchanted Fan (Enemy), Garden Melia, Garden Sankchinni, Pomguard Pompincher, Pomguard Pomchopper, Captain Mogsun, Sohr Khai Buzzard, Sohr Khai Anzu Egg, Sohr Khai Cockerel, Sohr Khai Anzu, Sanctuary Tsanahale, Kargas, Hraesvelgr Broodling, Holy Wyvern, Blizzard Dragon",
+   "objectives": "Overcome Unsevered Despair | Overcome Unstifled Prayer | Defeat Hraesvelgr",
+   "unlockQuest": "Winning over the Wyrm",
+   "timeLimitMinutes": "90",
+   "entrance": "The Churning Mists (7.8,27.8)",
+   "baseExp": "155,200",
+   "roulette": "High-level Dungeons"
+  },
+  "870": {
+   "bosses": "Empress of the Winds: Barbariccia",
+   "unlockQuest": "The Wind Rises",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "871": {
+   "bosses": "Empress of the Winds: Barbariccia",
+   "unlockQuest": "I Wandered Sharlayan as a Minstrel",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "102": {
+   "bosses": "Scylla, Glasya Labolas, Amon, Xande",
+   "objectives": "Clear the ladder of Ascension | Defeat Scylla | Clear the Braid | Defeat Glasya Labolas | Clear the Golden Sacristy | Defeat Amon | Defeat Xande",
+   "unlockQuest": "Syrcus Tower (Quest)",
+   "timeLimitMinutes": "120",
+   "entrance": "Mor Dhona (35.7, 20.0)",
+   "roulette": "alliance raid"
+  },
+  "834": {
+   "bosses": "Barreltender, Anthracite, Inexplicable Entity: The Greatest Serpent of Tural",
+   "monsters": "Valley Saguarotender, Valley Barbmole, Valley Nopalitender, Valley Tumbleclaw, Valley Campeador, Valley Sabotender, Valley Cactuar, Valley Flowertender, Valley Megamaguey, Valley Aspis, Valley Cliffkite, Valley Digger, Valley Gedan, Yok Huy Orb, Yok Huy Vessel, Yok Huy Altar, Yok Huy Attestant",
+   "unlockQuest": "It Belongs in a Museum",
+   "timeLimitMinutes": "90",
+   "entrance": "Shaaloani (29.0, 6.0)",
+   "roulette": "Level Cap Dungeons"
+  },
+  "962": {
+   "bosses": "Thaliak, Llymlaen, Oschon, The Twelve: Eulogia",
+   "unlockQuest": "The Heart of the Myth",
+   "timeLimitMinutes": "120",
+   "entrance": "The Omphalos (6.8, 8.4)",
+   "roulette": "Alliance Raids"
+  },
+  "964": {
+   "bosses": "Insatiable Vessel: Zeromus",
+   "unlockQuest": "Down in the Dark",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "965": {
+   "bosses": "Insatiable Vessel: Zeromus",
+   "unlockQuest": "I Wandered Sharlayan as a Minstrel",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "39": {
+   "bosses": "Rangda, Gyascutus, Nidhogg",
+   "monsters": "Dran Sorn Gahr, Aery Wyvern, Aery Biast, Thunderbolt Sprite, Cloud Chaser, Leyak, Nidhogg Broodling, Aery Red Dragon, Nehd Sorn Gahr, Aery Drake, Aery Yellow Dragon, Lesser Aery Dragon, Aery Diresaur, Aery Vouivre, Down Wyvern, The Sable Price, Liegedrake, Ahleh",
+   "objectives": "Clear the Aery exterior. | Defeat Rangda. | Clear the Aery interior. | Defeat Gyascutus. | Clear Errn Scorh. | Defeat Nidhogg.",
+   "unlockQuest": "Into the Aery",
+   "timeLimitMinutes": "90",
+   "entrance": "Foundation (7,10)",
+   "baseExp": "220,000",
+   "roulette": "leveling"
+  },
+  "822": {
+   "bosses": "Lyngbakr, Arkas, Slumbering Scourge: Octomammoth",
+   "monsters": "Haam Aurelia, Haam Frostbeast, Haam Otodus, Haam Halonid, Haam Auk, Haam Yakow, Haam Troll, Haam Golem, Haam Crystal, Haam Polycrystal, Haam Myrrlith, Haam Dhruva, Haam Forlorn, Mammoth Tentacle",
+   "objectives": "Arrive on the landfast floe | Clear the landfast floe | Arrive in Cyancap Cavern | Clear Cyancap Cavern | Arrive in the Deep Below | Defeat the Octomammoth",
+   "unlockQuest": "Going Haam",
+   "timeLimitMinutes": "90",
+   "entrance": "Old Sharlayan (13.9,16.0)",
+   "roulette": "High-level Dungeons"
+  },
+  "38": {
+   "bosses": "Regula van Hydrus, Harmachis, Lahabrea & Igeyorhm, Ascian Prime",
+   "monsters": "Clockwork Repurposer, Clockwork Hunter, Clockwork Avenger, Enforcement Droid 210, Scrambled Engineer, Scrambled Paladin, Scrambled Iron Claw, Scrambled Iron Giant, 6th Legion Magitek Vanguard H-1, 6th Legion Medicus, 6th Legion Tesserarius, 6th Legion Optio, Magitek Turret I, Precultured Biomass, Bioculture Node, Cultured Naga, Cultured Empuse, Cultured Cobra, Cultured Bowyer, Cultured Dancer, Biohazard, Cultured Mirrorknight, Cultured Reptoid, Cultured Chimera, Monitoring Drone, Facility Dreadnaught, Cloned Conjurer, Cloned Thaumaturge, Cultured Shabti, Arcane Sphere (Ascian Prime)",
+   "objectives": "Clear Analysis and Proving. | Clear Bioweapons Research. | Defeat Harmachis. | Defeat all opposition. | Defeat the Ascian prime.",
+   "unlockQuest": "Heavensward (Quest)",
+   "timeLimitMinutes": "90",
+   "entrance": "Azys Lla (21.4, 22.5, 8.7)",
+   "roulette": "High-level Dungeons"
+  },
+  "1061": {
+   "bosses": "Grasping Eternity: Necron",
+   "unlockQuest": "A Terminal Invitation",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "786": {
+   "bosses": "Livia the Undeterred, Rhitahtyn the Unshakable, Sundered Soul: Amon the Undying",
+   "monsters": "Sinking Resentment, Sinking Arrogance, Sinking Cynicism, Sinking Rivalry, Ilberd the Unrelenting, Sinking Desire, Sinking Dissension, Sinking Partiality, Sinking Dishonesty, Sinking Impatience, Sinking Imparity, Sinking Regret",
+   "objectives": "Arrive at the central observatory | Clear the central observatory | Arrive at the saltcrystal strings | Clear the saltcrystal strings | Arrive at Midnight Downwell | Defeat Amon the Undying",
+   "unlockQuest": "Her Children, One and All",
+   "timeLimitMinutes": "90",
+   "entrance": "Labyrinthos (16.7, 28.3)",
+   "roulette": "Leveling"
+  },
+  "80": {
+   "bosses": "Lady of Frost: Shiva",
+   "unlockQuest": "Drop Dead Shiva",
+   "timeLimitMinutes": "60",
+   "entrance": "Coerthas Central Highlands (3.1, 21.2)",
+   "roulette": "mentor"
+  },
+  "79": {
+   "bosses": "Lady of Frost: Shiva",
+   "unlockQuest": "The Instruments of Our Deliverance‎",
+   "timeLimitMinutes": "60",
+   "entrance": "Coerthas Central Highlands (3.1, 21.2)",
+   "roulette": "trials"
+  },
+  "141": {
+   "bosses": "Zuro Roggo, Ziggy, Calcabrina",
+   "monsters": "Poroggo Rivertamer, Tamed Leech, Tamed Bifericeras, Tamed Hropken, Sharlayan Mimic, Spriggan Doorkeeper, Fire Homunculus, Eroding Marolith, Massive Marolith, Wind-up Magus, Wind-up Viking, Centaur (Enemy)",
+   "objectives": "Clear the Manifest. 0/1 | Clear Where Hearts Leap. 0/1 | Clear Where All Witness. 0/1",
+   "unlockQuest": "The Word of the Mother",
+   "timeLimitMinutes": "90",
+   "entrance": "Matoya's Cave (Zone) (6.8,6.4)",
+   "baseExp": "122,000",
+   "roulette": "High-level Dungeons"
+  },
+  "5": {
+   "bosses": "Locksmith, Coincounter, Miser's Mistress, Tank Mechanics",
+   "monsters": "Eftstool, Nether Nix, Lily of the Vale, Vale Wasp, Morbol Fruit, Morbol Seedling (Enemy), Goldvine, Vale Bat, Vale Diremite, Vale Banemite, Poisoned Peasant",
+   "objectives": "Breach the Lock. | Defeat the morbol bed keeper. | Clear the Coincounter's Chest. | Defeat the morbol bed keepers.",
+   "unlockQuest": "Going for Gold",
+   "timeLimitMinutes": "90",
+   "entrance": "Coerthas Central Highlands (14,35)",
+   "roulette": "leveling"
+  },
+  "93": {
+   "bosses": "ADS, Caduceus",
+   "monsters": "Dark Matter Mantis, Dark Matter Pelican, Dark Matter Pteroc, Dark Matter Golem",
+   "objectives": "Gain access to the Exploratory Site | Breach the aetherial fields | Defeat Caduceus",
+   "unlockQuest": "Primal Awakening",
+   "timeLimitMinutes": "90",
+   "entrance": "Eastern La Noscea (21.7, 22.3)"
+  },
+  "94": {
+   "bosses": "Multiple ADS-type bosses, ADS",
+   "unlockQuest": "Primal Awakening",
+   "timeLimitMinutes": "90",
+   "entrance": "Eastern La Noscea (21.7, 22.3)"
+  },
+  "95": {
+   "monsters": "Dark Matter Mantis, Dreadguard, Dark Matter Golem, Dark Matter Slug, Dark Matter Aurelia",
+   "unlockQuest": "Primal Awakening",
+   "timeLimitMinutes": "90",
+   "entrance": "Eastern La Noscea (21.7, 22.3)"
+  },
+  "96": {
+   "bosses": "Clockwork Brigade",
+   "monsters": "Clockwork Bug (Enemy), Clockwork Soldier (Enemy), Clockwork Knight (Enemy), Clockwork Dreadnaught (Enemy), Spinner-rook (Enemy)",
+   "unlockQuest": "Primal Awakening",
+   "timeLimitMinutes": "90",
+   "entrance": "Eastern La Noscea (21.7, 22.3)"
+  },
+  "97": {
+   "bosses": "Twintania, Phase 1: 100% - 85%, Phase 2: 85% - 55%, Phase 3: Divebombs, Phase 4: 55% - 30%, Phase 5: 30% - 0%",
+   "unlockQuest": "Primal Awakening",
+   "timeLimitMinutes": "90",
+   "entrance": "Eastern La Noscea (21.7, 22.3)"
+  },
+  "56": {
+   "bosses": "Lord of the Inferno: Ifrit",
+   "unlockQuest": "Lord of the Inferno",
+   "timeLimitMinutes": "60",
+   "entrance": "Zanr'ak (zone) (20.4, 10.0)",
+   "roulette": "leveling"
+  },
+  "63": {
+   "bosses": "Lord of the Inferno: Ifrit",
+   "unlockQuest": "Ifrit Ain't Broke",
+   "timeLimitMinutes": "60",
+   "entrance": "Southern Thanalan (35.3, 19.6)",
+   "roulette": "mentor"
+  },
+  "59": {
+   "bosses": "Lord of the Inferno: Ifrit",
+   "unlockQuest": "Ifrit Bleeds, We Can Kill It",
+   "timeLimitMinutes": "60",
+   "entrance": "Southern Thanalan (35.3, 19.6)",
+   "roulette": "trials"
+  },
+  "585": {
+   "bosses": "Hedetet, Defective Drone, Mist Dragon",
+   "monsters": "Kukulkan (Enemy), Dancing Marionette, Charred Luminare, Desert Desman, Charred Droid, Charred Paladin, Charred Drone, Charred Dreadnaught, Charred Coblyn, Charred Doblyn, Mining Drone (Enemy), Rock Biter, Repurposed Dreadnaught, Gigaworm Stalker, Gigaworm, Veiled Gigaworm, Worm Stalker, Mist (Enemy), Draconic Regard",
+   "objectives": "Arrive in the Scorpion's Den | Clear the Scorpion's Den | Arrive in the Gamma Segregate | Clear the Gamma Segregate | Arrive in the Aspersory | Defeat the mist dragon",
+   "unlockQuest": "Feel the Burn",
+   "timeLimitMinutes": "90",
+   "entrance": "Yanxia (28.1, 10.8)",
+   "baseExp": "187,500",
+   "roulette": "High-level Dungeons"
+  },
+  "84": {
+   "bosses": "Ascian: Nabriales",
+   "unlockQuest": "An Uninvited Ascian",
+   "timeLimitMinutes": "60",
+   "roulette": "trials"
+  },
+  "781": {
+   "bosses": "Mark I Anti-Eikon Warmachina: The Diamond Weapon",
+   "unlockQuest": "Duty in the Sky with Diamond",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "782": {
+   "bosses": "Mark I Anti-Eikon Warmachina: The Diamond Weapon",
+   "unlockQuest": "Weapon of Choice",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "1010": {
+   "bosses": "Stygian Sovereign: The Cloud of Darkness",
+   "timeLimitMinutes": "90"
+  },
+  "104": {
+   "bosses": "Adds, Melusine, General Mechanics, Petrification Mechanics, Phase 1: 100% - 80%, Phase 2: 80% - 65%, Phase 3: 65% - 50%, Phase 4: 50% - 0%",
+   "unlockQuest": "Sing Me Another Song",
+   "timeLimitMinutes": "90"
+  },
+  "700": {
+   "bosses": "Serial-jointed Command Model, Hobbes, Engels, 9S-operated Walking Fortress)",
+   "objectives": "Clear Warehouse | Clear Warehouse B | Clear Quality Assurance | Clear Warehouse C | Clear the Forward Deck | Clear the Rear Deck",
+   "unlockQuest": "On the Threshold",
+   "timeLimitMinutes": "120",
+   "entrance": "Excavation Tunnels (6.0,4.2)",
+   "roulette": "alliance raid"
+  },
+  "666": {
+   "bosses": "Lightwarden: Innocence",
+   "unlockQuest": "Extinguishing the Last Light",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "667": {
+   "bosses": "Lightwarden: Innocence",
+   "unlockQuest": "Minstrel from Another Mother",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "657": {
+   "bosses": "Lightwarden: Titania",
+   "unlockQuest": "Acht-la Ormh Inn",
+   "timeLimitMinutes": "60",
+   "entrance": "Il Mheg (18.6, 16.1, 1.1)",
+   "roulette": "Trials"
+  },
+  "658": {
+   "bosses": "Lightwarden: Titania",
+   "unlockQuest": "Minstrel from Another Mother",
+   "timeLimitMinutes": "60",
+   "entrance": "Il Mheg (18.6, 16.1, 1.1)",
+   "roulette": "Mentor"
+  },
+  "802": {
+   "bosses": "Eternal Darkness: Zodiark",
+   "unlockQuest": "The Martyr",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "792": {
+   "bosses": "Caustic Grebuloff, Peacekeeper, The Last Mercy: Ra-la",
+   "monsters": "Warped Flesh (Umbril), Warped Flesh (Flan), Warped Flesh (Specter), Freedom Fighter, Landed Freedom Fighter, Airborne Freedom Fighter, Golden Wings, Xenofauna, Xenoflora, Xenoprotist",
+   "unlockQuest": "Endwalker (Quest)",
+   "timeLimitMinutes": "90",
+   "entrance": "Ultima Thule (21.4, 21.2)",
+   "roulette": "High-level Dungeons"
+  },
+  "81": {
+   "bosses": "Ultros & Typhon",
+   "unlockQuest": "The Coliseum Conundrum",
+   "timeLimitMinutes": "60",
+   "entrance": "Eastern Thanalan (14.7, 30.2)",
+   "roulette": "trials"
+  },
+  "279": {
+   "bosses": "Kelpie, The Old One, Hrodric Poisontongue",
+   "monsters": "Skalla Soblyn, Skalla Nanka, Salt Swallow Larva, Salt Swallow, Stone Phoebad, Urolith Sentinel, Dhara Sentinel, Subservient, Zangbeto (Enemy), Lightless Homunculus, Rotting Royal, Accursed Idol",
+   "objectives": "Arrive at the Green Screams | Defeat Kelpie | Arrive at a Door Unopened | Defeat the Old One | Arrive at the Golden Walls of Ruin | Defeat Hrodric Poisontongue",
+   "unlockQuest": "The Mad King's Trove",
+   "timeLimitMinutes": "90",
+   "entrance": "The Lochs (26.5, 21.2, -2.8)",
+   "roulette": "High-level Dungeons"
+  },
+  "36": {
+   "bosses": "Towering Oliphant, Ser Yuhelmeric, Opinicus",
+   "monsters": "Nestless Falcon, Muddy Zoblyn, Stronghold Mylodon, Snoll, Frostbitten Chirurgeon, Frostbitten Archer, Fading Soul, Frostbitten Officer, Frostbitten Conscript, Frostbitten Soldier, Frostbitten War Hound, Frostbitten Sentry, Frozen Knight, Frozen Chirurgeon, Stronghold Tursus, Icetrap, Hailstorm Sprite, Dusk Wolf",
+   "objectives": "Clear the outer training grounds. | Topple the towering oliphant. | Clear the barracks. | Slay Ser Yuhelmeric. | Clear the keep. | Defeat Opinicus.",
+   "unlockQuest": "For All the Nights to Come",
+   "timeLimitMinutes": "90",
+   "entrance": "Coerthas Western Highlands (20,7)",
+   "baseExp": "200,000",
+   "roulette": "leveling"
+  },
+  "687": {
+   "bosses": "Hades",
+   "unlockQuest": "Shadowbringers (Quest)",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "694": {
+   "timeLimitMinutes": "120"
+  },
+  "869": {
+   "bosses": "Evil Dreamers, Beatrice, Blighted Despot: Scarmiglione",
+   "monsters": "Troian Sentry, Troian Scavenger, Troian Pawn, Troian Footman, Troian Guard, Troian Hound, Troian Rider, Troian Bishop, Troian Knight, Troian Trapper, Troian Butler, Troian Equerry, Troian Steward, Necroserf",
+   "objectives": "Arrive at Penitence | Clear Penitence | Arrive in the Seat of the Foremost | Clear the Seat of the Foremost | Arrive at the Garden of Epopts: | Defeat Scarmiglione",
+   "unlockQuest": "In Search of Azdaja",
+   "timeLimitMinutes": "90",
+   "entrance": "Alzadaal's Legacy (Zone) (13.1, 9.5)",
+   "roulette": "High-level Dungeons"
+  },
+  "107": {
+   "bosses": "Imdugud, Phase 1: 100% - 83%, Phase 2: 83% - 77%, Phase 3: 77% - 54%, Phase 4: 54% - 44%, Phase 5 - 44% - 0%",
+   "monsters": "Clockwork Spider, Dark Matter Slime, Allagan Naga, Lamia Sharper, Lamia Bellydancer",
+   "unlockQuest": "Fragments of Truth",
+   "timeLimitMinutes": "90",
+   "entrance": "Northern Thanalan (19,20)"
+  },
+  "108": {
+   "bosses": "Kaliya",
+   "monsters": "Scouting Node, Spanner-rook, Valiant",
+   "unlockQuest": "Fragments of Truth",
+   "timeLimitMinutes": "90",
+   "entrance": "Northern Thanalan (19,20)"
+  },
+  "109": {
+   "bosses": "Phoenix",
+   "unlockQuest": "Fragments of Truth",
+   "timeLimitMinutes": "90",
+   "entrance": "Northern Thanalan (19,20)"
+  },
+  "110": {
+   "bosses": "Bahamut Prime",
+   "unlockQuest": "Fragments of Truth",
+   "timeLimitMinutes": "90",
+   "entrance": "Northern Thanalan (19,20)"
+  },
+  "796": {
+   "bosses": "The Endsinger",
+   "unlockQuest": "Endwalker (Quest)",
+   "timeLimitMinutes": "60",
+   "entrance": "The Final Day (Zone) (6.1,6.2)",
+   "roulette": "Trials"
+  },
+  "169": {
+   "bosses": "Nidhogg",
+   "unlockQuest": "An End to the Song",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "35": {
+   "bosses": "Phantom Ray, Minotaur, The Curator",
+   "monsters": "Immortalized Clockwork Soldier, Immortalized Clockwork Knight, Immortalized Clockwork Dreadnaught, Manikin Pugilist, Manikin Marauder, Manikin Conjurer, Flawless Empuse, Shabti (enemy), Iksalion (enemy), Flawless Naga, Flawless Chimera, Flawed Shabti, Clockwork Predator (enemy), Immortalized Death Claw, Retooled Enforcement Droid, Immortalized Interceptor Drone, Clockwork Reservoir, Immortalized Colossus, Clockwork Alarum",
+   "objectives": "Clear the History Gallery 0/1 | Defeat the phantom ray. 0/1 | Clear the Soldiery Gallery. 0/1 | Defeat the minotaur. 0/1 | Clear a route to the Security Deck. 0/1 | Activate the violet control unit. 0/1 | Activate the crimson control unit. 0/1 | Activate the emerald control unit. 0/1 | Defeat the Curator. 0/1",
+   "unlockQuest": "Do It for Gilly",
+   "timeLimitMinutes": "90",
+   "entrance": "Azys Lla (22.5,39.0,7.1)",
+   "roulette": "High-level Dungeons"
+  },
+  "285": {
+   "bosses": "Motherbit, The Ultima Warrior, The Ultima Beast",
+   "monsters": "Immortalized Predator, Prototype Claw, Servomechanical Minotaur (enemy), Servomechanical Chimera (enemy), Lone Shabti, Prototype Mirrorknight, Rinkhals, Prototype Empusa, Biomanufactured Naga, Biopellet, Proto-chimera, Biomanufactured Minotaur, Biomanufactured Brobinyak",
+   "objectives": "Arrive at the Reality Augmentation Bay | Defeat Motherbit | Arrive at Exhibit Level VIII | Defeat the Ultima Warrior | Arrive at the Genesis Engine | Defeat the Ultima Beast",
+   "unlockQuest": "An Unwanted Truth",
+   "timeLimitMinutes": "90",
+   "entrance": "Azys Lla (22.5,39.0,7.1)",
+   "roulette": "High-level Dungeons"
+  },
+  "611": {
+   "bosses": "Mark III-B Magitek Colossus, Prometheus, Annia quo Soranus and Julia quo Soranus",
+   "monsters": "Schola Secutor, Schola Eques, Schola Centurion, Schola Laquearius, Schola Predator, Schola Sky Armor, Schola Canis Pugnax, Schola Gunship, Schola Armored Weapon, Schola Avenger, Schola Scorpion, Schola Rearguard, Schola Colossus, Schola Hexadrone, Schola Mark II Colossus, Schola Colossus Rubricatus",
+   "objectives": "Arrive on the Field of Dust | Clear the Field of Dust | Arrive at the Impact Crater | Clear the Impact Crater | Arrive at the Provisional Imperial Landing | Defeat Julia and Annia",
+   "unlockQuest": "The Face of War",
+   "timeLimitMinutes": "90",
+   "entrance": "Eorzean Alliance Headquarters (6.2, 6.1)",
+   "roulette": "High-level Dungeons"
+  },
+  "69": {
+   "bosses": "False Manusya: Asura",
+   "unlockQuest": "Gentlemen at Heart",
+   "timeLimitMinutes": "60"
+  },
+  "692": {
+   "bosses": "Seeker of Solitude, Leannan Sith, Insatiable Flame: Lugus",
+   "monsters": "Over Armor, Agilulfo, Over Weapon, Magicked Broom, Bellporxie, Cosmos Witchweed, Cosmos Echo, Cosmos Snapweed, Cosmos Ya-te-veo, Paraporxie, Lover's Ring, Draco Statue, Ser Grymme, Ser Intheran, Ser Mothbert, Ser Javyth, Ser Phinibert, Ser Hamonth, Lord Tolthewil",
+   "objectives": "Arrive at the Martial Court | Clear the Martial Court | Arrive at the Font of Quintessence | Clear the Font of Quintessence | Arrive at the Chamber of Celestial Song | Defeat Lugus",
+   "unlockQuest": "A Grand Adventure",
+   "timeLimitMinutes": "90",
+   "entrance": "Lakeland (19.0, 34.4)",
+   "roulette": "High-level Dungeons"
+  },
+  "196": {
+   "bosses": "Demon of the Tome, Liquid Flame, Strix",
+   "monsters": "Bibliophobe, Spine Breaker, Bibliolater, Bibliovore, High Baboulas, Baboulas (Enemy), Inkstain, Enchanted Inkhorn, Bibliophagist, Fire Homunculus, Biblioclast, Forbidden Tome, Poroggo Polist, Poroggo Pelist, Mechanoscribe, Mechanoservitor, Mechanomagus, Apanda (Enemy)",
+   "objectives": "Arrive in the Hall of Magicks. | Clear the Hall of Magicks. | Arrive in the Astrology and Astromancy Camera. | Clear the Astrology and Astromancy Camera. | Arrive in the Rare Tomes Room. | Defeat Strix.",
+   "unlockQuest": "Let Me Gubal That for You",
+   "timeLimitMinutes": "90",
+   "entrance": "The Dravanian Hinterlands (28.6,37.9)",
+   "roulette": "High-level Dungeons"
+  },
+  "474": {
+   "bosses": "Rathalos",
+   "unlockQuest": "The New King on the Block",
+   "timeLimitMinutes": "60",
+   "entrance": "The Azim Steppe (11.3, 11.1)",
+   "roulette": "Trials"
+  },
+  "475": {
+   "bosses": "Rathalos",
+   "unlockQuest": "The Newer King on the Block",
+   "timeLimitMinutes": "60",
+   "entrance": "The Azim Steppe (11.3, 11.1, 0.7)",
+   "roulette": "Mentor"
+  },
+  "737": {
+   "bosses": "Spectral Thief, Spectral Necromancer, Distant Ideal: Spectral Berserker",
+   "monsters": "Spectral Paladin, Spectral Monk (enemy), Spectral Black Mage, Spectral White Mage, Spectral Samurai, Spectral Bard, Spectral Dragoon, Chicken Knife (Enemy), Spectral Ink Mage, Necrobomb",
+   "objectives": "Arrive in the Mount Argai Mines | Clear the Mount Argai Mines | Arrive in the Summer Ballroom | Clear the Summer Ballroom | Arrive in the Illuminated Plaza | Defeat the spectral berserker",
+   "unlockQuest": "The Converging Light",
+   "timeLimitMinutes": "90",
+   "entrance": "Eulmore (12.4, 11.2)",
+   "roulette": "High-level Dungeons"
+  },
+  "58": {
+   "bosses": "Lady of the Vortex: Garuda",
+   "unlockQuest": "Lady of the Vortex",
+   "timeLimitMinutes": "60",
+   "roulette": "leveling"
+  },
+  "65": {
+   "bosses": "Lady of the Vortex: Garuda",
+   "unlockQuest": "Gale-force Warning",
+   "timeLimitMinutes": "60",
+   "entrance": "Coerthas Central Highlands (34.3, 24.9)",
+   "roulette": "mentor"
+  },
+  "61": {
+   "bosses": "Lady of the Vortex: Garuda",
+   "unlockQuest": "In for Garuda Awakening",
+   "timeLimitMinutes": "60",
+   "entrance": "Coerthas Central Highlands (34.3, 24.9)",
+   "roulette": "trials"
+  },
+  "984": {
+   "bosses": "Queen Eternal",
+   "unlockQuest": "Dawntrail (Quest)",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "290": {
+   "bosses": "Auspice: Byakko",
+   "unlockQuest": "An Auspicious Encounter",
+   "timeLimitMinutes": "60",
+   "entrance": "Yanxia (31.4, 6.1)",
+   "roulette": "Trials"
+  },
+  "291": {
+   "bosses": "Auspice: Byakko",
+   "unlockQuest": "Songs in the Key of Kugane",
+   "timeLimitMinutes": "60",
+   "entrance": "Yanxia (31.4, 6.1)",
+   "roulette": "Mentor"
+  },
+  "32": {
+   "bosses": "Einhander, Magitek Gunship, Midgardsormr",
+   "monsters": "Harness Snipper, Codpiece Clipper, Cermet Coblyn, Lake Pugil, Lake Nanka, Son of the Keeper, Hull Nix, 6th Cohort Secutor, 6th Cohort Laquearius, 6th Cohort Vanguard, 6th Cohort Centurion, 6th Cohort Eques, Magitek Field Inductor, 6th Cohort Colossus, 6th Cohort Signifer, Silver Falcon, Loyal Dragonfly, Loyal Biast, Loyal Wyvern, Mirage Dragon",
+   "objectives": "Clear the Agrius hull | Deactivate the Garlean barriers | Clear the Cereleum Spill | Defeat ???",
+   "unlockQuest": "The Rising Chorus",
+   "timeLimitMinutes": "90",
+   "entrance": "Mor Dhona (28,14)",
+   "roulette": "High-level Dungeons"
+  },
+  "92": {
+   "bosses": "Bone Dragon, Thanatos, King Behemoth, Phlegethon",
+   "objectives": "Activate the Allagan teleporters | Clear the Pools of Obllivion | Defeat the bone dragon | Clear the Walk of Lament | Defeat Thanatos | Clear the Walk of Fire | Defeat the king behemoth | Defeat Phlegethon",
+   "unlockQuest": "Labyrinth of the Ancients",
+   "timeLimitMinutes": "120",
+   "entrance": "Mor Dhona (35.7, 20.0)",
+   "roulette": "alliance raid"
+  },
+  "89": {
+   "bosses": "Lord of the Mists: Bismarck",
+   "unlockQuest": "The Diabolical Bismarck",
+   "timeLimitMinutes": "60",
+   "entrance": "The Sea of Clouds (29.8, 27.5, 3.7)",
+   "roulette": "Mentor"
+  },
+  "88": {
+   "bosses": "Lord of the Mists: Bismarck",
+   "unlockQuest": "Bolt, Chain, and Island",
+   "timeLimitMinutes": "60",
+   "entrance": "The Sea of Clouds (19.5, 11.7, 2.2)",
+   "roulette": "Trials"
+  },
+  "22": {
+   "bosses": "Decaying Gourmand, Arioch, Diabolos",
+   "monsters": "Demonstool, Wamoura (Enemy), Ruins Dross, Gremlin (Enemy), Mold Colony, Tainted Mold, Hecteyes (Enemy), Madmite, Wamouracampa (Enemy), Gadfly, Ranch Wamoura, Dastardly Devilet, Baalzephon, Allotaur, White Magestone, Dirty Eye",
+   "objectives": "Clear the Halcyon Court | Clear the Tower of White | Defeat Diabolos",
+   "unlockQuest": "One Night in Amdapor",
+   "timeLimitMinutes": "90",
+   "entrance": "South Shroud",
+   "roulette": "High-level Dungeons"
+  },
+  "140": {
+   "bosses": "Achamoth, Winged Lion, Kuribu",
+   "monsters": "Scarab Beetle, Unfortunate Eggs, Magicked Crawler, Ranting Ranks Gremlin, Magicked Wamoura, Rift Dragon, Amdapori Corpse, Mhachi Corpse, Void Monk (Enemy), Dusty Eye, Arcane Sphere (Winged Lion), Amdapori Gargoyle, Light Sprite, Clay Effigy, Mana Idol (Enemy), Mana Pot (Enemy), High Putto, Low Putto",
+   "objectives": "Unfortunate eggs destroyed | Defeat Achamoth | Eliminate the threat in the Sanctum of Dreams | Defeat the winged lion | Eliminate the threat in the Crystallum | Defeat Kuribu",
+   "unlockQuest": "One More Night in Amdapor",
+   "timeLimitMinutes": "90",
+   "entrance": "South Shroud (14.2,30.6)",
+   "roulette": "High-level Dungeons"
+  },
+  "823": {
+   "bosses": "Dark Elf, Damcyan Antlion, Memoriate: Durante",
+   "monsters": "Voidmoon Panopt, Voidmoon Plague, Voidmoon Dahak, Voidmoon Arch Demon, Voidmoon Archaeodemon, Voidmoon Humbaba, Frenzied Morbol, Frenzied Goblin, Frenzied Cockerel, Memoriate of Darkness (enemy), Frenzied Peiste, Frenzied Manticore, Frenzied Behemoth, Stone Pillar, Armor of Baron, Original Hellhound, Baron Jester, Original Gargoyle, Original Progenitrix, Dark Grenade, Original Blackguard, Vampiress, Aetheric Charge",
+   "unlockQuest": "Down in the Dark",
+   "timeLimitMinutes": "90",
+   "entrance": "The Red Moon (6.0, 2.9)",
+   "roulette": "High-level Dungeons"
+  },
+  "1028": {
+   "bosses": "Chirurgeon General, Hooded Headsmen, Memory Meld: The Immortal Remains",
+   "monsters": "Terminal Watchman, Terminal Leptocyon, Preserved Medic, Terminal Claw, Terminal Bot, Preserved Prisoner, Terminal Dataguarder, Terminal Turret, Preserved Soldier",
+   "unlockQuest": "A Terminal Invitation",
+   "timeLimitMinutes": "90",
+   "entrance": "Living Memory (21.3, 28.6)",
+   "roulette": "Level Cap Dungeons"
+  },
+  "846": {
+   "bosses": "The Endsinger",
+   "unlockQuest": "I Wandered Sharlayan as a Minstrel",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "693": {
+   "bosses": "Hades",
+   "unlockQuest": "Minstrel from Another Mother",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "791": {
+   "bosses": "Divine Light: Hydaelyn",
+   "unlockQuest": "I Wandered Sharlayan as a Minstrel",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "1062": {
+   "bosses": "Grasping Eternity: Necron",
+   "timeLimitMinutes": "60"
+  },
+  "170": {
+   "bosses": "Nidhogg",
+   "unlockQuest": "Nidhogg's Rage",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "278": {
+   "bosses": "Primal: Shinryu",
+   "unlockQuest": "Songs in the Key of Kugane",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "1017": {
+   "bosses": "Queen Eternal",
+   "timeLimitMinutes": "60"
+  },
+  "91": {
+   "unlockQuest": "Thordan's Reign",
+   "timeLimitMinutes": "60",
+   "entrance": "Azys Lla (21.4, 22.5, 8.7)",
+   "roulette": "Mentor"
+  },
+  "538": {
+   "bosses": "The Lady of the Moon: Tsukuyomi",
+   "unlockQuest": "Songs in the Key of Kugane",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "68": {
+   "bosses": "Anti-Eikon Warmachina: The Ultima Weapon",
+   "unlockQuest": "The Ultimate Ballad",
+   "timeLimitMinutes": "60",
+   "roulette": "mentor"
+  },
+  "803": {
+   "bosses": "Eternal Darkness: Zodiark",
+   "unlockQuest": "I Wandered Sharlayan as a Minstrel",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "790": {
+   "bosses": "Divine Light: Hydaelyn",
+   "unlockQuest": "Her Children, One and All",
+   "timeLimitMinutes": "60",
+   "entrance": "The Mothercrystal (zone) (6.1, 6.1)",
+   "roulette": "Trials"
+  },
+  "57": {
+   "bosses": "Lord of Crags: Titan",
+   "unlockQuest": "Lord of Crags",
+   "timeLimitMinutes": "60",
+   "entrance": "Upper La Noscea (29.1, 18.6)",
+   "roulette": "leveling"
+  },
+  "64": {
+   "bosses": "Lord of Crags: Titan",
+   "unlockQuest": "Quake Me Up Before You O'Ghomoro",
+   "timeLimitMinutes": "60",
+   "entrance": "Outer La Noscea (24.3, 8.9)",
+   "roulette": "mentor"
+  },
+  "60": {
+   "bosses": "Lord of Crags: Titan",
+   "unlockQuest": "In a Titan Spot",
+   "timeLimitMinutes": "60",
+   "entrance": "Outer La Noscea (24.3, 8.9)",
+   "roulette": "trials"
+  },
+  "908": {
+   "unlockQuest": "I Wandered Sharlayan as a Minstrel",
+   "timeLimitMinutes": "120"
+  },
+  "636": {
+   "bosses": "Mustadio, Agrias, The Thunder God, Ultima, the High Seraph",
+   "monsters": "Harpy, Monastic Ghost, Monastic Skeleton, Nightstalker, Dark Crusader, Ruins Dweller",
+   "objectives": "Clear the Jungle's Plea | Clear the Realm of the Machinists | Clear the Realm of the Templars | Clear the Lifeless Alley | Clear the Realm of the Thunder God | Clear the Crystalline Gaol",
+   "unlockQuest": "The City of Lost Angels",
+   "timeLimitMinutes": "120",
+   "entrance": "The Prima Vista Bridge (6.3, 6.1)",
+   "roulette": "alliance raid"
+  },
+  "243": {
+   "bosses": "Lord of the Revel: Susano",
+   "unlockQuest": "The Lord of the Revel",
+   "timeLimitMinutes": "60",
+   "entrance": "The Ruby Sea (4.7, 22.2)",
+   "roulette": "Trials"
+  },
+  "244": {
+   "bosses": "Lord of the Revel: Susano",
+   "unlockQuest": "Songs in the Key of Kugane",
+   "timeLimitMinutes": "60",
+   "entrance": "The Ruby Sea (4.7, 22.2)",
+   "roulette": "Mentor"
+  },
+  "830": {
+   "bosses": "Anti-Eikon Warmachina: The Ultima Weapon",
+   "unlockQuest": "The Ultimate Weapon",
+   "timeLimitMinutes": "60",
+   "baseExp": "172,592",
+   "roulette": "main scenario"
+  },
+  "16": {
+   "bosses": "Mark II Magitek Colossus, Nero tol Scaeva, Gaius van Baelsar, The Ultima Weapon, Lahabrea",
+   "objectives": "Imperial Identification Key: 0 | Secure the command chamber | Make for the Laboratorium Primum | Power and board magitek armor | Defeat Nero tol Scaeva | Defeat Gaius van Baelsar | Defeat the Ultima Weapon | Defeat Lahabrea",
+   "unlockQuest": "The Ultimate Weapon",
+   "timeLimitMinutes": "120",
+   "entrance": "Northern Thanalan (15,16)",
+   "roulette": "main scenario"
+  },
+  "736": {
+   "bosses": "813P-operated Aegis Unit, Superior Flight Units, 905P-operated Heavy Artillery Unit, 4C6F6E67696E67: The Compound, Compound 2P",
+   "objectives": "Clear the elevated detritus 0/1 | Clear the sunken detritus 0/1 | Clear the launch deck 0/1 | Clear core command 0/1 | Clear the passage 0/1 | Clear the bridge 0/1",
+   "unlockQuest": "Everything You Know Is Wrong",
+   "timeLimitMinutes": "120",
+   "entrance": "Kholusia (35.3,18.2,2.9)",
+   "roulette": "alliance raid"
+  },
+  "651": {
+   "bosses": "Lozatl, Batsquatch, Lightwarden: Eros",
+   "monsters": "Ronkan Dreamer, Ronkan Vessel, Ronkan Idol, Ronkan Thorn, Acro Bat, Anaconda, Horned Iguana, Razana, Forgiven Flattery, Forgiven Violence, Forgiven Thievery, Echo of Qitana",
+   "objectives": "Arrive in the Divine Threshold. | Clear the Divine Threshold. | Arrive in Shallowed Hollow. | Clear Shallowed Hollow. | Arrive at the Song of Ox'Gatorl. | Defeat Eros.",
+   "unlockQuest": "The Burden of Knowledge",
+   "timeLimitMinutes": "90",
+   "entrance": "The Rak'tika Greatwood (38.3, 13.7)",
+   "roulette": "Leveling"
+  },
+  "550": {
+   "bosses": "Famfrit, the Darkening Cloud, Belias, the Gigas, Construct 7, Yiazmat",
+   "objectives": "Defeat Famfrit, the Darkening Cloud | Clear Spire Ravel | Defeat Belias, the Gigas | Clear the Walk of Divine Ascent | Defeat Construct 7 | Arrive in the Clockwork Colliseum | Defeat Yiazmat",
+   "unlockQuest": "Annihilation",
+   "timeLimitMinutes": "120",
+   "entrance": "The Prima Vista Bridge (6.3, 6.1)",
+   "roulette": "alliance raid"
+  },
+  "281": {
+   "bosses": "Mateus, the Corrupt, Hashmal, Bringer of Order, Rofocale, Argath Thadalfus",
+   "objectives": "Arrive at the Crumbling Bridge | Defeat Mateus, The Corrupt | Arrive in the Palace Square | Defeat Hashmal, Bringer of Order | Arrive in the Garamsythe Waterway | Clear the Garamsythe Waterway | Defeat Rofocale | Arrive at the Lesalia Temple Ruins | Slay Argath Thadalfus",
+   "unlockQuest": "A City Fallen",
+   "timeLimitMinutes": "120",
+   "entrance": "The Prima Vista Bridge (6.3, 6.1)",
+   "roulette": "alliance raid"
+  },
+  "239": {
+   "bosses": "Shinryu",
+   "unlockQuest": "Stormblood (Quest)",
+   "timeLimitMinutes": "60",
+   "entrance": "The Lochs",
+   "roulette": "Trials"
+  },
+  "738": {
+   "bosses": "Warrior of Light: Elidibus",
+   "unlockQuest": "Hope's Confluence",
+   "timeLimitMinutes": "60",
+   "roulette": "Trial"
+  },
+  "739": {
+   "bosses": "Warrior of Light: Elidibus",
+   "unlockQuest": "Minstrel from Another Mother",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "103": {
+   "bosses": "Rafflesia",
+   "unlockQuest": "Sing Me Another Song",
+   "timeLimitMinutes": "90"
+  },
+  "105": {
+   "bosses": "The Avatar",
+   "unlockQuest": "Sing Me Another Song",
+   "timeLimitMinutes": "90"
+  },
+  "106": {
+   "bosses": "Nael Deus Darnus",
+   "unlockQuest": "Sing Me Another Song",
+   "timeLimitMinutes": "90"
+  },
+  "98": {
+   "bosses": "Rafflesia, Phase 1 - 100% - 70%:, Phase 2 - 70% - 40%:, Phase 3 - 40% - 0%:",
+   "monsters": "Lunar Golem, Dark Matter Cluster (Enemy)",
+   "unlockQuest": "Another Turn in the Coil",
+   "timeLimitMinutes": "90",
+   "entrance": "North Shroud (20,27)"
+  },
+  "99": {
+   "bosses": "Melusine, Phase 1: 100% - 80%, Phase 2: 80% - 60%, Phase 3: 60% - 35%, Phase 4: 35% - 0%",
+   "monsters": "Dreadguard, Lamia Dancer, Maintenance Module, Proto-chimera, Lamia Bowyer, Allagan Cobra",
+   "unlockQuest": "Another Turn in the Coil",
+   "timeLimitMinutes": "90",
+   "entrance": "North Shroud (20,27)"
+  },
+  "100": {
+   "bosses": "The Avatar",
+   "monsters": "Surveillance Module, Clockwork Bug (Enemy), Clockwork Footman, Clockwork Warrior, Shaper-rook",
+   "unlockQuest": "Another Turn in the Coil",
+   "timeLimitMinutes": "90",
+   "entrance": "North Shroud (20,27)"
+  },
+  "101": {
+   "bosses": "Nael Deus Darnus",
+   "unlockQuest": "Another Turn in the Coil",
+   "timeLimitMinutes": "90",
+   "entrance": "North Shroud (20,27)"
+  },
+  "90": {
+   "bosses": "King Thordan and His Knights Twelve",
+   "unlockQuest": "Heavensward (Quest)",
+   "timeLimitMinutes": "60",
+   "entrance": "Azys Lla (21.4, 22.5, 8.7)",
+   "roulette": "Trials"
+  },
+  "238": {
+   "bosses": "Lugat, The Governor, Lorelei",
+   "monsters": "Banshee (Enemy), Ancient Ymir, Craklaw (Enemy), Reflection of Karlabos, Albatros, Sea Monk (Enemy), Skinless Deckhand, Skinless Skipper, Warden's Hound, Rotting Captive, Undead Warden, Fleshless Captive",
+   "objectives": "Arrive at Spae Rock. 0/1 | Defeat Lugat. 0/1 | Arrive at the Warden's Delight. 0/1 | Defeat the Governor. 0/1 | Arrive at Glowering Krautz. 0/1 | Defeat Lorelei. 0/1",
+   "unlockQuest": "Not without Incident",
+   "timeLimitMinutes": "90",
+   "entrance": "La Noscea (-1, -1)",
+   "baseExp": "312,500",
+   "roulette": "leveling"
+  },
+  "829": {
+   "bosses": "Feather Ray, Firearms, Sculptor of Silence: Maulskull",
+   "monsters": "Skydeep Horror, Skydeep Arrowhead, Skydeep Banshee, Skydeep Ghost, Skydeep Specter, Skydeep Haunt, Skydeep Spider, Skydeep Cobra, Skydeep Living Rock, Skydeep Quarrier, Skydeep Vessel, Skydeep Packer, Skydeep Stonemason",
+   "unlockQuest": "Road to the Golden City",
+   "timeLimitMinutes": "90",
+   "entrance": "Yak T'el (4.9,38.8,0.0)",
+   "roulette": "Leveling"
+  },
+  "784": {
+   "bosses": "Proto-Omega, Arch-Lambda, Siege Matrix: Stigma-4",
+   "monsters": "Omicron Invader, Level Tricker, Eta Invader, Mark II Guided Missile, Lambda Invader, Delta Invader, Beta Invader, Hybrid Dragon, Omega Frame, Proto-rocket Punch",
+   "objectives": "Arrive at A-4 Command | Clear A-4 Command | Arrive at A-4 Conquest | Clear A-4 Conquest | Arrive at A-4 Headquarters | Defeat Stigma-4",
+   "unlockQuest": "Where No Loporrit Has Gone Before",
+   "timeLimitMinutes": "90",
+   "entrance": "Ultima Thule (34.8,28.8)",
+   "roulette": "High-level Dungeons"
+  },
+  "11": {
+   "bosses": "Chudo-Yudo, Koshchei, Isgebind",
+   "monsters": "Dravanian Outflyer, Dravanian Outwalker, Carrier Ziz, Ice Sprite, Dragon Aevis",
+   "objectives": "Secure the barbican | Retake the right brattice | Defeat Isgebind",
+   "unlockQuest": "In Pursuit of the Past",
+   "timeLimitMinutes": "90",
+   "entrance": "Coerthas Central Highlands (7,11)",
+   "roulette": "leveling"
+  },
+  "25": {
+   "bosses": "Gorynich, Cuca Fera, Giruveganaus, A Note regarding Unsynced",
+   "monsters": "Storm Biast, Shield Dragon, Dragonfly Hunter, Watch Wyvern, Vigil Heir, Maundering Harrier, Craving Harrier, Raving Harrier, Haranguing Harrier, Jura Aevis, Gowrow (The Stone Vigil (Hard)), Sordes, Paleoaevis, Tursus",
+   "objectives": "Slay Gorynich | Slay Cuca Fera | Obtain the main storage vault key | Slay Giruveganaus",
+   "unlockQuest": "Blood for Stone",
+   "timeLimitMinutes": "90",
+   "entrance": "Coerthas Central Highlands (7,11)",
+   "roulette": "High-level Dungeons"
+  },
+  "981": {
+   "bosses": "His Royal Headness Leonogg I, Jack-in-the-Pot, Daylit Nightmare: Träumerei",
+   "monsters": "Stray Babbler, Stray Memory, Stray Malice, Stray Nightmare, Stray Rascal, Stray Tiger, Stray Elephant, Stray Lion, Stray Hand, Stray Liemonger, Stray Glutton, Stray Doll, Stray Box, Stray Poppet",
+   "unlockQuest": "Something Stray in the Neighborhood",
+   "timeLimitMinutes": "90",
+   "entrance": "Living Memory (33.8,33.7)",
+   "roulette": "Level Cap Dungeons"
+  },
+  "78": {
+   "bosses": "Lord of Levin: Ramuh",
+   "unlockQuest": "Judgment Bolts and Lightning",
+   "timeLimitMinutes": "60",
+   "entrance": "East Shroud (25.3, 17.0)",
+   "roulette": "mentor"
+  },
+  "77": {
+   "bosses": "The Lord of Levin: Ramuh",
+   "unlockQuest": "Levin an Impression",
+   "timeLimitMinutes": "60",
+   "entrance": "East Shroud (25.3, 17.0)",
+   "roulette": "trials"
+  },
+  "9": {
+   "bosses": "Teratotaur, Temple Guardian, Adjudicator",
+   "monsters": "Temple Bat, The Accused, Temple Bee, Qarn Facer, Dung Wespe, Death Claw, Avoirdupois, Wall Crawler, The Condemned, Golem Soulstone, Temple Croc, Mythril Verge",
+   "objectives": "Clear the Oratory of Tatamefu II | Clear the Rosarium of Lalafuto I | Clear the Adytum of Lalafuto IV | Tip the Scales of Judgment | Defeat the adjudicator",
+   "unlockQuest": "Braving New Depths",
+   "timeLimitMinutes": "90",
+   "entrance": "Southern Thanalan (25,12)",
+   "roulette": "leveling"
+  },
+  "26": {
+   "bosses": "Damaged Adjudicator, Sabotender Emperatriz, Vicegerent to the Warden",
+   "monsters": "Belah'dian Knight, Belah'dian Soul, Death Sickle (Enemy), Cracked Qarn Facer, Temple Fox, Camptotaur, Tail of the Adjudicator, Arm of the Adjudicator, Head of the Adjudicator, Ruins Crawler, Temple Mite, Desert Viper, Vicegerent's Head, Vicegerent's Right Hand, Vicegerent's Left Hand, Sabotender Soldado, Sabotender Campeador, Sabotender Gaurdia, Reckless Tomb Raider, Traveled Tomb Raider, Temple Mummy, Qarn Guardian",
+   "objectives": "Find a sun sphere | Defeat the damaged adjudicator | Find a moon sphere | Slay the sabotender emperatriz | Find a star sphere | Solve the magicked trap | Slay the Vicegerent to the Warden",
+   "unlockQuest": "The Wrath of Qarn",
+   "timeLimitMinutes": "90",
+   "entrance": "Southern Thanalan (25,12)",
+   "roulette": "High-level Dungeons"
+  },
+  "536": {
+   "bosses": "Otengu, Daidarabotchi, Qitian Dasheng",
+   "monsters": "Geomantic Kiyofusa, Sai Taisui (Enemy), Geomantic Apa, Torrent, Geomantic Dhara, Geomantic Anila, Tengu Ember, River Scorpion, River Unkiu, River Ray, Jinmenju, River Hikagiri, White Baboon, Dragon Hornbill, Dragon Bi Fang, Dragon Weasel, Servant of the Sage, Shadow of the Sage",
+   "objectives": "Arrive at the Heart of the Dragon | Defeat Otengu | Arrive at the Dragon's Mouth | Defeat Daidarabotchi | Arrive at Serenity | Defeat Qitian Dasheng",
+   "unlockQuest": "Tortoise in Time",
+   "timeLimitMinutes": "90",
+   "entrance": "Yanxia (11.7, 26.9, 0.7)",
+   "roulette": "High-level Dungeons"
+  },
+  "2": {
+   "bosses": "Void Soulcounter, Galvanth the Dominator",
+   "monsters": "Ak-Inik Varlet, Fleshfly Swarm, Carrion Beetle, Croftlight, Deepcroft Miteling, Ak-Mena Groundsman, Yarzon Feeder, Inconspicuous Imp, Skeleton Soldier",
+   "objectives": "Cultist orbs destroyed | Cultist Rosaries | Sealed broken barriers | Defeat Galvanth the Dominator",
+   "unlockQuest": "Fire in the Gloom",
+   "timeLimitMinutes": "90",
+   "entrance": "Central Shroud (19,28)",
+   "baseExp": "32,623",
+   "roulette": "Leveling"
+  },
+  "24": {
+   "bosses": "Liavinne, Spare Body, Avere Bravearm",
+   "monsters": "Tam-Tara Diremite, Tam-Tara Miteling, Tam-Tara Banemite, Demon Pawn, Vodoriga Usher, Gargoyle Usher, Best Man, Bridesmaid, Dantalion, Discarded Body, Spare Soul, Spare Will, Phantom Soldier, Phantom Knight (enemy), Discarded Eye, Spare Lung, Flyblown Failure, Piscodemon, Groom-to-be",
+   "objectives": "Clear the interring chamber | Clear the Tomb of King Galvanth the Dominator | Clear Eternal Calm",
+   "unlockQuest": "Corpse Groom",
+   "timeLimitMinutes": "90",
+   "entrance": "Central Shroud (19,28)",
+   "roulette": "High-level Dungeons"
+  },
+  "236": {
+   "bosses": "Coeurl Sruti and Coeurl Smriti, Arbuda, Ivon Coeurlfist",
+   "monsters": "Temple Pup, Temple Coeurl, Moss Barrier, Temple Mossling, Carmine Wamouracampa, Bloodglider Monk, Moss Wall, Gyr Abanian Vulture, Gyr Abanian Zu, Dancing Bear, Temple Doblyn, Singha (Enemy), Singha Cub, The Way of the Fist, The Way of the Blade, The Way of the Lance, Spirit Flame, Coeurl Prana",
+   "objectives": "Clear Rhalgr's Shoulder | Defeat the coeurls | Arrive at Harmony | Defeat Arbuda | Clear the Closed Fist | Defeat Ivon Coeurlfist",
+   "unlockQuest": "To Kill a Coeurl",
+   "timeLimitMinutes": "90",
+   "entrance": "Rhalgr's Reach (12.2, 5.5)",
+   "roulette": "High-level Dungeons"
+  },
+  "1": {
+   "bosses": "Coeurl O' Nine Tails, Graffias",
+   "monsters": "Prison Pteroc, Mun-Tuy Sapling, Cell Mite, Tainted Louse, Prisoner's Delight, Warden's Whip, Prison Pudding, Mitetrap, Lightning Sprite, Fleshy Pod, Comesmite, Graffias's Tail",
+   "objectives": "Activate Confession Chamber terminal | Activate the Fool's Rest terminal | Open the Abacination Chamber door | Defeat Graffias",
+   "unlockQuest": "Into the Beast's Maw",
+   "timeLimitMinutes": "90",
+   "entrance": "South Shroud (19,18)",
+   "roulette": "leveling"
+  },
+  "779": {
+   "bosses": "Knave of Hearts, Hansel & Gretel, Red Girl, Xun-Zi and Meng-Zi, 41626572726174696F6E: False Idol, Her Inflorescence",
+   "objectives": "Clear staging node A | Clear staging node B | Clear staging node C | Clear staging node D | Clear the ascension platform | Clear Beyond",
+   "unlockQuest": "Brave New World",
+   "timeLimitMinutes": "120",
+   "entrance": "The Puppets' Bunker (9.8, 14.2)",
+   "roulette": "alliance raid"
+  },
+  "785": {
+   "bosses": "Barnabas, Lugae, Eikon of Eikons: Anima",
+   "monsters": "Babil Slasher, Babil Nimrod, Babil Bit, Babil Satellite, Babil Canis Pugnax, Tempered Imperial, Babil Reaper, Babil Predator, Babil Sky Armor, Babil Helldiver, Babil Colossus, Babil Rearguard, Babil Avenger, Babil Death Machine, Tempered Imperial (Transfigured), Babil Hexadrone, Babil Gunship, Babil Roader, Babil Armored Weapon, Babil Hypertuned Specimen",
+   "objectives": "Arrive at Magitek Servicing. 0/1 | Clear Magitek Servicing. 0/1 | Arrive at Martial Conditioning. 0/1 | Clear Martial Conditioning. 0/1 | Arrive at the Iron Womb. 0/1 | Defeat Anima. 0/1",
+   "unlockQuest": "Gateway of the Gods",
+   "timeLimitMinutes": "90",
+   "entrance": "Garlemald (10.9,7.9,-1.7)",
+   "roulette": "Leveling"
+  },
+  "783": {
+   "bosses": "Minduruva, Sanduruva, Harbingers Elect: The Magus Sisters",
+   "monsters": "Tempered Imperial, Zot Armored Fiend, Zot Sky Armor, Tempered Imperial (Transfigured), Zot Umbril, Zot Hypertuned, Zot Death Claw, Berserker Sphere, Zot Predator, Zot Roader, Zot Gunship, Mark II Zot Colossus, Zot Armored Weapon",
+   "objectives": "Arrive at Ingenuity's Ingress | Clear Ingenuity's Ingress | Arrive at Prosperity's Promise | Clear Prosperity's Promise | Arrive at Wisdom's Ward | Defeat the Magus Sisters",
+   "unlockQuest": "In the Dark of the Tower",
+   "timeLimitMinutes": "90",
+   "entrance": "Thavnair (8.7, 8.2)",
+   "roulette": "Leveling"
+  },
+  "655": {
+   "bosses": "Alpha Zaghnal, Mithridates, Artificial Enigma: The Tycoon",
+   "monsters": "Search Drone, Enforcement Droid 209, Zaghnal (enemy), Servomechanical Minotaur (enemy), Clockwork Ark Knight, Surplus Kaliya, Flanborg, Beta Zaghnal, Vitalized Iksalion, Vitalized Reptoid, Vitalized Shabti, Ghrah Maximization, Mark CXLIV Thermocoil Boilbuster",
+   "objectives": "Arrive at Repurposing | Clear Repurposing | Arrive at Aetherial Observation | Clear Aetherial Observation | Arrive at Cornice | Defeat the Tycoon",
+   "unlockQuest": "By the Time You Hear This",
+   "timeLimitMinutes": "90",
+   "entrance": "The Crystarium (12.8, 10.6)",
+   "roulette": "High-level Dungeons"
+  },
+  "1027": {
+   "bosses": "Gargant, Soldier S0, Indefatigable Defense: Valia Pira",
+   "monsters": "Sandcake, Underkeep Hornfly, Underkeep Sandworm, Underkeep Myrmecoleon, Underkeep Lizard, Underkeep Cingulata, Bygone Sentry, Bygone Alpha Sentry, Bygone Subrunner, Bygone Electrohound, Bygone Laser Cannon, Bygone Terror Knight, Bygone Roadripper",
+   "unlockQuest": "Descent to the Foundation",
+   "timeLimitMinutes": "90",
+   "entrance": "Solution Nine (10.9, 3.2)",
+   "roulette": "Level Cap Dungeons"
+  },
+  "280": {
+   "timeLimitMinutes": "120"
+  },
+  "1115": {
+   "bosses": "Sovereign of Naught: Enuo",
+   "unlockQuest": "A Grave Presentiment",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "1116": {
+   "bosses": "Sovereign of Naught: Enuo",
+   "timeLimitMinutes": "60"
+  },
+  "34": {
+   "bosses": "Ser Adelphel Brightblade, Ser Grinnaux The Bull, Ser Charibert",
+   "monsters": "Temple Banneret, Vault Ostiary, Vault Auditor, Vault Deacon, Vault Friar, Face of the Hero, White Knight, Black Knight, Vault Priest, Cathedral Gargoyle, Holy Flame",
+   "objectives": "Defeat Ser Adelphel. | Defeat Ser Grinnaux. | Defeat Ser Charibert.",
+   "unlockQuest": "A Knight's Calling",
+   "timeLimitMinutes": "90",
+   "entrance": "The Pillars (11,7)",
+   "roulette": "leveling"
+  },
+  "120": {
+   "bosses": "Cetus, Irminsul and Sawtooth, Cuchulainn, Echidna, Forward Port Ventilator",
+   "monsters": "Ark Anzu, Cloudlarker, Hybodus (Mob), Hydrosprite, Teredo Moth, Teredo Worm, The Pagan's Knot, The Pagan's Vine, Ark Morbol, Hellhound, Blackguard (Enemy), Sepulture Gargoyle",
+   "objectives": "Clear the sterncastle deck. | Slay Cetus. | Clear the forward port ventilator. | Clear the modification cell. | Clear the central Conveyance unit. | Slay Cuchulainn. | Slay Echidna.",
+   "unlockQuest": "To Rule the Skies",
+   "timeLimitMinutes": "120",
+   "entrance": "The Sea of Clouds (25.5, 5.1)",
+   "roulette": "alliance raid"
+  },
+  "949": {
+   "bosses": "Knight in Black: Golbez",
+   "unlockQuest": "Abyssal Dark",
+   "timeLimitMinutes": "60",
+   "entrance": "The Voidcast Dais (Zone) (6.1, 6.1)",
+   "roulette": "Trials"
+  },
+  "950": {
+   "bosses": "Knight in Black: Golbez",
+   "unlockQuest": "I Wandered Sharlayan as a Minstrel",
+   "timeLimitMinutes": "60",
+   "roulette": "Mentor"
+  },
+  "10": {
+   "bosses": "Keeper of Halidom, Giant Bavarois, Tonberry King",
+   "monsters": "Tonberry (Enemy), Treasure Hunter, Tonberry Stalker, Bronze Buzzard, Bronze Beetle, Gear Grease, Pug Pugil, Cog Oil, Corrupted Nymian Curate, Soldier of Nym, Corrupted Nymian, White Bavarois, Green Bavarois, Purple Bavarois, Blue Bavarois, Tonberry Slasher",
+   "objectives": "Clear Still Waters | Unlock the sealed gate | Climb the Endless Rise | Clear the Final Ease | Defeat the tonberry king",
+   "unlockQuest": "Trauma Queen",
+   "timeLimitMinutes": "120",
+   "entrance": "Upper La Noscea (26,22)",
+   "baseExp": "54,358",
+   "roulette": "High-level Dungeons"
+  },
+  "539": {
+   "timeLimitMinutes": "120"
+  },
+  "168": {
+   "bosses": "Arachne Eve, Forgall, Security Corridor, Ozma, Calofisteri",
+   "objectives": "Clear the peat bogs | Defeat Arachne Eve | Clear the Shantotto Memorial | Defeat Forgall | Clear the security corridor | Defeat Ozma | Defeat Calofisteri",
+   "unlockQuest": "The Weeping City",
+   "timeLimitMinutes": "120",
+   "entrance": "The Parrock (7.0, 7.1)",
+   "roulette": "alliance raid"
+  },
+  "73": {
+   "bosses": "Lord of the Whorl: Leviathan",
+   "unlockQuest": "Whorl of a Time",
+   "timeLimitMinutes": "60",
+   "entrance": "Lower La Noscea (24.6, 33.0)",
+   "roulette": "mentor"
+  },
+  "72": {
+   "bosses": "Lord of the Whorl: Leviathan",
+   "unlockQuest": "Lord of the Whorl",
+   "timeLimitMinutes": "60",
+   "entrance": "Lower La Noscea (24.6, 33.0)",
+   "roulette": "trials"
+  },
+  "1043": {
+   "bosses": "The White Wraith: Guardian Arkveld",
+   "unlockQuest": "The White Wanderer",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "1044": {
+   "bosses": "The White Wraith: Guardian Arkveld",
+   "timeLimitMinutes": "60"
+  },
+  "111": {
+   "bosses": "Angra Mainyu, Five-headed Dragon, Cerberus, Cloud of Darkness",
+   "objectives": "Clear the Eye | Defeat Angra Mainyu | Clear the Nape | Defeat the five-headed dragon | Clear the Jaws | Defeat Cerberus | Defeat Cloud Of Darkness",
+   "unlockQuest": "The World of Darkness (Quest)",
+   "timeLimitMinutes": "120",
+   "entrance": "Mor Dhona (35.7, 20.0)",
+   "roulette": "alliance raid"
+  },
+  "637": {
+   "bosses": "Auspice: Seiryu",
+   "unlockQuest": "Surpassing the Samurai",
+   "timeLimitMinutes": "60",
+   "entrance": "The Ruby Sea (37.5, 15.4)",
+   "roulette": "Trials"
+  },
+  "638": {
+   "bosses": "Auspice: Seiryu",
+   "timeLimitMinutes": "60",
+   "entrance": "The Ruby Sea (37.5, 15.4)",
+   "roulette": "Mentor"
+  },
+  "87": {
+   "bosses": "Lord of the Hive: Ravana",
+   "unlockQuest": "Thok Around the Clock",
+   "timeLimitMinutes": "60",
+   "entrance": "The Dravanian Forelands (27.7, 41.0)",
+   "roulette": "Mentor"
+  },
+  "86": {
+   "bosses": "Lord of the Hive: Ravana",
+   "unlockQuest": "Lord of the Hive",
+   "timeLimitMinutes": "60",
+   "roulette": "Trials"
+  },
+  "67": {
+   "bosses": "King of Moogles: Good King Moggle Mog XII",
+   "unlockQuest": "The King Lives",
+   "timeLimitMinutes": "60",
+   "entrance": "East Shroud (15.0, 20.8)",
+   "roulette": "mentor"
+  },
+  "66": {
+   "bosses": "King of Moogles: Good King Moggle Mog XII",
+   "unlockQuest": "You Have Selected Regicide",
+   "timeLimitMinutes": "60",
+   "entrance": "East Shroud (15.0, 20.8)",
+   "roulette": "trials"
+  },
+  "82": {
+   "bosses": "The Dark Divinity: Odin",
+   "unlockQuest": "Fear and Odin in the Shroud",
+   "timeLimitMinutes": "60",
+   "entrance": "South Shroud (33.7, 23.1)",
+   "roulette": "mentor"
+  },
+  "789": {
+   "bosses": "Terminus Snatcher, Terminus Wrecker, Blasphemy: Svarbhanu",
+   "monsters": "Terminus Trampler, Terminus Shriver, Terminus Pursuer, Terminus Idolizer, Terminus Howler, Terminus Sprinter, Terminus Horror, Terminus Weeper, Terminus Shadower, Terminus Robber, Terminus Twitcher, Terminus Bellwether, Terminus Stalker",
+   "objectives": "Arrive in Trnakiya | Clear Trnakiya | Arrive in Insight | Clear Insight | Arrive in Devatagara | Clear Devatagara",
+   "unlockQuest": "Skies Aflame",
+   "timeLimitMinutes": "90",
+   "entrance": "Thavnair (25.5, 36.7)",
+   "roulette": "Leveling"
+  },
+  "831": {
+   "bosses": "Vanguard Commander R8, Protector, Ophidian Outrider: Zander the Snakeskinner",
+   "monsters": "Vanguard Leptocyon, Vanguard Sentry S7, Vanguard Sentry G7, Vanguard Sentry R7, Vanguard Turret, Vanguard Aerostat, Vanguard Prabhasa",
+   "unlockQuest": "All Aboard",
+   "timeLimitMinutes": "90",
+   "entrance": "Vanguard (zone) (6.1, 5.9)",
+   "roulette": "Leveling"
+  },
+  "1117": {
+   "bosses": "Shantotto the Demon, Alexander Resurrected, Promathia, Dread Made Flesh: Shinryu Paradox and Hollow King",
+   "unlockQuest": "The_Hollow_Promise",
+   "timeLimitMinutes": "120",
+   "entrance": "Lower Jeuno (5.8, 7.1)",
+   "roulette": "Mentor"
+  },
+  "832": {
+   "bosses": "Tural Vidraal: Valigarmanda",
+   "unlockQuest": "The Skyruin",
+   "timeLimitMinutes": "60",
+   "entrance": "Urqopacha (4.3, 23.4, 2.8)",
+   "roulette": "Trials"
+  },
+  "833": {
+   "bosses": "Tural Vidraal: Valigarmanda",
+   "unlockQuest": "How the West Was Sung",
+   "timeLimitMinutes": "60"
+  },
+  "824": {
+   "bosses": "Ryoqor Terteh, Kahderyor, Dawn's Elector: Gurfurlur",
+   "monsters": "Worqor Snowarbler, Worqor Biast, Lightning Sprite, Worqor Myrrlith, Ice Sprite, Fire Sprite, Worqor Anala, Worqor Longjaw, Worqor Sloth, Worqor Bloodsucker, Worqor Zu, Worqor Cloudtrap, Worqor Tulichu, Worqor Iguana, Worqor Pitcher Weed",
+   "unlockQuest": "The High Luminary",
+   "timeLimitMinutes": "90",
+   "entrance": "Urqopacha (13.1,32.7,3.3)",
+   "roulette": "Leveling"
+  },
+  "182": {
+   "bosses": "Nuzal Hueloc, Dotoli Ciloc, Tozol Huatotl",
+   "monsters": "Abalathian Slug, Swiftwater Hakulaq, Chasm Harpeia, Chasm Cobra, Velodyna Toad, Ixali Stitcher, Floating Turret, Airstone, Xelphatol Bravewing, Xelphatol Whirltalon, Xelphatol Strongbeak, Siege Goobbue, Xelphatol Swiftbeak, Xelphatol Fatecaller, Xelphatol Windtalon, Xelphatol Watchwolf, Xelphatol Fogcaller, Abalathian Hornbill, Xelphatol Skycaller",
+   "objectives": "Arrive at the Cage. | Defat Nuzal Hueloc. | Arrive in the Tiachtli. | Defeat Dotoli Ciloc. | Eliminate impending enemies. | Defeat Tozol Huatotl.",
+   "unlockQuest": "Shadows of the First",
+   "timeLimitMinutes": "90",
+   "entrance": "Coerthas Central Highlands (33.5, 15.4)",
+   "baseExp": "152,000",
+   "roulette": "High-level Dungeons"
+  },
+  "1008": {
+   "bosses": "Lindblum Zaghnal, Overseer Kanilokka, Tural Vidraal: Lunipyati",
+   "monsters": "Electrogolem, Forest Bat, Forest Woolback, Forest Axe Beak, Rotten Hound, Rotten Researcher, Giant Corse (Yuweyawata), Station Specter, Sprightly Mole, Sprightly Stone, Sprightly Loamkeep, Sprightly Phoebad, Sprightly Dhara, Sprightly Clay Golem",
+   "unlockQuest": "In Search of the Past",
+   "timeLimitMinutes": "90",
+   "entrance": "Heritage Found (9.2, 11.4)",
+   "roulette": "Level Cap Dungeons"
+  }
+ }
+}

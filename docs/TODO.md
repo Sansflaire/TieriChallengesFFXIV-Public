@@ -68,15 +68,11 @@ started right now. Update the indented line in the same edit that changes a depe
 - [ ] **A2** 🤖 ⚡🔒 Create `ADMIN_KEY` and `LODESTONE_UA`
 - [ ] **A3** 🙋 Seed the materials list — one-time dev-side extraction pass
   - ⛔ Blocked by: **V2** *(no schema to extract into)*, **R5** *(redistribution unresolved)*
-- [ ] **A5** 🙋 **Fill the rest of `data/duties.json`** — `unlockQuest` is ??? for 114 of 373
-      (mostly Savage/Extreme tiers unlocked by clearing the normal version, which is
-      indistinguishable from missing data). `monsters` is filled for 176 of 373 and the new
-      `bosses` column for 156 — the rest are mostly **Trials and Raids**, whose bosses the wiki
-      documents on duty-article pages rather than the enemy tables. **A13 covers those directly.**
-- [ ] **A13** 🤖 **Fetch the 33 duty-article pages** the boss redirects point at (Asphodelos,
-      The Singularity Reactor, The Crown of the Immaculate, …). They are the only wiki source
-      for Trial and Raid bosses, which is exactly the 146 duties `bosses` is still ??? for.
-      Cheap: 33 titles, one batched request.
+- [ ] **A5** 🙋 **Fill the last of `data/duties.json`** — `bosses` is 362 of 373 and
+      `unlockQuest` 309; the remainder have no boss heading on the wiki, or are Savage/Extreme
+      tiers unlocked by clearing the normal version. `monsters` is 194 — the ==Enemies== section
+      exists on only 189 duty pages. Low value now; the important columns are filled.
+
 - [ ] **A14** 🙋 **Confirm the map-coordinate conversion in game.** `MarkerToMap` is
       spot-checked (Summerford Farms → 25.2, 16.8 vs a known 25, 17) but not proven across map
       scales. Stand somewhere in `places-of-interest.json` and compare the readout. `rawX`/`rawY`
@@ -257,6 +253,7 @@ Moved here with the date and the answer — never deleted.
 | **Places of Interest dataset** | **Built, and from GAME data not the wiki.** `MapMarker` via `Map.MapMarkerRange` gives **6,435 named landmarks across 339 zones** with real map coordinates - settlements, gates, guilds, camps, rivers, aetheryte plazas. The wiki only adds prose (239). Includes the requested `location` column (the zone). | 2026-08-27 |
 | **Bosses in their own column** | `duties.bosses` split from `duties.monsters` (156 duties), plus `monsters.isBoss` / `bossKind` for 667 monsters. Boss status is in **no game sheet** - it comes from the wiki's 14 boss subcategories. | 2026-08-27 |
 | Is `Fate.Location` a `Level` row? | **No.** All 1,697 values sit inside `Level`'s RowId range and match nothing in it - not RowId, not Object, not EventId. It is an **LGB layer-object id**. This is why `fates.json` shipped with `zone=???` on all 1,712 rows, silently. FATE location must come from the wiki. | 2026-08-27 |
+| **A13** Duty bosses | **Done, and better than planned.** Rather than 33 Fandom duty-articles, the Console Games Wiki has a page per duty: `bosses` 156 -> **362 of 373**, `unlockQuest` 259 -> **309**, plus objectives, entrance+coords, time limit, roulette, base EXP. Joined on `id-gt == garlandId` - an EXACT id match, 379 by id and 0 by name. A boss is marked by its difficulty ICON in the heading, not by a ==Bosses== section (only 137 of 529 pages have one). | 2026-08-27 |
 | **Monster DROPS** | **Solved by an external source.** ffxiv.consolegameswiki.com has one page per enemy with a Loot section: **1,129 monsters with loot, 3,172 explicitly None, 4,185 still ???**. Also raised zones 755 -> 8,503 and level -> 6,384. "No drops" is now recorded as `None`, NOT `???` - most monsters drop nothing and a false unknown would send the generator hunting for data that does not exist. | 2026-08-27 |
 | FATE chain ordering | **Not irreducible after all.** `FATEChain` groups a chain but never sequences it; the Console Games Wiki's `prev-fate`/`next-fate` is the sequence. 233 FATEs are actually chained. | 2026-08-27 |
 | **A6** Fill `data/monsters.json` | **Largely done.** 3,504 of 14,560 entries curated: level (3,401), hp, hitbox, abilities, family, creatureClass, zones, duties, fates, quests, dungeonEnemy/Boss. `drops` stays ??? forever — server-side, settled at Q11. Garland was correctly ruled out; the wiki was the right source. | 2026-08-27 |

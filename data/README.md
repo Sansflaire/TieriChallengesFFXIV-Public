@@ -73,8 +73,8 @@ could supply it.
 | `monsters` | `level` | **6,384** | |
 | `monsters` | `abilities` | 1,196 | Only the Fandom tables carry these, and they are sparsely filled |
 | `monsters` | exact spawn coords | n/a | Would need LGB layer-file parsing. **Explicitly out of scope** |
-| `duties` | `bosses` / `monsters` | 156 / 176 of 373 | Rest are Trials + Raids — **TODO A13** fetches those pages |
-| `duties` | `unlockQuest` | 259 of 373 | The 114 are largely Savage/Extreme cleared via the normal version |
+| `duties` | `bosses` / `monsters` | **362** / 194 of 373 | From the Console Games Wiki duty pages, joined on `garlandId`. The 11 without bosses have no boss headings on the wiki |
+| `duties` | `unlockQuest` | **309** of 373 | The rest are largely Savage/Extreme cleared via the normal version |
 | `duties` | whole content types | 373 rows | Deep dungeons, Eureka/Bozja/Diadem, treasure, Variant/Criterion excluded by the generator filter (**A12**) |
 | `fates` | `rewards` / `fateType` | **1,165** / 1,193 of 1,712 | EXP, gil, seals, gemstones, item rewards |
 | `fates` | `monsters` / `bosses` | 771 / **445** | |
@@ -111,6 +111,7 @@ data/curated/monsters.boss.json ← Final Fantasy Wiki (isBoss, bossKind)
 data/curated/monsters.cgw.json  ← Console Games Wiki (DROPS, locations, aggression, hunt rank)
 data/curated/fates.cgw.json     ← Console Games Wiki (boss, enemies, rewards, chain order)
 data/curated/fates.wiki.json    ← Final Fantasy Wiki (zone, coords, type, spawn conditions)
+data/curated/duties.zcgw.json   ← Console Games Wiki (bosses, objectives, entrance, unlock)
 ```
 
 **An overlay is an INPUT to generation, not a patch applied afterwards.** The generator reads
