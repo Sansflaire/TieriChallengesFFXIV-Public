@@ -77,6 +77,25 @@ internal sealed class DatasetViewer
     private string _search = string.Empty;
     private string _appliedSearch = string.Empty;
     private int _page;
+
+    /// <summary>
+    /// One per-column rule. <see cref="Exclude"/> flips it: Include keeps only rows whose cell
+    /// contains the text, Exclude drops them. Matching is substring and case-insensitive, so
+    /// "black" finds Blacksmith without anyone having to type the whole word.
+    /// </summary>
+    private sealed class ColumnFilter
+    {
+        public int Column;
+        public bool Exclude;
+        public string Text = string.Empty;
+    }
+
+    /// <summary>Filters are ANDed. Two Includes on the same column therefore mean "contains both".</summary>
+    private readonly List<ColumnFilter> _filters = new();
+
+    private int _newCol;
+    private bool _newExclude;
+    private string _newText = string.Empty;
     private string _loadError = string.Empty;
     private bool _loading;
 
@@ -270,6 +289,12 @@ internal sealed class DatasetViewer
         _loadError = string.Empty;
         _search = _appliedSearch = string.Empty;
         _page = 0;
+
+        // Column indices are meaningless against a different dataset - a stale filter would
+        // silently point at whatever column happened to land in that slot.
+        _filters.Clear();
+        _newCol = 0;
+        _newText = string.Empty;
     }
 
     /// <summary>One cell as a string. Nested objects/arrays become compact JSON — the grid is for
@@ -289,22 +314,108 @@ internal sealed class DatasetViewer
         return s.Length > MaxCellLength ? s.Substring(0, MaxCellLength) + "…" : s;
     }
 
+    /// <summary>
+    /// Rebuilds the visible row list from the free-text search AND every column filter. Runs only
+    /// when something changes, never per frame — which is why it can afford to walk 30,000 rows
+    /// and do a case-insensitive scan per filter rather than caching a lowercased copy of every
+    /// cell (that would roughly double the memory this thing already holds).
+    /// </summary>
     private void ApplyFilter()
     {
         _filtered = new List<int>(_rows.Count);
         string q = _appliedSearch.Trim().ToLowerInvariant();
 
-        if (q.Length == 0)
+        for (int i = 0; i < _rows.Count; i++)
         {
-            for (int i = 0; i < _rows.Count; i++) _filtered.Add(i);
-        }
-        else
-        {
-            for (int i = 0; i < _blobs.Count; i++)
-                if (_blobs[i].Contains(q, StringComparison.Ordinal)) _filtered.Add(i);
+            if (q.Length > 0 && !_blobs[i].Contains(q, StringComparison.Ordinal)) continue;
+
+            var cells = _rows[i];
+            bool ok = true;
+
+            foreach (var f in _filters)
+            {
+                if (f.Text.Length == 0) continue;
+                string cell = f.Column < cells.Length ? cells[f.Column] : string.Empty;
+                bool hit = cell.Contains(f.Text, StringComparison.OrdinalIgnoreCase);
+                if (f.Exclude ? hit : !hit) { ok = false; break; }
+            }
+
+            if (ok) _filtered.Add(i);
         }
 
         _page = 0;
+    }
+
+    /// <summary>The filter builder plus the list of active rules.</summary>
+    private void DrawFilters()
+    {
+        if (_columns.Length == 0) return;
+
+        ImGui.SetNextItemWidth(200);
+        string colLabel = _newCol < _columns.Length ? _columns[_newCol] : "column";
+        if (ImGui.BeginCombo("##tc_ds_fcol", colLabel))
+        {
+            for (int i = 0; i < _columns.Length; i++)
+                if (ImGui.Selectable(_columns[i], i == _newCol)) _newCol = i;
+            ImGui.EndCombo();
+        }
+
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(110);
+        if (ImGui.BeginCombo("##tc_ds_fmode", _newExclude ? "EXCLUDE" : "INCLUDE"))
+        {
+            if (ImGui.Selectable("INCLUDE", !_newExclude)) _newExclude = false;
+            if (ImGui.Selectable("EXCLUDE", _newExclude)) _newExclude = true;
+            ImGui.EndCombo();
+        }
+
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(200);
+        bool submitted = ImGui.InputTextWithHint("##tc_ds_ftext", "text to match…", ref _newText, 128,
+                                                ImGuiInputTextFlags.EnterReturnsTrue);
+
+        ImGui.SameLine();
+        if ((ImGui.Button("Add filter", new Vector2(90, 0)) || submitted) && _newText.Trim().Length > 0)
+        {
+            _filters.Add(new ColumnFilter { Column = _newCol, Exclude = _newExclude, Text = _newText.Trim() });
+            _newText = string.Empty;
+            ApplyFilter();
+        }
+
+        if (_filters.Count == 0) return;
+
+        int remove = -1;
+        for (int i = 0; i < _filters.Count; i++)
+        {
+            var f = _filters[i];
+            ImGui.PushID(1000 + i);
+
+            if (ImGui.Button("x", new Vector2(22, 0))) remove = i;
+            ImGui.SameLine();
+
+            ImGui.PushStyleColor(ImGuiCol.Text, f.Exclude ? ColUnknown : ColOk);
+            ImGui.TextUnformatted(f.Exclude ? "EXCLUDE" : "INCLUDE");
+            ImGui.PopStyleColor();
+
+            ImGui.SameLine();
+            string col = f.Column < _columns.Length ? _columns[f.Column] : "?";
+            ImGui.TextUnformatted($"{col} : \"{f.Text}\"");
+
+            ImGui.PopID();
+        }
+
+        if (remove >= 0)
+        {
+            _filters.RemoveAt(remove);
+            ApplyFilter();
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("Clear filters", new Vector2(110, 0)))
+        {
+            _filters.Clear();
+            ApplyFilter();
+        }
     }
 
     // ── Draw ─────────────────────────────────────────────────────────────────
@@ -451,6 +562,8 @@ internal sealed class DatasetViewer
             _search = _appliedSearch = string.Empty;
             ApplyFilter();
         }
+
+        DrawFilters();
 
         int pages = Math.Max(1, (_filtered.Count + PageSize - 1) / PageSize);
         _page = Math.Clamp(_page, 0, pages - 1);
