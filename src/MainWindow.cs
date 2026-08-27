@@ -2576,9 +2576,7 @@ internal sealed class MainWindow : IDisposable
             bool spoiled = !_store.IsComplete(d.Id) && !DevBypassesSpoilers
                         && AttunementService.IsZoneSpoilered(_config, ZoneIndex.TerritoryOf(_config, d.Id));
 
-            if (_challengeSearch.HasTerm
-                && !(!spoiled && _challengeSearch.Matches(d.Title, d.Detail, d.Hint, d.Category)))
-                continue;
+            if (_challengeSearch.HasTerm && !MatchesSearch(d, spoiled)) continue;
 
             shown.Add(d);
         }
@@ -3151,6 +3149,39 @@ internal sealed class MainWindow : IDisposable
     }
 
     /// <summary>
+    /// Does this challenge match the current search term?
+    /// </summary>
+    /// <remarks>
+    /// <para><b>A spoilered row matches nothing.</b> Searching a masked challenge on its hidden text
+    /// would confirm exactly what the mask exists to withhold.</para>
+    ///
+    /// <para><b>A quest is also findable by the leg the player is on.</b> Its Title/Detail are the
+    /// challenge's own now, so without this a player searching for the step in front of them — the
+    /// text the expanded row is showing — would find nothing. Only the CURRENT step is searched:
+    /// a hit on a later one would confirm content the chain deliberately withholds, which is the
+    /// same reason those steps are not listed.</para>
+    /// </remarks>
+    private bool MatchesSearch(ChallengeDef d, bool spoilered)
+    {
+        if (spoilered) return false;
+
+        if (_challengeSearch.Matches(d.Title, d.Detail, d.Hint, d.Category)) return true;
+        if (!d.IsChain) return false;
+
+        var step = CurrentStepOf(ChallengeCatalog.FindCustom(_config, d.Id), d);
+        return step != null && _challengeSearch.Matches(step.Title, step.Detail, step.Hint);
+    }
+
+    /// <summary>The step a chain is on, or null when it is not a chain or has no steps.</summary>
+    private static ChainStep? CurrentStepOf(CustomChallenge? source, ChallengeDef def)
+    {
+        if (source?.ChainSteps == null || source.ChainSteps.Count == 0) return null;
+
+        // StepNumber is 1-based and already clamped into range by CurrentStepNumber.
+        return source.ChainSteps[Math.Clamp(def.StepNumber - 1, 0, source.ChainSteps.Count - 1)];
+    }
+
+    /// <summary>
     /// The step list an expanded quest shows: every step already finished, plus the one the player
     /// is on. Returns null when there is nothing to draw.
     /// </summary>
@@ -3165,15 +3196,6 @@ internal sealed class MainWindow : IDisposable
     /// button. They are detail belonging to the challenge above them, not challenges in their own
     /// right, and repeating that furniture per step would read as a nested list of separate things.</para>
     /// </remarks>
-    /// <summary>The step a chain is on, or null when it is not a chain or has no steps.</summary>
-    private static ChainStep? CurrentStepOf(CustomChallenge? source, ChallengeDef def)
-    {
-        if (source?.ChainSteps == null || source.ChainSteps.Count == 0) return null;
-
-        // StepNumber is 1-based and already clamped into range by CurrentStepNumber.
-        return source.ChainSteps[Math.Clamp(def.StepNumber - 1, 0, source.ChainSteps.Count - 1)];
-    }
-
     private Node? ChainStepRows(CustomChallenge? source, ChallengeDef def,
                                 bool done, bool spoilered, bool expanded, bool hintOpen)
     {
@@ -3193,6 +3215,7 @@ internal sealed class MainWindow : IDisposable
             s.Margin     = new EdgeSize(2, 0, 4, StepIndent);
         });
 
+        int drawn = 0;
         for (int i = 0; i <= last; i++)
         {
             var step = source.ChainSteps[i];
@@ -3200,9 +3223,12 @@ internal sealed class MainWindow : IDisposable
 
             bool stepDone = done || i < current;
             list.AppendChild(ChainStepRow(i + 1, step, stepDone, hintOpen));
+            drawn++;
         }
 
-        return list;
+        // Every step null is not a real case, but an empty container still carries this method's
+        // margin, so it would open a silent gap under the row rather than simply not expanding.
+        return drawn > 0 ? list : null;
     }
 
     private Node ChainStepRow(int number, ChainStep step, bool stepDone, bool hintOpen)

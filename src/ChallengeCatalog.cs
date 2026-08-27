@@ -481,6 +481,11 @@ public static class ChallengeCatalog
         return changed;
     }
 
+    /// <summary>
+    /// <see cref="RebindZonesToAreas"/> for a single step, for the Creator to call while authoring.
+    /// </summary>
+    public static bool RebindStepZone(ChainStep? step) => RebindStep(step);
+
     private static bool RebindStep(ChainStep? step)
     {
         if (step == null) return false;

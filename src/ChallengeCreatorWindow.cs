@@ -610,7 +610,7 @@ internal sealed class ChallengeCreatorWindow
 
         // Immediately, while authoring — not only at save — so the step list shows the zone the
         // position is really in rather than the one it inherited from the challenge.
-        ChallengeCatalog.RebindZonesToAreas(new CustomChallenge { ChainSteps = { step } });
+        ChallengeCatalog.RebindStepZone(step);
     }
 
     /// <summary>Load a step into the shared draft fields, committing whatever was there first.</summary>

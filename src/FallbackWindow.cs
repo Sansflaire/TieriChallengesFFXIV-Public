@@ -364,9 +364,19 @@ internal sealed class FallbackWindow
             // challenges are never filtered out, and the done/total counts stay whole-category so
             // the progress line does not lurch when the filter moves. Turning PanacheUI off must
             // not silently change which challenges exist.
+            //
+            // ChallengeFilter.Passes belongs here for exactly that reason and was missing: the
+            // filter menu is Panache-only, but what it SETS is persisted config, so a player who
+            // hid completed challenges and then switched renderers got them all back with nothing
+            // to say why. Third time this file has lost something by only implementing it on the
+            // other side — the step count and the difficulty meter were the first two.
             var shown = new List<ChallengeDef>(list.Count);
             foreach (var d in list)
-                if (!d.HasDifficulty || d.Difficulty <= _config.MaxDifficulty) shown.Add(d);
+            {
+                if (d.HasDifficulty && d.Difficulty > _config.MaxDifficulty) continue;
+                if (!ChallengeFilter.Passes(_config, d, _store.IsComplete(d.Id))) continue;
+                shown.Add(d);
+            }
             int hiddenByFilter = list.Count - shown.Count;
 
             if (!string.IsNullOrEmpty(title))
