@@ -71,3 +71,7 @@ SECURITY.local.md
 
 # wrangler local state — account cache, build artefacts. Never useful in the repo.
 worker/.wrangler/
+
+# Python bytecode from the dataset sweep scripts
+__pycache__/
+*.pyc
