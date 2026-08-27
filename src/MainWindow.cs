@@ -2735,7 +2735,18 @@ internal sealed class MainWindow : IDisposable
         // grows to fit instead of ellipsising away the thing the player just asked to read. Never
         // for a spoilered challenge — the hint exists to help FIND something, so offering it here
         // would leak exactly what the mask is hiding.
-        bool hintOpen = !spoilered && def.HasHint && _hintShown.Contains(def.Id);
+        //
+        // A QUEST falls back to the CURRENT STEP's hint when the challenge itself has none. That is
+        // not a nicety: hints on a multi-step quest naturally belong to the individual steps —
+        // "where is the third one" is a different question at every leg — so a quest hinted that way
+        // has an empty challenge-level Hint, which would leave a dead Hint button and make the step
+        // hints unreachable. Whichever hint is the most specific available is the one to offer.
+        var    chainSource  = def.IsChain ? ChallengeCatalog.FindCustom(_config, def.Id) : null;
+        var    currentStep  = CurrentStepOf(chainSource, def);
+        string revealedHint = def.HasHint ? def.Hint : currentStep?.Hint ?? string.Empty;
+
+        bool canHint  = !spoilered && !string.IsNullOrWhiteSpace(revealedHint);
+        bool hintOpen = canHint && _hintShown.Contains(def.Id);
         bool expanded = _expandedId == def.Id;
 
         // Fit height over a MinHeight floor, rather than a height this method computes. Wrapped
@@ -2940,7 +2951,7 @@ internal sealed class MainWindow : IDisposable
         // (MaxLines 0 = uncapped) and Fit height reports the wrapped height, which is what grows
         // the row. One code path for both cases so the hint and the line it replaces can never
         // wrap differently.
-        string subText = hintOpen ? "Hint: " + def.Hint.Trim() : sub;
+        string subText = hintOpen ? "Hint: " + revealedHint.Trim() : sub;
         PColor subInk  = hintOpen ? HintText : subColor;
 
         textCol.AppendChild(new Node().WithText(subText).WithStyle(s =>
@@ -3056,7 +3067,7 @@ internal sealed class MainWindow : IDisposable
             }
         }
 
-        controls.AppendChild(HintPillFor(def, hintOpen, spoilered));
+        controls.AppendChild(HintPillFor(def, hintOpen, spoilered, canHint));
         // For a quest or adventure the state pill doubles as the route into the objective sheet.
         // Withheld while spoilered, exactly as the old QUEST pill was — that sheet is the most
         // detailed thing the mask has to hide.
@@ -3118,7 +3129,7 @@ internal sealed class MainWindow : IDisposable
 
         // An expanded quest grows a list of its steps beneath it. Nothing else about the row
         // changes, so the returned node is only wrapped when there is something to wrap.
-        var steps = ChainStepRows(def, done, spoilered, expanded);
+        var steps = ChainStepRows(chainSource, def, done, spoilered, expanded, hintOpen);
         if (steps == null) return row;
 
         var group = new Node().WithStyle(s =>
@@ -3154,11 +3165,19 @@ internal sealed class MainWindow : IDisposable
     /// button. They are detail belonging to the challenge above them, not challenges in their own
     /// right, and repeating that furniture per step would read as a nested list of separate things.</para>
     /// </remarks>
-    private Node? ChainStepRows(ChallengeDef def, bool done, bool spoilered, bool expanded)
+    /// <summary>The step a chain is on, or null when it is not a chain or has no steps.</summary>
+    private static ChainStep? CurrentStepOf(CustomChallenge? source, ChallengeDef def)
+    {
+        if (source?.ChainSteps == null || source.ChainSteps.Count == 0) return null;
+
+        // StepNumber is 1-based and already clamped into range by CurrentStepNumber.
+        return source.ChainSteps[Math.Clamp(def.StepNumber - 1, 0, source.ChainSteps.Count - 1)];
+    }
+
+    private Node? ChainStepRows(CustomChallenge? source, ChallengeDef def,
+                                bool done, bool spoilered, bool expanded, bool hintOpen)
     {
         if (!expanded || spoilered || !def.IsChain) return null;
-
-        var source = ChallengeCatalog.FindCustom(_config, def.Id);
         if (source?.ChainSteps == null || source.ChainSteps.Count == 0) return null;
 
         // StepNumber is 1-based and already clamped into range by CurrentStepNumber.
@@ -3180,13 +3199,13 @@ internal sealed class MainWindow : IDisposable
             if (step == null) continue;
 
             bool stepDone = done || i < current;
-            list.AppendChild(ChainStepRow(i + 1, step, stepDone));
+            list.AppendChild(ChainStepRow(i + 1, step, stepDone, hintOpen));
         }
 
         return list;
     }
 
-    private Node ChainStepRow(int number, ChainStep step, bool stepDone)
+    private Node ChainStepRow(int number, ChainStep step, bool stepDone, bool hintOpen)
     {
         var row = new Node().WithStyle(s =>
         {
@@ -3225,14 +3244,30 @@ internal sealed class MainWindow : IDisposable
             s.TextOverflow = TextOverflow.Wrap;
         }));
 
-        if (!string.IsNullOrWhiteSpace(step.Detail))
+        // The Hint button swaps these lines too, not just the row's own. A quest's hints usually
+        // belong to its individual steps, so revealing "the hint" while a step list is open and
+        // leaving the steps showing descriptions would hide the useful half of what was asked for.
+        //
+        // A step with no hint says so rather than silently falling back to its description: mixing
+        // the two modes in one list would leave the player unable to tell which lines are hints.
+        bool   haveHint = !string.IsNullOrWhiteSpace(step.Hint);
+        string body     = hintOpen
+            ? haveHint ? "Hint: " + step.Hint.Trim() : "No hint for this step."
+            : step.Detail ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(body))
         {
-            text.AppendChild(new Node().WithText(step.Detail).WithStyle(s =>
+            PColor ink = hintOpen
+                ? haveHint ? HintText : Theme.TextSubtle
+                : stepDone ? Theme.TextSubtle : Theme.TextMuted;
+
+            text.AppendChild(new Node().WithText(body).WithStyle(s =>
             {
                 s.WidthMode    = SizeMode.Fill;
                 s.HeightMode   = SizeMode.Fit;
                 s.FontSize     = SubFontSize;
-                s.Color        = stepDone ? Theme.TextSubtle : Theme.TextMuted;
+                s.Italic       = hintOpen && !haveHint;
+                s.Color        = ink;
                 s.TextOverflow = TextOverflow.Wrap;
             }));
         }
@@ -3247,7 +3282,13 @@ internal sealed class MainWindow : IDisposable
     /// button — a button that reveals nothing is worse than an honest "NO HINT". A spoilered
     /// challenge gets neither — the hint itself is the exact thing being withheld.
     /// </summary>
-    private Node HintPillFor(ChallengeDef def, bool open, bool spoilered)
+    /// <param name="hasHint">
+    /// Whether there is anything to reveal — the challenge's own hint, or the current step's for a
+    /// quest hinted per step. NOT <c>def.HasHint</c>: a quest whose hints live on its steps has an
+    /// empty challenge-level hint, and reading that field alone made the button dead exactly where
+    /// the hints were.
+    /// </param>
+    private Node HintPillFor(ChallengeDef def, bool open, bool spoilered, bool hasHint)
     {
         if (spoilered)
         {
@@ -3262,7 +3303,7 @@ internal sealed class MainWindow : IDisposable
         // No centring margins anywhere in here any more: the controls row that holds these is
         // AlignItems.Center and Fit to its own contents, so it aligns a 28px button and a 19px
         // pill correctly without any of them knowing the row height.
-        if (!def.HasHint)
+        if (!hasHint)
         {
             // A dead affordance made obviously dead: same glyph, but no button chrome and heavily
             // dimmed. The old "NO HINT" pill said this in words; the point survives the switch

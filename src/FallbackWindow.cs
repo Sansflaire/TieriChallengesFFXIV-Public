@@ -500,13 +500,28 @@ internal sealed class FallbackWindow
                 // spoilered — a hint's whole job is helping find something, which is exactly what
                 // the mask is hiding.
                 ImGui.SameLine();
-                bool hintOpen = !spoilered && def.HasHint && _hintShown.Contains(def.Id);
+
+                // A quest falls back to its CURRENT STEP's hint, matching MainWindow: hints on a
+                // multi-step quest naturally belong to the steps, so reading the challenge-level
+                // field alone leaves a dead button exactly where the hints are.
+                string revealedHint = def.Hint ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(revealedHint) && def.IsChain)
+                {
+                    var chainSrc = ChallengeCatalog.FindCustom(_config, def.Id);
+                    var curStep  = chainSrc?.ChainSteps is { Count: > 0 } cs
+                        ? cs[Math.Clamp(def.StepNumber - 1, 0, cs.Count - 1)]
+                        : null;
+                    revealedHint = curStep?.Hint ?? string.Empty;
+                }
+
+                bool canHint  = !spoilered && !string.IsNullOrWhiteSpace(revealedHint);
+                bool hintOpen = canHint && _hintShown.Contains(def.Id);
 
                 if (spoilered)
                 {
                     ImGui.TextDisabled("[???]");
                 }
-                else if (!def.HasHint)
+                else if (!canHint)
                 {
                     ImGui.TextDisabled("[no hint]");
                 }
@@ -571,7 +586,7 @@ internal sealed class FallbackWindow
                 if (spoilered)
                     ImGui.TextColored(ColMuted, "      Explore this zone to reveal this challenge.");
                 else if (hintOpen)
-                    ImGui.TextColored(ColHint, $"      Hint: {def.Hint}");
+                    ImGui.TextColored(ColHint, $"      Hint: {revealedHint}");
                 else if (def.Kind == ChallengeKind.RaceTimer && _tracker.IsRaceRunning(def.Id))
                     ImGui.TextColored(ColOk,
                         $"      Running — {CompletionStore.FormatRaceTime(_tracker.RunningElapsedSeconds)}");

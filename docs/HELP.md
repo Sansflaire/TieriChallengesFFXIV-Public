@@ -76,7 +76,9 @@ expand it and see the whole thing wrapped over as many lines as it needs. Click 
 anywhere that is not a row, to collapse it.
 
 Expanding a **quest** also lists its steps underneath: the ones you have finished, and the one you
-are on. Steps you have not reached yet are not shown.
+are on. Steps you have not reached yet are not shown. Pressing **Hint** while that list is open
+swaps every step's description for its hint, so you can see the hint for the step you are actually
+stuck on.
 
 Clicking a row only ever expands it. It can never mark a challenge done.
 
@@ -103,6 +105,10 @@ challenge is easy.
 
 The **?** button on a row reveals a hint, replacing the description with it. Press it again to put
 the description back.
+
+On a **quest**, the hint you get is the one for the step you are on. If the quest has its steps
+expanded, every step listed swaps to its own hint at the same time — a step with none written says
+so rather than quietly showing its description instead.
 
 Not every challenge has one. Where none was written the button is drawn dim and does nothing,
 rather than pretending there is a hint to give.
