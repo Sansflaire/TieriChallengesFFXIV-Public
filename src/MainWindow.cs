@@ -342,6 +342,12 @@ internal sealed class MainWindow : IDisposable
     /// </summary>
     private const float SubFontSize = 10f;
 
+    /// <summary>
+    /// Left inset of an expanded quest's step list. Enough that the steps read as belonging to the
+    /// row above rather than as siblings of it, without pushing wrapped text into a narrow column.
+    /// </summary>
+    private const float StepIndent = 28f;
+
     // Icon sizing. Every bundled PanacheUI icon is square, so one number sizes each use.
     /// <summary>Corner controls (lock, close): the button box.</summary>
     private const float ChromeBtn    = 22f;
@@ -3109,6 +3115,129 @@ internal sealed class MainWindow : IDisposable
         }
 
         row.AppendChild(rightCol);
+
+        // An expanded quest grows a list of its steps beneath it. Nothing else about the row
+        // changes, so the returned node is only wrapped when there is something to wrap.
+        var steps = ChainStepRows(def, done, spoilered, expanded);
+        if (steps == null) return row;
+
+        var group = new Node().WithStyle(s =>
+        {
+            s.Flow       = Flow.Vertical;
+            s.WidthMode  = SizeMode.Fill;
+            s.HeightMode = SizeMode.Fit;
+            s.Gap        = 2;
+        });
+
+        // The whole block behaves as one row: clicking a step line collapses it again, the same way
+        // clicking the row body does. Both handlers record the same id, and InteractionManager has
+        // no topmost-wins rule, so a click on the row body fires both — harmless, they agree.
+        group.OnClick += _ => _rowClickPending = def.Id;
+
+        group.AppendChild(row);
+        group.AppendChild(steps);
+        return group;
+    }
+
+    /// <summary>
+    /// The step list an expanded quest shows: every step already finished, plus the one the player
+    /// is on. Returns null when there is nothing to draw.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Steps the player has not reached are NOT listed, not even greyed.</b> Same rule the
+    /// objective sheet follows: a chain's later legs are meant to be a surprise, and listing them
+    /// dimmed spoils the whole route at a glance. Completed steps stay visible because they are a
+    /// record of what the player did, and because "how did I get here" is the question a half-done
+    /// quest raises.</para>
+    ///
+    /// <para>These rows carry no right-hand controls at all — no stars, no state pill, no hint
+    /// button. They are detail belonging to the challenge above them, not challenges in their own
+    /// right, and repeating that furniture per step would read as a nested list of separate things.</para>
+    /// </remarks>
+    private Node? ChainStepRows(ChallengeDef def, bool done, bool spoilered, bool expanded)
+    {
+        if (!expanded || spoilered || !def.IsChain) return null;
+
+        var source = ChallengeCatalog.FindCustom(_config, def.Id);
+        if (source?.ChainSteps == null || source.ChainSteps.Count == 0) return null;
+
+        // StepNumber is 1-based and already clamped into range by CurrentStepNumber.
+        int current = Math.Clamp(def.StepNumber - 1, 0, source.ChainSteps.Count - 1);
+        int last    = done ? source.ChainSteps.Count - 1 : current;
+
+        var list = new Node().WithStyle(s =>
+        {
+            s.Flow       = Flow.Vertical;
+            s.WidthMode  = SizeMode.Fill;
+            s.HeightMode = SizeMode.Fit;
+            s.Gap        = 2;
+            s.Margin     = new EdgeSize(2, 0, 4, StepIndent);
+        });
+
+        for (int i = 0; i <= last; i++)
+        {
+            var step = source.ChainSteps[i];
+            if (step == null) continue;
+
+            bool stepDone = done || i < current;
+            list.AppendChild(ChainStepRow(i + 1, step, stepDone));
+        }
+
+        return list;
+    }
+
+    private Node ChainStepRow(int number, ChainStep step, bool stepDone)
+    {
+        var row = new Node().WithStyle(s =>
+        {
+            s.Flow          = Flow.Horizontal;
+            s.WidthMode     = SizeMode.Fill;
+            s.HeightMode    = SizeMode.Fit;
+            s.Padding       = new EdgeSize(3, PadPaneX, 3, 0);
+            s.Gap           = 8;
+            s.PointerEvents = PointerEvents.None;   // inert detail; the group above takes the click
+        });
+
+        // A tick or an empty box, never a colour change alone — the one distinction a colour-blind
+        // player is least likely to catch is exactly the one this list depends on.
+        var mark = PUI.Icon(stepDone ? Ico.Complete : Ico.Incomplete, StatusIconSz,
+                            stepDone ? StatusOk : QuestBlue);
+        mark.WithStyle(s => s.Margin = new EdgeSize(1, 0, 0, 0));
+        row.AppendChild(mark);
+
+        var text = new Node().WithStyle(s =>
+        {
+            s.Flow       = Flow.Vertical;
+            s.WidthMode  = SizeMode.Fill;
+            s.HeightMode = SizeMode.Fit;
+            s.Gap        = 1;
+        });
+
+        string title = string.IsNullOrWhiteSpace(step.Title) ? $"Step {number}" : step.Title;
+
+        text.AppendChild(new Node().WithText($"{number}.  {title}").WithStyle(s =>
+        {
+            s.WidthMode    = SizeMode.Fill;
+            s.HeightMode   = SizeMode.Fit;
+            s.FontSize     = SubFontSize + 1f;
+            s.Bold         = !stepDone;
+            s.Color        = stepDone ? StatusOk.WithOpacity(0.80f) : QuestBlue;
+            s.TextOverflow = TextOverflow.Wrap;
+        }));
+
+        if (!string.IsNullOrWhiteSpace(step.Detail))
+        {
+            text.AppendChild(new Node().WithText(step.Detail).WithStyle(s =>
+            {
+                s.WidthMode    = SizeMode.Fill;
+                s.HeightMode   = SizeMode.Fit;
+                s.FontSize     = SubFontSize;
+                s.Color        = stepDone ? Theme.TextSubtle : Theme.TextMuted;
+                s.TextOverflow = TextOverflow.Wrap;
+            }));
+        }
+
+        row.AppendChild(text);
         return row;
     }
 

@@ -75,6 +75,9 @@ Long names and descriptions are trimmed with "…" to keep rows a uniform height
 expand it and see the whole thing wrapped over as many lines as it needs. Click it again, or click
 anywhere that is not a row, to collapse it.
 
+Expanding a **quest** also lists its steps underneath: the ones you have finished, and the one you
+are on. Steps you have not reached yet are not shown.
+
 Clicking a row only ever expands it. It can never mark a challenge done.
 
 ## The tick box
@@ -146,14 +149,19 @@ plugin's usual gold.
 ## Quests — the blue ones
 <!-- keywords: quest, quests, blue, chain, chains, chained, series, steps, step, multi part, multipart, sequence, stages, part 1, next step, story, linked -->
 
-A **quest** is a series of steps. The row shows only the step you are on, and it changes to the next
-one as you finish each. Only completing the final step completes the quest.
+A **quest** is a series of steps. Only completing the final step completes the quest.
+
+The row is named after the quest itself and reads "Quest: " in front of its name, with how far
+through you are — "Step 2 of 5" — beside the difficulty stars.
+
+**Click the row** to see the steps. Each one you have finished is listed with a tick, and the step
+you are on is listed below them in blue with its own description. Click again to collapse.
 
 Quests move around the zone list with you: if the step you are on is in Ul'dah, the quest sits under
 Ul'dah, even if it began somewhere else.
 
-Later steps are deliberately not shown in advance. The **QUEST** button on the row opens the full
-sheet, where finished steps and the one you are on are listed and the rest read as `???`.
+Later steps are deliberately not shown in advance — not on the row, and not in the sheet, where they
+read as `???`. Clicking the small progress count on the right of the row opens that full sheet.
 
 Your progress through a quest is saved. Take as long as you like.
 
