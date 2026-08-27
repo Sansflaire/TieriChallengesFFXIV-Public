@@ -147,6 +147,42 @@ public sealed class ChallengeSyncService
 
     public string LastStatus { get; private set; } = string.Empty;
 
+    /// <summary>
+    /// A sync is refused this soon after the last SUCCESSFUL one.
+    ///
+    /// <para><b>This is politeness, not rate-limit protection.</b> Hitting the GitHub API ceiling
+    /// is already handled — <see cref="FetchAsync"/> falls through to raw.githubusercontent, which
+    /// has no limit — so a player mashing the button was never going to break anything. What they
+    /// were doing was firing pointless requests at a shared host and getting an identical answer
+    /// every time. Ten seconds is long enough to stop a double-click storm and short enough that
+    /// nobody waiting on a fresh publish notices it.</para>
+    ///
+    /// <para>Deliberately applies to EVERY caller — button, chat command and the load-time
+    /// auto-sync alike. One rule in one place cannot disagree with itself; three call sites each
+    /// remembering to check would eventually.</para>
+    /// </summary>
+    public const int CooldownSeconds = 10;
+
+    /// <summary>
+    /// Whole seconds until a sync is allowed, or 0 when one may start now. Never negative, and
+    /// never blocks when nothing has ever synced.
+    /// </summary>
+    public int CooldownRemaining
+    {
+        get
+        {
+            if (_config.LastSyncUtc == DateTime.MinValue) return 0;
+
+            double elapsed = (DateTime.UtcNow - _config.LastSyncUtc).TotalSeconds;
+
+            // A clock change (or a config carried between machines) can put the stored stamp in
+            // the future. Treat that as "ready" rather than locking the button out for hours.
+            if (elapsed < 0) return 0;
+
+            return elapsed >= CooldownSeconds ? 0 : (int)Math.Ceiling(CooldownSeconds - elapsed);
+        }
+    }
+
     public ChallengeSyncService(OfficialCatalog catalog, Configuration config)
     {
         _catalog = catalog;
@@ -157,6 +193,14 @@ public sealed class ChallengeSyncService
     {
         if (_running)
             return new SyncResult { Ok = false, Message = "A sync is already running." };
+
+        int wait = CooldownRemaining;
+        if (wait > 0)
+            return new SyncResult
+            {
+                Ok      = false,
+                Message = $"Already up to date — try again in {wait}s.",
+            };
 
         _running = true;
         try

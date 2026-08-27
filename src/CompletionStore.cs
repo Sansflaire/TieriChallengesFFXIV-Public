@@ -196,6 +196,14 @@ public sealed class CompletionStore
     public static string FormatDate(DateTime utc) =>
         utc.ToLocalTime().ToString("MMM d, yyyy 'at' h:mm tt");
 
+    /// <summary>
+    /// Just the clock time, for labels too small for <see cref="FormatDate"/> — "last synced
+    /// 14:32". Lives here so the UTC→local conversion happens in one place; a caller formatting
+    /// the raw stamp itself would print the wrong time for everyone outside UTC.
+    /// </summary>
+    public static string FormatTimeOfDay(DateTime utc) =>
+        utc.ToLocalTime().ToString("HH:mm");
+
     // ── Race times ───────────────────────────────────────────────────────────
 
     /// <summary>Best recorded time in seconds for a race, or null if it has never been finished.</summary>

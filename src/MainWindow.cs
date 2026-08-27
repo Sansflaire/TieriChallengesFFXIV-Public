@@ -2147,18 +2147,30 @@ internal sealed class MainWindow : IDisposable
         menus.Add(new MenuDef("View", view));
 
         // ── Update ───────────────────────────────────────────────────────────
+        // One item, always meaningful: it reports the sync state AND when the last one landed, so
+        // there is no dead "Last synced …" row sitting beside it doing nothing. The comment below
+        // about a menu item that can do nothing being worse than no item applies here too.
+        int syncWait = _sync.CooldownRemaining;
+        string syncLabel =
+            _sync.IsRunning                            ? "Syncing…"
+          : _config.LastSyncUtc == DateTime.MinValue   ? "Sync now — never synced"
+          : syncWait > 0                               ? $"Synced {CompletionStore.FormatTimeOfDay(_config.LastSyncUtc)} — wait {syncWait}s"
+          :                                              $"Sync now — last {CompletionStore.FormatTimeOfDay(_config.LastSyncUtc)}";
+
         var update = new List<MenuItem>
         {
-            new(_sync.IsRunning ? "Syncing…" : "Sync now", () =>
+            new(syncLabel, () =>
             {
-                if (_sync.IsRunning) return;
+                // Re-tested at click time, not trusted from the label: the menu is built once per
+                // frame but the cooldown expires between frames.
+                if (_sync.IsRunning || _sync.CooldownRemaining > 0) return;
                 _ = System.Threading.Tasks.Task.Run(async () =>
                 {
                     var r = await _sync.SyncAsync();
                     Plugin.ChatGui.Print("[Challenges] " + r.Message);
                     _tracker.Invalidate();
                 });
-            }, Accent, Ico.Sync),
+            }, syncWait > 0 || _sync.IsRunning ? Theme.TextMuted : Accent, Ico.Sync),
         };
 
         // Only offered when the permanent ledger actually holds something the current data is

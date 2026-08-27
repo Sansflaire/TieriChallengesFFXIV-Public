@@ -196,8 +196,15 @@ internal sealed class FallbackWindow
         DrawPanacheToggle();
 
         ImGui.SameLine();
-        if (_sync.IsRunning) ImGui.BeginDisabled();
-        if (ImGui.Button(_sync.IsRunning ? "Syncing…" : "Sync", new Vector2(90, 24)))
+
+        // Same rule as the Panache menu — the cooldown lives in the service, so both renderers
+        // read it rather than each keeping their own timer.
+        int  syncWait   = _sync.CooldownRemaining;
+        bool syncBlocked = _sync.IsRunning || syncWait > 0;
+
+        if (syncBlocked) ImGui.BeginDisabled();
+        if (ImGui.Button(_sync.IsRunning ? "Syncing…" : syncWait > 0 ? $"Wait {syncWait}s" : "Sync",
+                         new Vector2(90, 24)))
         {
             _ = System.Threading.Tasks.Task.Run(async () =>
             {
@@ -206,7 +213,11 @@ internal sealed class FallbackWindow
                 _tracker.Invalidate();
             });
         }
-        if (_sync.IsRunning) ImGui.EndDisabled();
+        if (syncBlocked) ImGui.EndDisabled();
+
+        // The label the cooldown replaced still has to be reachable, so it moves to the tooltip.
+        if (ImGui.IsItemHovered() && _config.LastSyncUtc != DateTime.MinValue)
+            ImGui.SetTooltip($"Last synced {CompletionStore.FormatTimeOfDay(_config.LastSyncUtc)}");
 
         if (SuggestionService.IsConfigured)
         {
