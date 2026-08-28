@@ -50,15 +50,44 @@ internal sealed unsafe class TimelineProbeWindow
     private const int DefaultTimeline = 13383;
 
     /// <summary>
-    /// Ornament row 17. The <c>m####</c> in an <c>ornament_sp</c> key looks like 6000 + Ornament row
-    /// id (row 1 = Parasol pairs with the <c>m6001</c> timelines seen live), which would make this
-    /// Fallen Angel Wings — but that mapping is INFERRED and attaching it here is how it gets checked.
+    /// Ornament row 57 = <b>Shovel</b> (Model 4936, AttachmentPoint 14) — the accessory row 13383's
+    /// animation belongs to, confirmed by Trist recognising the animation on 2026-08-28.
+    ///
+    /// <para>An earlier guess here was 17, from an inferred "<c>m####</c> = 6000 + Ornament row id"
+    /// mapping that fit the one live sample available (row 1 = Parasol ↔ <c>m6001</c>). It is WRONG:
+    /// the Shovel is row 57, not 17. The <c>m####</c> appears to number ornament *archetypes* rather
+    /// than rows — which is why ~58 ornament rows produce only a handful of <c>ornament_sp</c>
+    /// timelines, all the parasols presumably sharing <c>m6001</c>. Not needed for anything here,
+    /// since <see cref="OrnamentContainer.SetupOrnament"/> takes the row id, but do not resurrect
+    /// the 6000+ mapping on the strength of the parasol coincidence.</para>
     /// </summary>
-    private const int DefaultOrnament = 17;
+    private const int DefaultOrnament = 57;
+
+    /// <summary>
+    /// Frames to wait between attaching the model and firing the animation. The attach is not
+    /// instant — the model has to load — and firing on the same frame races that.
+    /// </summary>
+    private int _attachDelay = 6;
 
     private int  _timelineId = DefaultTimeline;
     private int  _ornamentId = DefaultOrnament;
     private bool _hold;
+
+    /// <summary>
+    /// Where the coupled attach → play → auto-detach sequence is up to. The whole point is that the
+    /// model's lifetime is tied to the animation's: the game cancels the timeline on movement
+    /// (<c>IsMotionCanceledByMoving</c>), <see cref="Stage.Watching"/> notices slot 0 change away
+    /// from the target, and the model comes off in the same frame. Nothing here asks the game to
+    /// stop the animation — it is the game stopping it that drives the teardown.
+    /// </summary>
+    private enum Stage { Off, Attaching, Playing, Watching }
+
+    private Stage _stage;
+    private int   _stageFrames;
+    private string _stageNote = string.Empty;
+
+    /// <summary>Frames to allow the fired timeline to appear in slot 0 before giving up.</summary>
+    private const int PlayGrace = 30;
 
     // Rolling capture of slot 0 after a fire. Stored as (id, consecutiveFrames) so a one-frame
     // flicker is visible as "13383 x1" rather than vanishing between two draws.
@@ -73,9 +102,18 @@ internal sealed unsafe class TimelineProbeWindow
 
     public void Draw()
     {
-        if (!IsVisible) return;
+        if (!IsVisible)
+        {
+            // Closing the window mid-performance must not strand the model on the character.
+            if (_stage != Stage.Off) ReleasePerformance("window closed");
+            return;
+        }
 
-        ImGui.SetNextWindowSize(new Vector2(660, 620), ImGuiCond.FirstUseEver);
+        // Runs before the early-out below so the sequence keeps advancing even on a frame where
+        // the window is collapsed and Begin returns false.
+        TickPerformance(LocalChara());
+
+        ImGui.SetNextWindowSize(new Vector2(660, 760), ImGuiCond.FirstUseEver);
 
         if (!ImGui.Begin("Timeline Probe (dev, throwaway)##tc_anim", ref IsVisible))
         {
@@ -285,39 +323,153 @@ internal sealed unsafe class TimelineProbeWindow
     private void DrawOrnament(Character* chara)
     {
         ImGui.TextColored(Accent, "Ornament (client-side attach)");
-        ImGui.TextDisabled("  If the bare fire does nothing, the .pap likely needs the ornament resident.");
 
         ImGui.SetNextItemWidth(160);
         ImGui.InputInt("Ornament row id##tc_anim_orn", ref _ornamentId);
         if (_ornamentId < 0)     _ornamentId = 0;
         if (_ornamentId > short.MaxValue) _ornamentId = short.MaxValue;
 
+        ImGui.SameLine();
+        ImGui.TextDisabled($"  {OrnamentLabel((uint)_ornamentId)}");
+
         bool ok = chara != null;
         if (!ok) ImGui.BeginDisabled();
 
         if (ImGui.Button("SetupOrnament(id)", new Vector2(220, 0)))
-        {
-            try
-            {
-                chara->OrnamentData.SetupOrnament((short)_ornamentId, 0);
-                Note($"SetupOrnament({_ornamentId})");
-            }
-            catch (Exception ex) { Note($"SetupOrnament THREW: {ex.Message}"); }
-        }
+            Attach(chara, (short)_ornamentId, "manual attach");
 
         ImGui.SameLine();
 
         if (ImGui.Button("SetupOrnament(-1)  detach", new Vector2(220, 0)))
+            Attach(chara, -1, "manual detach");
+
+        ImGui.Spacing();
+        ImGui.TextColored(Accent, "Coupled performance");
+        ImGui.TextDisabled("  Attach the model, play the animation, and pull the model the instant");
+        ImGui.TextDisabled("  the game cancels the animation. The teardown is driven BY the cancel.");
+
+        ImGui.SetNextItemWidth(160);
+        ImGui.InputInt("Attach delay (frames)##tc_anim_delay", ref _attachDelay);
+        if (_attachDelay < 0)   _attachDelay = 0;
+        if (_attachDelay > 240) _attachDelay = 240;
+
+        if (_stage == Stage.Off)
         {
-            try
-            {
-                chara->OrnamentData.SetupOrnament(-1, 0);
-                Note("SetupOrnament(-1) detach");
-            }
-            catch (Exception ex) { Note($"detach THREW: {ex.Message}"); }
+            if (ImGui.Button("Perform  (attach -> play -> auto-detach)", new Vector2(340, 0)))
+                StartPerformance(chara);
+        }
+        else
+        {
+            if (ImGui.Button("Cancel performance", new Vector2(340, 0)))
+                ReleasePerformance("cancelled by button");
         }
 
         if (!ok) ImGui.EndDisabled();
+
+        ImGui.Text($"  Stage: {_stage}  frame {_stageFrames}");
+        if (!string.IsNullOrEmpty(_stageNote)) ImGui.TextDisabled($"  {_stageNote}");
+    }
+
+    // ── coupled attach → play → auto-detach ──────────────────────────────────
+
+    private void StartPerformance(Character* chara)
+    {
+        if (chara == null) return;
+
+        _stage       = Stage.Attaching;
+        _stageFrames = 0;
+        _stageNote   = "attaching model";
+
+        Attach(chara, (short)_ornamentId, "perform: attach");
+        StartTrace();
+    }
+
+    /// <summary>
+    /// Advances the sequence one frame. Split out of the draw body so the stage machine cannot
+    /// stall on a frame where the window is collapsed.
+    /// </summary>
+    private void TickPerformance(Character* chara)
+    {
+        if (_stage == Stage.Off) return;
+
+        if (chara == null)
+        {
+            // Logging out mid-performance: forget the sequence rather than poking a null character.
+            _stage     = Stage.Off;
+            _stageNote = "character gone";
+            return;
+        }
+
+        _stageFrames++;
+        ushort slot0 = chara->Timeline.TimelineSequencer.TimelineIds[0];
+        ushort want  = (ushort)_timelineId;
+
+        switch (_stage)
+        {
+            case Stage.Attaching:
+                if (_stageFrames < _attachDelay) break;
+                try
+                {
+                    chara->Timeline.PlayActionTimeline(want, 0);
+                    Note($"perform: play {want}");
+                }
+                catch (Exception ex)
+                {
+                    ReleasePerformance($"play threw: {ex.Message}");
+                    break;
+                }
+                _stage       = Stage.Playing;
+                _stageFrames = 0;
+                _stageNote   = "waiting for the timeline to take";
+                break;
+
+            case Stage.Playing:
+                if (slot0 == want)
+                {
+                    _stage       = Stage.Watching;
+                    _stageFrames = 0;
+                    _stageNote   = "running — will detach when the game cancels it";
+                }
+                else if (_stageFrames >= PlayGrace)
+                {
+                    ReleasePerformance("timeline never took");
+                }
+                break;
+
+            case Stage.Watching:
+                // The game owns the cancel (IsMotionCanceledByMoving). We only notice and clean up.
+                if (slot0 != want) ReleasePerformance($"animation ended (slot 0 -> {slot0})");
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Ends a performance and takes the model off. Safe to call at any time, including when nothing
+    /// is running — Escape and unload both route here.
+    /// </summary>
+    public void ReleasePerformance(string why)
+    {
+        bool wasRunning = _stage != Stage.Off;
+
+        _stage       = Stage.Off;
+        _stageFrames = 0;
+        _stageNote   = why;
+
+        var chara = LocalChara();
+        if (chara == null) return;
+
+        Attach(chara, -1, wasRunning ? $"perform: detach ({why})" : $"detach ({why})");
+    }
+
+    private void Attach(Character* chara, short ornamentId, string label)
+    {
+        if (chara == null) return;
+        try
+        {
+            chara->OrnamentData.SetupOrnament(ornamentId, 0);
+            Note($"{label}: SetupOrnament({ornamentId})");
+        }
+        catch (Exception ex) { Note($"{label} THREW: {ex.Message}"); }
     }
 
     // ── log ──────────────────────────────────────────────────────────────────
@@ -362,6 +514,24 @@ internal sealed unsafe class TimelineProbeWindow
             return _sheet?.GetRowOrDefault(id);
         }
         catch { return null; }
+    }
+
+    private static Lumina.Excel.ExcelSheet<LSheets.Ornament>? _ornSheet;
+
+    private static string OrnamentLabel(uint rowId)
+    {
+        if (rowId == 0) return "(none)";
+        try
+        {
+            _ornSheet ??= Plugin.DataManager.GetExcelSheet<LSheets.Ornament>();
+            var row = _ornSheet?.GetRowOrDefault(rowId);
+            if (row == null) return "(no row)";
+            string n = row.Value.Singular.ExtractText();
+            return string.IsNullOrEmpty(n)
+                ? "(unnamed)"
+                : $"{n}  (model {row.Value.Model}, attach {row.Value.AttachmentPoint})";
+        }
+        catch { return "(lookup failed)"; }
     }
 
     private static string KeyOf(ushort id)

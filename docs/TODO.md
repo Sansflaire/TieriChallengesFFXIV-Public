@@ -40,12 +40,11 @@ started right now. Update the indented line in the same edit that changes a depe
 - [ ] **R3** 🙋 Kill attribution live test — confirm a named mob counts correctly
   - ⛔ Blocked by: **I1** *(no hook exists to test)*
 - [ ] **R4** 🙋 Turn-in / vendor detection — is `ItemRemoved` + vendor addon reliable?
-- [ ] **R8** 🙋 Run `/tchallenges anim` — can an arbitrary `ActionTimeline` row be driven onto the
-      local player for an animation the account does not own? Target row is **13383**
-      (`ornament_sp/m6017/onm_sp01`). Tool is built and loaded; ~5 min in game. The row is not in
-      the `Emote` sheet, so there is no unlock gate to bypass — the real unknown is whether
-      `Resident: true` means the .pap only loads while the ornament is attached. Probe offers a
-      client-side `SetupOrnament` as the fallback. Answers **Q17**.
+- [ ] **R9** 🙋 Run `/tchallenges anim` → **Perform** — does the coupled sequence work? Attach the
+      Shovel model (Ornament row **57**), play **13383**, and confirm the model is pulled the instant
+      the game cancels the animation. Tool is built and loaded; ~5 min in game. Two unknowns:
+      whether `SetupOrnament` on the local container is genuinely packet-free (zoning should drop the
+      model if so), and whether attaching puts the character into a mode that overrides the timeline.
 - [ ] **R5** 🤖 Garland Tools terms — may we redistribute their data in the Sync repo?
 - [ ] **R7** 🙋 **Fandom licensing.** Wiki text is **CC-BY-SA**, and `origin` here is the PUBLIC
       repo — so `data/curated/monsters.json`, `duties.wiki.json` and `scripts/wiki/cache/` are
@@ -246,6 +245,7 @@ Moved here with the date and the answer — never deleted.
 
 | Item | Outcome | Date |
 |---|---|---|
+| **R8** Can an arbitrary `ActionTimeline` row be played on the local player, unowned? | **Yes.** Row 13383 (`ornament_sp/m6017/onm_sp01`) played bare — no ornament attached, nothing owned. `Resident: true` did not require the model. No gate is bypassed: the row is absent from the `Emote` sheet, so `ExecuteEmote`/`IsEmoteUnlocked` never apply. Also corrected the accessory identity — it is the **Shovel** (Ornament row 57), not Fallen Angel Wings; the inferred `6000 + row id` mapping was wrong. See **Q17**. | 2026-08-28 |
 | Are mob drop tables in the client sheets? | **No.** Loot is server-side; no `DropList`/`LootTable`/`BNpcDrop`/`MonsterDrop` exists. Hunt routes are kill-count only and cannot chain into Craft. | 2026-08-26 |
 | Is `MonsterNote` available for Hunt routes? | **Yes** — `MonsterNote` + `MonsterNoteTarget` both bind normally. | 2026-08-26 |
 | Are `IGameInventory` / `ICondition` available? | **Yes, already injected**, and `InventoryWatcher` consumes all six events (but discards the args, so it cannot answer R1). | 2026-08-26 |

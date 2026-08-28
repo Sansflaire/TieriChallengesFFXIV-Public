@@ -478,6 +478,9 @@ public sealed class Plugin : IDalamudPlugin
         _soundTestWindow?.Dispose();
         LiveProbe.Detach();
         _datasetViewer.Unload();
+
+        // Never leave an attached model behind on a reload — nothing else would take it off.
+        try { _timelineProbe.ReleasePerformance("plugin unload"); } catch { /* teardown must not throw */ }
 #endif
         _mainWindow?.Dispose();
         _shutdown.Dispose();
@@ -978,6 +981,12 @@ public sealed class Plugin : IDalamudPlugin
             _statusWindow.IsVisible   = false;
             _helpWindow.IsVisible     = false;
             _objectiveWindow.Close();
+
+#if DEV_BUILD
+            // The timeline probe can put a model on the character. That is exactly the kind of
+            // thing this handler exists to take back, and it costs nothing when nothing is running.
+            _timelineProbe.ReleasePerformance("escape");
+#endif
         }
         catch (Exception ex)
         {

@@ -2,7 +2,7 @@
   "Author": "Sansflaire",
   "Name": "FFXIV Miscellaneous Challenges",
   "InternalName": "TieriChallengesFFXIV",
-  "AssemblyVersion": "0.84.38.3",
+  "AssemblyVersion": "0.84.38.4",
   "Punchline": "Track self-imposed miscellaneous challenges",
   "Description": "A tracker for miscellaneous self-imposed FFXIV challenges — combat, exploration, gathering, crafting and social goals. Challenges complete themselves as you play: stand somewhere wearing the right thing, follow a multi-step quest chain, work through an adventure's objectives, or race between two points against the clock. Progress persists per install, and a permanent record means a reset is always recoverable. Commands: /tchallenges",
   "ApplicableVersion": "any",
