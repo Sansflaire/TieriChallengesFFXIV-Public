@@ -159,6 +159,12 @@ public sealed class Plugin : IDalamudPlugin
     private readonly DatasetViewer _datasetViewer = new();
 
     /// <summary>
+    /// Throwaway. Settles whether an arbitrary <c>ActionTimeline</c> row can be driven onto the
+    /// local player — see <see cref="TimelineProbeWindow"/>. Delete once the answer is recorded.
+    /// </summary>
+    private readonly TimelineProbeWindow _timelineProbe = new();
+
+    /// <summary>
     /// Null when PanacheUI could not load — it is a Panache surface, and merely constructing one
     /// resolves the library. The chat commands remain the fallback in that case.
     /// </summary>
@@ -553,6 +559,10 @@ public sealed class Plugin : IDalamudPlugin
                     _probeWindow.IsVisible = !_probeWindow.IsVisible;
                     break;
 
+                case "anim":
+                    _timelineProbe.IsVisible = !_timelineProbe.IsVisible;
+                    break;
+
                 case "datasets":
                     _datasetViewer.IsVisible = !_datasetViewer.IsVisible;
                     break;
@@ -704,6 +714,9 @@ public sealed class Plugin : IDalamudPlugin
 
         try { _probeWindow.Draw(); }
         catch (Exception ex) { Diag.Error($"[Probe] window failed: {ex.Message}"); }
+
+        try { _timelineProbe.Draw(); }
+        catch (Exception ex) { Diag.Error($"[AnimProbe] window failed: {ex.Message}"); }
 
         try { _creatorWindow.Draw(); }
         catch (Exception ex) { Log.Error(ex, "ChallengeCreator draw exception"); }

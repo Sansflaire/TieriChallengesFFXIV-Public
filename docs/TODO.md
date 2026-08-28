@@ -40,6 +40,12 @@ started right now. Update the indented line in the same edit that changes a depe
 - [ ] **R3** 🙋 Kill attribution live test — confirm a named mob counts correctly
   - ⛔ Blocked by: **I1** *(no hook exists to test)*
 - [ ] **R4** 🙋 Turn-in / vendor detection — is `ItemRemoved` + vendor addon reliable?
+- [ ] **R8** 🙋 Run `/tchallenges anim` — can an arbitrary `ActionTimeline` row be driven onto the
+      local player for an animation the account does not own? Target row is **13383**
+      (`ornament_sp/m6017/onm_sp01`). Tool is built and loaded; ~5 min in game. The row is not in
+      the `Emote` sheet, so there is no unlock gate to bypass — the real unknown is whether
+      `Resident: true` means the .pap only loads while the ornament is attached. Probe offers a
+      client-side `SetupOrnament` as the fallback. Answers **Q17**.
 - [ ] **R5** 🤖 Garland Tools terms — may we redistribute their data in the Sync repo?
 - [ ] **R7** 🙋 **Fandom licensing.** Wiki text is **CC-BY-SA**, and `origin` here is the PUBLIC
       repo — so `data/curated/monsters.json`, `duties.wiki.json` and `scripts/wiki/cache/` are
