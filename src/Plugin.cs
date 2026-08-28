@@ -479,8 +479,8 @@ public sealed class Plugin : IDalamudPlugin
         LiveProbe.Detach();
         _datasetViewer.Unload();
 
-        // Never leave an attached model behind on a reload — nothing else would take it off.
-        try { _timelineProbe.ReleasePerformance("plugin unload"); } catch { /* teardown must not throw */ }
+        // Managed-only; stops the per-frame animation write. Nothing native to unwind by design.
+        try { _timelineProbe.ReleaseHold(); } catch { /* teardown must not throw */ }
 #endif
         _mainWindow?.Dispose();
         _shutdown.Dispose();
@@ -983,9 +983,10 @@ public sealed class Plugin : IDalamudPlugin
             _objectiveWindow.Close();
 
 #if DEV_BUILD
-            // The timeline probe can put a model on the character. That is exactly the kind of
-            // thing this handler exists to take back, and it costs nothing when nothing is running.
-            _timelineProbe.ReleasePerformance("escape");
+            // Stops the probe driving the player's animation. Managed state only — this handler runs
+            // on EVERY Escape press, so nothing called from here may touch game code. A revision
+            // that called SetupOrnament from this path crashed the game; see BROKEN.md 012.
+            _timelineProbe.ReleaseHold();
 #endif
         }
         catch (Exception ex)
