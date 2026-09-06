@@ -7,6 +7,7 @@ using Dalamud.Bindings.ImGui;
 
 using LSheets = Lumina.Excel.Sheets;
 
+using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 
@@ -101,6 +102,30 @@ internal sealed unsafe class TimelineProbeWindow
 
     // ── draw ─────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Runs EVERY frame from <c>Plugin.DrawUI</c>, window open or not.
+    ///
+    /// <para>Sampling used to live inside <see cref="Draw"/>, which early-returns when the window is
+    /// closed — so firing anything from a chat command produced no trace at all, and "did stop
+    /// actually work?" had to be asked rather than read off the log. Same blind spot as the trace
+    /// only ever existing on screen. Observation is cheap and belongs where it cannot be switched
+    /// off by closing a window.</para>
+    /// </summary>
+    public void Tick()
+    {
+        try
+        {
+            var chara = LocalChara();
+            SampleTrace(chara);
+            SampleOrnament(chara);
+            TickDig(chara);
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[AnimProbe] tick failed: {ex.Message}");
+        }
+    }
+
     public void Draw()
     {
         if (!IsVisible)
@@ -122,8 +147,7 @@ internal sealed unsafe class TimelineProbeWindow
         {
             var chara = LocalChara();
 
-            SampleTrace(chara);
-            SampleOrnament(chara);
+            // Sampling happens in Tick(), which runs whether or not this window is open.
             ApplyHold(chara);
 
             DrawLive(chara);
@@ -497,24 +521,190 @@ internal sealed unsafe class TimelineProbeWindow
         }
     }
 
-    /// <summary>Returns the player to <c>normal/idle</c>. Row 3, verified against the sheet.</summary>
-    public static string StopTimelineNow()
+    /// <summary>
+    /// Returns the player to <c>normal/idle</c> (row 3, read from the sheet) and dismisses the
+    /// accessory if the dig sequence summoned one.
+    ///
+    /// <para>13383 has <c>IsLoop: true</c>, and the first version of this only called
+    /// <c>PlayActionTimeline(3, 0)</c>, which did not visibly stop the dig. Both writes are used
+    /// now — <c>PlayActionTimeline</c> drives the container, <c>SetSlotTimeline</c> pokes slot 0
+    /// directly — because they are not the same operation and both are already proven safe from the
+    /// probe's fire buttons. A trace is started so the log shows which one took, instead of the
+    /// question having to be asked again.</para>
+    /// </summary>
+    public string StopDigNow()
     {
+        _digStage = DigStage.Off;
+
         var chara = LocalChara();
         if (chara == null) return "not logged in.";
+
+        StartTrace();
 
         try
         {
             chara->Timeline.PlayActionTimeline(IdleTimeline, 0);
-            Diag.Info("[AnimProbe] command stop -> normal/idle");
-            return "stopped — back to idle.";
+            chara->Timeline.TimelineSequencer.SetSlotTimeline(0, IdleTimeline);
+            Diag.Info("[AnimProbe] command stop -> PlayActionTimeline(3) + SetSlotTimeline(0,3)");
         }
         catch (Exception ex)
         {
             Diag.Error($"[AnimProbe] command stop failed: {ex.Message}");
             return $"failed: {ex.Message}";
         }
+
+        // Only put the accessory away if this plugin is what brought it out. Dismissing one the
+        // player summoned themselves would be undoing something we did not do.
+        if (_digSummoned && chara->OrnamentData.OrnamentId == DefaultOrnament)
+        {
+            _digSummoned = false;
+            string orn = ToggleOrnament((uint)DefaultOrnament);
+            return $"stopped. {orn}";
+        }
+
+        _digSummoned = false;
+        return "stopped — back to idle.";
     }
+
+    // ── dig: summon the accessory the game's way, then play the animation ────
+
+    private enum DigStage { Off, WaitingForOrnament }
+
+    private DigStage _digStage;
+    private int      _digFrames;
+    private bool     _digSummoned;
+
+    /// <summary>Frames to wait for the game to attach the accessory before playing regardless.</summary>
+    private const int DigSummonGrace = 300;
+
+    /// <summary>
+    /// Plays the dig, bringing the Shovel out first when the player owns it.
+    ///
+    /// <para>The accessory is summoned through <c>ActionManager.UseAction(ActionType.Ornament, …)</c>
+    /// — the game's own action, the same one the Fashion Accessory menu fires. It is
+    /// server-validated, requires ownership, and toggles off with the identical call, so there is no
+    /// invented teardown anywhere in this path. That is the whole difference between this and the
+    /// removed <c>SetupOrnament</c> attempt (BROKEN.md 012).</para>
+    ///
+    /// <para>Not owning the Shovel is not an error: the animation itself needs no ownership at all,
+    /// so it plays regardless and the player simply mimes it.</para>
+    /// </summary>
+    public string StartDigNow()
+    {
+        var chara = LocalChara();
+        if (chara == null) return "not logged in.";
+
+        if (!TimelineIsSafe(DigTimelineId))
+            return $"ActionTimeline {DigTimelineId} is not playable.";
+
+        // Already holding it — nothing to summon.
+        if (chara->OrnamentData.OrnamentId == DefaultOrnament)
+            return PlayDig(chara, "already holding the Shovel");
+
+        bool? owned = IsOrnamentOwned(DefaultOrnament);
+        if (owned != true)
+            return PlayDig(chara, "Shovel not owned — animation only, empty-handed");
+
+        string summon = ToggleOrnament((uint)DefaultOrnament);
+        if (summon.StartsWith("could not", StringComparison.Ordinal))
+            return PlayDig(chara, summon + "; animation only");
+
+        _digSummoned = true;
+        _digStage    = DigStage.WaitingForOrnament;
+        _digFrames   = 0;
+        return $"{summon} — animation follows once it is in hand.";
+    }
+
+    /// <summary>Waits for the game to finish attaching, then fires. Never writes the container.</summary>
+    private void TickDig(Character* chara)
+    {
+        if (_digStage != DigStage.WaitingForOrnament) return;
+
+        if (chara == null) { _digStage = DigStage.Off; return; }
+
+        _digFrames++;
+
+        if (chara->OrnamentData.OrnamentId == DefaultOrnament)
+        {
+            _digStage = DigStage.Off;
+            PlayDig(chara, "accessory in hand");
+            return;
+        }
+
+        if (_digFrames >= DigSummonGrace)
+        {
+            _digStage = DigStage.Off;
+            Diag.Info("[AnimProbe] dig: accessory never arrived, playing anyway");
+            PlayDig(chara, "accessory did not arrive");
+        }
+    }
+
+    private string PlayDig(Character* chara, string why)
+    {
+        try
+        {
+            ushort before = chara->Timeline.TimelineSequencer.TimelineIds[0];
+            chara->Timeline.PlayActionTimeline(DigTimelineId, 0);
+            StartTrace();
+            Diag.Info($"[AnimProbe] dig play {DigTimelineId} ({why}) — slot0 was {before}");
+            return $"digging ({why}).";
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[AnimProbe] dig play failed: {ex.Message}");
+            return $"failed: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Fires the game's own ornament action, which both summons and dismisses.
+    ///
+    /// <para>Which id <c>ActionType.Ornament</c> wants — the <c>Ornament</c> row or the
+    /// <c>Ornament.Action</c> row it points at — is not documented anywhere I can read, so it is
+    /// <b>measured rather than assumed</b>: <c>GetActionStatus</c> is a read, and both candidates
+    /// are queried and logged before either is used. Status 0 means usable. If neither reads usable
+    /// nothing is fired. This is the shape the ornament work should have had from the start.</para>
+    /// </summary>
+    private static string ToggleOrnament(uint ornamentRowId)
+    {
+        try
+        {
+            var am = ActionManager.Instance();
+            if (am == null) return "could not reach ActionManager";
+
+            uint viaRow = am->GetActionStatus(ActionType.Ornament, ornamentRowId);
+
+            uint actionRowId = 0;
+            var  row = OrnamentRowOf(ornamentRowId);
+            if (row != null) actionRowId = row.Value.Action.RowId;
+
+            uint viaAction = actionRowId != 0
+                ? am->GetActionStatus(ActionType.Ornament, actionRowId)
+                : uint.MaxValue;
+
+            Diag.Info($"[AnimProbe] GetActionStatus(Ornament, row {ornamentRowId}) = {viaRow}; "
+                    + $"(Ornament, action {actionRowId}) = {viaAction}");
+
+            uint use = viaRow == 0 ? ornamentRowId
+                     : viaAction == 0 ? actionRowId
+                     : 0;
+
+            if (use == 0)
+                return $"could not use the accessory action (status {viaRow}/{viaAction})";
+
+            bool ok = am->UseAction(ActionType.Ornament, use);
+            Diag.Info($"[AnimProbe] UseAction(Ornament, {use}) -> {ok}");
+            return ok ? $"accessory action fired (id {use})" : $"could not fire accessory action (id {use})";
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[AnimProbe] ToggleOrnament failed: {ex.Message}");
+            return "could not fire accessory action";
+        }
+    }
+
+    /// <summary>The Shovel's dig. Shared by the window's default and the chat command.</summary>
+    private const ushort DigTimelineId = (ushort)DefaultTimeline;
 
     // ── release ──────────────────────────────────────────────────────────────
 

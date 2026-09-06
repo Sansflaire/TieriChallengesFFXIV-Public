@@ -77,14 +77,6 @@ public sealed class Plugin : IDalamudPlugin
     private const string CmdMain  = "/tchallenges";
     private const string CmdShort = "/tchal";
 
-#if DEV_BUILD
-    /// <summary>
-    /// <c>ornament_sp/m6017/onm_sp01</c> — the Shovel accessory's dig animation. Plays on the local
-    /// player with the accessory neither owned nor equipped, because the row is not in the
-    /// <c>Emote</c> sheet and so no unlock check ever applies to it. See OPEN_QUESTIONS Q17.
-    /// </summary>
-    private const ushort DigTimeline = 13383;
-#endif
 
     private readonly Configuration    _config;
     private readonly CompletionStore  _store;
@@ -579,13 +571,13 @@ public sealed class Plugin : IDalamudPlugin
                 // dig animation on demand, with the accessory neither owned nor equipped. 13383 is
                 // absent from the Emote sheet, so no unlock gate applies to it — see Q17.
                 case "dig":
-                    ChatGui.Print("[Challenges] " + TimelineProbeWindow.PlayTimelineNow(DigTimeline));
+                    ChatGui.Print("[Challenges] " + _timelineProbe.StartDigNow());
                     break;
 
                 case "dig stop":
                 case "digstop":
                 case "stopanim":
-                    ChatGui.Print("[Challenges] " + TimelineProbeWindow.StopTimelineNow());
+                    ChatGui.Print("[Challenges] " + _timelineProbe.StopDigNow());
                     break;
 
                 case "datasets":
@@ -739,6 +731,11 @@ public sealed class Plugin : IDalamudPlugin
 
         try { _probeWindow.Draw(); }
         catch (Exception ex) { Diag.Error($"[Probe] window failed: {ex.Message}"); }
+
+        // Tick first and unconditionally: the probe's sampling and the dig sequence must keep
+        // running with the window closed, or a chat-command fire leaves no trace to read.
+        try { _timelineProbe.Tick(); }
+        catch (Exception ex) { Diag.Error($"[AnimProbe] tick failed: {ex.Message}"); }
 
         try { _timelineProbe.Draw(); }
         catch (Exception ex) { Diag.Error($"[AnimProbe] window failed: {ex.Message}"); }
