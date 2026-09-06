@@ -160,6 +160,8 @@ internal sealed unsafe class TimelineProbeWindow
             ImGui.Separator();
             DrawWeaponModels(chara);
             ImGui.Separator();
+            DrawModelPathCheck();
+            ImGui.Separator();
             DrawTrace();
             ImGui.Separator();
             DrawLog();
@@ -484,6 +486,81 @@ internal sealed unsafe class TimelineProbeWindow
     }
 
     private readonly HashSet<string> _weaponSeen = new();
+
+    // ── does the model actually exist as a weapon-format asset? ──────────────
+
+    private int  _pathModelId = 4936;   // Ornament 57 (Shovel) Model
+    private bool _pathChecked;
+    private readonly List<string> _pathResults = new();
+
+    /// <summary>
+    /// Asks sqpack whether the accessory's model exists under the ordinary weapon path convention.
+    ///
+    /// <para>The previous conclusion — "the accessory carries no weapon triple, therefore the weapon
+    /// route is dead" — conflated two different claims. It rules out COPYING a triple off the
+    /// ornament actor. It says nothing about whether the model is a weapon-format asset that could
+    /// be loaded as one, or redirected onto one with Penumbra. That is a file-existence question,
+    /// and <c>IDataManager.FileExists</c> answers it as a pure read.</para>
+    /// </summary>
+    private void DrawModelPathCheck()
+    {
+        ImGui.TextColored(Accent, "Model path check (read-only — does the asset exist?)");
+
+        ImGui.SetNextItemWidth(160);
+        if (ImGui.InputInt("Model id##tc_anim_model", ref _pathModelId)) _pathChecked = false;
+        if (_pathModelId < 0)     _pathModelId = 0;
+        if (_pathModelId > 65535) _pathModelId = 65535;
+
+        ImGui.SameLine();
+        if (ImGui.Button("Check paths##tc_anim_paths", new Vector2(140, 0))) { _pathChecked = false; }
+
+        if (!_pathChecked)
+        {
+            _pathChecked = true;
+            _pathResults.Clear();
+
+            foreach (string p in CandidateModelPaths(_pathModelId))
+            {
+                bool exists;
+                try { exists = Plugin.DataManager.FileExists(p); }
+                catch (Exception ex) { _pathResults.Add($"  ERR  {p}  ({ex.Message})"); continue; }
+
+                string line = (exists ? "  YES  " : "  no   ") + p;
+                _pathResults.Add(line);
+                if (exists) Diag.Info($"[AnimProbe] path EXISTS {p}");
+            }
+            Diag.Info($"[AnimProbe] path check for model {_pathModelId} complete");
+        }
+
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0f, 0f, 0f, 0.25f));
+        ImGui.BeginChild("##tc_anim_paths_out", new Vector2(0, 130), true);
+        foreach (var r in _pathResults)
+        {
+            if (r.StartsWith("  YES", StringComparison.Ordinal)) ImGui.TextColored(Good, r);
+            else ImGui.TextDisabled(r);
+        }
+        ImGui.EndChild();
+        ImGui.PopStyleColor();
+    }
+
+    /// <summary>
+    /// The conventional shapes a rigid held model can take. Weapon variants first, since that is the
+    /// hypothesis under test; the ornament-specific shapes are included so a negative on the weapon
+    /// paths still tells us where the asset actually lives rather than just "not there".
+    /// </summary>
+    private static IEnumerable<string> CandidateModelPaths(int id)
+    {
+        string w = $"w{id:D4}";
+        for (int b = 1; b <= 3; b++)
+            yield return $"chara/weapon/{w}/obj/body/b{b:D4}/model/{w}b{b:D4}.mdl";
+
+        string m = $"m{id:D4}";
+        yield return $"chara/monster/{m}/obj/body/b0001/model/{m}b0001.mdl";
+
+        string n = $"n{id:D4}";
+        yield return $"chara/ornament/{n}/obj/body/b0001/model/{n}b0001.mdl";
+        yield return $"chara/ornament/{w}/obj/body/b0001/model/{w}b0001.mdl";
+    }
 
     /// <summary>Read-only ownership check. Null when PlayerState is not available yet.</summary>
     private static bool? IsOrnamentOwned(uint ornamentId)
