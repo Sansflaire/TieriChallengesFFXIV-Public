@@ -158,6 +158,8 @@ internal sealed unsafe class TimelineProbeWindow
             ImGui.Separator();
             DrawOrnamentReadOnly(chara);
             ImGui.Separator();
+            DrawWeaponModels(chara);
+            ImGui.Separator();
             DrawTrace();
             ImGui.Separator();
             DrawLog();
@@ -401,6 +403,70 @@ internal sealed unsafe class TimelineProbeWindow
         _lastOrnId = now;
         _ornSeen   = true;
     }
+
+    /// <summary>
+    /// Dumps the weapon-model triple the game is using for the attached accessory, and for the
+    /// player's own hands.
+    ///
+    /// <para>This exists to MEASURE the one number the Glamourer-style route needs. A fashion
+    /// accessory is a separate <see cref="Ornament"/> actor, but it is a <c>Character</c>, so it
+    /// carries its own <c>DrawDataContainer</c> — and the model it renders is a
+    /// <see cref="WeaponModelId"/> exactly like a weapon. <c>DrawDataContainer.LoadWeapon</c> is a
+    /// client-side loader with no ownership concept, so if the Shovel's triple can be read off an
+    /// accessory the player DOES own, the same triple can later be loaded onto a character that
+    /// does not own it.</para>
+    ///
+    /// <para>Reading it is the whole point. The alternative was inventing a <c>Type</c>/<c>Variant</c>
+    /// pair, which is the exact move that produced BROKEN.md 012.</para>
+    /// </summary>
+    private void DrawWeaponModels(Character* chara)
+    {
+        ImGui.TextColored(Accent, "Weapon models (read-only — measuring the shovel's triple)");
+
+        if (chara == null)
+        {
+            ImGui.TextDisabled("  not logged in");
+            return;
+        }
+
+        DumpWeapon("  player main", chara, 0);
+        DumpWeapon("  player off ", chara, 1);
+
+        var orn = chara->OrnamentData.OrnamentObject;
+        if (orn == null)
+        {
+            ImGui.TextDisabled("  ornament: not summoned — bring one out to read its model");
+            return;
+        }
+
+        var oc = (Character*)orn;
+        DumpWeapon("  ORNAMENT   ", oc, 0);
+        DumpWeapon("  ornament 2 ", oc, 1);
+    }
+
+    private void DumpWeapon(string label, Character* c, int slot)
+    {
+        try
+        {
+            var span = c->DrawData.WeaponData;
+            if (slot >= span.Length) { ImGui.TextDisabled($"{label}  (no slot)"); return; }
+
+            var m = span[slot].ModelId;
+            string line = $"{label}  Id {m.Id}  Type {m.Type}  Variant {m.Variant}  "
+                        + $"Stain {m.Stain0}/{m.Stain1}";
+            ImGui.TextUnformatted(line);
+
+            // Logged as well as shown: the on-screen-only mistake has cost two round trips already.
+            string key = $"{label}|{m.Value}";
+            if (_weaponSeen.Add(key)) Diag.Info($"[AnimProbe] weapon{line}");
+        }
+        catch (Exception ex)
+        {
+            ImGui.TextDisabled($"{label}  unreadable ({ex.Message})");
+        }
+    }
+
+    private readonly HashSet<string> _weaponSeen = new();
 
     /// <summary>Read-only ownership check. Null when PlayerState is not available yet.</summary>
     private static bool? IsOrnamentOwned(uint ornamentId)
