@@ -40,11 +40,6 @@ started right now. Update the indented line in the same edit that changes a depe
 - [ ] **R3** 🙋 Kill attribution live test — confirm a named mob counts correctly
   - ⛔ Blocked by: **I1** *(no hook exists to test)*
 - [ ] **R4** 🙋 Turn-in / vendor detection — is `ItemRemoved` + vendor addon reliable?
-- [ ] **R9** 🙋 Run `/tchallenges anim` → **Perform** — does the coupled sequence work? Attach the
-      Shovel model (Ornament row **57**), play **13383**, and confirm the model is pulled the instant
-      the game cancels the animation. Tool is built and loaded; ~5 min in game. Two unknowns:
-      whether `SetupOrnament` on the local container is genuinely packet-free (zoning should drop the
-      model if so), and whether attaching puts the character into a mode that overrides the timeline.
 - [ ] **R5** 🤖 Garland Tools terms — may we redistribute their data in the Sync repo?
 - [ ] **R7** 🙋 **Fandom licensing.** Wiki text is **CC-BY-SA**, and `origin` here is the PUBLIC
       repo — so `data/curated/monsters.json`, `duties.wiki.json` and `scripts/wiki/cache/` are
@@ -245,6 +240,7 @@ Moved here with the date and the answer — never deleted.
 
 | Item | Outcome | Date |
 |---|---|---|
+| **R9** Does the coupled attach→play→auto-detach sequence work? | **Dead — the feature it tested no longer exists.** The ornament attach path was removed one commit after R9 was written, because its teardown (`SetupOrnament(-1)`) hard-crashed the game twice; there is no **Perform** button to run. Nothing is lost: Q17 proved the animation plays with no ornament attached, so the attach was never needed for it. Re-opening this needs a **verified** way to remove an attached model — see **BROKEN.md 012**, and prefer a supported path (Penumbra/Glamourer already attach models every character swap) over poking `OrnamentContainer` directly. | 2026-08-28 |
 | **R8** Can an arbitrary `ActionTimeline` row be played on the local player, unowned? | **Yes.** Row 13383 (`ornament_sp/m6017/onm_sp01`) played bare — no ornament attached, nothing owned. `Resident: true` did not require the model. No gate is bypassed: the row is absent from the `Emote` sheet, so `ExecuteEmote`/`IsEmoteUnlocked` never apply. Also corrected the accessory identity — it is the **Shovel** (Ornament row 57), not Fallen Angel Wings; the inferred `6000 + row id` mapping was wrong. See **Q17**. | 2026-08-28 |
 | Are mob drop tables in the client sheets? | **No.** Loot is server-side; no `DropList`/`LootTable`/`BNpcDrop`/`MonsterDrop` exists. Hunt routes are kill-count only and cannot chain into Craft. | 2026-08-26 |
 | Is `MonsterNote` available for Hunt routes? | **Yes** — `MonsterNote` + `MonsterNoteTarget` both bind normally. | 2026-08-26 |
