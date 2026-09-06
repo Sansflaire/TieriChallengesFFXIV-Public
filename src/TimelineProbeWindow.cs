@@ -8,6 +8,7 @@ using Dalamud.Bindings.ImGui;
 using LSheets = Lumina.Excel.Sheets;
 
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
 
 namespace TieriChallengesFFXIV;
 
@@ -51,8 +52,19 @@ internal sealed unsafe class TimelineProbeWindow
     /// <summary>The row this probe was built for. <c>ornament_sp/m6017/onm_sp01</c>, the Shovel.</summary>
     private const int DefaultTimeline = 13383;
 
+    /// <summary>Ornament row 57 = Shovel — the accessory row 13383's animation belongs to.</summary>
+    private const int DefaultOrnament = 57;
+
     private int  _timelineId = DefaultTimeline;
+    private int  _ornamentId = DefaultOrnament;
     private bool _hold;
+
+    // Every transition of OrnamentContainer.OrnamentId, newest last. This is how the game's own
+    // "no ornament" value gets LEARNED rather than guessed: summon an accessory, dismiss it, and
+    // read the value the client itself writes. Guessing that number is what crashed the game.
+    private readonly List<string> _ornTrace = new();
+    private ushort _lastOrnId;
+    private bool   _ornSeen;
 
     // Rolling capture of slot 0 after a fire, as (id, consecutiveFrames). "the write never landed"
     // and "the write landed and was reverted one frame later" are indistinguishable in a still
@@ -111,6 +123,7 @@ internal sealed unsafe class TimelineProbeWindow
             var chara = LocalChara();
 
             SampleTrace(chara);
+            SampleOrnament(chara);
             ApplyHold(chara);
 
             DrawLive(chara);
@@ -277,12 +290,20 @@ internal sealed unsafe class TimelineProbeWindow
     }
 
     /// <summary>
-    /// Ornaments are READ-ONLY here. See the class doc: the attach path crashed the game and is
-    /// withdrawn until a detach is verified rather than guessed.
+    /// Ornaments are READ-ONLY here, and stay that way. See the class doc: writing the container
+    /// crashed the game, so the supported route is to let the PLAYER summon the accessory through
+    /// the game's own Fashion Accessory menu and for this window only to watch.
+    ///
+    /// <para>Two things this panel exists to answer. <b>Ownership</b> —
+    /// <see cref="PlayerState.IsOrnamentUnlocked"/> is a read, so it settles whether the supported
+    /// route is even available for a given accessory without touching anything. <b>The game's own
+    /// "none" value</b> — the transition recorder captures what the client writes to
+    /// <c>OrnamentId</c> when an accessory is dismissed. That is the number the removed attach path
+    /// needed and invented instead.</para>
     /// </summary>
     private void DrawOrnamentReadOnly(Character* chara)
     {
-        ImGui.TextColored(Accent, "Ornament (read-only)");
+        ImGui.TextColored(Accent, "Ornament (read-only — the game does the attaching)");
 
         if (chara == null)
         {
@@ -293,12 +314,80 @@ internal sealed unsafe class TimelineProbeWindow
         ushort orn = chara->OrnamentData.OrnamentId;
         bool   obj = chara->OrnamentData.OrnamentObject != null;
 
-        ImGui.Text($"  OrnamentId  {(orn == 0 ? "(none)" : orn.ToString())}   object {(obj ? "attached" : "null")}");
+        ImGui.Text($"  Live OrnamentId  {orn}   object {(obj ? "attached" : "null")}");
         if (orn != 0) ImGui.TextDisabled($"  {OrnamentLabel(orn)}");
 
-        ImGui.TextColored(Warn, "  Attach/detach removed — SetupOrnament(-1) crashed the game.");
-        ImGui.TextDisabled("  Do not re-add it without a VERIFIED way to remove an attached model.");
-        ImGui.TextDisabled("  See BROKEN.md 012.");
+        ImGui.Spacing();
+        ImGui.SetNextItemWidth(160);
+        ImGui.InputInt("Ornament row id##tc_anim_orn", ref _ornamentId);
+        if (_ornamentId < 0) _ornamentId = 0;
+        if (_ornamentId > ushort.MaxValue) _ornamentId = ushort.MaxValue;
+
+        ImGui.SameLine();
+        ImGui.TextDisabled($"  {OrnamentLabel((uint)_ornamentId)}");
+
+        // Precondition before the native read, per the rule the crash bought: validate the id
+        // against the sheet first and simply do not call when it is not a real row.
+        if (OrnamentRowOf((uint)_ornamentId) == null)
+        {
+            ImGui.TextColored(Warn, "  Not a real Ornament row — ownership not checked.");
+        }
+        else
+        {
+            bool? owned = IsOrnamentOwned((uint)_ornamentId);
+            if (owned == null)
+                ImGui.TextDisabled("  Ownership unavailable (PlayerState not ready).");
+            else if (owned.Value)
+                ImGui.TextColored(Good, "  OWNED — summon it from the game's Fashion Accessory menu.");
+            else
+                ImGui.TextColored(Warn, "  NOT owned — the supported route is unavailable for this one.");
+        }
+
+        ImGui.Spacing();
+        ImGui.TextDisabled($"  OrnamentId transitions seen this session ({_ornTrace.Count}):");
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0f, 0f, 0f, 0.25f));
+        ImGui.BeginChild("##tc_anim_orntrace", new Vector2(0, 74), true);
+        if (_ornTrace.Count == 0)
+            ImGui.TextDisabled("  Summon and dismiss an accessory to record what the game writes.");
+        else
+            for (int i = _ornTrace.Count - 1; i >= 0; i--) ImGui.TextUnformatted(_ornTrace[i]);
+        ImGui.EndChild();
+        ImGui.PopStyleColor();
+    }
+
+    /// <summary>
+    /// Records every change to <c>OrnamentContainer.OrnamentId</c>. Pure observation — the value
+    /// the game writes on dismiss is the fact the crashed revision should have gone and looked up.
+    /// </summary>
+    private void SampleOrnament(Character* chara)
+    {
+        if (chara == null) return;
+
+        ushort now = chara->OrnamentData.OrnamentId;
+        if (_ornSeen && now == _lastOrnId) return;
+
+        if (_ornSeen)
+        {
+            string line = $"  {_lastOrnId} -> {now}   ({OrnamentLabel(now)})";
+            _ornTrace.Add(line);
+            if (_ornTrace.Count > 40) _ornTrace.RemoveAt(0);
+            Diag.Info($"[AnimProbe] OrnamentId {_lastOrnId} -> {now}");
+        }
+
+        _lastOrnId = now;
+        _ornSeen   = true;
+    }
+
+    /// <summary>Read-only ownership check. Null when PlayerState is not available yet.</summary>
+    private static bool? IsOrnamentOwned(uint ornamentId)
+    {
+        try
+        {
+            var ps = PlayerState.Instance();
+            if (ps == null) return null;
+            return ps->IsOrnamentUnlocked(ornamentId);
+        }
+        catch { return null; }
     }
 
     // ── trace ────────────────────────────────────────────────────────────────
@@ -385,6 +474,18 @@ internal sealed unsafe class TimelineProbeWindow
 
     private static readonly Vector4 Accent = new(1.00f, 0.78f, 0.35f, 1f);
     private static readonly Vector4 Warn   = new(1.00f, 0.55f, 0.35f, 1f);
+    private static readonly Vector4 Good   = new(0.45f, 0.90f, 0.50f, 1f);
+
+    private static LSheets.Ornament? OrnamentRowOf(uint rowId)
+    {
+        if (rowId == 0) return null;
+        try
+        {
+            _ornSheet ??= Plugin.DataManager.GetExcelSheet<LSheets.Ornament>();
+            return _ornSheet?.GetRowOrDefault(rowId);
+        }
+        catch { return null; }
+    }
 
     private static Character* LocalChara()
     {

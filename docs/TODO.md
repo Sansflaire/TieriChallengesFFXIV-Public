@@ -40,6 +40,12 @@ started right now. Update the indented line in the same edit that changes a depe
 - [ ] **R3** 🙋 Kill attribution live test — confirm a named mob counts correctly
   - ⛔ Blocked by: **I1** *(no hook exists to test)*
 - [ ] **R4** 🙋 Turn-in / vendor detection — is `ItemRemoved` + vendor addon reliable?
+- [ ] **R10** 🙋 Run `/tchallenges anim` — shovel model + animation via the SUPPORTED route.
+      (a) Read the ownership line for Ornament **57** (Shovel). (b) Summon any accessory from the
+      game's own Fashion Accessory menu and dismiss it, so the transition recorder captures the
+      value the client writes to `OrnamentId` for "none" — that is the number the crashed revision
+      invented instead of looking up, and having it is what would make an unowned attach safe to
+      revisit. Everything in this item is a READ; the plugin never writes the ornament container.
 - [ ] **R5** 🤖 Garland Tools terms — may we redistribute their data in the Sync repo?
 - [ ] **R7** 🙋 **Fandom licensing.** Wiki text is **CC-BY-SA**, and `origin` here is the PUBLIC
       repo — so `data/curated/monsters.json`, `duties.wiki.json` and `scripts/wiki/cache/` are
