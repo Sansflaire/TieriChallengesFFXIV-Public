@@ -442,6 +442,23 @@ internal sealed unsafe class TimelineProbeWindow
         var oc = (Character*)orn;
         DumpWeapon("  ORNAMENT   ", oc, 0);
         DumpWeapon("  ornament 2 ", oc, 1);
+
+        // The weapon slots came back all zeros on a summoned Shovel, so the accessory does NOT
+        // render through DrawDataContainer at all — "read the triple, load it as a weapon" is dead.
+        // Its model must therefore live on the actor itself; ModelContainer is where that is.
+        try
+        {
+            var mc = oc->ModelContainer;
+            string line = $"  ORNAMENT model  ModelCharaId {mc.ModelCharaId}  Skeleton {mc.ModelSkeletonId}"
+                        + $"  (alt {mc.ModelCharaId_2}/{mc.ModelSkeletonId_2})";
+            ImGui.TextUnformatted(line);
+            if (_weaponSeen.Add("ornmodel|" + mc.ModelCharaId + "/" + mc.ModelSkeletonId))
+                Diag.Info($"[AnimProbe]{line}");
+        }
+        catch (Exception ex)
+        {
+            ImGui.TextDisabled($"  ORNAMENT model unreadable ({ex.Message})");
+        }
     }
 
     private void DumpWeapon(string label, Character* c, int slot)
