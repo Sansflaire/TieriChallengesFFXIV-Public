@@ -56,6 +56,43 @@ removed entirely, and `MarkComplete` is the only writer. Recorded below.
 
 ## Dead Ends
 
+### Putting an UNOWNED accessory model in the player's hand (2026-09-06)
+
+Goal: the Shovel visibly held, on a character that does not own it. The *animation* needs no
+ownership and works (Q17); only the model is gated. Two routes were investigated and **both are
+dead** — recorded so they are not re-walked.
+
+**1. Glamourer-style weapon override — DEAD, measured.** The theory was that a fashion accessory
+renders as a weapon-shaped model, so `DrawDataContainer.LoadWeapon` (a client-side loader with no
+ownership concept) could place it. `Ornament` inherits `Character`, so it carries its own
+`DrawDataContainer`, and the ornament `Model` values sit in the weapon-model number range — the
+reasoning was sound and wrong. Read off a **summoned Shovel**:
+
+```
+player main   Id 5504  Type 1  Variant 1
+ORNAMENT      Id 0     Type 0  Variant 0
+```
+
+The accessory actor carries **no weapon model at all**; it does not render through
+`DrawDataContainer`. There is no triple to copy, so `LoadWeapon` has nothing to load.
+
+**2. Brio IPC — DEAD, complete surface checked.** Brio ships `Brio.API.xml`, so its public API is
+documented rather than guessed. All 23 members: Spawn/Despawn/Exists/GetAllActors/LoadMCDF/SaveMCDF,
+SetActorAnimation/Set+GetActorSpeed/Freeze+UnFreezeActor, Freeze+UnFreezePhysics,
+Set/Get/ResetModelTransform + LoadPose*/GetPoseAsJson/ResetPose, ApiVersion/IsAvailable/
+IsValidGPoseSession. **Nothing sets an actor's model identity** — the only "model" in the API is
+`ModelTransform`, i.e. position/rotation/scale. No prop attachment, no equipment, and GPose-gated
+besides.
+
+**What remains** is `OrnamentContainer.SetupOrnament` — the game's own bone-attach machinery, and
+the function that crashed twice (see [BROKEN.md](../BROKEN.md) 012). Both values it now needs are
+ones the game itself was **observed** using (attach `57`, none `0`), unlike the invented `-1` that
+caused the crash. Untested, and not to be attempted except by the staged protocol: test the DETACH
+first, on an accessory the player OWNS, so the server still holds true state and a desync is
+recoverable by zoning or re-summoning. An unowned attach has nothing to resync to, which is what
+made the original attempt unrecoverable.
+
+
 | Approach | Why it failed | Date |
 |----------|---------------|------|
 | Classifying enemies as "plant-based" / "beast" from game data | No such taxonomy exists. `BNpcBase` has no family/type column; `BNpcResist` is 256 rows of unlabelled booleans with no link back to a mob. The only things that resolve are `ModelChara.Type` (1=human, 2=monster, 3=demihuman), `BNpcName` for specific creatures, and name-substring matching. LimLoToolkit hit this same wall and documented it in `MobViewerTool.cs` — "rather than invent a column, the viewer shows what genuinely resolves." Don't re-derive this. | 2026-08-22 |
