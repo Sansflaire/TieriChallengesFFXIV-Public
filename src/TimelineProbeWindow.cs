@@ -463,6 +463,59 @@ internal sealed unsafe class TimelineProbeWindow
         Diag.Info($"[AnimProbe] {line}");
     }
 
+    // ── one-shot playback, for the chat command ──────────────────────────────
+
+    /// <summary>
+    /// Plays one ActionTimeline row on the local player and returns a human-readable result. This
+    /// is the whole of what Trist actually wanted out of this investigation — the dig animation, on
+    /// demand, with no accessory owned — so it lives behind a command rather than only inside a
+    /// probe window that has to be opened and typed into.
+    ///
+    /// <para>Gated by the same precondition as the window (<see cref="TimelineIsSafe"/>): the row
+    /// must exist and carry a non-empty <c>Key</c>. The `catch` is for the managed side only; the
+    /// precondition is what actually keeps this call safe. See the class doc.</para>
+    /// </summary>
+    public static string PlayTimelineNow(ushort id)
+    {
+        var chara = LocalChara();
+        if (chara == null) return "not logged in.";
+
+        if (!TimelineIsSafe(id))
+            return $"ActionTimeline {id} is not playable (no such row, or it has no animation).";
+
+        try
+        {
+            ushort before = chara->Timeline.TimelineSequencer.TimelineIds[0];
+            chara->Timeline.PlayActionTimeline(id, 0);
+            Diag.Info($"[AnimProbe] command play {id} — slot0 was {before}");
+            return $"playing {id} ({KeyOf(id)}).";
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[AnimProbe] command play {id} failed: {ex.Message}");
+            return $"failed: {ex.Message}";
+        }
+    }
+
+    /// <summary>Returns the player to <c>normal/idle</c>. Row 3, verified against the sheet.</summary>
+    public static string StopTimelineNow()
+    {
+        var chara = LocalChara();
+        if (chara == null) return "not logged in.";
+
+        try
+        {
+            chara->Timeline.PlayActionTimeline(IdleTimeline, 0);
+            Diag.Info("[AnimProbe] command stop -> normal/idle");
+            return "stopped — back to idle.";
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[AnimProbe] command stop failed: {ex.Message}");
+            return $"failed: {ex.Message}";
+        }
+    }
+
     // ── release ──────────────────────────────────────────────────────────────
 
     /// <summary>

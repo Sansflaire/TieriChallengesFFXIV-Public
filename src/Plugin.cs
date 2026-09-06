@@ -77,6 +77,15 @@ public sealed class Plugin : IDalamudPlugin
     private const string CmdMain  = "/tchallenges";
     private const string CmdShort = "/tchal";
 
+#if DEV_BUILD
+    /// <summary>
+    /// <c>ornament_sp/m6017/onm_sp01</c> — the Shovel accessory's dig animation. Plays on the local
+    /// player with the accessory neither owned nor equipped, because the row is not in the
+    /// <c>Emote</c> sheet and so no unlock check ever applies to it. See OPEN_QUESTIONS Q17.
+    /// </summary>
+    private const ushort DigTimeline = 13383;
+#endif
+
     private readonly Configuration    _config;
     private readonly CompletionStore  _store;
     private readonly ChallengeTracker _tracker;
@@ -564,6 +573,19 @@ public sealed class Plugin : IDalamudPlugin
 
                 case "anim":
                     _timelineProbe.IsVisible = !_timelineProbe.IsVisible;
+                    break;
+
+                // The point of the whole ActionTimeline investigation, as a command: the Shovel's
+                // dig animation on demand, with the accessory neither owned nor equipped. 13383 is
+                // absent from the Emote sheet, so no unlock gate applies to it — see Q17.
+                case "dig":
+                    ChatGui.Print("[Challenges] " + TimelineProbeWindow.PlayTimelineNow(DigTimeline));
+                    break;
+
+                case "dig stop":
+                case "digstop":
+                case "stopanim":
+                    ChatGui.Print("[Challenges] " + TimelineProbeWindow.StopTimelineNow());
                     break;
 
                 case "datasets":
