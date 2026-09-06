@@ -40,12 +40,6 @@ started right now. Update the indented line in the same edit that changes a depe
 - [ ] **R3** 🙋 Kill attribution live test — confirm a named mob counts correctly
   - ⛔ Blocked by: **I1** *(no hook exists to test)*
 - [ ] **R4** 🙋 Turn-in / vendor detection — is `ItemRemoved` + vendor addon reliable?
-- [ ] **R10** 🙋 Run `/tchallenges anim` — shovel model + animation via the SUPPORTED route.
-      (a) Read the ownership line for Ornament **57** (Shovel). (b) Summon any accessory from the
-      game's own Fashion Accessory menu and dismiss it, so the transition recorder captures the
-      value the client writes to `OrnamentId` for "none" — that is the number the crashed revision
-      invented instead of looking up, and having it is what would make an unowned attach safe to
-      revisit. Everything in this item is a READ; the plugin never writes the ornament container.
 - [ ] **R5** 🤖 Garland Tools terms — may we redistribute their data in the Sync repo?
 - [ ] **R7** 🙋 **Fandom licensing.** Wiki text is **CC-BY-SA**, and `origin` here is the PUBLIC
       repo — so `data/curated/monsters.json`, `duties.wiki.json` and `scripts/wiki/cache/` are
@@ -246,6 +240,7 @@ Moved here with the date and the answer — never deleted.
 
 | Item | Outcome | Date |
 |---|---|---|
+| **R10** Shovel model + animation via the supported route | **Works, and the missing fact is now observed.** Trist owns the Shovel; the game summoned it (`OrnamentId 0 -> 57`) and dismissed it (`57 -> 0`) through its own Fashion Accessory menu while the plugin only watched and played the animation — no memory write at any point. **The game's "no ornament" value is `0`**, which is the number the crashed revision invented as `-1` (see **BROKEN.md 012**). That does not license `SetupOrnament(0,0)` — a field's none-value is not proof of a function's accepted argument — and it is not needed, since the supported route covers every accessory the player owns. | 2026-09-06 |
 | **R9** Does the coupled attach→play→auto-detach sequence work? | **Dead — the feature it tested no longer exists.** The ornament attach path was removed one commit after R9 was written, because its teardown (`SetupOrnament(-1)`) hard-crashed the game twice; there is no **Perform** button to run. Nothing is lost: Q17 proved the animation plays with no ornament attached, so the attach was never needed for it. Re-opening this needs a **verified** way to remove an attached model — see **BROKEN.md 012**, and prefer a supported path (Penumbra/Glamourer already attach models every character swap) over poking `OrnamentContainer` directly. | 2026-08-28 |
 | **R8** Can an arbitrary `ActionTimeline` row be played on the local player, unowned? | **Yes.** Row 13383 (`ornament_sp/m6017/onm_sp01`) played bare — no ornament attached, nothing owned. `Resident: true` did not require the model. No gate is bypassed: the row is absent from the `Emote` sheet, so `ExecuteEmote`/`IsEmoteUnlocked` never apply. Also corrected the accessory identity — it is the **Shovel** (Ornament row 57), not Fallen Angel Wings; the inferred `6000 + row id` mapping was wrong. See **Q17**. | 2026-08-28 |
 | Are mob drop tables in the client sheets? | **No.** Loot is server-side; no `DropList`/`LootTable`/`BNpcDrop`/`MonsterDrop` exists. Hunt routes are kill-count only and cannot chain into Craft. | 2026-08-26 |

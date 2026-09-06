@@ -406,9 +406,17 @@ internal sealed unsafe class TimelineProbeWindow
         ushort now = chara->Timeline.TimelineSequencer.TimelineIds[0];
 
         if (_trace.Count > 0 && _trace[^1].Id == now)
+        {
             _trace[^1] = (now, _trace[^1].Frames + 1);
+        }
         else
+        {
             _trace.Add((now, 1));
+            // Logged, not just displayed. The on-screen panel answers "did the write take?" but it
+            // dies with the next hot-reload, so the one question the probe exists to answer was
+            // unreadable from outside the game and had to be asked. Diag survives.
+            Diag.Info($"[AnimProbe] trace slot0 -> {now}  {KeyOf(now)}");
+        }
 
         if (++_traceFrames >= TraceLimit) _tracing = false;
     }

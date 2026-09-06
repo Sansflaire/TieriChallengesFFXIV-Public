@@ -134,6 +134,29 @@ otherwise is what made the guess feel affordable.
 - Pointer-capturing lambdas were removed from the fire path so each guarded pointer is used directly
   in the scope it was checked in.
 
+## The value, finally observed (2026-09-06)
+
+The read-only transition recorder captured the game doing it itself:
+
+```
+16:36:09  OrnamentId 0 -> 57     (Shovel summoned from the Fashion Accessory menu)
+16:40:17  OrnamentId 57 -> 0     (dismissed)
+```
+
+**The game's "no ornament" value is `0`** — exactly what `ushort` implied, and what `-1` never
+could have been. Two minutes of watching would have prevented the whole incident.
+
+**This still does not license `SetupOrnament(0, 0)`.** Knowing what value the *field* holds for
+"none" is not the same as knowing what argument the *function* accepts — the game's dismiss path
+also despawns the `Ornament` object and releases its model, and `SetupOrnament` may be only one part
+of that. `0` is now a plausible, in-domain candidate rather than an invented out-of-domain one,
+which is a real improvement, but plausible is not verified and this file exists because that
+distinction was ignored once already.
+
+**And it is not needed.** Trist owns the Shovel, so the supported route works end to end: the game
+summons the accessory, the plugin only plays the animation, the game dismisses it. The memory attach
+would buy something only for accessories the player does *not* own, which nobody has asked for.
+
 ## Lessons
 
 1. **A parameter's type is not documentation of its domain.** `short` did not mean −1 was legal. The
