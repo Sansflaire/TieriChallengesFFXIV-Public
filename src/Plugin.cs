@@ -619,11 +619,11 @@ public sealed class Plugin : IDalamudPlugin
                     DigTuning.Save();
                 }
 
-                var live = Props.CurrentSlotSpeed;
-                ChatGui.Print($"[Challenges] Dig speed {DigTuning.DigSpeed:0.##}x — a "
-                            + $"{DigTuning.DigHoldSeconds:0.##}s dig now ends after "
-                            + $"{Props.EffectiveHoldMilliseconds} ms"
-                            + (live.HasValue ? $" (slot 0 reads {live.Value:0.##}x)." : "."));
+                ChatGui.Print($"[Challenges] Dig speed {DigTuning.DigSpeed:0.##}x via "
+                            + $"{(PropService.SpeedMode)DigTuning.DigSpeedMethod} — a "
+                            + $"{DigTuning.DigHoldSeconds:0.##}s dig ends after "
+                            + $"{Props.EffectiveHoldMilliseconds} ms.");
+                ChatGui.Print("[Challenges] " + Props.SpeedReadout());
                 return;
             }
 #endif

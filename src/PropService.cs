@@ -129,8 +129,35 @@ internal sealed unsafe class PropService
     public const float MinSpeed = 0.1f;
     public const float MaxSpeed = 5f;
 
+    /// <summary>
+    /// Which lever to pull to change animation pace. <b>Three exist and it was not knowable from
+    /// static reading which one actually wins</b>, so this is selectable and the lab reports all
+    /// three live — the same measure-don't-assume protocol that settled the ornament question.
+    /// </summary>
+    public enum SpeedMode
+    {
+        /// <summary>The member function. What 0.84.42.7 used, and it did not take.</summary>
+        SlotFunction = 0,
+
+        /// <summary>Write <c>TimelineSpeeds[0]</c> directly, bypassing the setter.</summary>
+        SlotArray = 1,
+
+        /// <summary>
+        /// <c>TimelineContainer.OverallSpeed</c> — the container-level multiplier the game's own
+        /// <c>CalculateAndApplyOverallSpeed</c> maintains. The likeliest culprit for the reset.
+        /// </summary>
+        Overall = 2,
+
+        /// <summary>All three, every frame. The default until one is proven sufficient.</summary>
+        Everything = 3,
+    }
+
+    public SpeedMode SpeedMethod { get; set; } = SpeedMode.Everything;
+
     private bool  _speedApplied;
-    private float _speedBefore = 1f;
+    private float _speedBefore    = 1f;
+    private float _arrayBefore    = 1f;
+    private float _overallBefore  = 1f;
 
     /// <summary>
     /// The multiplier actually in force on the animation, which is 1 whenever the apply was skipped
@@ -177,6 +204,27 @@ internal sealed unsafe class PropService
     }
 
     /// <summary>
+    /// All three speed values as the game currently reports them. The point of showing every one is
+    /// that a write which "does nothing" and a write that is being reverted a frame later look
+    /// identical from the outside — this tells them apart.
+    /// </summary>
+    public string SpeedReadout()
+    {
+        var chara = LocalChara();
+        if (chara == null) return "no character loaded.";
+
+        try
+        {
+            float fn      = chara->Timeline.TimelineSequencer.GetSlotSpeed(BaseSlot);
+            float array   = chara->Timeline.TimelineSequencer.TimelineSpeeds[(int)BaseSlot];
+            float overall = chara->Timeline.OverallSpeed;
+
+            return $"GetSlotSpeed {fn:0.###}   TimelineSpeeds[0] {array:0.###}   OverallSpeed {overall:0.###}";
+        }
+        catch (Exception ex) { return $"unreadable: {ex.Message}"; }
+    }
+
+    /// <summary>
     /// Forces the base slot back to normal speed. Recovery for the one case the restore cannot
     /// cover: the plugin being unloaded mid-dig, since teardown paths are forbidden from calling
     /// game code and the animation slot therefore keeps whatever multiplier was in force.
@@ -189,9 +237,15 @@ internal sealed unsafe class PropService
         try
         {
             chara->Timeline.TimelineSequencer.SetSlotSpeed(BaseSlot, 1f);
-            _speedApplied = false;
-            _speedBefore  = 1f;
-            return "animation speed reset to 1.0.";
+            chara->Timeline.TimelineSequencer.TimelineSpeeds[(int)BaseSlot] = 1f;
+            chara->Timeline.OverallSpeed = 1f;
+
+            _speedApplied  = false;
+            _speedBefore   = 1f;
+            _arrayBefore   = 1f;
+            _overallBefore = 1f;
+            _appliedSpeed  = 1f;
+            return "animation speed reset to 1.0 (all three).";
         }
         catch (Exception ex)
         {
@@ -348,21 +402,29 @@ internal sealed unsafe class PropService
                 case Stage.WaitAttach:
                     if (chara->OrnamentData.OrnamentId == (ushort)_ornament || _frames >= AttachGrace)
                     {
+                        // Baseline BEFORE the play call, while the values still describe what the
+                        // character was doing rather than what we just did to it.
+                        CaptureSpeedBaseline(chara);
+
                         try { chara->Timeline.PlayActionTimeline(_timeline, 0); }
                         catch (Exception ex) { Diag.Error($"[Prop] play failed: {ex.Message}"); Stop(); return; }
 
-                        ApplySpeed(chara);
-
-                        // The cap is measured from here — the moment the animation was asked for —
-                        // not from Start(), so waiting for the model to attach never eats into it.
-                        _playStartedMs = Environment.TickCount64;
-                        _stage         = Stage.Playing;
-                        _frames        = 0;
+                        _stage  = Stage.Playing;
+                        _frames = 0;
                     }
                     break;
 
                 case Stage.Playing:
-                    if (slot0 == _timeline) { _stage = Stage.Watching; _frames = 0; }
+                    if (slot0 == _timeline)
+                    {
+                        // The animation is genuinely in the slot now — this is the first moment a
+                        // speed write can survive, and the first honest moment to start the clock.
+                        ApplySpeed(chara, announce: true);
+
+                        _playStartedMs = Environment.TickCount64;
+                        _stage         = Stage.Watching;
+                        _frames        = 0;
+                    }
                     else if (_frames >= PlayGrace) Stop();
                     break;
 
@@ -371,6 +433,10 @@ internal sealed unsafe class PropService
                     // (IsMotionCanceledByMoving) and we only notice it; the cap is ours and ends a
                     // dig that nothing interrupted rather than letting it loop.
                     if (slot0 != _timeline) { Stop(); break; }
+
+                    // Every frame — the game recalculates its own speeds, so a single write can be
+                    // undone on the next update. See ApplySpeed.
+                    ApplySpeed(chara, announce: false);
 
                     // Scaled by the speed that actually took, so the cap always ends the same
                     // amount of DIG rather than the same amount of clock.
@@ -419,37 +485,81 @@ internal sealed unsafe class PropService
     /// speed is 1 — an acquire that changes nothing is still an acquire, and skipping it means
     /// there is no restore to get wrong on the way out.
     /// </summary>
-    private void ApplySpeed(Character* chara)
+    /// <summary>
+    /// Records every speed value we might overwrite, BEFORE the animation is asked for. Captured
+    /// this early because the values are only trustworthy while the character is still doing
+    /// whatever it was doing — reading them back after the dig has been installed would capture our
+    /// own change, and the restore would then put back the wrong number.
+    /// </summary>
+    private void CaptureSpeedBaseline(Character* chara)
     {
         _speedApplied = false;
         _appliedSpeed = 1f;
 
+        try
+        {
+            _speedBefore   = chara->Timeline.TimelineSequencer.GetSlotSpeed(BaseSlot);
+            _arrayBefore   = chara->Timeline.TimelineSequencer.TimelineSpeeds[(int)BaseSlot];
+            _overallBefore = chara->Timeline.OverallSpeed;
+
+            if (!float.IsFinite(_speedBefore)   || _speedBefore   <= 0f) _speedBefore   = 1f;
+            if (!float.IsFinite(_arrayBefore)   || _arrayBefore   <= 0f) _arrayBefore   = 1f;
+            if (!float.IsFinite(_overallBefore) || _overallBefore <= 0f) _overallBefore = 1f;
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Prop] speed baseline read failed: {ex.Message}");
+            _speedBefore = _arrayBefore = _overallBefore = 1f;
+        }
+    }
+
+    /// <summary>
+    /// Writes the multiplier. Called EVERY FRAME while the dig runs, not once.
+    ///
+    /// <para><b>Once was the bug.</b> 0.84.42.7 set the speed immediately after asking for the
+    /// animation — before the timeline had actually been installed into the slot, which takes a
+    /// frame or more (that delay is why <see cref="Stage.Playing"/> exists at all). The install
+    /// then reset the slot and the dig played at normal pace. On top of that the game runs its own
+    /// <c>CalculateAndApplyOverallSpeed</c>, so even a correctly-timed single write can be undone
+    /// on the next update. Re-writing every frame beats both without needing to know which one
+    /// happened.</para>
+    /// </summary>
+    private void ApplySpeed(Character* chara, bool announce)
+    {
         float speed = PlaybackSpeed;
         if (!float.IsFinite(speed)) return;
 
         speed = Math.Clamp(speed, MinSpeed, MaxSpeed);
-        if (MathF.Abs(speed - 1f) < 0.001f) return;
+        if (MathF.Abs(speed - 1f) < 0.001f) { _appliedSpeed = 1f; return; }
 
         try
         {
-            _speedBefore = chara->Timeline.TimelineSequencer.GetSlotSpeed(BaseSlot);
-            if (!float.IsFinite(_speedBefore) || _speedBefore <= 0f) _speedBefore = 1f;
+            var mode = SpeedMethod;
 
-            chara->Timeline.TimelineSequencer.SetSlotSpeed(BaseSlot, speed);
+            if (mode is SpeedMode.SlotFunction or SpeedMode.Everything)
+                chara->Timeline.TimelineSequencer.SetSlotSpeed(BaseSlot, speed);
+
+            if (mode is SpeedMode.SlotArray or SpeedMode.Everything)
+                chara->Timeline.TimelineSequencer.TimelineSpeeds[(int)BaseSlot] = speed;
+
+            if (mode is SpeedMode.Overall or SpeedMode.Everything)
+                chara->Timeline.OverallSpeed = speed;
+
             _speedApplied = true;
             _appliedSpeed = speed;
 
-            Diag.Info($"[Prop] slot {BaseSlot} speed {_speedBefore:0.##} -> {speed:0.##}, "
-                    + $"dig ends after {ScaleHold(speed)} ms");
+            if (announce)
+                Diag.Info($"[Prop] speed {speed:0.##}x via {mode} "
+                        + $"(was slot {_speedBefore:0.##} / array {_arrayBefore:0.##} / overall {_overallBefore:0.##}), "
+                        + $"dig ends after {ScaleHold(speed)} ms");
         }
         catch (Exception ex)
         {
             Diag.Error($"[Prop] speed apply failed: {ex.Message}");
-            _speedApplied = false;
         }
     }
 
-    /// <summary>Puts back the speed that was in force before we touched it. Observed, not assumed.</summary>
+    /// <summary>Puts back every value we touched. Observed at capture, not assumed.</summary>
     private void RestoreSpeed(Character* chara)
     {
         _appliedSpeed = 1f;
@@ -457,7 +567,12 @@ internal sealed unsafe class PropService
         if (!_speedApplied) return;
         _speedApplied = false;
 
-        try   { chara->Timeline.TimelineSequencer.SetSlotSpeed(BaseSlot, _speedBefore); }
+        try
+        {
+            chara->Timeline.TimelineSequencer.SetSlotSpeed(BaseSlot, _speedBefore);
+            chara->Timeline.TimelineSequencer.TimelineSpeeds[(int)BaseSlot] = _arrayBefore;
+            chara->Timeline.OverallSpeed = _overallBefore;
+        }
         catch (Exception ex) { Diag.Error($"[Prop] speed restore failed: {ex.Message}"); }
     }
 

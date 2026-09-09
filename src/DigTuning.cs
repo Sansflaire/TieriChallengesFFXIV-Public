@@ -156,6 +156,12 @@ internal static class DigTuning
     public static float DigSpeed = 1f;
 
     /// <summary>
+    /// Which speed lever to use — see <see cref="PropService.SpeedMode"/>. Defaults to all three,
+    /// since the one that was tried alone provably did not work.
+    /// </summary>
+    public static int DigSpeedMethod = (int)PropService.SpeedMode.Everything;
+
+    /// <summary>
     /// Pushes the values that live somewhere else into their real home. Called after
     /// <see cref="Load"/> and whenever the lab changes one — a tuning value that is only read at
     /// startup would look like it had silently stopped working the first time it was edited.
@@ -166,6 +172,7 @@ internal static class DigTuning
         {
             Plugin.Props.HoldMilliseconds = (int)MathF.Round(DigHoldSeconds * 1000f);
             Plugin.Props.PlaybackSpeed    = Math.Clamp(DigSpeed, PropService.MinSpeed, PropService.MaxSpeed);
+            Plugin.Props.SpeedMethod      = (PropService.SpeedMode)Math.Clamp(DigSpeedMethod, 0, 3);
         }
         catch (Exception ex) { Diag.Error($"[Dig] applying tuning failed: {ex.Message}"); }
     }
@@ -223,6 +230,7 @@ internal static class DigTuning
         public float MaxRise { get; set; }
         public float DigHoldSeconds { get; set; }
         public float DigSpeed { get; set; }
+        public int?  DigSpeedMethod { get; set; }
     }
 
     private static string Path =>
@@ -253,6 +261,7 @@ internal static class DigTuning
         MaxRise        = 25f;
         DigHoldSeconds = PropService.DefaultHoldMilliseconds / 1000f;
         DigSpeed       = 1f;
+        DigSpeedMethod = (int)PropService.SpeedMode.Everything;
         Apply();
     }
 
@@ -337,6 +346,12 @@ internal static class DigTuning
                            ? Math.Clamp(d.DigSpeed, PropService.MinSpeed, PropService.MaxSpeed)
                            : 1f;
 
+            // Nullable: absent means "never chosen", which must land on Everything rather than on
+            // SlotFunction — index 0 is the method already proven not to work on its own.
+            DigSpeedMethod = d.DigSpeedMethod is { } m
+                                 ? Math.Clamp(m, 0, 3)
+                                 : (int)PropService.SpeedMode.Everything;
+
             Apply();
             Diag.Info("[Dig] tuning loaded.");
         }
@@ -370,6 +385,7 @@ internal static class DigTuning
                 TrailStops = TrailStops, TrailDig = TrailDig,
                 TrailRadar = TrailRadar, TrailSpacing = TrailSpacing,
                 MaxRise = MaxRise, DigHoldSeconds = DigHoldSeconds, DigSpeed = DigSpeed,
+                DigSpeedMethod = DigSpeedMethod,
             };
 
             // Temp-then-replace, like the completion stores: a half-written tuning file read on the
