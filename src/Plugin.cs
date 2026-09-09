@@ -583,7 +583,8 @@ public sealed class Plugin : IDalamudPlugin
                 }
 
                 ChatGui.Print(Props.HoldMilliseconds > 0
-                    ? $"[Challenges] Dig length {DigTuning.DigHoldSeconds:0.##}s ({Props.HoldMilliseconds} ms)."
+                    ? $"[Challenges] Dig length {DigTuning.DigHoldSeconds:0.##}s of animation "
+                    + $"— {Props.EffectiveHoldMilliseconds} ms at {DigTuning.DigSpeed:0.##}x."
                     : "[Challenges] Dig length: no cap — runs until the game cancels it.");
                 return;
             }
@@ -619,8 +620,10 @@ public sealed class Plugin : IDalamudPlugin
                 }
 
                 var live = Props.CurrentSlotSpeed;
-                ChatGui.Print($"[Challenges] Dig speed {DigTuning.DigSpeed:0.##}x"
-                            + (live.HasValue ? $" (slot 0 currently reads {live.Value:0.##}x)." : "."));
+                ChatGui.Print($"[Challenges] Dig speed {DigTuning.DigSpeed:0.##}x — a "
+                            + $"{DigTuning.DigHoldSeconds:0.##}s dig now ends after "
+                            + $"{Props.EffectiveHoldMilliseconds} ms"
+                            + (live.HasValue ? $" (slot 0 reads {live.Value:0.##}x)." : "."));
                 return;
             }
 #endif

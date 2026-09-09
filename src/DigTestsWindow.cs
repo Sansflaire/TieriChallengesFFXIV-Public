@@ -141,7 +141,9 @@ internal sealed class DigTestsWindow
         if (ImGui.IsItemDeactivatedAfterEdit()) { DigTuning.Apply(); DigTuning.Save(); }
 
         ImGui.SameLine();
-        ImGui.TextDisabled($"in effect: {Plugin.Props.HoldMilliseconds} ms");
+        ImGui.TextDisabled(Plugin.Props.HoldMilliseconds <= 0
+            ? "no cap"
+            : $"= {Plugin.Props.EffectiveHoldMilliseconds} ms at {DigTuning.DigSpeed:0.##}x");
 
         // The two named lengths content will ask for by name.
         if (ImGui.Button($"Short Dig ({PropService.ShortDigMilliseconds / 1000f:0.##}s)"))
@@ -164,7 +166,9 @@ internal sealed class DigTestsWindow
           + "before we touch it is READ and restored afterwards, so nothing is guessed on the way\n"
           + "out — but note the one gap: if the plugin unloads mid-dig the slot keeps the\n"
           + "multiplier, because teardown may not call game code. Use Reset if that happens.\n"
-          + "Speed and length interact: at 2x a 4s dig plays twice as much of the loop.");
+          + "Length is a length of ANIMATION at 1x, so speed SHORTENS the dig rather than\n"
+          + "cramming more of it into the same clock: a 4s dig at 2x ends after 2s having played\n"
+          + "exactly the same dig. The two settings are independent.");
 
         ImGui.SliderFloat("Speed", ref DigTuning.DigSpeed, PropService.MinSpeed, PropService.MaxSpeed, "%.2fx");
         if (ImGui.IsItemDeactivatedAfterEdit()) { DigTuning.Apply(); DigTuning.Save(); }

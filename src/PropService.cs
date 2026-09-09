@@ -116,9 +116,12 @@ internal sealed unsafe class PropService
     /// acquire with a genuinely verified release rather than one that guesses 1.0 on the way out —
     /// the distinction BROKEN.md 012 exists to enforce.</para>
     ///
-    /// <para><b>Note this changes how much animation a given hold length covers.</b> At 2× a
-    /// 4-second dig plays twice as much of the loop, so speed and
-    /// <see cref="HoldMilliseconds"/> are tuned together, not independently.</para>
+    /// <para><b>Speed shortens the dig, it does not lengthen it.</b> See
+    /// <see cref="EffectiveHoldMilliseconds"/> — the hold is a length of ANIMATION, so a Short Dig
+    /// at 2× is over in half the wall-clock time having played the same amount of dig. The two
+    /// knobs are therefore independent, which they were not at first: the hold used to be raw wall
+    /// clock, so 2× simply played twice as much of the loop and "short dig" stopped meaning
+    /// anything.</para>
     /// </summary>
     public float PlaybackSpeed { get; set; } = 1f;
 
@@ -128,6 +131,34 @@ internal sealed unsafe class PropService
 
     private bool  _speedApplied;
     private float _speedBefore = 1f;
+
+    /// <summary>
+    /// The multiplier actually in force on the animation, which is 1 whenever the apply was skipped
+    /// or failed. The hold is divided by THIS rather than by <see cref="PlaybackSpeed"/>: if the
+    /// speed never took, the animation is playing at normal pace and cutting the dig short would
+    /// truncate it for no reason.
+    /// </summary>
+    private float _appliedSpeed = 1f;
+
+    /// <summary>
+    /// How long the dig will actually last in wall-clock milliseconds, given the requested speed.
+    /// 0 means no cap.
+    ///
+    /// <para><see cref="HoldMilliseconds"/> is a length of ANIMATION measured at 1×, so this is it
+    /// divided by the multiplier: a 4-second dig at 2× ends after 2 seconds having played exactly
+    /// the same dig, and "Short Dig" keeps meaning one thing at every speed.</para>
+    /// </summary>
+    public int EffectiveHoldMilliseconds => ScaleHold(PlaybackSpeed);
+
+    private int ScaleHold(float speed)
+    {
+        if (HoldMilliseconds <= 0) return 0;
+
+        if (!float.IsFinite(speed) || speed <= 0f) speed = 1f;
+        speed = Math.Clamp(speed, MinSpeed, MaxSpeed);
+
+        return Math.Max(1, (int)MathF.Round(HoldMilliseconds / speed));
+    }
 
     /// <summary>
     /// The speed the game currently reports for the base slot, or null if it cannot be read.
@@ -341,7 +372,10 @@ internal sealed unsafe class PropService
                     // dig that nothing interrupted rather than letting it loop.
                     if (slot0 != _timeline) { Stop(); break; }
 
-                    if (HoldMilliseconds > 0 && Environment.TickCount64 - _playStartedMs >= HoldMilliseconds)
+                    // Scaled by the speed that actually took, so the cap always ends the same
+                    // amount of DIG rather than the same amount of clock.
+                    int cap = ScaleHold(_appliedSpeed);
+                    if (cap > 0 && Environment.TickCount64 - _playStartedMs >= cap)
                         Stop();
                     break;
             }
@@ -388,6 +422,7 @@ internal sealed unsafe class PropService
     private void ApplySpeed(Character* chara)
     {
         _speedApplied = false;
+        _appliedSpeed = 1f;
 
         float speed = PlaybackSpeed;
         if (!float.IsFinite(speed)) return;
@@ -402,8 +437,10 @@ internal sealed unsafe class PropService
 
             chara->Timeline.TimelineSequencer.SetSlotSpeed(BaseSlot, speed);
             _speedApplied = true;
+            _appliedSpeed = speed;
 
-            Diag.Info($"[Prop] slot {BaseSlot} speed {_speedBefore:0.##} -> {speed:0.##}");
+            Diag.Info($"[Prop] slot {BaseSlot} speed {_speedBefore:0.##} -> {speed:0.##}, "
+                    + $"dig ends after {ScaleHold(speed)} ms");
         }
         catch (Exception ex)
         {
@@ -415,6 +452,8 @@ internal sealed unsafe class PropService
     /// <summary>Puts back the speed that was in force before we touched it. Observed, not assumed.</summary>
     private void RestoreSpeed(Character* chara)
     {
+        _appliedSpeed = 1f;
+
         if (!_speedApplied) return;
         _speedApplied = false;
 
