@@ -587,6 +587,42 @@ public sealed class Plugin : IDalamudPlugin
                     : "[Challenges] Dig length: no cap — runs until the game cancels it.");
                 return;
             }
+
+            // Dig animation playback speed. "reset" forces the slot back to 1.0, which is the
+            // recovery for a speed left behind by a mid-dig plugin reload.
+            if (raw.StartsWith("digspeed", StringComparison.OrdinalIgnoreCase))
+            {
+                string arg = raw.Substring(8).Trim();
+
+                if (arg.Equals("reset", StringComparison.OrdinalIgnoreCase))
+                {
+                    DigTuning.DigSpeed = 1f;
+                    DigTuning.Apply();
+                    DigTuning.Save();
+                    ChatGui.Print("[Challenges] " + Props.ResetPlaybackSpeed());
+                    return;
+                }
+
+                if (arg.Length > 0)
+                {
+                    if (!float.TryParse(arg, System.Globalization.NumberStyles.Float,
+                                        System.Globalization.CultureInfo.InvariantCulture, out float mult)
+                        || !float.IsFinite(mult) || mult <= 0f)
+                    {
+                        ChatGui.PrintError("[Challenges] Usage: /tchal digspeed <multiplier|reset>");
+                        return;
+                    }
+
+                    DigTuning.DigSpeed = Math.Clamp(mult, PropService.MinSpeed, PropService.MaxSpeed);
+                    DigTuning.Apply();
+                    DigTuning.Save();
+                }
+
+                var live = Props.CurrentSlotSpeed;
+                ChatGui.Print($"[Challenges] Dig speed {DigTuning.DigSpeed:0.##}x"
+                            + (live.HasValue ? $" (slot 0 currently reads {live.Value:0.##}x)." : "."));
+                return;
+            }
 #endif
 
             switch (raw.ToLowerInvariant())

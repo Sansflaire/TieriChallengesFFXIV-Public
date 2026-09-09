@@ -150,13 +150,23 @@ internal static class DigTuning
     public static float DigHoldSeconds = PropService.DefaultHoldMilliseconds / 1000f;
 
     /// <summary>
+    /// Dig animation playback speed. 1 = untouched. Drives
+    /// <see cref="PropService.PlaybackSpeed"/>, which ships.
+    /// </summary>
+    public static float DigSpeed = 1f;
+
+    /// <summary>
     /// Pushes the values that live somewhere else into their real home. Called after
     /// <see cref="Load"/> and whenever the lab changes one — a tuning value that is only read at
     /// startup would look like it had silently stopped working the first time it was edited.
     /// </summary>
     public static void Apply()
     {
-        try { Plugin.Props.HoldMilliseconds = (int)MathF.Round(DigHoldSeconds * 1000f); }
+        try
+        {
+            Plugin.Props.HoldMilliseconds = (int)MathF.Round(DigHoldSeconds * 1000f);
+            Plugin.Props.PlaybackSpeed    = Math.Clamp(DigSpeed, PropService.MinSpeed, PropService.MaxSpeed);
+        }
         catch (Exception ex) { Diag.Error($"[Dig] applying tuning failed: {ex.Message}"); }
     }
 
@@ -177,7 +187,7 @@ internal static class DigTuning
     /// Gating on "older than current" would make every future bump re-run every past migration and
     /// overrule values the user chose deliberately in between.</para>
     /// </summary>
-    private const int CurrentVersion = 3;
+    private const int CurrentVersion = 4;
 
     private sealed class Dto
     {
@@ -212,6 +222,7 @@ internal static class DigTuning
         public float TrailSpacing { get; set; }
         public float MaxRise { get; set; }
         public float DigHoldSeconds { get; set; }
+        public float DigSpeed { get; set; }
     }
 
     private static string Path =>
@@ -241,6 +252,7 @@ internal static class DigTuning
         ResetHunt(); ResetSite(); ResetTrail();
         MaxRise        = 25f;
         DigHoldSeconds = PropService.DefaultHoldMilliseconds / 1000f;
+        DigSpeed       = 1f;
         Apply();
     }
 
@@ -315,6 +327,16 @@ internal static class DigTuning
                 if (SiteWallHeight == 6f)  SiteWallHeight = 1.5f;
             }
 
+            // Version 4: the dig default moved from the Long Dig to the Short Dig. Same narrow
+            // rule — 9 was the previous default, so a pre-v4 file holding exactly 9 is somebody who
+            // never moved that slider, not somebody who wants a long dig.
+            if (d.Version < 4 && DigHoldSeconds == PropService.LongDigMilliseconds / 1000f)
+                DigHoldSeconds = PropService.ShortDigMilliseconds / 1000f;
+
+            DigSpeed = float.IsFinite(d.DigSpeed) && d.DigSpeed > 0f
+                           ? Math.Clamp(d.DigSpeed, PropService.MinSpeed, PropService.MaxSpeed)
+                           : 1f;
+
             Apply();
             Diag.Info("[Dig] tuning loaded.");
         }
@@ -347,7 +369,7 @@ internal static class DigTuning
                 SiteDebugColorB = SiteDebugColor.Z,
                 TrailStops = TrailStops, TrailDig = TrailDig,
                 TrailRadar = TrailRadar, TrailSpacing = TrailSpacing,
-                MaxRise = MaxRise, DigHoldSeconds = DigHoldSeconds,
+                MaxRise = MaxRise, DigHoldSeconds = DigHoldSeconds, DigSpeed = DigSpeed,
             };
 
             // Temp-then-replace, like the completion stores: a half-written tuning file read on the

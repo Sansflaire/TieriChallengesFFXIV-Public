@@ -55,13 +55,29 @@ internal sealed unsafe class PropService
     private long   _playStartedMs;
 
     /// <summary>
-    /// The dig length, in milliseconds. <b>9 seconds — found by testing, not chosen.</b> Trist
-    /// dialled it in with the lab slider across real digs and settled here; it is the length at
-    /// which an uninterrupted dig reads as a complete action rather than as a loop that was cut off.
-    /// Do not "tidy" it to a rounder number, and if it ever needs to change, change it the same way
-    /// it was found.
+    /// <b>Short Dig — 4 seconds.</b> The default, and the length a routine dig should be.
+    /// Found by testing with the lab slider, not chosen.
     /// </summary>
-    public const int DefaultHoldMilliseconds = 9000;
+    public const int ShortDigMilliseconds = 4000;
+
+    /// <summary>
+    /// <b>Long Dig — 9 seconds.</b> The length at which an uninterrupted dig reads as a whole,
+    /// deliberate piece of work rather than a quick scrape. Also found by testing.
+    ///
+    /// <para>Both exist as named numbers because challenge content will want to ask for "a short
+    /// dig" or "a long dig" rather than carry a millisecond literal — a literal in content is a
+    /// number nobody can re-tune later without hunting for every copy of it.</para>
+    /// </summary>
+    public const int LongDigMilliseconds = 9000;
+
+    /// <summary>What a dig is unless something asks otherwise: the Short Dig.</summary>
+    public const int DefaultHoldMilliseconds = ShortDigMilliseconds;
+
+    /// <summary>
+    /// The animation slot a dig plays on. <c>Base = 0</c> per the slot list on
+    /// <c>ActionTimelineSequencer</c>, and the slot <see cref="Tick"/> already watches.
+    /// </summary>
+    private const uint BaseSlot = 0;
 
     /// <summary>
     /// How long the animation is allowed to run before the performance ends itself and the prop is
@@ -86,6 +102,72 @@ internal sealed unsafe class PropService
     /// sharp rather than learning to ignore.</para>
     /// </summary>
     public int HoldMilliseconds { get; set; } = DefaultHoldMilliseconds;
+
+    /// <summary>
+    /// Playback speed multiplier for the dig animation. 1 = untouched, 2 = twice as fast.
+    ///
+    /// <para><b>Driven through <c>ActionTimelineSequencer.SetSlotSpeed(slot, speed)</c></b>, which is
+    /// a real member function in FFXIVClientStructs, not a guess — and the game bounds-checks the
+    /// slot itself (<c>cmp edx, 0Eh / jae</c>, i.e. it returns for any slot ≥ 14) so an out-of-range
+    /// slot is a no-op rather than a fault. We only ever touch slot 0.</para>
+    ///
+    /// <para><b>The baseline is READ, never assumed.</b> <c>GetSlotSpeed</c> exists, so the speed in
+    /// force before we touch it is observed and restored verbatim. That is what makes this an
+    /// acquire with a genuinely verified release rather than one that guesses 1.0 on the way out —
+    /// the distinction BROKEN.md 012 exists to enforce.</para>
+    ///
+    /// <para><b>Note this changes how much animation a given hold length covers.</b> At 2× a
+    /// 4-second dig plays twice as much of the loop, so speed and
+    /// <see cref="HoldMilliseconds"/> are tuned together, not independently.</para>
+    /// </summary>
+    public float PlaybackSpeed { get; set; } = 1f;
+
+    /// <summary>Slowest and fastest we will ask for. A multiplier, so neither end is a sentinel.</summary>
+    public const float MinSpeed = 0.1f;
+    public const float MaxSpeed = 5f;
+
+    private bool  _speedApplied;
+    private float _speedBefore = 1f;
+
+    /// <summary>
+    /// The speed the game currently reports for the base slot, or null if it cannot be read.
+    /// Purely diagnostic — the lab shows it so a leaked speed is visible rather than mysterious.
+    /// </summary>
+    public float? CurrentSlotSpeed
+    {
+        get
+        {
+            var chara = LocalChara();
+            if (chara == null) return null;
+
+            try   { return chara->Timeline.TimelineSequencer.GetSlotSpeed(BaseSlot); }
+            catch { return null; }
+        }
+    }
+
+    /// <summary>
+    /// Forces the base slot back to normal speed. Recovery for the one case the restore cannot
+    /// cover: the plugin being unloaded mid-dig, since teardown paths are forbidden from calling
+    /// game code and the animation slot therefore keeps whatever multiplier was in force.
+    /// </summary>
+    public string ResetPlaybackSpeed()
+    {
+        var chara = LocalChara();
+        if (chara == null) return "no character loaded.";
+
+        try
+        {
+            chara->Timeline.TimelineSequencer.SetSlotSpeed(BaseSlot, 1f);
+            _speedApplied = false;
+            _speedBefore  = 1f;
+            return "animation speed reset to 1.0.";
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Prop] speed reset failed: {ex.Message}");
+            return $"failed: {ex.Message}";
+        }
+    }
 
     /// <summary>Frames to wait for the model to appear before playing anyway.</summary>
     private const int AttachGrace = 300;
@@ -187,7 +269,11 @@ internal sealed unsafe class PropService
         _cancelRequested = false;
 
         var chara = LocalChara();
-        if (chara == null) return "stopped.";
+        if (chara == null) { _speedApplied = false; return "stopped."; }
+
+        // Speed first, so the idle we drop back to plays at normal pace rather than inheriting the
+        // dig's multiplier for a frame.
+        RestoreSpeed(chara);
 
         try
         {
@@ -233,6 +319,8 @@ internal sealed unsafe class PropService
                     {
                         try { chara->Timeline.PlayActionTimeline(_timeline, 0); }
                         catch (Exception ex) { Diag.Error($"[Prop] play failed: {ex.Message}"); Stop(); return; }
+
+                        ApplySpeed(chara);
 
                         // The cap is measured from here — the moment the animation was asked for —
                         // not from Start(), so waiting for the model to attach never eats into it.
@@ -290,6 +378,48 @@ internal sealed unsafe class PropService
             Diag.Error($"[Prop] SetupOrnament({id}) failed: {ex.Message}");
             return $"failed: {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// Reads the slot's current speed, then applies ours. Does nothing at all when the requested
+    /// speed is 1 — an acquire that changes nothing is still an acquire, and skipping it means
+    /// there is no restore to get wrong on the way out.
+    /// </summary>
+    private void ApplySpeed(Character* chara)
+    {
+        _speedApplied = false;
+
+        float speed = PlaybackSpeed;
+        if (!float.IsFinite(speed)) return;
+
+        speed = Math.Clamp(speed, MinSpeed, MaxSpeed);
+        if (MathF.Abs(speed - 1f) < 0.001f) return;
+
+        try
+        {
+            _speedBefore = chara->Timeline.TimelineSequencer.GetSlotSpeed(BaseSlot);
+            if (!float.IsFinite(_speedBefore) || _speedBefore <= 0f) _speedBefore = 1f;
+
+            chara->Timeline.TimelineSequencer.SetSlotSpeed(BaseSlot, speed);
+            _speedApplied = true;
+
+            Diag.Info($"[Prop] slot {BaseSlot} speed {_speedBefore:0.##} -> {speed:0.##}");
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Prop] speed apply failed: {ex.Message}");
+            _speedApplied = false;
+        }
+    }
+
+    /// <summary>Puts back the speed that was in force before we touched it. Observed, not assumed.</summary>
+    private void RestoreSpeed(Character* chara)
+    {
+        if (!_speedApplied) return;
+        _speedApplied = false;
+
+        try   { chara->Timeline.TimelineSequencer.SetSlotSpeed(BaseSlot, _speedBefore); }
+        catch (Exception ex) { Diag.Error($"[Prop] speed restore failed: {ex.Message}"); }
     }
 
     private static Character* LocalChara()

@@ -143,6 +143,39 @@ internal sealed class DigTestsWindow
         ImGui.SameLine();
         ImGui.TextDisabled($"in effect: {Plugin.Props.HoldMilliseconds} ms");
 
+        // The two named lengths content will ask for by name.
+        if (ImGui.Button($"Short Dig ({PropService.ShortDigMilliseconds / 1000f:0.##}s)"))
+        {
+            DigTuning.DigHoldSeconds = PropService.ShortDigMilliseconds / 1000f;
+            DigTuning.Apply(); DigTuning.Save();
+        }
+        ImGui.SameLine();
+        if (ImGui.Button($"Long Dig ({PropService.LongDigMilliseconds / 1000f:0.##}s)"))
+        {
+            DigTuning.DigHoldSeconds = PropService.LongDigMilliseconds / 1000f;
+            DigTuning.Apply(); DigTuning.Save();
+        }
+
+        ImGui.Spacing();
+        ImGui.TextColored(Head, "DIG ANIMATION SPEED");
+        ImGui.TextColored(Rule,
+            "Playback multiplier for the dig. 1 = untouched, 2 = twice as fast.\n"
+          + "Driven by ActionTimelineSequencer.SetSlotSpeed on the base slot. The speed in force\n"
+          + "before we touch it is READ and restored afterwards, so nothing is guessed on the way\n"
+          + "out — but note the one gap: if the plugin unloads mid-dig the slot keeps the\n"
+          + "multiplier, because teardown may not call game code. Use Reset if that happens.\n"
+          + "Speed and length interact: at 2x a 4s dig plays twice as much of the loop.");
+
+        ImGui.SliderFloat("Speed", ref DigTuning.DigSpeed, PropService.MinSpeed, PropService.MaxSpeed, "%.2fx");
+        if (ImGui.IsItemDeactivatedAfterEdit()) { DigTuning.Apply(); DigTuning.Save(); }
+
+        ImGui.SameLine();
+        var live = Plugin.Props.CurrentSlotSpeed;
+        ImGui.TextDisabled(live.HasValue ? $"slot 0 reads {live.Value:0.##}x" : "slot 0 unreadable");
+
+        if (ImGui.Button("Reset speed to 1.0")) Say(Plugin.Props.ResetPlaybackSpeed());
+
+        ImGui.Spacing();
         if (ImGui.Button("Test dig now")) Say(Plugin.Props.Dig());
         ImGui.SameLine();
         if (ImGui.Button("Stop dig")) Say(Plugin.Props.Stop());
