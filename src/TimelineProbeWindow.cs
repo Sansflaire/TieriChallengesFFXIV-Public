@@ -561,6 +561,9 @@ internal sealed unsafe class TimelineProbeWindow
     private string _swapStatus = string.Empty;
     private bool   _swapActive;
 
+    /// <summary>Ornament row 1 = Parasol — the cheapest accessory most players already own.</summary>
+    private int _swapSourceOrn = 1;
+
     /// <summary>
     /// Redirects the player's equipped main-hand weapon model to the Shovel's model file, then
     /// redraws.
@@ -582,21 +585,38 @@ internal sealed unsafe class TimelineProbeWindow
 
         if (chara == null) { ImGui.TextDisabled("  not logged in"); return; }
 
-        string weaponPath = CurrentMainHandPath(chara, out string detail);
-        ImGui.TextUnformatted($"  main-hand path: {(string.IsNullOrEmpty(weaponPath) ? detail : weaponPath)}");
-        ImGui.TextDisabled($"  shovel model:   {ShovelModelPath}");
+        ImGui.TextDisabled("  The Shovel is a Fashion Accessory, so redirect it onto ANOTHER accessory —");
+        ImGui.TextDisabled("  same system, same attach point. The weapon slot rejected it for that reason.");
 
-        bool ready = !string.IsNullOrEmpty(weaponPath);
+        ImGui.SetNextItemWidth(160);
+        ImGui.InputInt("Source accessory (one you OWN)##tc_swap_src", ref _swapSourceOrn);
+        if (_swapSourceOrn < 1)     _swapSourceOrn = 1;
+        if (_swapSourceOrn > 10000) _swapSourceOrn = 10000;
+
+        ImGui.SameLine();
+        ImGui.TextDisabled($"  {OrnamentLabel((uint)_swapSourceOrn)}");
+
+        bool? owned = IsOrnamentOwned((uint)_swapSourceOrn);
+        if (owned == true)       ImGui.TextColored(Good, "  OWNED — you can summon this one.");
+        else if (owned == false) ImGui.TextColored(Warn, "  NOT owned — pick an accessory you actually have.");
+
+        string srcPath = OrnamentModelPath((uint)_swapSourceOrn, out string srcDetail);
+        ImGui.TextUnformatted($"  source model: {(string.IsNullOrEmpty(srcPath) ? "(" + srcDetail + ")" : srcPath)}");
+        ImGui.TextDisabled($"  shovel model: {ShovelModelPath}");
+
+        bool ready = !string.IsNullOrEmpty(srcPath) && owned == true;
         if (!ready) ImGui.BeginDisabled();
 
-        if (ImGui.Button("Swap main-hand -> Shovel", new Vector2(240, 0)))
-            _swapStatus = ApplySwap(weaponPath);
+        if (ImGui.Button("Swap accessory -> Shovel", new Vector2(240, 0)))
+            _swapStatus = ApplySwap(srcPath);
 
         if (!ready) ImGui.EndDisabled();
 
         ImGui.SameLine();
         if (ImGui.Button("Remove swap", new Vector2(160, 0)))
             _swapStatus = RemoveSwap();
+
+        string weaponPath = srcPath;
 
         if (_swapActive) ImGui.TextColored(Good, "  swap ACTIVE");
         if (!string.IsNullOrEmpty(_swapStatus)) ImGui.TextDisabled($"  {_swapStatus}");
@@ -634,6 +654,49 @@ internal sealed unsafe class TimelineProbeWindow
                 .InvokeFunc(gamePath) ?? string.Empty;
         }
         catch { return string.Empty; }
+    }
+
+    /// <summary>
+    /// Resolves an <c>Ornament</c> row to the model file the game will actually load.
+    ///
+    /// <para><c>Ornament.Model</c> is NOT a model id — it is a <c>ModelChara</c> row id. That row
+    /// carries the real <c>Model</c>, <c>Type</c> and <c>Base</c>. Missing this indirection is why
+    /// six guessed paths failed: the Shovel's <c>Ornament.Model</c> is 4936, but the model is 6017
+    /// and the body is b0002, both of which live on <c>ModelChara</c> row 4936.</para>
+    ///
+    /// <para>Checked, not assumed: this formula reproduces
+    /// <c>chara/monster/m6017/obj/body/b0002/model/m6017b0002.mdl</c> — the path measured off the
+    /// live accessory — exactly.</para>
+    /// </summary>
+    private static string OrnamentModelPath(uint ornamentRowId, out string detail)
+    {
+        detail = string.Empty;
+        try
+        {
+            var orn = OrnamentRowOf(ornamentRowId);
+            if (orn == null) { detail = "no such Ornament row"; return string.Empty; }
+
+            uint modelCharaId = orn.Value.Model;
+            var mc = Plugin.DataManager.GetExcelSheet<LSheets.ModelChara>()?.GetRowOrDefault(modelCharaId);
+            if (mc == null) { detail = $"no ModelChara row {modelCharaId}"; return string.Empty; }
+
+            // Type 3 is the monster-model family every fashion accessory measured so far uses.
+            if (mc.Value.Type != 3)
+            {
+                detail = $"ModelChara {modelCharaId} is Type {mc.Value.Type}, not the expected 3";
+                return string.Empty;
+            }
+
+            int model = mc.Value.Model;
+            int b     = mc.Value.Base;
+            string p  = $"chara/monster/m{model:D4}/obj/body/b{b:D4}/model/m{model:D4}b{b:D4}.mdl";
+
+            try { if (!Plugin.DataManager.FileExists(p)) { detail = "derived path not in sqpack"; return string.Empty; } }
+            catch { }
+
+            return p;
+        }
+        catch (Exception ex) { detail = ex.Message; return string.Empty; }
     }
 
     /// <summary>
