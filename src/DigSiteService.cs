@@ -35,12 +35,12 @@ internal sealed class DigSiteService : IDigTest
     private readonly List<Vector3> _pieces = new();
     private readonly List<Vector3> _found  = new();
 
-    /// <summary>
-    /// Fine steps per coarse (dig-sized) grid cell. 2 keeps the terrain-following honest without
-    /// squaring the number of raycasts — the lattice is sampled once, but "once" still happens in a
-    /// single frame and a few thousand rays would be felt.
-    /// </summary>
-    private const int GridSubdivisions = 2;
+    /// <summary>Roughly one ground sample every this many yalms, whatever the grid density.</summary>
+    private const float TargetSpacing = 2f;
+
+    /// <summary>Ceiling on fine steps per visual cell, and on the lattice as a whole.</summary>
+    private const int MaxSubdivisions   = 12;
+    private const int MaxLatticePoints  = 45;
 
     /// <summary>Ceiling on grid cells, matching the lab slider's own upper bound.</summary>
     private const int MaxGridCells = 40;
@@ -54,7 +54,7 @@ internal sealed class DigSiteService : IDigTest
     /// <see cref="DigVolumeRender.DrawGroundGrid"/>.
     /// </summary>
     private Vector3[,] _grid = new Vector3[0, 0];
-    private int        _gridStride = GridSubdivisions;
+    private int        _gridStride = 1;
     private uint           _territory;
     private long           _startedAtMs;
     private long           _endedAtMs;
@@ -325,10 +325,17 @@ internal sealed class DigSiteService : IDigTest
         float side  = MathF.Max(1f, _site.SizeX * _site.Scale);
         int   cells = Math.Clamp(DigTuning.SiteGridCells, 2, MaxGridCells);
 
-        // Fine subdivision only pays for terrain shape WITHIN a cell, so a dense grid does not
-        // need it — and without this the lattice would grow as the square of the cell count and a
-        // 40-cell site would fire several thousand raycasts in the frame the site is marked out.
-        _gridStride = cells <= 16 ? GridSubdivisions : 1;
+        // Subdivide each visual cell until the lattice is about one sample every TargetSpacing.
+        //
+        // This DECOUPLES how accurately the ground is measured from how many stripes are drawn.
+        // Tying them meant a 2-cell grid sampled the ground five times across the whole site, and
+        // every marker that reads the lattice — the piece rings, the walls — quietly became
+        // inaccurate as a side effect of a purely visual setting. Capped so a dense grid cannot
+        // square the raycast count in the frame the site is marked out.
+        int wanted = (int)MathF.Ceiling(side / TargetSpacing);
+        _gridStride = Math.Clamp((int)MathF.Round(wanted / (float)cells), 1, MaxSubdivisions);
+
+        while (cells * _gridStride + 1 > MaxLatticePoints && _gridStride > 1) _gridStride--;
 
         int n    = cells * _gridStride + 1;
         var grid = new Vector3[n, n];
@@ -358,6 +365,59 @@ internal sealed class DigSiteService : IDigTest
 
         _grid = grid;
         Diag.Info($"[Site] ground grid sampled: {cells} cell(s) across, {n * n} point(s).");
+    }
+
+    /// <summary>
+    /// Drops a world point onto the site's measured floor, by interpolating the ground lattice
+    /// rather than firing a ray.
+    ///
+    /// <para><b>Why interpolate instead of raycasting.</b> A marker ring is ~56 vertices and its
+    /// disc over 200; five pieces drawn every frame would be thousands of rays a second, which is
+    /// the cost the lattice exists to avoid. The lattice is already measured, so this is free.</para>
+    ///
+    /// <para><b>And it is arguably more correct than a fresh ray.</b> The circle is drawn on top of
+    /// the floor grid, which is built from these same samples — reading them means the marker sits
+    /// exactly on the surface the player can see, instead of on a slightly different surface that
+    /// happens to be the true one. Two overlays disagreeing about where the ground is looks like a
+    /// bug even when both are right.</para>
+    ///
+    /// <para>Outside the site, or before the lattice exists, the point is returned unchanged.</para>
+    /// </summary>
+    private Vector3 SnapToFloor(Vector3 p)
+    {
+        int n = _grid.GetLength(0);
+        if (_site == null || n < 2) return p;
+
+        float hx = MathF.Max(0.01f, _site.SizeX * _site.Scale) * 0.5f;
+        float hz = MathF.Max(0.01f, _site.SizeZ * _site.Scale) * 0.5f;
+
+        // Into the box's own frame — the inverse yaw, matching ChallengeArea.Contains.
+        float dx  = p.X - _site.X;
+        float dz  = p.Z - _site.Z;
+        float cos = MathF.Cos(-_site.RotationY);
+        float sin = MathF.Sin(-_site.RotationY);
+        float lx  = dx * cos - dz * sin;
+        float lz  = dx * sin + dz * cos;
+
+        // Lattice index space. Clamped rather than rejected: a dig radius straddling the boundary
+        // should flatten against the edge, not tear a hole in the ring.
+        float fi = Math.Clamp((lx + hx) / (2f * hx), 0f, 1f) * (n - 1);
+        float fj = Math.Clamp((lz + hz) / (2f * hz), 0f, 1f) * (n - 1);
+
+        int i0 = Math.Clamp((int)fi, 0, n - 2);
+        int j0 = Math.Clamp((int)fj, 0, n - 2);
+        float ti = fi - i0;
+        float tj = fj - j0;
+
+        float y00 = _grid[i0,     j0    ].Y;
+        float y10 = _grid[i0 + 1, j0    ].Y;
+        float y01 = _grid[i0,     j0 + 1].Y;
+        float y11 = _grid[i0 + 1, j0 + 1].Y;
+
+        float y = (y00 * (1f - ti) + y10 * ti) * (1f - tj)
+                + (y01 * (1f - ti) + y11 * ti) * tj;
+
+        return new Vector3(p.X, y, p.Z);
     }
 
     private bool TooClose(Vector3 p)
@@ -392,11 +452,14 @@ internal sealed class DigSiteService : IDigTest
 
         // Recovered pieces: green, always shown. Nothing is given away by marking ground you have
         // already dug.
+        // Both markers follow the floor by reading the same lattice the grid is drawn from.
+        Func<Vector3, Vector3> snap = SnapToFloor;
+
         var recovered = new Vector3(0.44f, 0.86f, 0.62f);
         foreach (var p in _found)
         {
-            DigVolumeRender.DrawGroundDisc(p, DigTuning.SitePieceRadius, recovered);
-            DigVolumeRender.DrawGroundRing(p, DigTuning.SitePieceRadius, recovered, 0.75f);
+            DigVolumeRender.DrawGroundDisc(p, DigTuning.SitePieceRadius, recovered, 0.34f, snap);
+            DigVolumeRender.DrawGroundRing(p, DigTuning.SitePieceRadius, recovered, 0.75f, 2f, snap);
         }
 
         // Still-buried pieces: the answer key, off by default of the player's choosing rather than
@@ -406,8 +469,8 @@ internal sealed class DigSiteService : IDigTest
 
         foreach (var p in _pieces)
         {
-            DigVolumeRender.DrawGroundDisc(p, DigTuning.SitePieceRadius, DigTuning.SiteDebugColor, 0.22f);
-            DigVolumeRender.DrawGroundRing(p, DigTuning.SitePieceRadius, DigTuning.SiteDebugColor);
+            DigVolumeRender.DrawGroundDisc(p, DigTuning.SitePieceRadius, DigTuning.SiteDebugColor, 0.22f, snap);
+            DigVolumeRender.DrawGroundRing(p, DigTuning.SitePieceRadius, DigTuning.SiteDebugColor, 0.95f, 2f, snap);
         }
     }
 }

@@ -272,34 +272,43 @@ internal static class DigVolumeRender
     /// small, they sit on ground that was itself found by a downward raycast, and a per-frame
     /// raycast per ring vertex is the cost this file exists to avoid.</para>
     /// </summary>
+    /// <param name="snap">
+    /// Optional height sampler — maps a world point onto the floor beneath it. Supplied by the
+    /// caller rather than raycast here: a ring is 40 vertices and a disc is over 200, so sampling
+    /// per frame per piece would be thousands of rays a second. The site already holds a measured
+    /// ground lattice, and reading that is both free and guaranteed to agree with the grid the
+    /// circle is drawn on top of.
+    /// </param>
     public static void DrawGroundRing(Vector3 centre, float radius, Vector3 rgb, float alpha = 0.95f,
-                                      float thickness = 2f)
+                                      float thickness = 2f, Func<Vector3, Vector3>? snap = null)
     {
         try
         {
             var drawList = ImGui.GetBackgroundDrawList();
             uint col     = ImGui.GetColorU32(new Vector4(rgb.X, rgb.Y, rgb.Z, alpha));
 
-            const int Segments = 40;
-            var c = centre + new Vector3(0f, 0.07f, 0f);
+            // More segments than a flat circle needs. Once the ring follows the ground its outline
+            // carries terrain shape, and too few segments read as a polygon rather than a circle.
+            const int Segments = 56;
+            const float Lift   = 0.04f;
 
-            Vector2? prev  = null;
-            Vector2? first = null;
+            Vector2? prev = null;
 
             for (int i = 0; i <= Segments; i++)
             {
                 float ang = MathF.Tau * i / Segments;
-                var   p   = c + new Vector3(radius * MathF.Cos(ang), 0f, radius * MathF.Sin(ang));
+                var   p   = centre + new Vector3(radius * MathF.Cos(ang), 0f, radius * MathF.Sin(ang));
+
+                p = Ground(p, snap, Lift);
 
                 if (!AreaOverlay.Project(p, out var s)) { prev = null; continue; }
 
-                first ??= s;
                 if (prev.HasValue) drawList.AddLine(prev.Value, s, col, thickness);
                 prev = s;
             }
 
             // A small cross at the exact centre — the ring says how far, this says from where.
-            if (AreaOverlay.Project(c, out var mid))
+            if (AreaOverlay.Project(Ground(centre, snap, Lift), out var mid))
             {
                 const float k = 5f;
                 drawList.AddLine(new Vector2(mid.X - k, mid.Y), new Vector2(mid.X + k, mid.Y), col, thickness);
@@ -313,21 +322,33 @@ internal static class DigVolumeRender
     }
 
     /// <summary>
+    /// Drops a point onto the floor via the caller's sampler, then lifts it clear of the surface.
+    /// Falls back to the point's own height when there is no sampler, which is what makes the snap
+    /// optional rather than mandatory at every call site.
+    /// </summary>
+    private static Vector3 Ground(Vector3 p, Func<Vector3, Vector3>? snap, float lift)
+    {
+        if (snap != null) p = snap(p);
+        return new Vector3(p.X, p.Y + lift, p.Z);
+    }
+
+    /// <summary>
     /// A ground-level disc for a point of interest — the pieces a Surveillance dig has turned up,
     /// once they are no longer secret. Filled towards the centre and clear at the rim, so it reads
     /// as a spot on the floor rather than a bubble.
     /// </summary>
-    public static void DrawGroundDisc(Vector3 centre, float radius, Vector3 rgb, float baseAlpha = 0.34f)
+    public static void DrawGroundDisc(Vector3 centre, float radius, Vector3 rgb, float baseAlpha = 0.34f,
+                                      Func<Vector3, Vector3>? snap = null)
     {
         try
         {
             var drawList = ImGui.GetBackgroundDrawList();
-            const int Segments = 32;
+            const int Segments = 40;
             const int Rings    = 6;
 
-            // Lifted a hair off the ground: coplanar with the terrain the disc z-fights nothing
-            // (this is an overlay, not depth-tested), but it does sink into any dip in the mesh.
-            var c = centre + new Vector3(0f, 0.05f, 0f);
+            // Lifted a hair off the ground. Nothing here is depth-tested, so this is not about
+            // z-fighting — it is so the disc does not disappear into a dip in the mesh.
+            const float Lift = 0.02f;
 
             for (int r = 0; r < Rings; r++)
             {
@@ -343,10 +364,10 @@ internal static class DigVolumeRender
                     float a0 = MathF.Tau * i / Segments;
                     float a1 = MathF.Tau * (i + 1) / Segments;
 
-                    var p0 = c + new Vector3(r0 * MathF.Cos(a0), 0f, r0 * MathF.Sin(a0));
-                    var p1 = c + new Vector3(r1 * MathF.Cos(a0), 0f, r1 * MathF.Sin(a0));
-                    var p2 = c + new Vector3(r1 * MathF.Cos(a1), 0f, r1 * MathF.Sin(a1));
-                    var p3 = c + new Vector3(r0 * MathF.Cos(a1), 0f, r0 * MathF.Sin(a1));
+                    var p0 = Ground(centre + new Vector3(r0 * MathF.Cos(a0), 0f, r0 * MathF.Sin(a0)), snap, Lift);
+                    var p1 = Ground(centre + new Vector3(r1 * MathF.Cos(a0), 0f, r1 * MathF.Sin(a0)), snap, Lift);
+                    var p2 = Ground(centre + new Vector3(r1 * MathF.Cos(a1), 0f, r1 * MathF.Sin(a1)), snap, Lift);
+                    var p3 = Ground(centre + new Vector3(r0 * MathF.Cos(a1), 0f, r0 * MathF.Sin(a1)), snap, Lift);
 
                     if (!AreaOverlay.Project(p0, out var s0)) continue;
                     if (!AreaOverlay.Project(p1, out var s1)) continue;
