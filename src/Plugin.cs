@@ -177,6 +177,18 @@ public sealed class Plugin : IDalamudPlugin
     /// resolves the library. The chat commands remain the fallback in that case.
     /// </summary>
     private readonly SoundTestWindow? _soundTestWindow;
+
+    /// <summary>
+    /// The three dig tests — Sense Hunt, Area Surveillance, Clue Trail — and the lab that carries
+    /// their rules, commands, buttons and settings. Entirely dev-only, gate and all: unlike
+    /// <see cref="Props"/>, which ships because challenge content calls it, these are experiments a
+    /// player must not be able to reach. Trist's call, 2026-09-09.
+    /// </summary>
+    private readonly DigTests       _digTests = new();
+    private readonly DigTestsWindow _digTestsWindow;
+
+    /// <summary>The dig HUD. Null when PanacheUI could not load — it is a Panache surface.</summary>
+    private readonly DigHuntOverlay? _digOverlay;
 #endif
 
     public Plugin()
@@ -324,6 +336,14 @@ public sealed class Plugin : IDalamudPlugin
 
 #if DEV_BUILD
         _creatorWindow = new ChallengeCreatorWindow(_config, _store, SaveConfig, _tracker, _toastQueue);
+
+        // Tuning is restored before the lab can show a slider, so the numbers on screen are the
+        // numbers the tests will actually use.
+        DigTuning.Load();
+        _digTestsWindow = new DigTestsWindow(_digTests);
+
+        if (PanacheAvailability.IsAvailable)
+            _digOverlay = new DigHuntOverlay(TextureProvider);
 
         if (PanacheAvailability.IsAvailable)
             _soundTestWindow = new SoundTestWindow(TextureProvider);
@@ -484,6 +504,7 @@ public sealed class Plugin : IDalamudPlugin
         _progressToast?.Dispose();
         _racePrompt?.Dispose();
 #if DEV_BUILD
+        _digOverlay?.Dispose();
         _soundTestWindow?.Dispose();
         LiveProbe.Detach();
         _datasetViewer.Unload();
@@ -527,6 +548,19 @@ public sealed class Plugin : IDalamudPlugin
                 HandleSfxCommand(raw.Substring(3).Trim());
                 return;
             }
+
+#if DEV_BUILD
+            // The three dig tests. DEV ONLY, gate and all — see DigTests for why these are a
+            // stricter split than PropService. Prefixes rather than switch cases: each takes a verb.
+            if (raw.StartsWith("hunt", StringComparison.OrdinalIgnoreCase))
+            { HandleDigCommand(_digTests.Hunt, raw.Substring(4).Trim()); return; }
+
+            if (raw.StartsWith("site", StringComparison.OrdinalIgnoreCase))
+            { HandleDigCommand(_digTests.Site, raw.Substring(4).Trim()); return; }
+
+            if (raw.StartsWith("trail", StringComparison.OrdinalIgnoreCase))
+            { HandleDigCommand(_digTests.Trail, raw.Substring(5).Trim()); return; }
+#endif
 
             switch (raw.ToLowerInvariant())
             {
@@ -573,6 +607,12 @@ public sealed class Plugin : IDalamudPlugin
 
                 case "anim":
                     _timelineProbe.IsVisible = !_timelineProbe.IsVisible;
+                    break;
+
+                // The dig-test lab — rules, commands, buttons and settings for all three tests.
+                case "digtests":
+                case "diglab":
+                    _digTestsWindow.IsVisible = !_digTestsWindow.IsVisible;
                     break;
 
                 // DEV ONLY, deliberately. PropService itself ships publicly so challenge content
@@ -649,6 +689,13 @@ public sealed class Plugin : IDalamudPlugin
         // the animation. Ships publicly, so it runs outside any DEV_BUILD gate.
         try { Props.Tick(); }
         catch (Exception ex) { Diag.Error($"[Prop] tick failed: {ex.Message}"); }
+
+#if DEV_BUILD
+        // Places spots, tracks how warm the player is, and expires result screens. Ticked
+        // unconditionally so a test started from chat keeps running with the lab window closed.
+        try { _digTests.Tick(); }
+        catch (Exception ex) { Diag.Error($"[Dig] tick failed: {ex.Message}"); }
+#endif
 
 #if DEV_BUILD
         // One-shot map geometry dump for the zone we are in. Fired from the DRAW loop, not the
@@ -743,6 +790,19 @@ public sealed class Plugin : IDalamudPlugin
             else            _fallbackRacePrompt.Draw();
         }
         catch (Exception ex) { Log.Error(ex, "Race prompt draw exception"); }
+
+#if DEV_BUILD
+        // The dig HUD and the in-world site walls. Both are dev-only, and both are drawn whether or
+        // not the lab window is open — a test runs in the world, not in a panel.
+        try { _digOverlay?.Draw(_digTests); }
+        catch (Exception ex) { Diag.Error($"[Dig] overlay draw failed: {ex.Message}"); }
+
+        try { _digTests.DrawWorld(); }
+        catch (Exception ex) { Diag.Error($"[Dig] world draw failed: {ex.Message}"); }
+
+        try { _digTestsWindow.Draw(); }
+        catch (Exception ex) { Diag.Error($"[Dig] lab window failed: {ex.Message}"); }
+#endif
 
 #if DEV_BUILD
         try { _datasetViewer.Draw(); }
@@ -975,6 +1035,53 @@ public sealed class Plugin : IDalamudPlugin
             _          => SoundService.Cue.ResetConfirmed,
         });
     }
+
+#if DEV_BUILD
+    /// <summary>
+    /// Drives one dig test from chat. <b>Dev-only on purpose</b> — see the note at the call site.
+    /// One handler for all three, because they share a verb set; the two test-specific verbs
+    /// (<c>sense</c>, <c>clue</c>) are dispatched by type.
+    ///
+    /// <para>There is deliberately no "where is it" verb. Reading the distance is what the lab
+    /// window is for — in chat it would just be the answer.</para>
+    /// </summary>
+    private void HandleDigCommand(IDigTest test, string arg)
+    {
+        switch (arg.ToLowerInvariant())
+        {
+            case "":
+            case "start":
+                ChatGui.Print("[Challenges] " + _digTests.Start(test));
+                break;
+
+            case "dig":
+                ChatGui.Print("[Challenges] " + test.Dig());
+                break;
+
+            case "stop":
+                ChatGui.Print("[Challenges] " + test.Stop());
+                break;
+
+            case "sense" when test is DigHuntService hunt:
+                ChatGui.Print("[Challenges] " + hunt.Sense());
+                break;
+
+            case "clue" when test is DigTrailService trail:
+                ChatGui.Print("[Challenges] " + trail.Recall());
+                break;
+
+            case "lab":
+                _digTestsWindow.IsVisible = !_digTestsWindow.IsVisible;
+                break;
+
+            default:
+                ChatGui.PrintError($"[Challenges] {test.Name}: [start|dig|stop|lab]"
+                                 + (test is DigHuntService  ? " and sense" : string.Empty)
+                                 + (test is DigTrailService ? " and clue"  : string.Empty));
+                break;
+        }
+    }
+#endif
 
     /// <summary>
     /// A challenge completed. Order is the design: the sound request goes out FIRST and

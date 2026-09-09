@@ -167,8 +167,12 @@ internal sealed class AreaOverlay
         }
     }
 
-    /// <summary>All twelve edges of the (optionally yawed) box.</summary>
-    private static void DrawBox(ChallengeArea a, uint color, float thickness)
+    /// <summary>
+    /// All twelve edges of the (optionally yawed) box. <c>internal</c> rather than private so the
+    /// dig-test lab can draw its Surveillance site with the same code — a second box renderer would
+    /// be a second chance to get the yaw convention backwards.
+    /// </summary>
+    internal static void DrawBox(ChallengeArea a, uint color, float thickness)
     {
         float hx = MathF.Max(0.01f, a.SizeX * a.Scale) * 0.5f;
         float hy = MathF.Max(0.01f, a.SizeY * a.Scale) * 0.5f;
@@ -222,7 +226,7 @@ internal sealed class AreaOverlay
         drawList.AddLine(new Vector2(p.X, p.Y - k), new Vector2(p.X, p.Y + k), color, 2f);
     }
 
-    private static void DrawLabel(ChallengeArea a, string text, uint color)
+    internal static void DrawLabel(ChallengeArea a, string text, uint color)
     {
         // Anchor the label at the top of the volume so it does not sit inside the wireframe.
         float top = a.Shape == AreaShape.Sphere
