@@ -354,6 +354,7 @@ public sealed class Plugin : IDalamudPlugin
             _mainWindow.OnOpenCreator   = () => _creatorWindow.IsVisible = true;
             _mainWindow.OnOpenDatasets  = () => _datasetViewer.IsVisible = true;
             _mainWindow.OnOpenProbe     = () => _probeWindow.IsVisible = true;
+            _mainWindow.OnOpenDigTests  = () => _digTestsWindow.IsVisible = true;
             _mainWindow.OnOpenSoundTest = () =>
             {
                 if (_soundTestWindow != null) _soundTestWindow.IsVisible = true;

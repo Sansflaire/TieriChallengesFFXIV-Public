@@ -154,6 +154,9 @@ internal sealed class MainWindow : IDisposable
     /// <summary>Wired by Plugin. Opens the live-game investigation harness. Dev builds only.</summary>
     public Action? OnOpenProbe;
 
+    /// <summary>Wired by Plugin. Opens the dig-test lab. Dev builds only.</summary>
+    public Action? OnOpenDigTests;
+
 #endif
 
     /// <summary>
@@ -2218,6 +2221,7 @@ internal sealed class MainWindow : IDisposable
                 new("Challenge Creator", () => OnOpenCreator?.Invoke(), Accent, Ico.Creator),
                 new("Dataset Viewer", () => OnOpenDatasets?.Invoke(), Neutral, Ico.None),
                 new("Live Probe", () => OnOpenProbe?.Invoke(), Neutral, Ico.None),
+                new("Dig Tests", () => OnOpenDigTests?.Invoke(), Neutral, Ico.None),
                 new("Preview public build", () =>
                 {
                     _config.PublicPreview = true;
