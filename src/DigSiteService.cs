@@ -257,6 +257,10 @@ internal sealed class DigSiteService : IDigTest
     {
         if (_site == null) { _phase = Phase.Off; return; }
 
+        // The ground is measured BEFORE anything is buried, because placement now needs to know the
+        // shape of the surface around a candidate — not just that a point exists there.
+        SampleGrid();
+
         int want = Math.Max(1, DigTuning.SitePieces);
 
         for (int n = 0; n < want; n++)
@@ -267,6 +271,7 @@ internal sealed class DigSiteService : IDigTest
             {
                 if (!DigGround.TryPointInBox(_site, _rng, out var p, 1)) continue;
                 if (TooClose(p)) continue;
+                if (TooSteep(p)) continue;
 
                 _pieces.Add(p);
                 placed = true;
@@ -286,8 +291,6 @@ internal sealed class DigSiteService : IDigTest
                 "[Challenges] Could not bury anything in this site — try somewhere more open.");
             return;
         }
-
-        SampleGrid();
 
         _phase       = Phase.Digging;
         _startedAtMs = Environment.TickCount64;
@@ -428,6 +431,62 @@ internal sealed class DigSiteService : IDigTest
         return false;
     }
 
+    /// <summary>
+    /// Whether the ground across a candidate's dig radius rises or falls more than
+    /// <see cref="DigTuning.SitePieceMaxDrop"/> — i.e. whether the spot straddles a wall, a ledge or
+    /// a cliff.
+    ///
+    /// <para><b>This is a playability rule before it is a cosmetic one.</b> A piece against a wall
+    /// has part of its radius somewhere the player physically cannot stand, so the area they can
+    /// actually dig from is smaller than the rule says and smaller than the marker shows. The
+    /// vertical smear up the wall face was the symptom; the unreachable dig area was the bug.</para>
+    ///
+    /// <para>Sampled from the lattice, so it costs nothing — which is what lets it run on every
+    /// candidate rather than only on the ones that already passed.</para>
+    /// </summary>
+    private bool TooSteep(Vector3 p)
+    {
+        float max = MathF.Max(0.05f, DigTuning.SitePieceMaxDrop);
+        float r   = MathF.Max(0.1f, DigTuning.SitePieceRadius);
+        float baseY = SnapToFloor(p).Y;
+
+        // Eight compass points at the rim and at half radius. The inner set matters: a narrow ledge
+        // crossing the middle of the circle leaves the rim perfectly level.
+        for (int i = 0; i < 8; i++)
+        {
+            float a = MathF.Tau * i / 8f;
+            float cos = MathF.Cos(a), sin = MathF.Sin(a);
+
+            for (int k = 1; k <= 2; k++)
+            {
+                float rr = r * k * 0.5f;
+                var   q  = new Vector3(p.X + rr * cos, p.Y, p.Z + rr * sin);
+
+                if (MathF.Abs(SnapToFloor(q).Y - baseY) > max) return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// A floor sampler for one marker that <b>vetoes</b> points too far above or below the marker's
+    /// own ground — see <see cref="DigVolumeRender.DrawGroundRing"/>. Placement already refuses
+    /// steep spots, so this is the second line: it keeps an existing marker, or one whose ground
+    /// changed under it, from drawing a vertical sheet up a wall.
+    /// </summary>
+    private Func<Vector3, Vector3?> FloorVeto(Vector3 centre)
+    {
+        float baseY = SnapToFloor(centre).Y;
+        float max   = MathF.Max(0.05f, DigTuning.SitePieceMaxDrop);
+
+        return p =>
+        {
+            var g = SnapToFloor(p);
+            return MathF.Abs(g.Y - baseY) > max ? null : g;
+        };
+    }
+
     // ── in-world ─────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -452,12 +511,11 @@ internal sealed class DigSiteService : IDigTest
 
         // Recovered pieces: green, always shown. Nothing is given away by marking ground you have
         // already dug.
-        // Both markers follow the floor by reading the same lattice the grid is drawn from.
-        Func<Vector3, Vector3> snap = SnapToFloor;
-
+        // Each marker gets its own sampler, because the veto is relative to that marker's ground.
         var recovered = new Vector3(0.44f, 0.86f, 0.62f);
         foreach (var p in _found)
         {
+            var snap = FloorVeto(p);
             DigVolumeRender.DrawGroundDisc(p, DigTuning.SitePieceRadius, recovered, 0.34f, snap);
             DigVolumeRender.DrawGroundRing(p, DigTuning.SitePieceRadius, recovered, 0.75f, 2f, snap);
         }
@@ -469,6 +527,7 @@ internal sealed class DigSiteService : IDigTest
 
         foreach (var p in _pieces)
         {
+            var snap = FloorVeto(p);
             DigVolumeRender.DrawGroundDisc(p, DigTuning.SitePieceRadius, DigTuning.SiteDebugColor, 0.22f, snap);
             DigVolumeRender.DrawGroundRing(p, DigTuning.SitePieceRadius, DigTuning.SiteDebugColor, 0.95f, 2f, snap);
         }

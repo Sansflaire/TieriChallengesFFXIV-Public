@@ -330,6 +330,11 @@ internal sealed class DigTestsWindow
         SliderInt("Pieces to bury",        ref DigTuning.SitePieces, 1, 20);
         Slider("Piece dig radius",         ref DigTuning.SitePieceRadius, 0.5f, 30f);
         Slider("Min spacing between pieces", ref DigTuning.SitePieceSpacing, 1f, 100f);
+        Slider("Max ground drop across a piece", ref DigTuning.SitePieceMaxDrop, 0.2f, 15f);
+        ImGui.TextColored(Rule,
+            "Max drop refuses spots straddling a wall or ledge. Not just cosmetic: half such a\n"
+          + "spot's dig radius is somewhere you cannot stand. Raise it for hilly ground, lower it\n"
+          + "if markers still climb a face. Anything that slips through is clipped when drawn.");
 
         if (DigTuning.SitePieceSpacing <= DigTuning.SitePieceRadius * 2f)
             ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),

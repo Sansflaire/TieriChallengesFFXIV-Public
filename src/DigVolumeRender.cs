@@ -280,7 +280,7 @@ internal static class DigVolumeRender
     /// circle is drawn on top of.
     /// </param>
     public static void DrawGroundRing(Vector3 centre, float radius, Vector3 rgb, float alpha = 0.95f,
-                                      float thickness = 2f, Func<Vector3, Vector3>? snap = null)
+                                      float thickness = 2f, Func<Vector3, Vector3?>? snap = null)
     {
         try
         {
@@ -299,16 +299,18 @@ internal static class DigVolumeRender
                 float ang = MathF.Tau * i / Segments;
                 var   p   = centre + new Vector3(radius * MathF.Cos(ang), 0f, radius * MathF.Sin(ang));
 
-                p = Ground(p, snap, Lift);
+                var g = Ground(p, snap, Lift);
+                if (g is null) { prev = null; continue; }        // over a drop — break the outline
 
-                if (!AreaOverlay.Project(p, out var s)) { prev = null; continue; }
+                if (!AreaOverlay.Project(g.Value, out var s)) { prev = null; continue; }
 
                 if (prev.HasValue) drawList.AddLine(prev.Value, s, col, thickness);
                 prev = s;
             }
 
             // A small cross at the exact centre — the ring says how far, this says from where.
-            if (AreaOverlay.Project(Ground(centre, snap, Lift), out var mid))
+            var centreGround = Ground(centre, snap, Lift);
+            if (centreGround is { } cg && AreaOverlay.Project(cg, out var mid))
             {
                 const float k = 5f;
                 drawList.AddLine(new Vector2(mid.X - k, mid.Y), new Vector2(mid.X + k, mid.Y), col, thickness);
@@ -326,9 +328,23 @@ internal static class DigVolumeRender
     /// Falls back to the point's own height when there is no sampler, which is what makes the snap
     /// optional rather than mandatory at every call site.
     /// </summary>
-    private static Vector3 Ground(Vector3 p, Func<Vector3, Vector3>? snap, float lift)
+    /// <summary>
+    /// Drops a point onto the floor via the caller's sampler, then lifts it clear of the surface.
+    ///
+    /// <para><b>Returns null when the sampler rejects the point.</b> That is how a circle refuses to
+    /// exist where it cannot: a marker overlapping a cliff or a wall would otherwise have some
+    /// vertices metres above the rest and smear vertically up the face. The sampler owns that
+    /// judgement because only it knows the marker's own height; this just honours the veto.</para>
+    /// </summary>
+    private static Vector3? Ground(Vector3 p, Func<Vector3, Vector3?>? snap, float lift)
     {
-        if (snap != null) p = snap(p);
+        if (snap != null)
+        {
+            var g = snap(p);
+            if (g is null) return null;
+            p = g.Value;
+        }
+
         return new Vector3(p.X, p.Y + lift, p.Z);
     }
 
@@ -338,7 +354,7 @@ internal static class DigVolumeRender
     /// as a spot on the floor rather than a bubble.
     /// </summary>
     public static void DrawGroundDisc(Vector3 centre, float radius, Vector3 rgb, float baseAlpha = 0.34f,
-                                      Func<Vector3, Vector3>? snap = null)
+                                      Func<Vector3, Vector3?>? snap = null)
     {
         try
         {
@@ -369,10 +385,14 @@ internal static class DigVolumeRender
                     var p2 = Ground(centre + new Vector3(r1 * MathF.Cos(a1), 0f, r1 * MathF.Sin(a1)), snap, Lift);
                     var p3 = Ground(centre + new Vector3(r0 * MathF.Cos(a1), 0f, r0 * MathF.Sin(a1)), snap, Lift);
 
-                    if (!AreaOverlay.Project(p0, out var s0)) continue;
-                    if (!AreaOverlay.Project(p1, out var s1)) continue;
-                    if (!AreaOverlay.Project(p2, out var s2)) continue;
-                    if (!AreaOverlay.Project(p3, out var s3)) continue;
+                    // Any corner over a drop takes the whole cell with it — a quad with three good
+                    // corners and one on top of a wall is the vertical smear this exists to stop.
+                    if (p0 is null || p1 is null || p2 is null || p3 is null) continue;
+
+                    if (!AreaOverlay.Project(p0.Value, out var s0)) continue;
+                    if (!AreaOverlay.Project(p1.Value, out var s1)) continue;
+                    if (!AreaOverlay.Project(p2.Value, out var s2)) continue;
+                    if (!AreaOverlay.Project(p3.Value, out var s3)) continue;
 
                     drawList.AddQuadFilled(s0, s1, s2, s3, col);
                 }
