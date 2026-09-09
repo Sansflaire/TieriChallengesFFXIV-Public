@@ -262,6 +262,57 @@ internal static class DigVolumeRender
     }
 
     /// <summary>
+    /// A crisp ring at exactly <paramref name="radius"/>, plus a centre cross.
+    ///
+    /// <para>Drawn alongside the fading disc rather than instead of it, because the disc shows
+    /// <i>where</i> and only the ring shows <i>how far</i> — and "how far" is the whole point when
+    /// what is being debugged is a radius. A gradient has no edge to measure against.</para>
+    ///
+    /// <para>Flat at the point's own height rather than draped over the terrain: these markers are
+    /// small, they sit on ground that was itself found by a downward raycast, and a per-frame
+    /// raycast per ring vertex is the cost this file exists to avoid.</para>
+    /// </summary>
+    public static void DrawGroundRing(Vector3 centre, float radius, Vector3 rgb, float alpha = 0.95f,
+                                      float thickness = 2f)
+    {
+        try
+        {
+            var drawList = ImGui.GetBackgroundDrawList();
+            uint col     = ImGui.GetColorU32(new Vector4(rgb.X, rgb.Y, rgb.Z, alpha));
+
+            const int Segments = 40;
+            var c = centre + new Vector3(0f, 0.07f, 0f);
+
+            Vector2? prev  = null;
+            Vector2? first = null;
+
+            for (int i = 0; i <= Segments; i++)
+            {
+                float ang = MathF.Tau * i / Segments;
+                var   p   = c + new Vector3(radius * MathF.Cos(ang), 0f, radius * MathF.Sin(ang));
+
+                if (!AreaOverlay.Project(p, out var s)) { prev = null; continue; }
+
+                first ??= s;
+                if (prev.HasValue) drawList.AddLine(prev.Value, s, col, thickness);
+                prev = s;
+            }
+
+            // A small cross at the exact centre — the ring says how far, this says from where.
+            if (AreaOverlay.Project(c, out var mid))
+            {
+                const float k = 5f;
+                drawList.AddLine(new Vector2(mid.X - k, mid.Y), new Vector2(mid.X + k, mid.Y), col, thickness);
+                drawList.AddLine(new Vector2(mid.X, mid.Y - k), new Vector2(mid.X, mid.Y + k), col, thickness);
+            }
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Dig] ground ring draw failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// A ground-level disc for a point of interest — the pieces a Surveillance dig has turned up,
     /// once they are no longer secret. Filled towards the centre and clear at the rim, so it reads
     /// as a spot on the floor rather than a bubble.

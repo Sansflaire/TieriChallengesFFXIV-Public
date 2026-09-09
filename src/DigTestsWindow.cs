@@ -243,9 +243,33 @@ internal sealed class DigTestsWindow
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
         ImGui.SameLine();
-        if (ImGui.Button("Reset colour"))
+        if (ImGui.Button("Reset##sitecol"))
         {
             DigTuning.SiteColor = DigTuning.DefaultSiteColor;
+            DigTuning.Save();
+        }
+
+        ImGui.Spacing();
+        ImGui.TextColored(Head, "DEBUG DRAW");
+
+        if (ImGui.Checkbox("Show floor grid", ref DigTuning.SiteShowGrid)) DigTuning.Save();
+
+        if (ImGui.Checkbox("Show buried piece locations + dig radius", ref DigTuning.SiteRevealPieces))
+            DigTuning.Save();
+
+        ImGui.TextColored(Rule,
+            "The piece markers are the ANSWER KEY — with them on this is not a test. They exist\n"
+          + "because a miss and a mis-tuned dig radius look identical from inside the game: the\n"
+          + "ring is drawn at exactly SitePieceRadius, so you can see whether you were short.\n"
+          + "Cyan ring = still buried. Green ring = already recovered.");
+
+        ImGui.ColorEdit3("Marker colour", ref DigTuning.SiteDebugColor);
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SameLine();
+        if (ImGui.Button("Reset##dbgcol"))
+        {
+            DigTuning.SiteDebugColor = DigTuning.DefaultDebugColor;
             DigTuning.Save();
         }
         SliderInt("Pieces to bury",        ref DigTuning.SitePieces, 1, 20);

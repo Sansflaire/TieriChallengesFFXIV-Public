@@ -385,11 +385,30 @@ internal sealed class DigSiteService : IDigTest
 
         // Ground first, walls over it — the walls are the boundary and should read as being in
         // front of the floor they enclose.
-        DigVolumeRender.DrawGroundGrid(_grid, _gridStride, rgb);
+        if (DigTuning.SiteShowGrid)
+            DigVolumeRender.DrawGroundGrid(_grid, _gridStride, rgb);
+
         DigVolumeRender.DrawGradientWalls(_grid, DigTuning.SiteWallHeight, rgb);
 
+        // Recovered pieces: green, always shown. Nothing is given away by marking ground you have
+        // already dug.
+        var recovered = new Vector3(0.44f, 0.86f, 0.62f);
         foreach (var p in _found)
-            DigVolumeRender.DrawGroundDisc(p, DigTuning.SitePieceRadius, new Vector3(0.44f, 0.86f, 0.62f));
+        {
+            DigVolumeRender.DrawGroundDisc(p, DigTuning.SitePieceRadius, recovered);
+            DigVolumeRender.DrawGroundRing(p, DigTuning.SitePieceRadius, recovered, 0.75f);
+        }
+
+        // Still-buried pieces: the answer key, off by default of the player's choosing rather than
+        // of the code's. Drawn at the EXACT dig radius, which is the only way to tell a near miss
+        // apart from a mis-tuned radius — from inside the game the two look identical.
+        if (!DigTuning.SiteRevealPieces) return;
+
+        foreach (var p in _pieces)
+        {
+            DigVolumeRender.DrawGroundDisc(p, DigTuning.SitePieceRadius, DigTuning.SiteDebugColor, 0.22f);
+            DigVolumeRender.DrawGroundRing(p, DigTuning.SitePieceRadius, DigTuning.SiteDebugColor);
+        }
     }
 }
 #endif
