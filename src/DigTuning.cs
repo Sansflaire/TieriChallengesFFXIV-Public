@@ -156,10 +156,11 @@ internal static class DigTuning
     public static float DigSpeed = 1f;
 
     /// <summary>
-    /// Which speed lever to use — see <see cref="PropService.SpeedMode"/>. Defaults to all three,
-    /// since the one that was tried alone provably did not work.
+    /// Which speed lever to use — see <see cref="PropService.SpeedMode"/>. Defaults to
+    /// <c>SlotFunction</c>: measured 2026-09-09, both per-slot levers work alone, so the
+    /// character-wide <c>OverallSpeed</c> is not needed and should not be written.
     /// </summary>
-    public static int DigSpeedMethod = (int)PropService.SpeedMode.Everything;
+    public static int DigSpeedMethod = (int)PropService.SpeedMode.SlotFunction;
 
     /// <summary>
     /// Pushes the values that live somewhere else into their real home. Called after
@@ -194,7 +195,7 @@ internal static class DigTuning
     /// Gating on "older than current" would make every future bump re-run every past migration and
     /// overrule values the user chose deliberately in between.</para>
     /// </summary>
-    private const int CurrentVersion = 4;
+    private const int CurrentVersion = 5;
 
     private sealed class Dto
     {
@@ -261,7 +262,7 @@ internal static class DigTuning
         MaxRise        = 25f;
         DigHoldSeconds = PropService.DefaultHoldMilliseconds / 1000f;
         DigSpeed       = 1f;
-        DigSpeedMethod = (int)PropService.SpeedMode.Everything;
+        DigSpeedMethod = (int)PropService.SpeedMode.SlotFunction;
         Apply();
     }
 
@@ -346,11 +347,17 @@ internal static class DigTuning
                            ? Math.Clamp(d.DigSpeed, PropService.MinSpeed, PropService.MaxSpeed)
                            : 1f;
 
-            // Nullable: absent means "never chosen", which must land on Everything rather than on
-            // SlotFunction — index 0 is the method already proven not to work on its own.
             DigSpeedMethod = d.DigSpeedMethod is { } m
                                  ? Math.Clamp(m, 0, 3)
-                                 : (int)PropService.SpeedMode.Everything;
+                                 : (int)PropService.SpeedMode.SlotFunction;
+
+            // Version 5: Everything was the default only while it was unknown which lever worked.
+            // Both per-slot levers were then measured to work alone, so a stored Everything is
+            // almost certainly the old default rather than a choice — and it needlessly writes the
+            // character-wide OverallSpeed. Same narrow rule: only the exact old default is
+            // overruled.
+            if (d.Version < 5 && DigSpeedMethod == (int)PropService.SpeedMode.Everything)
+                DigSpeedMethod = (int)PropService.SpeedMode.SlotFunction;
 
             Apply();
             Diag.Info("[Dig] tuning loaded.");

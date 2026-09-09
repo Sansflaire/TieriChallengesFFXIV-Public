@@ -173,9 +173,6 @@ internal sealed class DigTestsWindow
         ImGui.SliderFloat("Speed", ref DigTuning.DigSpeed, PropService.MinSpeed, PropService.MaxSpeed, "%.2fx");
         if (ImGui.IsItemDeactivatedAfterEdit()) { DigTuning.Apply(); DigTuning.Save(); }
 
-        // 0.84.42.7 wrote the speed ONCE, right after asking for the animation — before the
-        // timeline was in the slot — and it silently did nothing. Three levers exist and which one
-        // wins was not knowable by reading; pick one here and watch the readout below.
         int method = DigTuning.DigSpeedMethod;
         if (ImGui.Combo("Method", ref method,
                         "SetSlotSpeed (function)\0TimelineSpeeds[0] (array)\0OverallSpeed (container)\0All three\0"))
@@ -185,11 +182,18 @@ internal sealed class DigTestsWindow
             DigTuning.Save();
         }
 
+        ImGui.TextColored(Rule,
+            "MEASURED 2026-09-09: SetSlotSpeed and TimelineSpeeds[0] each work ON THEIR OWN.\n"
+          + "SetSlotSpeed is the default — the narrowest lever that works, and the game's own\n"
+          + "setter, so any bookkeeping it does beyond storing the float still happens.\n"
+          + "OverallSpeed is NOT needed and scales everything the character does, not just this\n"
+          + "animation. Do not make it or All three the default again.");
+
         ImGui.TextColored(Rule, "LIVE: " + Plugin.Props.SpeedReadout());
         ImGui.TextColored(Rule,
             "Watch this DURING a dig. A value that never changes means the write is not landing;\n"
           + "one that snaps back to 1 means the game is reverting it — those look identical from\n"
-          + "outside, which is why all three are shown. The write is now repeated every frame.");
+          + "outside, which is why all three are shown. The write is repeated every frame.");
 
         if (ImGui.Button("Reset speed to 1.0")) Say(Plugin.Props.ResetPlaybackSpeed());
 

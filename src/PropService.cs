@@ -136,23 +136,42 @@ internal sealed unsafe class PropService
     /// </summary>
     public enum SpeedMode
     {
-        /// <summary>The member function. What 0.84.42.7 used, and it did not take.</summary>
+        /// <summary>
+        /// <c>SetSlotSpeed</c> — the game's own setter. <b>The default: measured to work on its own
+        /// (2026-09-09), and preferred over the raw array write because if the setter does any
+        /// bookkeeping beyond storing the float, writing the field skips it.</b>
+        /// </summary>
         SlotFunction = 0,
 
-        /// <summary>Write <c>TimelineSpeeds[0]</c> directly, bypassing the setter.</summary>
+        /// <summary>
+        /// Write <c>TimelineSpeeds[0]</c> directly. Also measured to work on its own; kept as the
+        /// fallback if the setter's signature ever moves under a patch.
+        /// </summary>
         SlotArray = 1,
 
         /// <summary>
-        /// <c>TimelineContainer.OverallSpeed</c> — the container-level multiplier the game's own
-        /// <c>CalculateAndApplyOverallSpeed</c> maintains. The likeliest culprit for the reset.
+        /// <c>TimelineContainer.OverallSpeed</c> — container-level, so it scales <b>everything the
+        /// character does</b>, not just this animation. Measurement showed it is <b>not needed</b>:
+        /// either per-slot lever is sufficient. Kept only for investigation; do not make it a
+        /// default.
         /// </summary>
         Overall = 2,
 
-        /// <summary>All three, every frame. The default until one is proven sufficient.</summary>
+        /// <summary>
+        /// All three. Was the default while it was unknown which lever worked; now redundant, and
+        /// it drags <see cref="Overall"/> along with it.
+        /// </summary>
         Everything = 3,
     }
 
-    public SpeedMode SpeedMethod { get; set; } = SpeedMode.Everything;
+    /// <summary>
+    /// Which lever to pull. Defaults to <see cref="SpeedMode.SlotFunction"/> — the narrowest one
+    /// that was measured to work, rather than the broadest one that was measured to work.
+    /// </summary>
+    public SpeedMode SpeedMethod { get; set; } = SpeedMode.SlotFunction;
+
+    /// <summary>The mode actually written, so the restore puts back only what it touched.</summary>
+    private SpeedMode _appliedMode = SpeedMode.SlotFunction;
 
     private bool  _speedApplied;
     private float _speedBefore    = 1f;
@@ -547,6 +566,7 @@ internal sealed unsafe class PropService
 
             _speedApplied = true;
             _appliedSpeed = speed;
+            _appliedMode  = mode;
 
             if (announce)
                 Diag.Info($"[Prop] speed {speed:0.##}x via {mode} "
@@ -569,9 +589,19 @@ internal sealed unsafe class PropService
 
         try
         {
-            chara->Timeline.TimelineSequencer.SetSlotSpeed(BaseSlot, _speedBefore);
-            chara->Timeline.TimelineSequencer.TimelineSpeeds[(int)BaseSlot] = _arrayBefore;
-            chara->Timeline.OverallSpeed = _overallBefore;
+            // Only what we actually wrote. Restoring a lever we never touched would write a stale
+            // baseline over whatever the game legitimately changed during the dig — mounting,
+            // haste, anything that moves OverallSpeed on its own.
+            var mode = _appliedMode;
+
+            if (mode is SpeedMode.SlotFunction or SpeedMode.Everything)
+                chara->Timeline.TimelineSequencer.SetSlotSpeed(BaseSlot, _speedBefore);
+
+            if (mode is SpeedMode.SlotArray or SpeedMode.Everything)
+                chara->Timeline.TimelineSequencer.TimelineSpeeds[(int)BaseSlot] = _arrayBefore;
+
+            if (mode is SpeedMode.Overall or SpeedMode.Everything)
+                chara->Timeline.OverallSpeed = _overallBefore;
         }
         catch (Exception ex) { Diag.Error($"[Prop] speed restore failed: {ex.Message}"); }
     }

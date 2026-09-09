@@ -16,4 +16,4 @@ This file is an **index only** — one row per issue, with a link to the detail 
 
 | ID | Summary | Keywords | Status | Found | Detail |
 |----|---------|----------|--------|-------|--------|
-| 013 | Dig site walls drew only at some camera angles — the `WorldToScreen` gate also required the point to be *in the viewport*, so any quad with a corner off-screen was discarded. Same latent bug made Challenge Creator wireframes vanish near large volumes. | WorldToScreen, inView, overlay, gradient walls, culling, AreaOverlay, surveillance | 🔄 FIX SHIPPED 0.84.42.3 — awaiting in-game confirmation | 2026-09-09 | [013](Issues/013-worldtoscreen-gate-discarded-visible-geometry.md) |
+| _(none)_ | | | | | |
