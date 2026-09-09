@@ -574,6 +574,17 @@ public sealed class Plugin : IDalamudPlugin
                     ChatGui.Print("[Challenges] " + _timelineProbe.StartDigNow());
                     break;
 
+                // The real thing: attach the Shovel client-side, dig, detach when the game
+                // cancels. No ownership anywhere - works on a brand-new character.
+                case "shovel":
+                    ChatGui.Print("[Challenges] " + _timelineProbe.StartNativeShovel());
+                    break;
+
+                case "shovel off":
+                case "shoveloff":
+                    ChatGui.Print("[Challenges] " + _timelineProbe.StopNativeShovel());
+                    break;
+
                 case "dig stop":
                 case "digstop":
                 case "stopanim":

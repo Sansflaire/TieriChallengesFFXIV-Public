@@ -119,6 +119,7 @@ internal sealed unsafe class TimelineProbeWindow
             SampleTrace(chara);
             SampleOrnament(chara);
             TickDig(chara);
+            TickNativeShovel(chara);
         }
         catch (Exception ex)
         {
@@ -155,6 +156,8 @@ internal sealed unsafe class TimelineProbeWindow
             DrawTarget();
             ImGui.Separator();
             DrawFireButtons(chara);
+            ImGui.Separator();
+            DrawNativeOrnament(chara);
             ImGui.Separator();
             DrawOrnamentReadOnly(chara);
             ImGui.Separator();
@@ -547,6 +550,158 @@ internal sealed unsafe class TimelineProbeWindow
         catch (Exception ex)
         {
             ImGui.TextDisabled($"  unreadable ({ex.Message})");
+        }
+    }
+
+    // ── native attach: the game's own accessory spawn, no ownership ──────────
+
+    /// <summary>
+    /// The game's "no accessory" value. <b>Observed, not invented</b> — the client wrote
+    /// <c>OrnamentId 57 -> 0</c> when the Shovel was dismissed from its own menu on 2026-09-06.
+    /// The value that crashed the game was <c>-1</c>, which nothing in the client ever writes:
+    /// every field storing an ornament id is unsigned. See BROKEN.md 012.
+    /// </summary>
+    private const short OrnamentNone = 0;
+
+    private string _nativeStatus = string.Empty;
+
+    /// <summary>
+    /// Calls <c>OrnamentContainer.SetupOrnament</c> — the client-side accessory spawn.
+    ///
+    /// <para>No ownership is involved: this is the call the client makes <i>after</i> the server has
+    /// already decided, so it carries no unlock check. That is what makes it the only route that
+    /// satisfies "works for a brand-new player with zero accessories".</para>
+    ///
+    /// <para><b>Precondition, not a catch.</b> The id must be either <see cref="OrnamentNone"/> or a
+    /// real <c>Ornament</c> row. A C# catch cannot survive a bad native call, so the gate is here
+    /// and the caller is disabled when it fails — the lesson BROKEN.md 012 paid for.</para>
+    /// </summary>
+    private static string SetOrnamentNative(Character* chara, short id)
+    {
+        if (chara == null) return "not logged in.";
+
+        if (id != OrnamentNone && OrnamentRowOf((uint)id) == null)
+            return $"refused: {id} is not a real Ornament row.";
+
+        try
+        {
+            ushort before = chara->OrnamentData.OrnamentId;
+            chara->OrnamentData.SetupOrnament(id, 0);
+            Diag.Info($"[AnimProbe] SetupOrnament({id}) — OrnamentId was {before}");
+            return id == OrnamentNone ? $"detach fired (was {before})." : $"attach {id} fired (was {before}).";
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[AnimProbe] SetupOrnament({id}) threw: {ex.Message}");
+            return $"failed: {ex.Message}";
+        }
+    }
+
+    private void DrawNativeOrnament(Character* chara)
+    {
+        ImGui.TextColored(Accent, "Native accessory attach (no ownership — the real route)");
+
+        if (chara == null) { ImGui.TextDisabled("  not logged in"); return; }
+
+        ushort live = chara->OrnamentData.OrnamentId;
+        ImGui.Text($"  live OrnamentId {live}");
+
+        ImGui.TextColored(Warn, "  STEP 1 — verify detach FIRST, while the Shovel is legitimately summoned.");
+        ImGui.TextDisabled("  Owned state means the server still holds truth, so a desync is recoverable");
+        ImGui.TextDisabled("  by zoning or re-summoning. Test the teardown before building on it.");
+
+        if (ImGui.Button("TEST detach: SetupOrnament(0)", new Vector2(280, 0)))
+            _nativeStatus = SetOrnamentNative(chara, OrnamentNone);
+
+        ImGui.Spacing();
+        ImGui.TextDisabled("  STEP 2 — once detach is proven, these need no accessory owned at all.");
+
+        if (ImGui.Button("Attach Shovel (57)", new Vector2(200, 0)))
+            _nativeStatus = SetOrnamentNative(chara, DefaultOrnament);
+
+        ImGui.SameLine();
+        if (ImGui.Button("Detach", new Vector2(120, 0)))
+            _nativeStatus = SetOrnamentNative(chara, OrnamentNone);
+
+        ImGui.SameLine();
+        if (ImGui.Button("Full: attach -> dig -> detach", new Vector2(240, 0)))
+            _nativeStatus = StartNativeShovel();
+
+        if (!string.IsNullOrEmpty(_nativeStatus)) ImGui.TextDisabled($"  {_nativeStatus}");
+    }
+
+    // ── the full sequence, driven from Tick ──────────────────────────────────
+
+    private enum ShovelStage { Off, WaitAttach, Playing, WatchAnim }
+
+    private ShovelStage _shovelStage;
+    private int         _shovelFrames;
+
+    private const int AttachGrace = 300;   // frames to wait for the model to appear
+    private const int PlayGrace2  = 60;    // frames to wait for the timeline to take
+
+    /// <summary>Attach the Shovel, dig, and pull it the moment the game cancels the animation.</summary>
+    public string StartNativeShovel()
+    {
+        var chara = LocalChara();
+        if (chara == null) return "not logged in.";
+        if (!TimelineIsSafe(DigTimelineId)) return "dig timeline unavailable.";
+
+        string r = SetOrnamentNative(chara, DefaultOrnament);
+        if (r.StartsWith("refused", StringComparison.Ordinal) || r.StartsWith("failed", StringComparison.Ordinal))
+            return r;
+
+        _shovelStage  = ShovelStage.WaitAttach;
+        _shovelFrames = 0;
+        return "attaching, then digging.";
+    }
+
+    public string StopNativeShovel()
+    {
+        _shovelStage = ShovelStage.Off;
+
+        var chara = LocalChara();
+        if (chara == null) return "not logged in.";
+
+        try
+        {
+            chara->Timeline.PlayActionTimeline(IdleTimeline, 0);
+            chara->Timeline.TimelineSequencer.SetSlotTimeline(0, IdleTimeline);
+        }
+        catch (Exception ex) { Diag.Error($"[AnimProbe] stop threw: {ex.Message}"); }
+
+        return "stopped. " + SetOrnamentNative(chara, OrnamentNone);
+    }
+
+    private void TickNativeShovel(Character* chara)
+    {
+        if (_shovelStage == ShovelStage.Off) return;
+        if (chara == null) { _shovelStage = ShovelStage.Off; return; }
+
+        _shovelFrames++;
+        ushort slot0 = chara->Timeline.TimelineSequencer.TimelineIds[0];
+
+        switch (_shovelStage)
+        {
+            case ShovelStage.WaitAttach:
+                if (chara->OrnamentData.OrnamentId == DefaultOrnament || _shovelFrames >= AttachGrace)
+                {
+                    try { chara->Timeline.PlayActionTimeline(DigTimelineId, 0); StartTrace(); }
+                    catch (Exception ex) { Diag.Error($"[AnimProbe] dig threw: {ex.Message}"); }
+                    _shovelStage  = ShovelStage.Playing;
+                    _shovelFrames = 0;
+                }
+                break;
+
+            case ShovelStage.Playing:
+                if (slot0 == DigTimelineId) { _shovelStage = ShovelStage.WatchAnim; _shovelFrames = 0; }
+                else if (_shovelFrames >= PlayGrace2) { _nativeStatus = StopNativeShovel(); }
+                break;
+
+            case ShovelStage.WatchAnim:
+                // The game owns the cancel; we only notice it and put the accessory away.
+                if (slot0 != DigTimelineId) _nativeStatus = StopNativeShovel();
+                break;
         }
     }
 
