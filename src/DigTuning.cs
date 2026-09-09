@@ -71,6 +71,20 @@ internal static class DigTuning
     public static float SitePieceMaxDrop = 2f;
 
     /// <summary>
+    /// The largest height jump allowed between two ground samples half a yalm apart, in yalms.
+    ///
+    /// <para><b>This is what tells a wall from a hill, and total height cannot.</b> A 2-yalm rise
+    /// across a 4-yalm radius is a 26° slope — perfectly walkable and fine to dig on. A 1-yalm
+    /// garden wall is a smaller total rise and completely unusable. The difference is not how far
+    /// the ground moves but how suddenly, so this measures the step between neighbouring samples
+    /// rather than the spread across the circle.</para>
+    ///
+    /// <para>0.4 over a 0.5 spacing is about 39°, so ordinary terrain passes and anything with an
+    /// actual edge does not.</para>
+    /// </summary>
+    public static float SitePieceMaxStep = 0.4f;
+
+    /// <summary>
     /// How tall the drawn walls are, in yalms. <b>Nothing to do with the volume's own height</b> —
     /// the site box is deliberately tall so its containment test survives sloped ground, and drawing
     /// the wall over that height put the gradient's opaque base metres underground.
@@ -224,6 +238,7 @@ internal static class DigTuning
         public float SitePieceSpacing { get; set; }
         public float SiteWallHeight { get; set; }
         public float SitePieceMaxDrop { get; set; }
+        public float SitePieceMaxStep { get; set; }
         public int   SiteGridCells { get; set; }
         public float SiteColorR { get; set; }
         public float SiteColorG { get; set; }
@@ -260,7 +275,7 @@ internal static class DigTuning
     {
         SiteSize = 50f; SitePieces = 5; SitePieceRadius = 4f; SitePieceSpacing = 12f;
         SiteWallHeight = 1.5f; SiteGridCells = 12; SiteColor = DefaultSiteColor;
-        SitePieceMaxDrop = 2f;
+        SitePieceMaxDrop = 2f; SitePieceMaxStep = 0.4f;
         SiteRevealPieces = true; SiteDebugColor = DefaultDebugColor; SiteShowGrid = true;
     }
 
@@ -303,6 +318,7 @@ internal static class DigTuning
             SitePieceSpacing = Pos(d.SitePieceSpacing, 12f);
             SiteWallHeight   = Pos(d.SiteWallHeight,    6f);
             SitePieceMaxDrop = Pos(d.SitePieceMaxDrop,  2f);
+            SitePieceMaxStep = Pos(d.SitePieceMaxStep, 0.4f);
             SiteGridCells    = d.SiteGridCells > 0 ? Math.Clamp(d.SiteGridCells, 2, 40) : 12;
 
             // All-zero means the field was absent, not that somebody picked black — a colour that
@@ -398,7 +414,7 @@ internal static class DigTuning
                 SiteSize = SiteSize, SitePieces = SitePieces,
                 SitePieceRadius = SitePieceRadius, SitePieceSpacing = SitePieceSpacing,
                 SiteWallHeight = SiteWallHeight, SiteGridCells = SiteGridCells,
-                SitePieceMaxDrop = SitePieceMaxDrop,
+                SitePieceMaxDrop = SitePieceMaxDrop, SitePieceMaxStep = SitePieceMaxStep,
                 SiteColorR = SiteColor.X, SiteColorG = SiteColor.Y, SiteColorB = SiteColor.Z,
                 SiteRevealPieces = SiteRevealPieces, SiteShowGrid = SiteShowGrid,
                 SiteDebugColorR = SiteDebugColor.X,

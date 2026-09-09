@@ -331,10 +331,14 @@ internal sealed class DigTestsWindow
         Slider("Piece dig radius",         ref DigTuning.SitePieceRadius, 0.5f, 30f);
         Slider("Min spacing between pieces", ref DigTuning.SitePieceSpacing, 1f, 100f);
         Slider("Max ground drop across a piece", ref DigTuning.SitePieceMaxDrop, 0.2f, 15f);
+        Slider("Max ground STEP (wall detector)", ref DigTuning.SitePieceMaxStep, 0.05f, 3f);
         ImGui.TextColored(Rule,
-            "Max drop refuses spots straddling a wall or ledge. Not just cosmetic: half such a\n"
-          + "spot's dig radius is somewhere you cannot stand. Raise it for hilly ground, lower it\n"
-          + "if markers still climb a face. Anything that slips through is clipped when drawn.");
+            "Two different tests, and the second is the one that matters.\n"
+          + "  DROP is the total spread across the circle — catches big terrain.\n"
+          + "  STEP is the jump between samples half a yalm apart — catches WALLS.\n"
+          + "Total height cannot tell a wall from a hill: a 2y rise over a 4y radius is a walkable\n"
+          + "26 degree slope, while a 1y garden wall is a SMALLER rise and unusable. Lower the step\n"
+          + "if spots still land on kerbs; raise it if nothing will bury on rocky ground.");
 
         if (DigTuning.SitePieceSpacing <= DigTuning.SitePieceRadius * 2f)
             ImGui.TextColored(new Vector4(0.95f, 0.45f, 0.45f, 1f),

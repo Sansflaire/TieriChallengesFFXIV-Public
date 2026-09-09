@@ -38,6 +38,22 @@ internal sealed class DigSiteService : IDigTest
     /// <summary>Roughly one ground sample every this many yalms, whatever the grid density.</summary>
     private const float TargetSpacing = 2f;
 
+    /// <summary>Spokes and spacing for the step test. Eight directions catch any wall that crosses
+    /// the circle; only a wall clipping a corner between spokes can slip past.</summary>
+    private const int   StepRays       = 8;
+    private const float StepSpacing    = 0.5f;
+    private const int   MaxStepSamples = 16;
+
+    /// <summary>
+    /// Candidates that may be ray-tested in one frame. Each costs about
+    /// <see cref="StepRays"/> × samples rays, so this is the knob that keeps placement off the
+    /// frame budget.
+    /// </summary>
+    private const int RayTestsPerFrame = 20;
+
+    /// <summary>Frames placement may take before giving up. ~0.7 s at 60 fps.</summary>
+    private const int MaxPlaceFrames = 40;
+
     /// <summary>Ceiling on fine steps per visual cell, and on the lattice as a whole.</summary>
     private const int MaxSubdivisions   = 12;
     private const int MaxLatticePoints  = 45;
@@ -55,6 +71,9 @@ internal sealed class DigSiteService : IDigTest
     /// </summary>
     private Vector3[,] _grid = new Vector3[0, 0];
     private int        _gridStride = 1;
+
+    /// <summary>Frames spent placing so far — placement is spread, see <see cref="BuryPieces"/>.</summary>
+    private int _placeTicks;
     private uint           _territory;
     private long           _startedAtMs;
     private long           _endedAtMs;
@@ -147,9 +166,11 @@ internal sealed class DigSiteService : IDigTest
 
         _pieces.Clear();
         _found.Clear();
-        _digs      = 0;
-        _territory = Plugin.ClientState.TerritoryType;
-        _phase     = Phase.Placing;
+        _digs       = 0;
+        _placeTicks = 0;
+        _grid       = new Vector3[0, 0];
+        _territory  = Plugin.ClientState.TerritoryType;
+        _phase      = Phase.Placing;
 
         return $"marking out a {side:0}×{side:0} site…";
     }
@@ -257,38 +278,55 @@ internal sealed class DigSiteService : IDigTest
     {
         if (_site == null) { _phase = Phase.Off; return; }
 
-        // The ground is measured BEFORE anything is buried, because placement now needs to know the
-        // shape of the surface around a candidate — not just that a point exists there.
-        SampleGrid();
+        // The ground is measured BEFORE anything is buried, because placement needs the shape of
+        // the surface around a candidate, not just that a point exists there.
+        if (_grid.GetLength(0) < 2) SampleGrid();
 
         int want = Math.Max(1, DigTuning.SitePieces);
 
-        for (int n = 0; n < want; n++)
+        // ONE piece per frame, with a per-frame budget on the expensive test.
+        //
+        // The step test raycasts — it has to, because the lattice is far too coarse to tell a wall
+        // from a ramp — so burying five pieces in a single frame could mean tens of thousands of
+        // rays in one update. Spread over frames it is imperceptible, and placement already has a
+        // "Surveying…" state on screen for exactly this.
+        int rayTested = 0;
+        bool placed = false;
+
+        for (int attempt = 0; attempt < AttemptsPerPiece && !placed; attempt++)
         {
-            bool placed = false;
+            if (!DigGround.TryPointInBox(_site, _rng, out var p, 1)) continue;
+            if (TooClose(p)) continue;
+            if (TooSteep(p)) continue;                       // lattice, free
 
-            for (int attempt = 0; attempt < AttemptsPerPiece && !placed; attempt++)
-            {
-                if (!DigGround.TryPointInBox(_site, _rng, out var p, 1)) continue;
-                if (TooClose(p)) continue;
-                if (TooSteep(p)) continue;
+            if (rayTested >= RayTestsPerFrame) break;        // resume next frame
+            rayTested++;
 
-                _pieces.Add(p);
-                placed = true;
-            }
+            if (HasStep(p)) continue;                        // raycasts, the wall detector
 
-            // Stop at what actually fitted rather than looping forever. A small site with a large
-            // spacing simply cannot hold the requested count, and quietly burying four instead of
-            // five is far better than hanging the frame — the count shown is the count buried.
-            if (!placed) break;
+            _pieces.Add(p);
+            placed = true;
         }
+
+        if (placed && _pieces.Count < want && _placeTicks < MaxPlaceFrames)
+        {
+            _placeTicks++;
+            return;                                          // come back for the next piece
+        }
+
+        // Not placed this frame: keep trying until the frame budget runs out. Stopping at what
+        // actually fitted is deliberate — a small site with wide spacing genuinely cannot hold the
+        // requested count, and burying four instead of five beats hanging.
+        if (!placed && _pieces.Count < want && ++_placeTicks < MaxPlaceFrames)
+            return;
 
         if (_pieces.Count == 0)
         {
             _phase = Phase.Off;
             _site  = null;
             Plugin.ChatGui.PrintError(
-                "[Challenges] Could not bury anything in this site — try somewhere more open.");
+                "[Challenges] Could not bury anything in this site — too much broken ground. "
+              + "Try somewhere flatter, or raise the step/drop limits in the lab.");
             return;
         }
 
@@ -298,7 +336,8 @@ internal sealed class DigSiteService : IDigTest
         Diag.Info($"[Site] buried {_pieces.Count} piece(s) of {want} requested.");
 
         string shortfall = _pieces.Count < want
-            ? $" (only {_pieces.Count} of {want} would fit — the site is too small or spacing too wide)"
+            ? $" (only {_pieces.Count} of {want} would fit — site too small, spacing too wide, "
+            + "or too much of the ground is walls and ledges)"
             : string.Empty;
 
         Plugin.ChatGui.Print(
@@ -463,6 +502,49 @@ internal sealed class DigSiteService : IDigTest
                 var   q  = new Vector3(p.X + rr * cos, p.Y, p.Z + rr * sin);
 
                 if (MathF.Abs(SnapToFloor(q).Y - baseY) > max) return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Whether the ground under a candidate contains a <b>step</b> — a wall, a kerb, the lip of a
+    /// trough — as opposed to a slope.
+    ///
+    /// <para><b>Total height cannot tell those apart, which is why this exists.</b> A 2-yalm rise
+    /// across a 4-yalm radius is a 26° hillside and fine to dig on; a 1-yalm garden wall is a
+    /// *smaller* total rise and completely unusable. The difference is not how far the ground moves
+    /// but how suddenly, so this walks outward in short increments and looks at the change between
+    /// neighbours.</para>
+    ///
+    /// <para><b>It has to raycast, and the lattice cannot substitute.</b> Lattice samples are about
+    /// two yalms apart and are read back with bilinear interpolation, which turns a one-yalm wall
+    /// into a gentle ramp — the smoothing that makes the grid look good is exactly what destroys
+    /// the evidence here. Hence <see cref="RayTestsPerFrame"/> and one piece per frame.</para>
+    /// </summary>
+    private bool HasStep(Vector3 centre)
+    {
+        float r       = MathF.Max(0.5f, DigTuning.SitePieceRadius);
+        float maxStep = MathF.Max(0.02f, DigTuning.SitePieceMaxStep);
+
+        int steps = Math.Clamp((int)MathF.Ceiling(r / StepSpacing), 2, MaxStepSamples);
+        float centreY = DigGround.GroundAt(centre, centre.X, centre.Z).Y;
+
+        for (int d = 0; d < StepRays; d++)
+        {
+            float a   = MathF.Tau * d / StepRays;
+            float cos = MathF.Cos(a), sin = MathF.Sin(a);
+
+            float prev = centreY;
+
+            for (int k = 1; k <= steps; k++)
+            {
+                float rr = r * k / steps;
+                float y  = DigGround.GroundAt(centre, centre.X + rr * cos, centre.Z + rr * sin).Y;
+
+                if (MathF.Abs(y - prev) > maxStep) return true;
+                prev = y;
             }
         }
 
