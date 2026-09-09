@@ -600,6 +600,40 @@ internal sealed unsafe class TimelineProbeWindow
 
         if (_swapActive) ImGui.TextColored(Good, "  swap ACTIVE");
         if (!string.IsNullOrEmpty(_swapStatus)) ImGui.TextDisabled($"  {_swapStatus}");
+
+        // Self-diagnosing. "Penumbra accepted the redirect" and "the redirect is actually reaching
+        // this character" are different claims, and only the second one matters. Asking Penumbra to
+        // resolve the path settles it here rather than requiring an out-of-game query — and it
+        // separates "not applying" (a fixable plumbing problem) from "applying but not rendering"
+        // (a model-format problem). Those need completely different fixes.
+        if (!string.IsNullOrEmpty(weaponPath))
+        {
+            string resolved = ResolvePlayerPath(weaponPath);
+            if (string.IsNullOrEmpty(resolved))
+            {
+                ImGui.TextDisabled("  resolve: unavailable");
+            }
+            else if (resolved.Equals(weaponPath, StringComparison.OrdinalIgnoreCase))
+            {
+                ImGui.TextColored(Warn, "  resolve: NOT redirected — Penumbra is not applying it here.");
+            }
+            else
+            {
+                ImGui.TextColored(Good, $"  resolve: REDIRECTED -> {resolved}");
+                ImGui.TextDisabled("  If it resolves but nothing renders, the model is the problem, not the plumbing.");
+            }
+        }
+    }
+
+    private static string ResolvePlayerPath(string gamePath)
+    {
+        try
+        {
+            return Plugin.PluginInterface
+                .GetIpcSubscriber<string, string>("Penumbra.ResolvePlayerPath")
+                .InvokeFunc(gamePath) ?? string.Empty;
+        }
+        catch { return string.Empty; }
     }
 
     /// <summary>
