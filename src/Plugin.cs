@@ -125,6 +125,13 @@ public sealed class Plugin : IDalamudPlugin
     /// <summary>The searchable manual, parsed from the shipped HELP.md. Renderer-agnostic.</summary>
     private readonly HelpWindow _helpWindow = new();
 
+    /// <summary>
+    /// Spawns a Fashion Accessory prop and plays an animation with it — no ownership required.
+    /// SHIPS PUBLICLY; challenge content depends on it. Static because challenge evaluation reaches
+    /// it the same way it reaches <see cref="Inventory"/>.
+    /// </summary>
+    internal static PropService Props { get; private set; } = null!;
+
     // PanacheUI-backed. NULL when the library could not be loaded — these types must never be
     // constructed in that case, because merely loading them throws. See PanacheAvailability.
     private readonly CompletionToast? _toast;
@@ -258,6 +265,7 @@ public sealed class Plugin : IDalamudPlugin
         // Stood up before the tracker: an item condition evaluated on the first tick must find a
         // watcher, not a null. It starts dirty, so the first read builds the map.
         Inventory = new InventoryWatcher();
+        Props     = new PropService();
         Inventory.Attach();
 
         _tracker = new ChallengeTracker(_config, _store, SaveConfig);
@@ -545,6 +553,17 @@ public sealed class Plugin : IDalamudPlugin
                     break;
                 }
 
+                // Public: spawn the Shovel, dig, drop it. No ownership at any layer - the
+                // client-side spawn carries no unlock check and 13383 is not an Emote row.
+                case "dig":
+                    ChatGui.Print("[Challenges] " + Props.Dig());
+                    break;
+
+                case "dig stop":
+                case "digstop":
+                    ChatGui.Print("[Challenges] " + Props.Stop());
+                    break;
+
                 case "sync":
                     _ = System.Threading.Tasks.Task.Run(async () =>
                     {
@@ -570,26 +589,9 @@ public sealed class Plugin : IDalamudPlugin
                 // The point of the whole ActionTimeline investigation, as a command: the Shovel's
                 // dig animation on demand, with the accessory neither owned nor equipped. 13383 is
                 // absent from the Emote sheet, so no unlock gate applies to it — see Q17.
-                case "dig":
-                    ChatGui.Print("[Challenges] " + _timelineProbe.StartDigNow());
-                    break;
 
-                // The real thing: attach the Shovel client-side, dig, detach when the game
-                // cancels. No ownership anywhere - works on a brand-new character.
-                case "shovel":
-                    ChatGui.Print("[Challenges] " + _timelineProbe.StartNativeShovel());
-                    break;
 
-                case "shovel off":
-                case "shoveloff":
-                    ChatGui.Print("[Challenges] " + _timelineProbe.StopNativeShovel());
-                    break;
 
-                case "dig stop":
-                case "digstop":
-                case "stopanim":
-                    ChatGui.Print("[Challenges] " + _timelineProbe.StopDigNow());
-                    break;
 
                 case "datasets":
                     _datasetViewer.IsVisible = !_datasetViewer.IsVisible;
@@ -641,6 +643,11 @@ public sealed class Plugin : IDalamudPlugin
         UiScale.Set(_config.UiScale);
 
         HandleEscape();
+
+        // Drives the prop performance to completion and removes the model when the game cancels
+        // the animation. Ships publicly, so it runs outside any DEV_BUILD gate.
+        try { Props.Tick(); }
+        catch (Exception ex) { Diag.Error($"[Prop] tick failed: {ex.Message}"); }
 
 #if DEV_BUILD
         // One-shot map geometry dump for the zone we are in. Fired from the DRAW loop, not the
@@ -1011,6 +1018,11 @@ public sealed class Plugin : IDalamudPlugin
             _statusWindow.IsVisible   = false;
             _helpWindow.IsVisible     = false;
             _objectiveWindow.Close();
+
+            // Managed flag only. The detach happens on the next Props.Tick(), never from here:
+            // this handler runs on every Escape press, and calling game code from it is exactly
+            // what crashed the client in BROKEN.md 012.
+            Props.RequestCancel();
 
 #if DEV_BUILD
             // Stops the probe driving the player's animation. Managed state only — this handler runs

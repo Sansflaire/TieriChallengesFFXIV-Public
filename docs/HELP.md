@@ -412,6 +412,25 @@ shown broken, and a banner tells you how many and which version you need.
 Updating the plugin brings them in. This is deliberate: a challenge that silently never completes
 would be far worse than one that says "update first".
 
+## Digging with a shovel
+<!-- keywords: shovel, dig, digging, prop, spade, hold, hands, item, tool, animation, emote, fashion accessory, accessory, dont own, do not own, unlock, locked, how do i dig, nothing happens, no shovel -->
+
+Some challenges ask you to dig. Type `/tchallenges dig` and your character takes out a shovel and
+starts digging. `/tchallenges dig stop` puts it away early.
+
+You do not need to own the Shovel fashion accessory, or any accessory at all. This works on a brand
+new character.
+
+A few things worth knowing:
+
+- Only you see it. It is drawn on your screen and is not sent to the server, so nobody else sees the
+  shovel or the digging.
+- Moving cancels it, and the shovel goes away by itself. That is the game's own behaviour, not a
+  bug.
+- It will politely refuse while you are mounted, loading, in a cutscene, or otherwise busy, and will
+  say so in chat. Try again once you are standing around normally.
+- If the shovel is ever left in your hands, changing zone clears it.
+
 # Help and feedback
 
 ## Reporting a bug
