@@ -125,6 +125,23 @@ internal static class DigGround
         return false;
     }
 
+    /// <summary>
+    /// Ground height at an XZ position, for DRAWING rather than for placement. Unlike
+    /// <see cref="TryPointNear"/> it applies no reachability rule and never fails: a ray that finds
+    /// nothing falls back to the reference height, because a grid vertex at a slightly wrong height
+    /// is far better than a hole in the grid.
+    /// </summary>
+    public static Vector3 GroundAt(Vector3 reference, float x, float z)
+    {
+        var origin = new Vector3(x, reference.Y + RayAbove, z);
+
+        if (BGCollisionModule.RaycastMaterialFilter(origin, new Vector3(0f, -1f, 0f),
+                                                    out var hit, RayLength))
+            return new Vector3(x, hit.Point.Y, z);
+
+        return new Vector3(x, reference.Y, z);
+    }
+
     private static bool TryGround(Vector3 reference, float x, float z, out Vector3 point)
     {
         point = default;

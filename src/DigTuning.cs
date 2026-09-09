@@ -42,8 +42,12 @@ internal static class DigTuning
 
     // ── Test 2: Area Surveillance ────────────────────────────────────────────
 
-    /// <summary>Side length of the drawn square site, in yalms.</summary>
-    public static float SiteSize = 70f;
+    /// <summary>
+    /// Side length of the drawn square site, in yalms. 50, not 70 — Trist asked for roughly half
+    /// the ground to search, and halving an AREA means dividing the side by √2, not by two.
+    /// 70 → 49.5, taken as 50.
+    /// </summary>
+    public static float SiteSize = 50f;
 
     /// <summary>How many pieces are buried inside it. Collect them all to get the relic.</summary>
     public static int SitePieces = 5;
@@ -59,7 +63,7 @@ internal static class DigTuning
     /// the site box is deliberately tall so its containment test survives sloped ground, and drawing
     /// the wall over that height put the gradient's opaque base metres underground.
     /// </summary>
-    public static float SiteWallHeight = 6f;
+    public static float SiteWallHeight = 1.5f;
 
     // ── Test 3: Clue Trail ───────────────────────────────────────────────────
 
@@ -125,7 +129,15 @@ internal static class DigTuning
     /// have silently overridden the 9s default with the exact behaviour it replaced. A missing or
     /// older version therefore takes the shipped default rather than the stored number.
     /// </summary>
-    private const int CurrentVersion = 2;
+    /// <summary>
+    /// Version 3: the site defaults changed meaningfully (side 70 → 50, wall height 6 → 1.5), so a
+    /// file written before it holds the OLD defaults and would silently reinstate them.
+    ///
+    /// <para><b>Each migration is keyed to its own version, never to <c>CurrentVersion</c>.</b>
+    /// Gating on "older than current" would make every future bump re-run every past migration and
+    /// overrule values the user chose deliberately in between.</para>
+    /// </summary>
+    private const int CurrentVersion = 3;
 
     private sealed class Dto
     {
@@ -162,8 +174,8 @@ internal static class DigTuning
 
     public static void ResetSite()
     {
-        SiteSize = 70f; SitePieces = 5; SitePieceRadius = 4f; SitePieceSpacing = 12f;
-        SiteWallHeight = 6f;
+        SiteSize = 50f; SitePieces = 5; SitePieceRadius = 4f; SitePieceSpacing = 12f;
+        SiteWallHeight = 1.5f;
     }
 
     public static void ResetTrail()
@@ -216,11 +228,20 @@ internal static class DigTuning
             // write without the user ever having chosen it — saving any other slider wrote the
             // then-default 0 along with it. A pre-version-2 file holding 4.5 means somebody moved
             // that slider on purpose, and a migration has no business overruling them.
-            bool unchosenZero = d.Version < CurrentVersion && d.DigHoldSeconds == 0f;
+            bool unchosenZero = d.Version < 2 && d.DigHoldSeconds == 0f;
 
             DigHoldSeconds = !unchosenZero && float.IsFinite(d.DigHoldSeconds) && d.DigHoldSeconds >= 0f
                                  ? MathF.Min(d.DigHoldSeconds, 60f)
                                  : PropService.DefaultHoldMilliseconds / 1000f;
+
+            // Version 3 site defaults. Same narrow rule as above: overrule the stored number ONLY
+            // when it is exactly the old default, i.e. the value the previous version wrote for
+            // anyone who never touched that slider. A site deliberately set to 90 stays at 90.
+            if (d.Version < 3)
+            {
+                if (SiteSize       == 70f) SiteSize       = 50f;
+                if (SiteWallHeight == 6f)  SiteWallHeight = 1.5f;
+            }
 
             Apply();
             Diag.Info("[Dig] tuning loaded.");

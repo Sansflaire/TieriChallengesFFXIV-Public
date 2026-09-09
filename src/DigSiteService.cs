@@ -35,8 +35,26 @@ internal sealed class DigSiteService : IDigTest
     private readonly List<Vector3> _pieces = new();
     private readonly List<Vector3> _found  = new();
 
+    /// <summary>
+    /// Fine steps per coarse (dig-sized) grid cell. 2 keeps the terrain-following honest without
+    /// squaring the number of raycasts — the lattice is sampled once, but "once" still happens in a
+    /// single frame and a few thousand rays would be felt.
+    /// </summary>
+    private const int GridSubdivisions = 2;
+
+    /// <summary>Coarse cells across the site. Capped so a huge site cannot explode the lattice.</summary>
+    private const int MaxGridCells = 14;
+
     private Phase          _phase;
     private ChallengeArea? _site;
+
+    /// <summary>
+    /// Ground heights across the site, measured ONCE when it is marked out. A site never moves, so
+    /// there is no reason to pay for a raycast per grid vertex per frame — see
+    /// <see cref="DigVolumeRender.DrawGroundGrid"/>.
+    /// </summary>
+    private Vector3[,] _grid = new Vector3[0, 0];
+    private int        _gridStride = GridSubdivisions;
     private uint           _territory;
     private long           _startedAtMs;
     private long           _endedAtMs;
@@ -192,6 +210,7 @@ internal sealed class DigSiteService : IDigTest
 
         _phase = Phase.Off;
         _site  = null;
+        _grid  = new Vector3[0, 0];
         _pieces.Clear();
         _found.Clear();
         return "survey abandoned, site cleared.";
@@ -268,6 +287,8 @@ internal sealed class DigSiteService : IDigTest
             return;
         }
 
+        SampleGrid();
+
         _phase       = Phase.Digging;
         _startedAtMs = Environment.TickCount64;
 
@@ -279,6 +300,53 @@ internal sealed class DigSiteService : IDigTest
 
         Plugin.ChatGui.Print(
             $"[Challenges] {_pieces.Count} piece(s) buried inside the site. Dig to find them.{shortfall}");
+    }
+
+    /// <summary>
+    /// Measures the ground across the site, once. The coarse cell is sized to the dig radius, so
+    /// the stripes the player sees are a picture of how precisely they have to dig rather than an
+    /// arbitrary decoration — one cell is roughly one dig's worth of ground.
+    /// </summary>
+    private void SampleGrid()
+    {
+        if (_site == null) { _grid = new Vector3[0, 0]; return; }
+
+        float side = MathF.Max(1f, _site.SizeX * _site.Scale);
+
+        // One coarse cell ≈ the diameter a dig covers.
+        float wanted = MathF.Max(2f, DigTuning.SitePieceRadius * 2f);
+        int   cells  = Math.Clamp((int)MathF.Round(side / wanted), 2, MaxGridCells);
+
+        _gridStride = GridSubdivisions;
+
+        int n    = cells * GridSubdivisions + 1;
+        var grid = new Vector3[n, n];
+
+        float hx  = side * 0.5f;
+        float hz  = MathF.Max(1f, _site.SizeZ * _site.Scale) * 0.5f;
+        float cos = MathF.Cos(_site.RotationY);
+        float sin = MathF.Sin(_site.RotationY);
+        var   c   = _site.Center;
+
+        for (int i = 0; i < n; i++)
+        {
+            float lx = -hx + 2f * hx * i / (n - 1);
+
+            for (int j = 0; j < n; j++)
+            {
+                float lz = -hz + 2f * hz * j / (n - 1);
+
+                float wx = c.X + lx * cos - lz * sin;
+                float wz = c.Z + lx * sin + lz * cos;
+
+                // Lifted clear of the surface so the line does not disappear into a dip in the mesh.
+                var g = DigGround.GroundAt(c, wx, wz);
+                grid[i, j] = new Vector3(g.X, g.Y + 0.06f, g.Z);
+            }
+        }
+
+        _grid = grid;
+        Diag.Info($"[Site] ground grid sampled: {cells} cell(s) across, {n * n} point(s).");
     }
 
     private bool TooClose(Vector3 p)
@@ -304,6 +372,9 @@ internal sealed class DigSiteService : IDigTest
             ? new Vector3(0.44f, 0.86f, 0.62f)
             : new Vector3(0.89f, 0.70f, 0.25f);
 
+        // Ground first, walls over it — the walls are the boundary and should read as being in
+        // front of the floor they enclose.
+        DigVolumeRender.DrawGroundGrid(_grid, _gridStride, rgb);
         DigVolumeRender.DrawGradientBox(_site, rgb, DigTuning.SiteWallHeight);
 
         foreach (var p in _found)

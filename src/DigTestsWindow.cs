@@ -208,11 +208,15 @@ internal sealed class DigTestsWindow
 
         ImGui.TextColored(Rule,
             "RULES\n"
-          + "  A square site is drawn around you as gradient walls — solid at the base, clear at\n"
-          + "  the top. Pieces are buried inside it, spaced apart so no single dig turns up two.\n"
-          + "  Dig anywhere INSIDE the site; close enough to a piece and you turn it up.\n"
-          + "  There is no sense and no warming here — sweeping the area is the thing being\n"
-          + "  tested. Collect every piece to assemble the relic, which ends it.\n"
+          + "  A square site is marked around you: low gradient walls at its edges, and the ground\n"
+          + "  inside painted as a striped grid that follows the terrain.\n"
+          + "  Pieces are buried at SPECIFIC spots, spaced so no one dig turns up two. You must dig\n"
+          + "  close enough to a spot to get one; a miss costs nothing but the animation, so just\n"
+          + "  try again somewhere else.\n"
+          + "  One grid cell is about one dig's worth of ground — the stripes show you how\n"
+          + "  precisely you have to place a dig, they are not decoration.\n"
+          + "  There is no sense and no warming here: sweeping the area is the thing being tested.\n"
+          + "  Collect every piece to assemble the relic, which ends it.\n"
           + "  Recovered pieces are marked on the ground. Unfound ones never are.");
 
         Commands("/tchal site", "/tchal site dig", "/tchal site stop");

@@ -173,6 +173,93 @@ internal static class DigVolumeRender
     }
 
     /// <summary>
+    /// Paints the ground inside a site as a striped grid that follows the terrain.
+    ///
+    /// <para><b>The lattice is sampled once and handed in, never sampled here.</b> Draping a grid
+    /// over terrain means a downward raycast per vertex, and doing that every frame is precisely
+    /// the mistake <c>LimLoToolkit</c>'s ground sampler exists to warn about. A site does not move
+    /// once it is marked out, so its heights are measured at placement and this method is pure
+    /// drawing.</para>
+    ///
+    /// <para><b>It overlays the world rather than being occluded by it</b> — the background draw
+    /// list is not depth-tested, so the grid reads through a rise or a rock instead of being
+    /// swallowed by it. That is what makes the site legible from outside as well as inside.</para>
+    ///
+    /// <para>Stripes are a checkerboard of the COARSE cells, and the coarse cell is sized to the
+    /// dig radius by the caller — so the pattern is not decoration, it is a picture of the
+    /// granularity at which digging actually matters.</para>
+    /// </summary>
+    /// <param name="lattice">Fine grid of ground points, <c>[i, j]</c> spanning the site.</param>
+    /// <param name="stride">Fine steps per coarse cell — the checker and line spacing.</param>
+    public static void DrawGroundGrid(Vector3[,] lattice, int stride, Vector3 rgb)
+    {
+        if (lattice.Length == 0 || stride < 1) return;
+
+        try
+        {
+            int n = lattice.GetLength(0);
+            var drawList = ImGui.GetBackgroundDrawList();
+
+            uint fill = ImGui.GetColorU32(new Vector4(rgb.X, rgb.Y, rgb.Z, 0.13f));
+            uint line = ImGui.GetColorU32(new Vector4(rgb.X, rgb.Y, rgb.Z, 0.34f));
+
+            // Checkerboard, built from the FINE quads so each coarse cell follows the ground rather
+            // than being one flat plate bridging a slope.
+            for (int i = 0; i + 1 < n; i++)
+            {
+                for (int j = 0; j + 1 < n; j++)
+                {
+                    if (((i / stride) + (j / stride)) % 2 != 0) continue;
+
+                    if (!AreaOverlay.Project(lattice[i,     j],     out var s0)) continue;
+                    if (!AreaOverlay.Project(lattice[i + 1, j],     out var s1)) continue;
+                    if (!AreaOverlay.Project(lattice[i + 1, j + 1], out var s2)) continue;
+                    if (!AreaOverlay.Project(lattice[i,     j + 1], out var s3)) continue;
+
+                    drawList.AddQuadFilled(s0, s1, s2, s3, fill);
+                }
+            }
+
+            // Coarse lines, drawn through every fine vertex so they bend with the ground. The
+            // polyline breaks on a projection failure rather than joining across the gap — the same
+            // rule the wireframe rings follow, and for the same reason.
+            for (int c = 0; c < n; c += stride)
+            {
+                Polyline(drawList, lattice, c, true,  line);
+                Polyline(drawList, lattice, c, false, line);
+            }
+
+            // Always close the far edges, which a stride that does not divide evenly would miss.
+            if ((n - 1) % stride != 0)
+            {
+                Polyline(drawList, lattice, n - 1, true,  line);
+                Polyline(drawList, lattice, n - 1, false, line);
+            }
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Dig] ground grid draw failed: {ex.Message}");
+        }
+    }
+
+    private static void Polyline(ImDrawListPtr drawList, Vector3[,] lattice, int index, bool alongI,
+                                 uint color)
+    {
+        int n = lattice.GetLength(0);
+        Vector2? prev = null;
+
+        for (int k = 0; k < n; k++)
+        {
+            var world = alongI ? lattice[index, k] : lattice[k, index];
+
+            if (!AreaOverlay.Project(world, out var screen)) { prev = null; continue; }
+
+            if (prev.HasValue) drawList.AddLine(prev.Value, screen, color, 1.6f);
+            prev = screen;
+        }
+    }
+
+    /// <summary>
     /// A ground-level disc for a point of interest — the pieces a Surveillance dig has turned up,
     /// once they are no longer secret. Filled towards the centre and clear at the rim, so it reads
     /// as a spot on the floor rather than a bubble.
