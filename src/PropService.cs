@@ -385,6 +385,8 @@ internal sealed unsafe class PropService
         // Held from the moment the prop is asked for, not from when the animation starts: the
         // attach takes frames, and a step taken during them would cancel the dig before it began.
         SetInputBlocked(true);
+        try { Plugin.Input.HeldRotation = _heldRotation; }
+        catch (Exception ex) { Diag.Error($"[Prop] rotation hold failed: {ex.Message}"); }
 
         return "performing.";
     }
@@ -451,10 +453,10 @@ internal sealed unsafe class PropService
 
             _frames++;
 
-            // Held every frame, in every stage. A single write at the start would be undone the
-            // moment the player moved the mouse.
-            try { chara->GameObject.Rotation = _heldRotation; }
-            catch (Exception ex) { Diag.Error($"[Prop] rotation hold failed: {ex.Message}"); }
+            // The render-phase pin, third of three — see InputBlock.PinRotation for why the facing
+            // is reasserted in several phases rather than one.
+            try { Plugin.Input.PinRotation(); }
+            catch (Exception ex) { Diag.Error($"[Prop] rotation pin failed: {ex.Message}"); }
 
             ushort slot0 = chara->Timeline.TimelineSequencer.TimelineIds[0];
 
@@ -655,7 +657,14 @@ internal sealed unsafe class PropService
     /// </summary>
     private static void SetInputBlocked(bool blocked)
     {
-        try { Plugin.Input.Blocking = blocked; }
+        try
+        {
+            Plugin.Input.Blocking = blocked;
+
+            // Released together with the block, never separately — a pinned facing outliving the
+            // dig would leave the player unable to turn with no indication why.
+            if (!blocked) Plugin.Input.HeldRotation = null;
+        }
         catch (Exception ex) { Diag.Error($"[Prop] input block toggle failed: {ex.Message}"); }
     }
 

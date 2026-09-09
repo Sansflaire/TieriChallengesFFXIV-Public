@@ -65,6 +65,22 @@ internal sealed unsafe class InputBlock : IDisposable
     /// </summary>
     public bool Blocking { get; set; }
 
+    /// <summary>
+    /// Facing to pin the character to while blocking, or null to leave rotation alone.
+    ///
+    /// <para><b>This has to be written from inside the hook, not from a tick.</b> The first attempt
+    /// wrote it from <c>PropService.Tick</c>, which runs on the DRAW loop — after the scene for that
+    /// frame has already been rendered — so the game recomputed rotation from the mouse on the next
+    /// update and the held value was never the one drawn. The RMI detour runs inside the game's own
+    /// movement processing, which is the phase rotation is actually applied in, so a write here
+    /// lands for the frame being built.</para>
+    ///
+    /// <para>Rotation is not position: this is a facing angle, which the sibling movement plugins
+    /// write routinely, and it carries none of the displacement concerns that make writing
+    /// <c>Position</c> forbidden.</para>
+    /// </summary>
+    public float? HeldRotation { get; set; }
+
     public bool MovementHooked => _rmiWalkHook != null;
     public bool JumpHooked     => _useActionHook != null;
 
@@ -95,6 +111,48 @@ internal sealed unsafe class InputBlock : IDisposable
             _useActionHook = null;
             Diag.Error($"[Input] jump hook unavailable, jumping stays possible mid-dig: {ex.Message}");
         }
+
+        Plugin.Framework.Update += OnFrameworkUpdate;
+    }
+
+    /// <summary>
+    /// Second of the three points the facing is pinned at — see <see cref="PinRotation"/>.
+    /// </summary>
+    private void OnFrameworkUpdate(Dalamud.Plugin.Services.IFramework _)
+    {
+        if (Blocking) PinRotation();
+    }
+
+    /// <summary>
+    /// Forces the character back to <see cref="HeldRotation"/>.
+    ///
+    /// <para><b>Called from three different phases of the frame, and that is deliberate rather than
+    /// lazy.</b> Camera-driven facing — hold strafe, move the mouse, the body swings to face the
+    /// screen — is applied by the move controller, and that controller is not among the structs
+    /// available here, so there is no single write site to intercept. Without knowing where in the
+    /// frame it lands, the only reliable answer is to reassert the value in the game-logic phase
+    /// (framework update), the movement phase (the RMI detour) and the render phase
+    /// (<c>PropService.Tick</c>): whichever the game's write falls between, one of ours is still
+    /// after it.</para>
+    ///
+    /// <para>If the true write site is ever identified, this collapses to one place and the other
+    /// two should go.</para>
+    /// </summary>
+    public void PinRotation()
+    {
+        if (HeldRotation is not { } rot) return;
+
+        try
+        {
+            var lp = Plugin.ObjectTable.LocalPlayer;
+            if (lp == null || lp.Address == nint.Zero) return;
+
+            ((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)lp.Address)->Rotation = rot;
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Input] rotation pin failed: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -105,7 +163,10 @@ internal sealed unsafe class InputBlock : IDisposable
     /// </summary>
     public void Dispose()
     {
-        Blocking = false;
+        Blocking     = false;
+        HeldRotation = null;
+
+        try { Plugin.Framework.Update -= OnFrameworkUpdate; } catch { /* teardown must not throw */ }
 
         try { _rmiWalkHook?.Dispose(); }   catch { /* teardown must not throw */ }
         try { _useActionHook?.Dispose(); } catch { /* teardown must not throw */ }
@@ -131,6 +192,10 @@ internal sealed unsafe class InputBlock : IDisposable
                 if (sumLeft     != null) *sumLeft     = 0f;
                 if (sumForward  != null) *sumForward  = 0f;
                 if (sumTurnLeft != null) *sumTurnLeft = 0f;
+
+                // Zeroing the turn float only covers turn KEYS. Camera-driven facing bypasses these
+                // floats entirely, so the facing is pinned as well — here, in the movement phase.
+                PinRotation();
             }
         }
         catch (Exception ex)
