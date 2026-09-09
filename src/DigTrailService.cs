@@ -6,72 +6,75 @@ using System.Numerics;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. <b>Test 3 — Clue Trail.</b> An ordered chain of spots. Each one carries a
-/// clue to the next, so digging up spot N is what tells you roughly where spot N+1 is. Reach the
-/// end and the trail pays out.
+/// DEVELOPER BUILD ONLY. <b>Test 3 — Clue Trail.</b> An ordered chain of <b>authored</b> stops. Each
+/// carries a clue written by whoever placed it; digging on a stop reveals the clue to the next.
 ///
-/// <para><b>The radar is the whole interaction.</b> A ring appears once the player is within
-/// <see cref="DigTuning.TrailRadar"/> of the current spot and pulses faster the closer they get,
-/// going solid inside the dig radius. It deliberately does <i>not</i> exist further out: a radar
-/// visible from anywhere would be a distance readout, and the clue — a compass bearing and a woolly
-/// range — is supposed to be the thing that gets you into the neighbourhood. The radar only closes
-/// the last few yalms.</para>
+/// <para><b>The stops and clues are authored, not generated, and that is the whole point.</b> The
+/// first version placed random spots and produced its own clues — "NORTH-EAST, far away" — which is
+/// not a clue but a search order: a bearing across a whole zone leaves the player sweeping hundreds
+/// of yalms with no way to distinguish progress from luck. A clue works because someone who knows
+/// the place wrote something someone who does not can act on, and no amount of geometry substitutes
+/// for that. See <see cref="DigTrailStore"/>.</para>
 ///
-/// <para><b>Solid means the dig will land.</b> That is a promise the tuning has to keep: the ring
-/// goes solid at exactly the distance <see cref="Dig"/> accepts, so a player who waits for solid is
-/// never told "nothing but dirt". <see cref="DigTuning.TrailRadar"/> is clamped above
-/// <see cref="DigTuning.TrailDig"/> in the lab for the same reason.</para>
+/// <para><b>The radar is the last few yalms only.</b> A ring appears within
+/// <see cref="DigTuning.TrailRadar"/> and pulses faster the closer the player gets, going solid
+/// inside the dig radius. It deliberately does not exist further out: a radar visible from anywhere
+/// would be a distance readout, and then the clue would be decoration. The clue gets you to the
+/// neighbourhood; the radar closes the last stretch.</para>
+///
+/// <para><b>Solid means the dig will land</b> — the ring goes solid at exactly the distance
+/// <see cref="Dig"/> accepts, which is why radar range is clamped above the dig radius in the lab
+/// rather than merely warned about.</para>
+///
+/// <para><b>A trail may cross zones.</b> Leaving the current stop's territory is travel, not
+/// failure, so this does not abandon on a zone change the way the other two tests do — it says
+/// where to go instead.</para>
 /// </summary>
 internal sealed class DigTrailService : IDigTest
 {
-    private enum Phase { Off, Placing, Running, Done }
+    private enum Phase { Off, Running, Done }
 
     private const long DoneHoldMs = 15_000;
 
-    /// <summary>Per-spot placement attempts, and how many frames placement may take.</summary>
-    private const int AttemptsPerSpot = 200;
-    private const int PlacementTicks  = 8;
+    private readonly List<TrailStop> _stops = new();
 
-    private readonly Random        _rng   = new();
-    private readonly List<Vector3> _stops = new();
-
-    private Phase   _phase;
-    private uint    _territory;
-    private long    _startedAtMs;
-    private long    _endedAtMs;
-    private int     _index;
-    private int     _placeTicks;
-    private int     _digs;
-    private float   _distance = float.MaxValue;
-    private string  _clue     = string.Empty;
+    private Phase  _phase;
+    private long   _startedAtMs;
+    private long   _endedAtMs;
+    private int    _index;
+    private int    _digs;
+    private float  _distance = float.MaxValue;
+    private bool   _inZone;
 
     public string Name => "Clue Trail";
 
     public bool IsActive => _phase != Phase.Off;
 
-    public int  StopTotal   => _stops.Count;
-    public int  StopIndex   => _index;
-    public int  Digs        => _digs;
+    public int   StopTotal     => _stops.Count;
+    public int   StopIndex     => _index;
+    public int   Digs          => _digs;
     public float DebugDistance => _distance;
+
+    /// <summary>The stop being looked for, or null when the trail is not running.</summary>
+    private TrailStop? Current =>
+        _phase == Phase.Running && _index >= 0 && _index < _stops.Count ? _stops[_index] : null;
 
     public DigBand Band => _phase switch
     {
-        Phase.Done => DigBand.Green,
-        Phase.Running => _distance <= DigTuning.TrailDig   ? DigBand.Dig
-                       : _distance <= DigTuning.TrailRadar ? DigBand.Yellow
+        Phase.Done    => DigBand.Green,
+        Phase.Running => !_inZone                             ? DigBand.Cold
+                       : _distance <= DigTuning.TrailDig      ? DigBand.Dig
+                       : _distance <= DigTuning.TrailRadar    ? DigBand.Yellow
                        : DigBand.Cold,
         _ => DigBand.Cold,
     };
 
-    /// <summary>
-    /// 0 at the edge of radar range, 1 on the spot. Null whenever there is no radar to draw, which
-    /// is every state except "running and close enough".
-    /// </summary>
+    /// <summary>0 at the edge of radar range, 1 on the spot. Null whenever there is no radar.</summary>
     public float? RadarCloseness
     {
         get
         {
-            if (_phase != Phase.Running) return null;
+            if (_phase != Phase.Running || !_inZone) return null;
 
             float outer = MathF.Max(DigTuning.TrailRadar, DigTuning.TrailDig + 1f);
             if (_distance > outer) return null;
@@ -93,44 +96,66 @@ internal sealed class DigTrailService : IDigTest
     public string Headline => _phase switch
     {
         Phase.Done    => "TRAIL'S END!",
-        Phase.Placing => "LAYING THE TRAIL…",
-        Phase.Running => RadarCloseness is >= 1f
-                             ? "DIG!!!"
-                             : $"CLUE  {_index + 1} / {_stops.Count}",
+        Phase.Running => RadarCloseness is >= 1f ? "DIG!!!" : $"CLUE  {_index + 1} / {_stops.Count}",
         _             => "CLUE TRAIL",
     };
 
-    public string Subtitle => _phase switch
+    public string Subtitle
     {
-        Phase.Done    => $"{_digs} dig(s) along the way.",
-        Phase.Placing => "Working out where it goes…",
-        Phase.Running => RadarCloseness is >= 1f ? "This is the place. Dig." : _clue,
-        _             => string.Empty,
-    };
+        get
+        {
+            if (_phase == Phase.Done)    return $"{_digs} dig(s) along the way.";
+            if (_phase != Phase.Running) return string.Empty;
+
+            var stop = Current;
+            if (stop == null) return string.Empty;
+
+            // Wrong zone is travel, not failure — say where, since a clue for a place you are not
+            // in reads as a broken clue.
+            if (!_inZone) return $"Travel to {ZoneName(stop.Territory)}.";
+
+            if (RadarCloseness is >= 1f) return "This is the place. Dig.";
+
+            return string.IsNullOrWhiteSpace(stop.Clue) ? "(no clue written for this stop)" : stop.Clue;
+        }
+    }
 
     // ── the player's actions ─────────────────────────────────────────────────
 
+    /// <summary>
+    /// Begins the authored trail. Refuses when nothing has been authored — there is nothing to fall
+    /// back on, deliberately: a generated trail is what this test was changed away from.
+    /// </summary>
     public string Start()
     {
         if (!PropService.CanPerform(out string why)) return "cannot start — " + why;
         if (Plugin.ObjectTable.LocalPlayer == null)  return "no character loaded.";
 
-        _stops.Clear();
-        _index      = 0;
-        _digs       = 0;
-        _placeTicks = 0;
-        _distance   = float.MaxValue;
-        _clue       = string.Empty;
-        _territory  = Plugin.ClientState.TerritoryType;
-        _phase      = Phase.Placing;
+        var authored = DigTrailStore.Snapshot();
+        if (authored.Count == 0)
+            return "no trail authored yet — add stops and write their clues in the lab first.";
 
-        return "laying a trail…";
+        // A snapshot, so editing the list mid-run cannot shift the trail underfoot.
+        _stops.Clear();
+        _stops.AddRange(authored);
+
+        _index       = 0;
+        _digs        = 0;
+        _distance    = float.MaxValue;
+        _inZone      = false;
+        _startedAtMs = Environment.TickCount64;
+        _phase       = Phase.Running;
+
+        var first = _stops[0];
+        string clue = string.IsNullOrWhiteSpace(first.Clue) ? "(no clue written)" : first.Clue;
+
+        return $"trail of {_stops.Count} begun. First clue: {clue}";
     }
 
     /// <summary>
-    /// Digs. On the current spot this turns up the next clue and advances; on the last spot it ends
-    /// the trail. As with the other tests the animation always plays — digging in the wrong place
-    /// is allowed and costs only the time.
+    /// Digs. On the current stop this reveals the next clue and advances; on the last it ends the
+    /// trail. The animation always plays — digging in the wrong place is allowed and costs only the
+    /// time.
     /// </summary>
     public string Dig()
     {
@@ -140,19 +165,20 @@ internal sealed class DigTrailService : IDigTest
 
         _digs++;
 
-        if (_distance > DigTuning.TrailDig) return animation + " Nothing but dirt here.";
+        if (!_inZone)                       return animation + " Wrong zone.";
+        if (_distance > DigTuning.TrailDig)  return animation + " Nothing but dirt here.";
 
         _index++;
 
         if (_index < _stops.Count)
         {
-            var player = Plugin.ObjectTable.LocalPlayer;
-            if (player != null) _clue = ClueFor(player.Position, _stops[_index]);
-
             try { Plugin.Sound.Play(SoundService.Cue.ObjectiveProgress); }
             catch (Exception ex) { Diag.Error($"[Trail] clue cue failed: {ex.Message}"); }
 
-            return animation + $" A clue! {_clue}";
+            var next = _stops[_index];
+            string clue = string.IsNullOrWhiteSpace(next.Clue) ? "(no clue written)" : next.Clue;
+
+            return animation + $" A clue! {clue}";
         }
 
         _endedAtMs = Environment.TickCount64;
@@ -175,14 +201,19 @@ internal sealed class DigTrailService : IDigTest
         return "trail abandoned.";
     }
 
-    /// <summary>Repeats the clue for the spot currently being looked for.</summary>
+    /// <summary>Repeats the clue for the stop currently being looked for.</summary>
     public string Recall()
     {
         if (_phase != Phase.Running) return "no trail is running.";
-        return string.IsNullOrEmpty(_clue) ? "you have no clue yet." : _clue;
+
+        var stop = Current;
+        if (stop == null) return "no clue.";
+
+        string where = _inZone ? string.Empty : $" (in {ZoneName(stop.Territory)})";
+        return (string.IsNullOrWhiteSpace(stop.Clue) ? "(no clue written for this stop)" : stop.Clue) + where;
     }
 
-    public void DrawWorld() { /* drawing the spots would replace the radar with an answer */ }
+    public void DrawWorld() { /* drawing the stops would replace the clue with an answer */ }
 
     // ── per-frame ────────────────────────────────────────────────────────────
 
@@ -201,16 +232,16 @@ internal sealed class DigTrailService : IDigTest
             var player = Plugin.ObjectTable.LocalPlayer;
             if (player == null || !Plugin.ClientState.IsLoggedIn) { Stop(); return; }
 
-            if (Plugin.ClientState.TerritoryType != _territory)
-            {
-                Stop();
-                Plugin.ChatGui.Print("[Challenges] Trail abandoned — you left the zone.");
-                return;
-            }
+            var stop = Current;
+            if (stop == null) { Stop(); return; }
 
-            if (_phase == Phase.Placing) { Lay(player.Position); return; }
+            // NOT abandoned on a zone change: an authored trail is allowed to cross zones, and
+            // walking to the next one is playing it, not failing it.
+            _inZone = Plugin.ClientState.TerritoryType == stop.Territory;
 
-            _distance = DigGround.Flat(player.Position, _stops[_index]);
+            _distance = _inZone
+                ? DigGround.Flat(player.Position, stop.Position)
+                : float.MaxValue;
         }
         catch (Exception ex)
         {
@@ -220,51 +251,14 @@ internal sealed class DigTrailService : IDigTest
     }
 
     /// <summary>
-    /// Lays the chain, each spot roughly <see cref="DigTuning.TrailSpacing"/> from the last so the
-    /// trail walks somewhere rather than circling one field. A short trail is accepted rather than
-    /// retried forever — the count the player is shown is the count that actually got placed.
+    /// Dev-only zone name. Uses <c>ZoneIndex.ZoneName</c> rather than <c>DisplayName</c> on purpose:
+    /// the spoiler mask exists for player-facing surfaces, and this whole class is compiled out of
+    /// the public build. Flagged here so a future grep for unmasked zone names has its answer.
     /// </summary>
-    private void Lay(Vector3 from)
+    private static string ZoneName(uint territory)
     {
-        int want = Math.Max(1, DigTuning.TrailStops);
-
-        float near = DigTuning.TrailSpacing * 0.7f;
-        float far  = DigTuning.TrailSpacing * 1.3f;
-
-        var cursor = from;
-
-        for (int n = 0; n < want; n++)
-        {
-            if (!DigGround.TryPointNear(cursor, near, far, _rng, out var spot, AttemptsPerSpot)) break;
-            _stops.Add(spot);
-            cursor = spot;
-        }
-
-        if (_stops.Count == 0)
-        {
-            if (++_placeTicks < PlacementTicks) return;
-
-            _phase = Phase.Off;
-            Plugin.ChatGui.PrintError(
-                "[Challenges] Could not lay a trail here — try somewhere more open.");
-            return;
-        }
-
-        _phase       = Phase.Running;
-        _index       = 0;
-        _startedAtMs = Environment.TickCount64;
-        _clue        = ClueFor(from, _stops[0]);
-        _distance    = DigGround.Flat(from, _stops[0]);
-
-        Diag.Info($"[Trail] laid {_stops.Count} stop(s) of {want} requested.");
-        Plugin.ChatGui.Print($"[Challenges] A trail of {_stops.Count} lies ahead. First clue: {_clue}");
+        try   { return ZoneIndex.ZoneName((ushort)territory); }
+        catch { return $"territory {territory}"; }
     }
-
-    /// <summary>
-    /// A clue is a bearing plus a woolly range — the same vocabulary the Sense Hunt uses, so the
-    /// two tests teach the same reading rather than each inventing its own.
-    /// </summary>
-    private static string ClueFor(Vector3 from, Vector3 to)
-        => $"{DigGround.Compass(from, to)}, {DigGround.Vagueness(DigGround.Flat(from, to))}.";
 }
 #endif

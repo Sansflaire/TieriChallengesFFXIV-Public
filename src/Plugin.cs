@@ -340,6 +340,7 @@ public sealed class Plugin : IDalamudPlugin
         // Tuning is restored before the lab can show a slider, so the numbers on screen are the
         // numbers the tests will actually use.
         DigTuning.Load();
+        DigTrailStore.Load();
         _digTestsWindow = new DigTestsWindow(_digTests);
 
         if (PanacheAvailability.IsAvailable)
@@ -1136,14 +1137,35 @@ public sealed class Plugin : IDalamudPlugin
                 ChatGui.Print("[Challenges] " + trail.Recall());
                 break;
 
+            // Capturing a stop from chat matters more than it looks: authoring means walking to a
+            // place and marking it, and reaching for a window to do that breaks the walk.
+            case "add" when test is DigTrailService:
+                ChatGui.Print("[Challenges] " + DigTrailStore.AddHere());
+                break;
+
+            case "list" when test is DigTrailService:
+                if (DigTrailStore.Stops.Count == 0)
+                {
+                    ChatGui.Print("[Challenges] No trail stops authored yet.");
+                    break;
+                }
+
+                for (int i = 0; i < DigTrailStore.Stops.Count; i++)
+                {
+                    var s = DigTrailStore.Stops[i];
+                    ChatGui.Print($"[Challenges] {i + 1}. "
+                                + (string.IsNullOrWhiteSpace(s.Clue) ? "(no clue written)" : s.Clue));
+                }
+                break;
+
             case "lab":
                 _digTestsWindow.IsVisible = !_digTestsWindow.IsVisible;
                 break;
 
             default:
                 ChatGui.PrintError($"[Challenges] {test.Name}: [start|dig|stop|lab]"
-                                 + (test is DigHuntService  ? " and sense" : string.Empty)
-                                 + (test is DigTrailService ? " and clue"  : string.Empty));
+                                 + (test is DigHuntService  ? " and sense"             : string.Empty)
+                                 + (test is DigTrailService ? " and clue|add|list"     : string.Empty));
                 break;
         }
     }

@@ -363,14 +363,23 @@ internal sealed class DigTestsWindow
 
         ImGui.TextColored(Rule,
             "RULES\n"
-          + "  An ordered chain of spots. Each clue is a compass bearing plus a woolly distance,\n"
-          + "  and digging up a spot is what gives you the clue to the next one.\n"
-          + "  A circular radar appears ONLY once you are within radar range of the current spot,\n"
-          + "  and pulses faster the closer you get. It goes SOLID exactly when a dig will land —\n"
-          + "  that is a promise, which is why radar range is clamped above the dig radius.\n"
-          + "  Reach the end of the chain and the trail pays out.");
+          + "  An ordered chain of spots YOU place, each with a clue YOU write. Digging on a stop\n"
+          + "  reveals the clue to the next one. Reach the end and the trail pays out.\n"
+          + "  A circular radar appears ONLY within radar range of the current stop and pulses\n"
+          + "  faster as you close, going SOLID exactly when a dig will land — that is a promise,\n"
+          + "  which is why radar range is clamped above the dig radius.\n"
+          + "  A trail MAY cross zones: being in the wrong one is travel, not failure, and the HUD\n"
+          + "  names the zone to head for instead of showing a clue you cannot act on.");
 
-        Commands("/tchal trail", "/tchal trail dig", "/tchal trail clue", "/tchal trail stop");
+        ImGui.TextColored(Head, "WHY THIS IS AUTHORED AND NOT GENERATED");
+        ImGui.TextColored(Rule,
+            "It used to place random spots and generate clues like \"NORTH-EAST, far away\". That\n"
+          + "is not a clue, it is a search order — a bearing across a whole zone leaves you\n"
+          + "sweeping hundreds of yalms unable to tell progress from luck. A clue works because\n"
+          + "someone who knows the place wrote something someone who does not can act on, and no\n"
+          + "amount of geometry substitutes for that.");
+
+        Commands("/tchal trail", "/tchal trail add", "/tchal trail dig", "/tchal trail clue", "/tchal trail stop");
 
         if (ImGui.Button("Start##trail")) Say(_tests.Start(_tests.Trail));
         ImGui.SameLine();
@@ -380,10 +389,10 @@ internal sealed class DigTestsWindow
         ImGui.SameLine();
         if (ImGui.Button("Stop##trail")) Say(_tests.Trail.Stop());
 
-        SliderInt("Stops on the trail", ref DigTuning.TrailStops, 1, 20);
-        Slider("Dig radius",            ref DigTuning.TrailDig,   0.5f, 30f);
-        Slider("Radar appears within",  ref DigTuning.TrailRadar, 2f, 150f);
-        Slider("Spacing between stops", ref DigTuning.TrailSpacing, 10f, 400f);
+        Slider("Dig radius",           ref DigTuning.TrailDig,   0.5f, 30f);
+        Slider("Radar appears within", ref DigTuning.TrailRadar, 2f, 150f);
+
+        DrawTrailAuthoring();
 
         // Clamped rather than warned about: "solid means the dig lands" is load-bearing for this
         // test, and it stops being true the instant the radar is tighter than the dig radius.
@@ -395,6 +404,83 @@ internal sealed class DigTestsWindow
         }
 
         if (ImGui.Button("Reset##trail")) { DigTuning.ResetTrail(); DigTuning.Save(); }
+    }
+
+    /// <summary>
+    /// The trail editor: capture a stop where you stand, write its clue, reorder, delete.
+    ///
+    /// <para>Raw ImGui text fields, which is permitted here — PanacheUI has no multi-line input and
+    /// this whole window is dev-only anyway, the same exemption the Challenge Creator has.</para>
+    ///
+    /// <para>Every edit saves immediately. A trail is twenty minutes of walking around; losing it to
+    /// a forgotten Save button, or to a plugin reload between authoring and testing, would be the
+    /// worst possible failure for this panel.</para>
+    /// </summary>
+    private void DrawTrailAuthoring()
+    {
+        ImGui.Spacing();
+        ImGui.TextColored(Head, $"TRAIL STOPS ({DigTrailStore.Stops.Count})");
+
+        if (ImGui.Button("Add stop HERE")) Say(DigTrailStore.AddHere());
+        ImGui.SameLine();
+        ImGui.TextDisabled("stand where you want the dig spot, then click");
+
+        var player   = Plugin.ObjectTable.LocalPlayer;
+        uint here    = Plugin.ClientState.TerritoryType;
+
+        for (int i = 0; i < DigTrailStore.Stops.Count; i++)
+        {
+            var stop = DigTrailStore.Stops[i];
+            ImGui.PushID(i);
+
+            bool sameZone = stop.Territory == here;
+            float dist    = sameZone && player != null
+                                ? DigGround.Flat(player.Position, stop.Position)
+                                : -1f;
+
+            string where = sameZone
+                ? (dist >= 0f ? $"{dist:0} yalms away" : "this zone")
+                : "another zone";
+
+            ImGui.TextColored(sameZone ? Running : Rule, $"{i + 1}.  {where}");
+
+            ImGui.SameLine();
+            if (ImGui.SmallButton("Move to me") && player != null)
+            {
+                stop.SetPosition(player.Position);
+                stop.Territory = here;
+                stop.MapId     = PlayerStateReader.MapIdFor((ushort)here);
+                DigTrailStore.Save();
+            }
+
+            ImGui.SameLine();
+            if (ImGui.SmallButton("Up"))   DigTrailStore.Move(i, -1);
+            ImGui.SameLine();
+            if (ImGui.SmallButton("Down")) DigTrailStore.Move(i, +1);
+            ImGui.SameLine();
+            if (ImGui.SmallButton("Delete")) { DigTrailStore.Remove(i); ImGui.PopID(); break; }
+
+            // The clue LEADING TO this stop — so stop 1's clue is what the player starts with.
+            string clue = stop.Clue ?? string.Empty;
+            ImGui.SetNextItemWidth(-1);
+            if (ImGui.InputText($"##clue{i}", ref clue, 400))
+                stop.Clue = clue;
+            if (ImGui.IsItemDeactivatedAfterEdit()) DigTrailStore.Save();
+
+            if (string.IsNullOrWhiteSpace(stop.Clue))
+                ImGui.TextColored(new Vector4(0.95f, 0.75f, 0.35f, 1f),
+                    "    no clue written — the player will be told exactly that");
+
+            ImGui.PopID();
+        }
+
+        if (DigTrailStore.Stops.Count == 0)
+            ImGui.TextDisabled("No stops yet. Walk somewhere and press Add stop HERE.");
+
+        ImGui.Spacing();
+        if (ImGui.Button("Clear whole trail")) DigTrailStore.Clear();
+        ImGui.SameLine();
+        ImGui.TextDisabled("saved to dig-trail.json on every edit");
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

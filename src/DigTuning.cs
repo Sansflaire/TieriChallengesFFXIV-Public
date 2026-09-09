@@ -132,8 +132,9 @@ internal static class DigTuning
 
     // ── Test 3: Clue Trail ───────────────────────────────────────────────────
 
-    /// <summary>How many spots the trail runs through before the payoff.</summary>
-    public static int TrailStops = 4;
+    // TrailStops and TrailSpacing were removed in 0.84.42.14 along with the trail generator. The
+    // trail is authored now, so how many stops there are and how far apart they sit are decisions
+    // made by walking to them, not numbers. Old files may still carry the keys; they are ignored.
 
     /// <summary>How close a dig must be to a trail spot to turn up the next clue.</summary>
     public static float TrailDig = 4f;
@@ -145,8 +146,6 @@ internal static class DigTuning
     /// </summary>
     public static float TrailRadar = 30f;
 
-    /// <summary>Roughly how far apart consecutive spots on the trail are placed.</summary>
-    public static float TrailSpacing = 90f;
 
     // ── shared ───────────────────────────────────────────────────────────────
 
@@ -251,6 +250,7 @@ internal static class DigTuning
         public float SiteDebugColorR { get; set; }
         public float SiteDebugColorG { get; set; }
         public float SiteDebugColorB { get; set; }
+        // Kept on the DTO so an older file still deserialises; nothing reads them any more.
         public int   TrailStops { get; set; }
         public float TrailDig { get; set; }
         public float TrailRadar { get; set; }
@@ -281,7 +281,7 @@ internal static class DigTuning
 
     public static void ResetTrail()
     {
-        TrailStops = 4; TrailDig = 4f; TrailRadar = 30f; TrailSpacing = 90f;
+        TrailDig = 4f; TrailRadar = 30f;
     }
 
     public static void ResetAll()
@@ -338,10 +338,8 @@ internal static class DigTuning
                                  : new Vector3(Math.Clamp(d.SiteDebugColorR, 0f, 1f),
                                                Math.Clamp(d.SiteDebugColorG, 0f, 1f),
                                                Math.Clamp(d.SiteDebugColorB, 0f, 1f));
-            TrailStops       = d.TrailStops  > 0 ? Math.Min(d.TrailStops, 20) : 4;
             TrailDig         = Pos(d.TrailDig,          4f);
             TrailRadar       = Pos(d.TrailRadar,       30f);
-            TrailSpacing     = Pos(d.TrailSpacing,     90f);
             MaxRise          = Pos(d.MaxRise,          25f);
 
             // NOT guarded by Pos: 0 is a meaningful value here ("no cap"), and Pos rejects
@@ -420,8 +418,7 @@ internal static class DigTuning
                 SiteDebugColorR = SiteDebugColor.X,
                 SiteDebugColorG = SiteDebugColor.Y,
                 SiteDebugColorB = SiteDebugColor.Z,
-                TrailStops = TrailStops, TrailDig = TrailDig,
-                TrailRadar = TrailRadar, TrailSpacing = TrailSpacing,
+                TrailDig = TrailDig, TrailRadar = TrailRadar,
                 MaxRise = MaxRise, DigHoldSeconds = DigHoldSeconds, DigSpeed = DigSpeed,
                 DigSpeedMethod = DigSpeedMethod,
             };
