@@ -171,6 +171,8 @@ So `0` **is** an accepted argument, and the original bug really was only ever th
 function was never the problem; the value was. Two crashes came from one number that nothing in the
 client ever writes.
 
+**Confirmed unowned (2026-09-09).** Attached on a character that does not own the Shovel at all. So the whole chain is ownership-free: `SetupOrnament(57)` attach -> `PlayActionTimeline(13383)` -> `SetupOrnament(0)` detach. Nothing in it consults an unlock bit, because the client-side spawn is the call made *after* the server has decided, and 13383 is absent from the `Emote` sheet. **Nothing is bypassed; there is no gate on this path to bypass.**
+
 The protocol is what made the retry defensible, and is the reusable part: **verify the teardown
 before building on it, on state the server can restore.** Not "be more careful with the same guess".
 

@@ -124,7 +124,15 @@ Parasol 1, Angel Wings 2, Knapsack 9, Torch 10, Shovel 14 — so redirecting a p
 Shovel would hang a shovel where a parasol goes. That data was printed by this very probe and not
 applied.
 
-**What remains** is `OrnamentContainer.SetupOrnament` — the game's own bone-attach machinery, and
+**RESOLVED 2026-09-09 — `OrnamentContainer.SetupOrnament` is the answer, and it works unowned.**
+Attach `57`, play `13383`, detach `0`. Verified on a character that does **not** own the Shovel, so the
+brand-new-player requirement is met. Detach was proven first on owned state under a staged protocol
+(see [BROKEN.md](../BROKEN.md) 012) before anything was built on it. The three routes below are still
+dead and are kept so nobody re-walks them.
+
+---
+
+**Superseded — what used to remain:** `OrnamentContainer.SetupOrnament` — the game's own bone-attach machinery, and
 the function that crashed twice (see [BROKEN.md](../BROKEN.md) 012). Both values it now needs are
 ones the game itself was **observed** using (attach `57`, none `0`), unlike the invented `-1` that
 caused the crash. Untested, and not to be attempted except by the staged protocol: test the DETACH
