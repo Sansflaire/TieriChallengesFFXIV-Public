@@ -67,6 +67,24 @@ internal sealed class DigHuntOverlay : IDisposable
     /// </summary>
     private float _radarPhase;
 
+    /// <summary>
+    /// Radar opacity envelope, 0 (invisible) to 1 (full). Ramps towards whichever the range says.
+    ///
+    /// <para><b>A value, not an animation.</b> A triggered fade would have to start, and therefore
+    /// could be restarted — walking in and out of range would relaunch it from 0 each time and the
+    /// ring would snap. This just climbs while in range and falls while out, so crossing the
+    /// boundary repeatedly makes it wander up and down from wherever it currently is. There is no
+    /// timer to reset because there is no timer.</para>
+    /// </summary>
+    private float _radarFade;
+
+    /// <summary>
+    /// Last known closeness, held through the fade-out. Once out of range there is no closeness to
+    /// read, and the ring still has two seconds of life left — freezing the rate it had on the way
+    /// out is less distracting than snapping it to the slowest.
+    /// </summary>
+    private float _radarCloseness;
+
     public DigHuntOverlay(ITextureProvider texProvider) => _texProvider = texProvider;
 
     public void Dispose()
@@ -78,22 +96,43 @@ internal sealed class DigHuntOverlay : IDisposable
     public void Draw(DigTests tests)
     {
         var active = tests.Active;
-        if (active == null) return;
+
+        if (active == null)
+        {
+            // Nothing running: the next test starts from silence rather than inheriting a
+            // half-faded ring from the last one.
+            _radarFade  = 0f;
+            _radarPhase = 0f;
+            return;
+        }
 
         float time = (float)(DateTime.UtcNow - _start).TotalSeconds;
 
         DrawBanner(active, time);
 
-        if (active.RadarCloseness is { } closeness)
+        var  closeness = active.RadarCloseness;
+        bool inRange   = closeness.HasValue;
+
+        if (inRange) _radarCloseness = closeness!.Value;
+
+        // Linear ramp towards the target, so a full fade takes exactly the configured time and a
+        // partial one takes proportionally less — which is what makes crossing the boundary twice
+        // in quick succession look like one continuous movement rather than two events.
+        float seconds = MathF.Max(0.05f, DigTuning.RadarFadeSeconds);
+        float step    = ImGui.GetIO().DeltaTime / seconds;
+        float target  = inRange ? 1f : 0f;
+
+        if      (_radarFade < target) _radarFade = MathF.Min(target, _radarFade + step);
+        else if (_radarFade > target) _radarFade = MathF.Max(target, _radarFade - step);
+
+        if (_radarFade <= 0.002f)
         {
-            DrawRadar(closeness);
+            _radarFade  = 0f;
+            _radarPhase = 0f;      // fully gone — next appearance starts from a known point
+            return;
         }
-        else
-        {
-            // Out of radar range: start the next appearance from a known point rather than from
-            // wherever the last one happened to stop.
-            _radarPhase = 0f;
-        }
+
+        DrawRadar(_radarCloseness, _radarFade);
     }
 
     // ── the banner ───────────────────────────────────────────────────────────
@@ -218,7 +257,7 @@ internal sealed class DigHuntOverlay : IDisposable
     /// The Clue Trail's ring. Pulse frequency scales with closeness and the fill goes solid the
     /// moment a dig would land — so "solid" is a promise the player can act on, not a decoration.
     /// </summary>
-    private void DrawRadar(float closeness)
+    private void DrawRadar(float closeness, float fade)
     {
         // Advance the phase by this frame's share of the current rate. Wrapped so the accumulator
         // cannot drift into float values where sin loses precision over a long session.
@@ -243,8 +282,8 @@ internal sealed class DigHuntOverlay : IDisposable
 
         float time = (float)(DateTime.UtcNow - _start).TotalSeconds;
 
-        var (tex, _) = _radar.Render(BuildRadar(closeness, _radarPhase), time, Vector2.Zero, false,
-                                     false, 0f, ImGui.GetIO().DeltaTime, forceRedraw: false);
+        var (tex, _) = _radar.Render(BuildRadar(closeness, _radarPhase, fade), time, Vector2.Zero,
+                                     false, false, 0f, ImGui.GetIO().DeltaTime, forceRedraw: false);
 
         if (tex.HasValue) ImGui.Image(tex.Value, new Vector2(phys, phys));
         EndHud();
@@ -274,7 +313,7 @@ internal sealed class DigHuntOverlay : IDisposable
     private const float MinPulseHz = 1.0f;
     private const float MaxPulseHz = 4.0f;
 
-    private static Node BuildRadar(float closeness, float phase)
+    private static Node BuildRadar(float closeness, float phase, float fade)
     {
         bool solid = closeness >= 1f;
 
@@ -306,8 +345,8 @@ internal sealed class DigHuntOverlay : IDisposable
             s.WidthMode       = SizeMode.Fixed; s.Width  = Dial;
             s.HeightMode      = SizeMode.Fixed; s.Height = Dial;
             s.BorderRadius    = Dial / 2f;
-            s.BackgroundColor = Ink.WithOpacity(0.55f);
-            s.BorderColor     = accent.WithOpacity(0.90f);
+            s.BackgroundColor = Ink.WithOpacity(0.55f * fade);
+            s.BorderColor     = accent.WithOpacity(0.90f * fade);
             s.BorderWidth     = 2;
             s.PointerEvents   = PointerEvents.None;
         }));
@@ -324,7 +363,7 @@ internal sealed class DigHuntOverlay : IDisposable
             s.WidthMode       = SizeMode.Fixed; s.Width  = Core;
             s.HeightMode      = SizeMode.Fixed; s.Height = Core;
             s.BorderRadius    = Core / 2f;
-            s.BackgroundColor = accent.WithOpacity(fill);
+            s.BackgroundColor = accent.WithOpacity(fill * fade);
             s.PointerEvents   = PointerEvents.None;
         }));
 

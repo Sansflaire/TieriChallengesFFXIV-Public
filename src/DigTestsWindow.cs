@@ -391,6 +391,10 @@ internal sealed class DigTestsWindow
 
         Slider("Dig radius",           ref DigTuning.TrailDig,   0.5f, 30f);
         Slider("Radar appears within", ref DigTuning.TrailRadar, 2f, 150f);
+        Slider("Radar fade in/out (s)", ref DigTuning.RadarFadeSeconds, 0.1f, 8f);
+        ImGui.TextColored(Rule,
+            "The fade is a RATE, not a clip: opacity climbs while in range and falls while out, so\n"
+          + "crossing the boundary twice drifts it up and down instead of restarting a timer.");
 
         DrawTrailAuthoring();
 

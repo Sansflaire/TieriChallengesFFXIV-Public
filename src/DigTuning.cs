@@ -136,6 +136,15 @@ internal static class DigTuning
     // trail is authored now, so how many stops there are and how far apart they sit are decisions
     // made by walking to them, not numbers. Old files may still carry the keys; they are ignored.
 
+    /// <summary>
+    /// Seconds for the radar to fade fully in on entering range, or fully out on leaving it.
+    ///
+    /// <para>It is a ramp rate, not a duration: a partial fade takes proportionally less, so
+    /// stepping in and out of range repeatedly makes the ring drift up and down rather than
+    /// restarting.</para>
+    /// </summary>
+    public static float RadarFadeSeconds = 2.5f;
+
     /// <summary>How close a dig must be to a trail spot to turn up the next clue.</summary>
     public static float TrailDig = 4f;
 
@@ -254,6 +263,7 @@ internal static class DigTuning
         public int   TrailStops { get; set; }
         public float TrailDig { get; set; }
         public float TrailRadar { get; set; }
+        public float RadarFadeSeconds { get; set; }
         public float TrailSpacing { get; set; }
         public float MaxRise { get; set; }
         public float DigHoldSeconds { get; set; }
@@ -281,7 +291,7 @@ internal static class DigTuning
 
     public static void ResetTrail()
     {
-        TrailDig = 4f; TrailRadar = 30f;
+        TrailDig = 4f; TrailRadar = 30f; RadarFadeSeconds = 2.5f;
     }
 
     public static void ResetAll()
@@ -340,6 +350,7 @@ internal static class DigTuning
                                                Math.Clamp(d.SiteDebugColorB, 0f, 1f));
             TrailDig         = Pos(d.TrailDig,          4f);
             TrailRadar       = Pos(d.TrailRadar,       30f);
+            RadarFadeSeconds = Pos(d.RadarFadeSeconds, 2.5f);
             MaxRise          = Pos(d.MaxRise,          25f);
 
             // NOT guarded by Pos: 0 is a meaningful value here ("no cap"), and Pos rejects
@@ -419,6 +430,7 @@ internal static class DigTuning
                 SiteDebugColorG = SiteDebugColor.Y,
                 SiteDebugColorB = SiteDebugColor.Z,
                 TrailDig = TrailDig, TrailRadar = TrailRadar,
+                RadarFadeSeconds = RadarFadeSeconds,
                 MaxRise = MaxRise, DigHoldSeconds = DigHoldSeconds, DigSpeed = DigSpeed,
                 DigSpeedMethod = DigSpeedMethod,
             };
