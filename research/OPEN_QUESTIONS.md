@@ -109,6 +109,21 @@ Trying costs nothing and cannot crash — Penumbra only redirects paths — but 
 expected to work. The game's own way to show this model is to spawn a monster-model actor and
 attach it to a bone, which is precisely what `SetupOrnament` does.
 
+**4. Penumbra redirect — DEAD on two independent counts (2026-09-06/09).**
+
+*Weapon slot:* tested, and the panel's own resolve check proved the plumbing was fine —
+`resolve: REDIRECTED -> chara/monster/m6017/...` — while the game rendered nothing. An accessory
+model in a weapon slot is a type mismatch.
+
+*Accessory slot:* dead on the **requirement**, before any technical question. The plugin must work
+for a brand-new player with **zero fashion accessories**, so any route needing the player to own or
+summon one is not a solution. Trist's constraint, and it is the correct one.
+
+*Also wrong on its own terms:* accessories are not interchangeable. Their attach points differ —
+Parasol 1, Angel Wings 2, Knapsack 9, Torch 10, Shovel 14 — so redirecting a parasol's model to the
+Shovel would hang a shovel where a parasol goes. That data was printed by this very probe and not
+applied.
+
 **What remains** is `OrnamentContainer.SetupOrnament` — the game's own bone-attach machinery, and
 the function that crashed twice (see [BROKEN.md](../BROKEN.md) 012). Both values it now needs are
 ones the game itself was **observed** using (attach `57`, none `0`), unlike the invented `-1` that
