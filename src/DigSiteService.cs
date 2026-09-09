@@ -304,7 +304,7 @@ internal sealed class DigSiteService : IDigTest
             ? new Vector3(0.44f, 0.86f, 0.62f)
             : new Vector3(0.89f, 0.70f, 0.25f);
 
-        DigVolumeRender.DrawGradientBox(_site, rgb);
+        DigVolumeRender.DrawGradientBox(_site, rgb, DigTuning.SiteWallHeight);
 
         foreach (var p in _found)
             DigVolumeRender.DrawGroundDisc(p, DigTuning.SitePieceRadius, new Vector3(0.44f, 0.86f, 0.62f));

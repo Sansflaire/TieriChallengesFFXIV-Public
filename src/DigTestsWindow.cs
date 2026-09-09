@@ -224,6 +224,7 @@ internal sealed class DigTestsWindow
         if (ImGui.Button("Stop##site")) Say(_tests.Site.Stop());
 
         Slider("Site size (yalms square)", ref DigTuning.SiteSize, 15f, 300f);
+        Slider("Wall height (visual only)", ref DigTuning.SiteWallHeight, 1f, 30f);
         SliderInt("Pieces to bury",        ref DigTuning.SitePieces, 1, 20);
         Slider("Piece dig radius",         ref DigTuning.SitePieceRadius, 0.5f, 30f);
         Slider("Min spacing between pieces", ref DigTuning.SitePieceSpacing, 1f, 100f);

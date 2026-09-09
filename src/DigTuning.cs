@@ -54,6 +54,13 @@ internal static class DigTuning
     /// <summary>Minimum gap between two buried pieces, so no dig can turn up two at once.</summary>
     public static float SitePieceSpacing = 12f;
 
+    /// <summary>
+    /// How tall the drawn walls are, in yalms. <b>Nothing to do with the volume's own height</b> —
+    /// the site box is deliberately tall so its containment test survives sloped ground, and drawing
+    /// the wall over that height put the gradient's opaque base metres underground.
+    /// </summary>
+    public static float SiteWallHeight = 6f;
+
     // ── Test 3: Clue Trail ───────────────────────────────────────────────────
 
     /// <summary>How many spots the trail runs through before the payoff.</summary>
@@ -134,6 +141,7 @@ internal static class DigTuning
         public int   SitePieces { get; set; }
         public float SitePieceRadius { get; set; }
         public float SitePieceSpacing { get; set; }
+        public float SiteWallHeight { get; set; }
         public int   TrailStops { get; set; }
         public float TrailDig { get; set; }
         public float TrailRadar { get; set; }
@@ -155,6 +163,7 @@ internal static class DigTuning
     public static void ResetSite()
     {
         SiteSize = 70f; SitePieces = 5; SitePieceRadius = 4f; SitePieceSpacing = 12f;
+        SiteWallHeight = 6f;
     }
 
     public static void ResetTrail()
@@ -192,6 +201,7 @@ internal static class DigTuning
             SitePieces       = d.SitePieces  > 0 ? Math.Min(d.SitePieces, 20) : 5;
             SitePieceRadius  = Pos(d.SitePieceRadius,   4f);
             SitePieceSpacing = Pos(d.SitePieceSpacing, 12f);
+            SiteWallHeight   = Pos(d.SiteWallHeight,    6f);
             TrailStops       = d.TrailStops  > 0 ? Math.Min(d.TrailStops, 20) : 4;
             TrailDig         = Pos(d.TrailDig,          4f);
             TrailRadar       = Pos(d.TrailRadar,       30f);
@@ -236,6 +246,7 @@ internal static class DigTuning
                 HuntMinPlacement = HuntMinPlacement, HuntMaxPlacement = HuntMaxPlacement,
                 SiteSize = SiteSize, SitePieces = SitePieces,
                 SitePieceRadius = SitePieceRadius, SitePieceSpacing = SitePieceSpacing,
+                SiteWallHeight = SiteWallHeight,
                 TrailStops = TrailStops, TrailDig = TrailDig,
                 TrailRadar = TrailRadar, TrailSpacing = TrailSpacing,
                 MaxRise = MaxRise, DigHoldSeconds = DigHoldSeconds,

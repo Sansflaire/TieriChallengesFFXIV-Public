@@ -156,7 +156,7 @@ internal sealed class AreaOverlay
             float ang = MathF.Tau * i / RingSegments;
             var world = centre + offset(ang, radius);
 
-            if (!Plugin.GameGui.WorldToScreen(world, out var screen))
+            if (!Project(world, out var screen))
             {
                 prev = null;                       // behind the camera — break the polyline
                 continue;
@@ -208,10 +208,26 @@ internal sealed class AreaOverlay
         }
     }
 
+    /// <summary>
+    /// Projects a world point, treating <b>only "behind the camera"</b> as a failure.
+    ///
+    /// <para><b>This is not the same test as the two-argument overload, and the difference is a
+    /// bug that shipped.</b> <c>WorldToScreen(pos, out screen)</c> returns true only if the point is
+    /// in front of the camera <i>AND lands inside the viewport</i> — so using it as a gate silently
+    /// discards geometry that is perfectly visible but merely extends past a screen edge. That is
+    /// fine for a nameplate anchor, which is what most callers want, and wrong for anything large:
+    /// a wall the player is standing next to nearly always has a corner off-screen, so the whole
+    /// wall vanished and only reappeared when the camera happened to frame all of it. The
+    /// three-argument overload separates the two questions; ImGui clips to the viewport by itself,
+    /// so off-screen corners need no help from us.</para>
+    /// </summary>
+    internal static bool Project(Vector3 world, out Vector2 screen)
+        => Plugin.GameGui.WorldToScreen(world, out screen, out _);
+
     private static void DrawSegment(Vector3 a, Vector3 b, uint color, float thickness)
     {
-        if (!Plugin.GameGui.WorldToScreen(a, out var sa)) return;
-        if (!Plugin.GameGui.WorldToScreen(b, out var sb)) return;
+        if (!Project(a, out var sa)) return;
+        if (!Project(b, out var sb)) return;
         ImGui.GetBackgroundDrawList().AddLine(sa, sb, color, thickness);
     }
 
