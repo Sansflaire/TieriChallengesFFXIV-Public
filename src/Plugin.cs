@@ -553,17 +553,6 @@ public sealed class Plugin : IDalamudPlugin
                     break;
                 }
 
-                // Public: spawn the Shovel, dig, drop it. No ownership at any layer - the
-                // client-side spawn carries no unlock check and 13383 is not an Emote row.
-                case "dig":
-                    ChatGui.Print("[Challenges] " + Props.Dig());
-                    break;
-
-                case "dig stop":
-                case "digstop":
-                    ChatGui.Print("[Challenges] " + Props.Stop());
-                    break;
-
                 case "sync":
                     _ = System.Threading.Tasks.Task.Run(async () =>
                     {
@@ -584,6 +573,18 @@ public sealed class Plugin : IDalamudPlugin
 
                 case "anim":
                     _timelineProbe.IsVisible = !_timelineProbe.IsVisible;
+                    break;
+
+                // DEV ONLY, deliberately. PropService itself ships publicly so challenge content
+                // can call it, but a PLAYER must not be able to summon a shovel on demand — the
+                // dig belongs to a challenge, not to a chat command. Trist's call.
+                case "dig":
+                    ChatGui.Print("[Challenges] " + Props.Dig());
+                    break;
+
+                case "dig stop":
+                case "digstop":
+                    ChatGui.Print("[Challenges] " + Props.Stop());
                     break;
 
                 // The point of the whole ActionTimeline investigation, as a command: the Shovel's
