@@ -1,6 +1,7 @@
 #if DEV_BUILD
 using System;
 using System.IO;
+using System.Numerics;
 using System.Text.Json;
 
 namespace TieriChallengesFFXIV;
@@ -64,6 +65,21 @@ internal static class DigTuning
     /// the wall over that height put the gradient's opaque base metres underground.
     /// </summary>
     public static float SiteWallHeight = 1.5f;
+
+    /// <summary>
+    /// Grid cells across the site, both axes — the site is square, so one number does both.
+    /// Also sets how finely the walls follow the ground, since the wall footprint IS the grid's
+    /// outer edge.
+    /// </summary>
+    public static int SiteGridCells = 12;
+
+    /// <summary>
+    /// Colour of the walls and the floor grid. A picker rather than a constant because the right
+    /// colour depends on the ground it is drawn over, and Eorzea's ground is not one colour.
+    /// </summary>
+    public static Vector3 SiteColor = DefaultSiteColor;
+
+    public static readonly Vector3 DefaultSiteColor = new(0.89f, 0.70f, 0.25f);
 
     // ── Test 3: Clue Trail ───────────────────────────────────────────────────
 
@@ -154,6 +170,10 @@ internal static class DigTuning
         public float SitePieceRadius { get; set; }
         public float SitePieceSpacing { get; set; }
         public float SiteWallHeight { get; set; }
+        public int   SiteGridCells { get; set; }
+        public float SiteColorR { get; set; }
+        public float SiteColorG { get; set; }
+        public float SiteColorB { get; set; }
         public int   TrailStops { get; set; }
         public float TrailDig { get; set; }
         public float TrailRadar { get; set; }
@@ -175,7 +195,7 @@ internal static class DigTuning
     public static void ResetSite()
     {
         SiteSize = 50f; SitePieces = 5; SitePieceRadius = 4f; SitePieceSpacing = 12f;
-        SiteWallHeight = 1.5f;
+        SiteWallHeight = 1.5f; SiteGridCells = 12; SiteColor = DefaultSiteColor;
     }
 
     public static void ResetTrail()
@@ -214,6 +234,15 @@ internal static class DigTuning
             SitePieceRadius  = Pos(d.SitePieceRadius,   4f);
             SitePieceSpacing = Pos(d.SitePieceSpacing, 12f);
             SiteWallHeight   = Pos(d.SiteWallHeight,    6f);
+            SiteGridCells    = d.SiteGridCells > 0 ? Math.Clamp(d.SiteGridCells, 2, 40) : 12;
+
+            // All-zero means the field was absent, not that somebody picked black — a colour that
+            // would render the whole site invisible is never what a saved file meant.
+            SiteColor = d.SiteColorR <= 0f && d.SiteColorG <= 0f && d.SiteColorB <= 0f
+                            ? DefaultSiteColor
+                            : new Vector3(Math.Clamp(d.SiteColorR, 0f, 1f),
+                                          Math.Clamp(d.SiteColorG, 0f, 1f),
+                                          Math.Clamp(d.SiteColorB, 0f, 1f));
             TrailStops       = d.TrailStops  > 0 ? Math.Min(d.TrailStops, 20) : 4;
             TrailDig         = Pos(d.TrailDig,          4f);
             TrailRadar       = Pos(d.TrailRadar,       30f);
@@ -267,7 +296,8 @@ internal static class DigTuning
                 HuntMinPlacement = HuntMinPlacement, HuntMaxPlacement = HuntMaxPlacement,
                 SiteSize = SiteSize, SitePieces = SitePieces,
                 SitePieceRadius = SitePieceRadius, SitePieceSpacing = SitePieceSpacing,
-                SiteWallHeight = SiteWallHeight,
+                SiteWallHeight = SiteWallHeight, SiteGridCells = SiteGridCells,
+                SiteColorR = SiteColor.X, SiteColorG = SiteColor.Y, SiteColorB = SiteColor.Z,
                 TrailStops = TrailStops, TrailDig = TrailDig,
                 TrailRadar = TrailRadar, TrailSpacing = TrailSpacing,
                 MaxRise = MaxRise, DigHoldSeconds = DigHoldSeconds,

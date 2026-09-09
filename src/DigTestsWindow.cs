@@ -228,7 +228,26 @@ internal sealed class DigTestsWindow
         if (ImGui.Button("Stop##site")) Say(_tests.Site.Stop());
 
         Slider("Site size (yalms square)", ref DigTuning.SiteSize, 15f, 300f);
-        Slider("Wall height (visual only)", ref DigTuning.SiteWallHeight, 1f, 30f);
+        Slider("Wall height (visual only)", ref DigTuning.SiteWallHeight, 0.2f, 30f);
+
+        // Re-samples the live site on release rather than waiting for the next Start — the grid IS
+        // the thing being tuned, so making you restart a survey to see a change would defeat it.
+        ImGui.SliderInt("Grid cells (both axes)", ref DigTuning.SiteGridCells, 2, 40);
+        if (ImGui.IsItemDeactivatedAfterEdit())
+        {
+            DigTuning.Save();
+            _tests.Site.RebuildGrid();
+        }
+
+        ImGui.ColorEdit3("Wall / floor colour", ref DigTuning.SiteColor);
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SameLine();
+        if (ImGui.Button("Reset colour"))
+        {
+            DigTuning.SiteColor = DigTuning.DefaultSiteColor;
+            DigTuning.Save();
+        }
         SliderInt("Pieces to bury",        ref DigTuning.SitePieces, 1, 20);
         Slider("Piece dig radius",         ref DigTuning.SitePieceRadius, 0.5f, 30f);
         Slider("Min spacing between pieces", ref DigTuning.SitePieceSpacing, 1f, 100f);

@@ -1,5 +1,6 @@
 #if DEV_BUILD
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 using Dalamud.Bindings.ImGui;
@@ -70,78 +71,85 @@ internal static class DigVolumeRender
     private const float FadeCurve = 1.5f;
 
     /// <summary>
-    /// Draws four gradient walls standing on the ground at the volume's edges, plus a wireframe for
-    /// a crisp edge. Spheres are ignored — a sphere has no walls, and these volumes are all boxes.
+    /// Draws the four walls of a site as a fence <b>standing on the measured ground</b>, following
+    /// every rise and dip along its length, plus a stroked line at the base and the top.
+    ///
+    /// <para><b>It reuses the floor grid's lattice rather than sampling its own.</b> The lattice
+    /// spans the site exactly, so its outer ring <i>is</i> the wall footprint — the wall gets
+    /// terrain-snapping for free, at zero extra raycasts, and can never disagree with the floor it
+    /// stands on. Raising the grid's cell count makes the walls follow the ground more closely
+    /// too, which is the behaviour anyone would expect and would be a bug to have to remember
+    /// separately.</para>
     /// </summary>
-    /// <param name="a">The volume. Only its X/Z extents and yaw are used for the footprint.</param>
-    /// <param name="rgb">Wall colour.</param>
-    /// <param name="wallHeight">
-    /// How tall the drawn wall is, in yalms — <b>independent of the volume's own height</b>, which
-    /// is sized for the containment test rather than for looking at.
-    /// </param>
-    public static void DrawGradientBox(ChallengeArea a, Vector3 rgb, float wallHeight,
-                                       float thickness = 1.8f)
+    /// <param name="lattice">The floor lattice; its border ring is the footprint.</param>
+    /// <param name="wallHeight">Height above the ground, in yalms.</param>
+    public static void DrawGradientWalls(Vector3[,] lattice, float wallHeight, Vector3 rgb,
+                                         float thickness = 1.8f)
     {
-        if (a.Shape != AreaShape.Box) return;
+        int n = lattice.GetLength(0);
+        if (n < 2) return;
 
         try
         {
-            float hx = MathF.Max(0.01f, a.SizeX * a.Scale) * 0.5f;
-            float hz = MathF.Max(0.01f, a.SizeZ * a.Scale) * 0.5f;
-            float h  = MathF.Max(0.5f, wallHeight);
+            float h    = MathF.Max(0.1f, wallHeight);
+            var   ring = BorderRing(lattice, n);
 
-            // Forward yaw, matching AreaOverlay.DrawBox — the inverse of the one
-            // ChallengeArea.Contains applies to the delta. All three must stay in step or the wall
-            // you can see stops being the volume that is tested.
-            float cos = MathF.Cos(a.RotationY);
-            float sin = MathF.Sin(a.RotationY);
-            var   c   = a.Center;
+            for (int i = 0; i + 1 < ring.Count; i++)
+                DrawWallSegment(ring[i], ring[i + 1], h, rgb);
 
-            // The centre's Y is where the site was marked out, i.e. the player's feet — so it is
-            // ground level, and the wall stands ON it rather than being centred on it.
-            Vector3 Foot(float sx, float sz)
-            {
-                float lx = sx * hx, lz = sz * hz;
-                return new Vector3(c.X + lx * cos - lz * sin, c.Y, c.Z + lx * sin + lz * cos);
-            }
+            uint edge = ImGui.GetColorU32(new Vector4(rgb.X, rgb.Y, rgb.Z, 0.85f));
+            var  up   = new Vector3(0f, h, 0f);
+            var  list = ImGui.GetBackgroundDrawList();
 
-            var b = new[] { Foot(-1, -1), Foot(+1, -1), Foot(+1, +1), Foot(-1, +1) };
-
-            for (int i = 0; i < 4; i++)
-                DrawWall(b[i], b[(i + 1) % 4], h, rgb);
-
-            // Outline the wall we actually drew, not the tall containment volume — a wireframe
-            // twenty yalms underground would read as a second, wrong boundary.
-            var visual = new ChallengeArea
-            {
-                Shape = AreaShape.Box,
-                SizeX = a.SizeX, SizeZ = a.SizeZ, SizeY = h,
-                Scale = a.Scale, RotationY = a.RotationY,
-            };
-            visual.SetCenter(new Vector3(c.X, c.Y + h * 0.5f, c.Z));
-
-            AreaOverlay.DrawBox(visual, ImGui.GetColorU32(new Vector4(rgb.X, rgb.Y, rgb.Z, 0.85f)),
-                                thickness);
+            // Base and cap. Both follow the ground, so the fence reads as sitting on the world
+            // rather than as a flat plate hovering over it.
+            Stroke(list, ring, Vector3.Zero, edge, thickness);
+            Stroke(list, ring, up,           edge, thickness);
         }
         catch (Exception ex)
         {
-            Diag.Error($"[Dig] gradient volume draw failed: {ex.Message}");
+            Diag.Error($"[Dig] gradient walls draw failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>The lattice's outer ring, closed, walked in a consistent direction.</summary>
+    private static List<Vector3> BorderRing(Vector3[,] lattice, int n)
+    {
+        var ring = new List<Vector3>(4 * n);
+
+        for (int j = 0;     j < n;  j++) ring.Add(lattice[0,     j]);
+        for (int i = 1;     i < n;  i++) ring.Add(lattice[i,     n - 1]);
+        for (int j = n - 2; j >= 0; j--) ring.Add(lattice[n - 1, j]);
+        for (int i = n - 2; i >= 0; i--) ring.Add(lattice[i,     0]);
+
+        return ring;
+    }
+
+    private static void Stroke(ImDrawListPtr list, List<Vector3> ring, Vector3 offset, uint color,
+                               float thickness)
+    {
+        Vector2? prev = null;
+
+        for (int i = 0; i < ring.Count; i++)
+        {
+            if (!AreaOverlay.Project(ring[i] + offset, out var s)) { prev = null; continue; }
+            if (prev.HasValue) list.AddLine(prev.Value, s, color, thickness);
+            prev = s;
         }
     }
 
     /// <summary>
-    /// One wall, as a grid of quads fading upward. Cells whose corners will not project are skipped
-    /// rather than clamped — a point behind the camera has no meaningful screen position, and
-    /// stretching a quad to a garbage coordinate paints a triangle across the whole viewport.
+    /// One span of wall between two adjacent footprint points, sliced vertically for the gradient.
+    /// Horizontal subdivision is the lattice's job now — each segment is already short.
+    ///
+    /// <para>Quads whose corners will not project are skipped rather than clamped: a point behind
+    /// the camera has no meaningful screen position, and stretching a quad to a garbage coordinate
+    /// paints a triangle across the whole viewport.</para>
     /// </summary>
-    private static void DrawWall(Vector3 footA, Vector3 footB, float height, Vector3 rgb)
+    private static void DrawWallSegment(Vector3 footA, Vector3 footB, float height, Vector3 rgb)
     {
         var drawList = ImGui.GetBackgroundDrawList();
         var up       = new Vector3(0f, height, 0f);
-
-        // Corner of the cell at (column u, row v). Computed from the wall's own basis so the same
-        // expression works for any yaw.
-        Vector3 P(float u, float v) => Vector3.Lerp(footA, footB, u) + up * v;
 
         for (int r = 0; r < Rows; r++)
         {
@@ -154,21 +162,15 @@ internal static class DigVolumeRender
 
             uint col = ImGui.GetColorU32(new Vector4(rgb.X, rgb.Y, rgb.Z, alpha));
 
-            for (int k = 0; k < Cols; k++)
-            {
-                float u0 = k / (float)Cols;
-                float u1 = (k + 1) / (float)Cols;
+            if (!AreaOverlay.Project(footA + up * v0, out var s0)) continue;
+            if (!AreaOverlay.Project(footB + up * v0, out var s1)) continue;
+            if (!AreaOverlay.Project(footB + up * v1, out var s2)) continue;
+            if (!AreaOverlay.Project(footA + up * v1, out var s3)) continue;
 
-                if (!AreaOverlay.Project(P(u0, v0), out var s0)) continue;
-                if (!AreaOverlay.Project(P(u1, v0), out var s1)) continue;
-                if (!AreaOverlay.Project(P(u1, v1), out var s2)) continue;
-                if (!AreaOverlay.Project(P(u0, v1), out var s3)) continue;
-
-                // Wound consistently around the quad. AddQuadFilled goes through
-                // AddConvexPolyFilled, which needs a convex ring — a figure-of-eight winding
-                // renders as two slivers rather than erroring.
-                drawList.AddQuadFilled(s0, s1, s2, s3, col);
-            }
+            // Wound consistently around the quad. AddQuadFilled goes through AddConvexPolyFilled,
+            // which needs a convex ring — a figure-of-eight winding renders as two slivers rather
+            // than erroring.
+            drawList.AddQuadFilled(s0, s1, s2, s3, col);
         }
     }
 
@@ -200,8 +202,8 @@ internal static class DigVolumeRender
             int n = lattice.GetLength(0);
             var drawList = ImGui.GetBackgroundDrawList();
 
-            uint fill = ImGui.GetColorU32(new Vector4(rgb.X, rgb.Y, rgb.Z, 0.13f));
-            uint line = ImGui.GetColorU32(new Vector4(rgb.X, rgb.Y, rgb.Z, 0.34f));
+            uint fill = ImGui.GetColorU32(new Vector4(rgb.X, rgb.Y, rgb.Z, 0.22f));
+            uint line = ImGui.GetColorU32(new Vector4(rgb.X, rgb.Y, rgb.Z, 0.60f));
 
             // Checkerboard, built from the FINE quads so each coarse cell follows the ground rather
             // than being one flat plate bridging a slope.

@@ -42,8 +42,8 @@ internal sealed class DigSiteService : IDigTest
     /// </summary>
     private const int GridSubdivisions = 2;
 
-    /// <summary>Coarse cells across the site. Capped so a huge site cannot explode the lattice.</summary>
-    private const int MaxGridCells = 14;
+    /// <summary>Ceiling on grid cells, matching the lab slider's own upper bound.</summary>
+    private const int MaxGridCells = 40;
 
     private Phase          _phase;
     private ChallengeArea? _site;
@@ -303,23 +303,34 @@ internal sealed class DigSiteService : IDigTest
     }
 
     /// <summary>
-    /// Measures the ground across the site, once. The coarse cell is sized to the dig radius, so
-    /// the stripes the player sees are a picture of how precisely they have to dig rather than an
-    /// arbitrary decoration — one cell is roughly one dig's worth of ground.
+    /// Re-measures the ground for a site that is already running. Only for the lab's grid slider:
+    /// changing the cell count has to be visible on the site in front of you, not on the next one.
+    /// Harmless when nothing is running.
+    /// </summary>
+    public void RebuildGrid()
+    {
+        if (_site == null || _phase == Phase.Off) return;
+        SampleGrid();
+    }
+
+    /// <summary>
+    /// Measures the ground across the site. Once per site — the lattice is what both the floor grid
+    /// and the walls are drawn from, so this is the only place terrain is sampled and the two can
+    /// never disagree about where the ground is.
     /// </summary>
     private void SampleGrid()
     {
         if (_site == null) { _grid = new Vector3[0, 0]; return; }
 
-        float side = MathF.Max(1f, _site.SizeX * _site.Scale);
+        float side  = MathF.Max(1f, _site.SizeX * _site.Scale);
+        int   cells = Math.Clamp(DigTuning.SiteGridCells, 2, MaxGridCells);
 
-        // One coarse cell ≈ the diameter a dig covers.
-        float wanted = MathF.Max(2f, DigTuning.SitePieceRadius * 2f);
-        int   cells  = Math.Clamp((int)MathF.Round(side / wanted), 2, MaxGridCells);
+        // Fine subdivision only pays for terrain shape WITHIN a cell, so a dense grid does not
+        // need it — and without this the lattice would grow as the square of the cell count and a
+        // 40-cell site would fire several thousand raycasts in the frame the site is marked out.
+        _gridStride = cells <= 16 ? GridSubdivisions : 1;
 
-        _gridStride = GridSubdivisions;
-
-        int n    = cells * GridSubdivisions + 1;
+        int n    = cells * _gridStride + 1;
         var grid = new Vector3[n, n];
 
         float hx  = side * 0.5f;
@@ -367,15 +378,15 @@ internal sealed class DigSiteService : IDigTest
     {
         if (_site == null || _phase is Phase.Off) return;
 
-        // Green once the relic is assembled, amber while there is still something to find.
-        var rgb = _phase == Phase.Won
-            ? new Vector3(0.44f, 0.86f, 0.62f)
-            : new Vector3(0.89f, 0.70f, 0.25f);
+        // The picked colour, always — including the won state. Swapping to green on success would
+        // make the colour picker lie about what is being tested, and the headline already says the
+        // relic is assembled.
+        var rgb = DigTuning.SiteColor;
 
         // Ground first, walls over it — the walls are the boundary and should read as being in
         // front of the floor they enclose.
         DigVolumeRender.DrawGroundGrid(_grid, _gridStride, rgb);
-        DigVolumeRender.DrawGradientBox(_site, rgb, DigTuning.SiteWallHeight);
+        DigVolumeRender.DrawGradientWalls(_grid, DigTuning.SiteWallHeight, rgb);
 
         foreach (var p in _found)
             DigVolumeRender.DrawGroundDisc(p, DigTuning.SitePieceRadius, new Vector3(0.44f, 0.86f, 0.62f));
