@@ -162,6 +162,8 @@ internal sealed unsafe class TimelineProbeWindow
             ImGui.Separator();
             DrawLoadedModelPaths(chara);
             ImGui.Separator();
+            DrawShovelSwap(chara);
+            ImGui.Separator();
             DrawModelPathCheck();
             ImGui.Separator();
             DrawTrace();
@@ -546,6 +548,146 @@ internal sealed unsafe class TimelineProbeWindow
         {
             ImGui.TextDisabled($"  unreadable ({ex.Message})");
         }
+    }
+
+    // ── Penumbra file swap: make a held weapon render as the shovel ──────────
+
+    /// <summary>The measured path, read off the accessory's own CharacterBase — not a convention.</summary>
+    private const string ShovelModelPath = "chara/monster/m6017/obj/body/b0002/model/m6017b0002.mdl";
+
+    private const string SwapTag      = "TieriChallenges-ShovelSwap";
+    private const int    SwapPriority = 999;
+
+    private string _swapStatus = string.Empty;
+    private bool   _swapActive;
+
+    /// <summary>
+    /// Redirects the player's equipped main-hand weapon model to the Shovel's model file, then
+    /// redraws.
+    ///
+    /// <para>No ownership is involved and no game memory is written — Penumbra redirects a game
+    /// path to another file, which is what every model mod does. Fully reversible by removing the
+    /// temporary mod and redrawing again.</para>
+    ///
+    /// <para>I predicted this would fail on a "skeleton mismatch" because the asset lives under
+    /// <c>chara/monster/</c>. That was inference from a folder name, not a finding — and the
+    /// counter-evidence is strong: the shovel is authored to sit in a hand, which is the same thing
+    /// a weapon model is. Testing costs nothing and cannot crash, so it gets tested rather than
+    /// predicted.</para>
+    /// </summary>
+    private void DrawShovelSwap(Character* chara)
+    {
+        ImGui.TextColored(Accent, "Shovel swap (Penumbra file redirect — no ownership, no memory writes)");
+        ImGui.TextDisabled("  Makes the equipped main-hand weapon render as the Shovel model.");
+
+        if (chara == null) { ImGui.TextDisabled("  not logged in"); return; }
+
+        string weaponPath = CurrentMainHandPath(chara, out string detail);
+        ImGui.TextUnformatted($"  main-hand path: {(string.IsNullOrEmpty(weaponPath) ? detail : weaponPath)}");
+        ImGui.TextDisabled($"  shovel model:   {ShovelModelPath}");
+
+        bool ready = !string.IsNullOrEmpty(weaponPath);
+        if (!ready) ImGui.BeginDisabled();
+
+        if (ImGui.Button("Swap main-hand -> Shovel", new Vector2(240, 0)))
+            _swapStatus = ApplySwap(weaponPath);
+
+        if (!ready) ImGui.EndDisabled();
+
+        ImGui.SameLine();
+        if (ImGui.Button("Remove swap", new Vector2(160, 0)))
+            _swapStatus = RemoveSwap();
+
+        if (_swapActive) ImGui.TextColored(Good, "  swap ACTIVE");
+        if (!string.IsNullOrEmpty(_swapStatus)) ImGui.TextDisabled($"  {_swapStatus}");
+    }
+
+    /// <summary>
+    /// Builds the game path for the equipped main hand, verifying it against sqpack before use.
+    /// Weapon paths key the body folder off either Type or Variant depending on the item; rather
+    /// than pick one, both are tried and the one that actually EXISTS wins.
+    /// </summary>
+    private static string CurrentMainHandPath(Character* chara, out string detail)
+    {
+        detail = string.Empty;
+        try
+        {
+            var span = chara->DrawData.WeaponData;
+            if (span.Length == 0) { detail = "(no weapon data)"; return string.Empty; }
+
+            var m = span[0].ModelId;
+            if (m.Id == 0) { detail = "(no weapon equipped — equip one first)"; return string.Empty; }
+
+            foreach (int b in new[] { m.Type, m.Variant, 1 })
+            {
+                string p = $"chara/weapon/w{m.Id:D4}/obj/body/b{b:D4}/model/w{m.Id:D4}b{b:D4}.mdl";
+                try { if (Plugin.DataManager.FileExists(p)) return p; } catch { }
+            }
+
+            detail = $"(no path found for weapon Id {m.Id} Type {m.Type} Variant {m.Variant})";
+            return string.Empty;
+        }
+        catch (Exception ex) { detail = $"({ex.Message})"; return string.Empty; }
+    }
+
+    private string ApplySwap(string weaponPath)
+    {
+        try
+        {
+            var add = Plugin.PluginInterface
+                .GetIpcSubscriber<string, Dictionary<string, string>, string, int, int>(
+                    "Penumbra.AddTemporaryModAll.V5");
+
+            var paths = new Dictionary<string, string>
+            {
+                [weaponPath] = ShovelModelPath,
+            };
+
+            int ec = add.InvokeFunc(SwapTag, paths, string.Empty, SwapPriority);
+            Diag.Info($"[AnimProbe] AddTemporaryModAll -> {ec}  {weaponPath} => {ShovelModelPath}");
+
+            Redraw();
+            _swapActive = ec == 0;
+            return ec == 0 ? "swap applied, redrawing." : $"Penumbra returned {ec}.";
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[AnimProbe] swap failed: {ex.Message}");
+            return $"failed: {ex.Message}";
+        }
+    }
+
+    private string RemoveSwap()
+    {
+        try
+        {
+            var remove = Plugin.PluginInterface
+                .GetIpcSubscriber<string, int, int>("Penumbra.RemoveTemporaryModAll.V5");
+
+            int ec = remove.InvokeFunc(SwapTag, SwapPriority);
+            Diag.Info($"[AnimProbe] RemoveTemporaryModAll -> {ec}");
+
+            Redraw();
+            _swapActive = false;
+            return ec == 0 ? "swap removed, redrawing." : $"Penumbra returned {ec}.";
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[AnimProbe] remove swap failed: {ex.Message}");
+            return $"failed: {ex.Message}";
+        }
+    }
+
+    private static void Redraw()
+    {
+        try
+        {
+            // 0 = local player object index; 0 = RedrawType.Redraw.
+            Plugin.PluginInterface
+                .GetIpcSubscriber<int, int, object>("Penumbra.RedrawObject.V5")
+                .InvokeAction(0, 0);
+        }
+        catch (Exception ex) { Diag.Warn($"[AnimProbe] redraw failed: {ex.Message}"); }
     }
 
     // ── does the model actually exist as a weapon-format asset? ──────────────
