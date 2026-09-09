@@ -362,6 +362,11 @@ internal sealed unsafe class PropService
         _stage           = Stage.WaitAttach;
         _frames          = 0;
         _cancelRequested = false;
+
+        // Held from the moment the prop is asked for, not from when the animation starts: the
+        // attach takes frames, and a step taken during them would cancel the dig before it began.
+        SetInputBlocked(true);
+
         return "performing.";
     }
 
@@ -371,6 +376,11 @@ internal sealed unsafe class PropService
         _stage           = Stage.Off;
         _frames          = 0;
         _cancelRequested = false;
+
+        // FIRST, and before any early return below. Every way a performance can end comes through
+        // here, so this is the one place that can guarantee the player gets their controls back —
+        // releasing it later, or per exit path, is how input stays stuck after an odd failure.
+        SetInputBlocked(false);
 
         var chara = LocalChara();
         if (chara == null) { _speedApplied = false; return "stopped."; }
@@ -404,7 +414,14 @@ internal sealed unsafe class PropService
 
     public void Tick()
     {
-        if (_stage == Stage.Off) return;
+        if (_stage == Stage.Off)
+        {
+            // Belt and braces. Stop() is the only way out and it always releases, but "the player
+            // cannot move" is severe enough to be worth a second, unconditional guarantee: if the
+            // block is somehow still on with nothing running, it comes off this frame.
+            if (Plugin.Input.Blocking) SetInputBlocked(false);
+            return;
+        }
 
         try
         {
@@ -604,6 +621,17 @@ internal sealed unsafe class PropService
                 chara->Timeline.OverallSpeed = _overallBefore;
         }
         catch (Exception ex) { Diag.Error($"[Prop] speed restore failed: {ex.Message}"); }
+    }
+
+    /// <summary>
+    /// Turns the movement/jump block on or off. Managed state only — it flips a bool that two
+    /// already-installed hooks read, so it is safe from anywhere, including the paths that must
+    /// never call game code.
+    /// </summary>
+    private static void SetInputBlocked(bool blocked)
+    {
+        try { Plugin.Input.Blocking = blocked; }
+        catch (Exception ex) { Diag.Error($"[Prop] input block toggle failed: {ex.Message}"); }
     }
 
     private static Character* LocalChara()

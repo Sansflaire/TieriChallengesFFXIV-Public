@@ -36,6 +36,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static ITargetManager          TargetManager   { get; private set; } = null!;
     [PluginService] internal static ICondition              Condition       { get; private set; } = null!;
     [PluginService] internal static IGameInventory          GameInventory   { get; private set; } = null!;
+    [PluginService] internal static IGameInteropProvider    GameInterop     { get; private set; } = null!;
 
     /// <summary>
     /// Event-driven "do I hold item X?" map. Static because <see cref="ConditionEvaluator"/> is
@@ -131,6 +132,13 @@ public sealed class Plugin : IDalamudPlugin
     /// it the same way it reaches <see cref="Inventory"/>.
     /// </summary>
     internal static PropService Props { get; private set; } = null!;
+
+    /// <summary>
+    /// Swallows movement and jump while a dig runs, so it plays to its end. SHIPS PUBLICLY with
+    /// <see cref="Props"/>, and static for the same reason — the prop service toggles it, and
+    /// challenge content drives the prop service.
+    /// </summary>
+    internal static InputBlock Input { get; private set; } = null!;
 
     // PanacheUI-backed. NULL when the library could not be loaded — these types must never be
     // constructed in that case, because merely loading them throws. See PanacheAvailability.
@@ -277,8 +285,15 @@ public sealed class Plugin : IDalamudPlugin
         // Stood up before the tracker: an item condition evaluated on the first tick must find a
         // watcher, not a null. It starts dirty, so the first read builds the map.
         Inventory = new InventoryWatcher();
+
+        // Before Props: the prop service toggles the block, so the block has to exist first.
+        Input     = new InputBlock();
         Props     = new PropService();
         Inventory.Attach();
+
+        if (!Input.MovementHooked || !Input.JumpHooked)
+            Log.Warning("[Input] a control hook is unavailable — digs remain interruptible. "
+                      + "The plugin works; only the input block is missing.");
 
         _tracker = new ChallengeTracker(_config, _store, SaveConfig);
         _sync    = new ChallengeSyncService(_official, _config);
@@ -500,6 +515,10 @@ public sealed class Plugin : IDalamudPlugin
         _tracker.Progressed -= OnProgressed;
         _tracker.Completed  -= OnCompleted;
         _tracker.Dispose();
+
+        // Disposing the hooks restores the game's own functions, so an unload mid-dig hands the
+        // controls straight back rather than leaving the player unable to move.
+        Input.Dispose();
         Inventory.Dispose();
         Sound.Dispose();
         _toast?.Dispose();
