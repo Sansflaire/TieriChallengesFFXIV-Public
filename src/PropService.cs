@@ -52,6 +52,26 @@ internal sealed unsafe class PropService
     private short  _ornament;
     private ushort _timeline;
     private bool   _cancelRequested;
+    private long   _playStartedMs;
+
+    /// <summary>
+    /// How long the animation is allowed to run before the performance ends itself and the prop is
+    /// removed, in milliseconds. <b>0 means no cap</b> — run until the game cancels the animation,
+    /// which is the original behaviour.
+    ///
+    /// <para>A cap and the game's own cancel are not alternatives; whichever happens first wins. The
+    /// cap does not stop the player walking out of a dig, it only stops a dig that nothing
+    /// interrupts from running to the end of its loop.</para>
+    ///
+    /// <para>Settable because the right number is a feel, not a fact — see the dig lab's slider.
+    /// Once a value is settled on, it becomes the default here and the slider just moves off it.</para>
+    ///
+    /// <para>A property rather than a field on purpose: its only writer is the dev-only lab, so as a
+    /// field it raised CS0649 ("never assigned") in the Release build — and this project treats a
+    /// Release warning as a signal that a dev branch has leaked, which is a signal worth keeping
+    /// sharp rather than learning to ignore.</para>
+    /// </summary>
+    public int HoldMilliseconds { get; set; }
 
     /// <summary>Frames to wait for the model to appear before playing anyway.</summary>
     private const int AttachGrace = 300;
@@ -199,8 +219,12 @@ internal sealed unsafe class PropService
                     {
                         try { chara->Timeline.PlayActionTimeline(_timeline, 0); }
                         catch (Exception ex) { Diag.Error($"[Prop] play failed: {ex.Message}"); Stop(); return; }
-                        _stage  = Stage.Playing;
-                        _frames = 0;
+
+                        // The cap is measured from here — the moment the animation was asked for —
+                        // not from Start(), so waiting for the model to attach never eats into it.
+                        _playStartedMs = Environment.TickCount64;
+                        _stage         = Stage.Playing;
+                        _frames        = 0;
                     }
                     break;
 
@@ -210,8 +234,13 @@ internal sealed unsafe class PropService
                     break;
 
                 case Stage.Watching:
-                    // The game owns the cancel (IsMotionCanceledByMoving). We only notice and clean up.
-                    if (slot0 != _timeline) Stop();
+                    // Two ways out, whichever comes first. The game owns the cancel
+                    // (IsMotionCanceledByMoving) and we only notice it; the cap is ours and ends a
+                    // dig that nothing interrupted rather than letting it loop.
+                    if (slot0 != _timeline) { Stop(); break; }
+
+                    if (HoldMilliseconds > 0 && Environment.TickCount64 - _playStartedMs >= HoldMilliseconds)
+                        Stop();
                     break;
             }
         }

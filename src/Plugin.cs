@@ -560,6 +560,33 @@ public sealed class Plugin : IDalamudPlugin
 
             if (raw.StartsWith("trail", StringComparison.OrdinalIgnoreCase))
             { HandleDigCommand(_digTests.Trail, raw.Substring(5).Trim()); return; }
+
+            // Set the dig animation length without opening the lab, so a timing can be dialled in
+            // between digs. "/tchal digtime" with no argument just reports the current value.
+            if (raw.StartsWith("digtime", StringComparison.OrdinalIgnoreCase))
+            {
+                string arg = raw.Substring(7).Trim();
+
+                if (arg.Length > 0)
+                {
+                    if (!float.TryParse(arg, System.Globalization.NumberStyles.Float,
+                                        System.Globalization.CultureInfo.InvariantCulture, out float secs)
+                        || !float.IsFinite(secs) || secs < 0f)
+                    {
+                        ChatGui.PrintError("[Challenges] Usage: /tchal digtime <seconds>  (0 = no cap)");
+                        return;
+                    }
+
+                    DigTuning.DigHoldSeconds = MathF.Min(secs, 60f);
+                    DigTuning.Apply();
+                    DigTuning.Save();
+                }
+
+                ChatGui.Print(Props.HoldMilliseconds > 0
+                    ? $"[Challenges] Dig length {DigTuning.DigHoldSeconds:0.##}s ({Props.HoldMilliseconds} ms)."
+                    : "[Challenges] Dig length: no cap — runs until the game cancels it.");
+                return;
+            }
 #endif
 
             switch (raw.ToLowerInvariant())

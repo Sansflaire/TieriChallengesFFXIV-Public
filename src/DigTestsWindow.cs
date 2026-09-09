@@ -122,6 +122,31 @@ internal sealed class DigTestsWindow
 
         Slider("Max rise (yalms)", ref DigTuning.MaxRise, 2f, 80f);
 
+        ImGui.Spacing();
+        ImGui.TextColored(Head, "DIG ANIMATION LENGTH");
+        ImGui.TextColored(Rule,
+            "How long the dig plays before it ends itself and the shovel comes off.\n"
+          + "0 = no cap: run until the game cancels it (walking, jumping, etc). That is the\n"
+          + "current shipped default. The cap and the game's own cancel are not alternatives —\n"
+          + "whichever happens first wins, so this never stops you walking out of a dig.\n"
+          + "Drives PropService, which SHIPS. Tell me the number you like and it becomes the default.");
+
+        ImGui.SliderFloat("Dig length (seconds)", ref DigTuning.DigHoldSeconds, 0f, 15f,
+                          DigTuning.DigHoldSeconds <= 0f ? "no cap" : "%.2f s");
+        if (ImGui.IsItemDeactivatedAfterEdit()) { DigTuning.Apply(); DigTuning.Save(); }
+
+        // Applied live so the very next dig uses it — waiting for a reload to feel a timing change
+        // would make this slider useless for the thing it exists to do.
+        DigTuning.Apply();
+
+        ImGui.SameLine();
+        ImGui.TextDisabled($"= {Plugin.Props.HoldMilliseconds} ms");
+
+        if (ImGui.Button("Test dig now")) Say(Plugin.Props.Dig());
+        ImGui.SameLine();
+        if (ImGui.Button("Stop dig")) Say(Plugin.Props.Stop());
+
+        ImGui.Spacing();
         if (ImGui.Button("Reset ALL tuning")) { DigTuning.ResetAll(); DigTuning.Save(); }
         ImGui.SameLine();
         ImGui.TextDisabled("saved to dig-tuning.json — delete it for defaults");

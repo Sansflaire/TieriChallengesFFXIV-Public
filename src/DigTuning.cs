@@ -81,6 +81,29 @@ internal static class DigTuning
     /// </summary>
     public static float MaxRise = 25f;
 
+    /// <summary>
+    /// How long the dig animation runs before it ends itself and the shovel comes off, in seconds.
+    /// <b>0 means no cap</b> — run until the game cancels it, which is the shipped default.
+    ///
+    /// <para>This is the one tuning value that is not a distance, and the one that drives something
+    /// in the PUBLIC build: it is applied to <see cref="PropService.HoldMilliseconds"/>, which ships
+    /// because challenge content plays the dig. The knob is dev-only; the behaviour it sets is not.
+    /// When a number is settled on it becomes the default in <c>PropService</c> and this slider
+    /// simply starts there.</para>
+    /// </summary>
+    public static float DigHoldSeconds;
+
+    /// <summary>
+    /// Pushes the values that live somewhere else into their real home. Called after
+    /// <see cref="Load"/> and whenever the lab changes one — a tuning value that is only read at
+    /// startup would look like it had silently stopped working the first time it was edited.
+    /// </summary>
+    public static void Apply()
+    {
+        try { Plugin.Props.HoldMilliseconds = (int)MathF.Round(DigHoldSeconds * 1000f); }
+        catch (Exception ex) { Diag.Error($"[Dig] applying tuning failed: {ex.Message}"); }
+    }
+
     // ── persistence ──────────────────────────────────────────────────────────
 
     private sealed class Dto
@@ -100,6 +123,7 @@ internal static class DigTuning
         public float TrailRadar { get; set; }
         public float TrailSpacing { get; set; }
         public float MaxRise { get; set; }
+        public float DigHoldSeconds { get; set; }
     }
 
     private static string Path =>
@@ -125,7 +149,9 @@ internal static class DigTuning
     public static void ResetAll()
     {
         ResetHunt(); ResetSite(); ResetTrail();
-        MaxRise = 25f;
+        MaxRise        = 25f;
+        DigHoldSeconds = 0f;
+        Apply();
     }
 
     public static void Load()
@@ -156,6 +182,13 @@ internal static class DigTuning
             TrailSpacing     = Pos(d.TrailSpacing,     90f);
             MaxRise          = Pos(d.MaxRise,          25f);
 
+            // NOT guarded by Pos: 0 is a meaningful value here ("no cap"), and Pos rejects
+            // anything non-positive. Clamped rather than defaulted, so a hand-typed 3.5 survives.
+            DigHoldSeconds = float.IsFinite(d.DigHoldSeconds) && d.DigHoldSeconds >= 0f
+                                 ? MathF.Min(d.DigHoldSeconds, 60f)
+                                 : 0f;
+
+            Apply();
             Diag.Info("[Dig] tuning loaded.");
         }
         catch (Exception ex)
@@ -180,7 +213,7 @@ internal static class DigTuning
                 SitePieceRadius = SitePieceRadius, SitePieceSpacing = SitePieceSpacing,
                 TrailStops = TrailStops, TrailDig = TrailDig,
                 TrailRadar = TrailRadar, TrailSpacing = TrailSpacing,
-                MaxRise = MaxRise,
+                MaxRise = MaxRise, DigHoldSeconds = DigHoldSeconds,
             };
 
             // Temp-then-replace, like the completion stores: a half-written tuning file read on the
