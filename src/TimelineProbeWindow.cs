@@ -628,6 +628,60 @@ internal sealed unsafe class TimelineProbeWindow
             _nativeStatus = StartNativeShovel();
 
         if (!string.IsNullOrEmpty(_nativeStatus)) ImGui.TextDisabled($"  {_nativeStatus}");
+
+        // ── the proof that ownership is irrelevant ──────────────────────────
+        ImGui.Spacing();
+        ImGui.TextColored(Warn, "  STEP 3 — PROVE it needs no ownership.");
+        ImGui.TextDisabled("  Every test so far ran on the Shovel, which IS owned, so none of them");
+        ImGui.TextDisabled("  actually prove ownership is irrelevant. Attaching an accessory that is");
+        ImGui.TextDisabled("  NOT owned is the only thing that settles it.");
+
+        if (ImGui.Button("Find accessories I do NOT own", new Vector2(280, 0)))
+            _unownedList = FindUnowned();
+
+        if (!string.IsNullOrEmpty(_unownedList)) ImGui.TextDisabled($"  {_unownedList}");
+
+        ImGui.SetNextItemWidth(160);
+        ImGui.InputInt("Unowned row to attach##tc_unowned", ref _unownedTry);
+        if (_unownedTry < 1) _unownedTry = 1;
+
+        bool? owns = IsOrnamentOwned((uint)_unownedTry);
+        ImGui.SameLine();
+        if (owns == false)     ImGui.TextColored(Good, $"  NOT owned — {OrnamentLabel((uint)_unownedTry)}");
+        else if (owns == true) ImGui.TextColored(Warn, "  you OWN this one — proves nothing, pick another");
+
+        bool provable = owns == false && OrnamentRowOf((uint)_unownedTry) != null;
+        if (!provable) ImGui.BeginDisabled();
+        if (ImGui.Button("Attach UNOWNED accessory", new Vector2(240, 0)))
+            _nativeStatus = SetOrnamentNative(chara, (short)_unownedTry);
+        if (!provable) ImGui.EndDisabled();
+    }
+
+    private int    _unownedTry = 1;
+    private string _unownedList = string.Empty;
+
+    /// <summary>Scans the Ornament sheet for rows the player does not own. Pure reads.</summary>
+    private static string FindUnowned()
+    {
+        var found = new List<string>();
+        try
+        {
+            _ornSheet ??= Plugin.DataManager.GetExcelSheet<LSheets.Ornament>();
+            if (_ornSheet == null) return "sheet unavailable";
+
+            foreach (var row in _ornSheet)
+            {
+                if (found.Count >= 6) break;
+                if (row.RowId == 0 || row.Model == 0) continue;
+                if (IsOrnamentOwned(row.RowId) != false) continue;
+
+                string n = row.Singular.ExtractText();
+                found.Add($"{row.RowId} ({(string.IsNullOrEmpty(n) ? "?" : n)})");
+            }
+        }
+        catch (Exception ex) { return $"scan failed: {ex.Message}"; }
+
+        return found.Count == 0 ? "you appear to own every accessory" : "not owned: " + string.Join(", ", found);
     }
 
     // ── the full sequence, driven from Tick ──────────────────────────────────

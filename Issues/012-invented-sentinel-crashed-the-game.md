@@ -157,6 +157,23 @@ distinction was ignored once already.
 summons the accessory, the plugin only plays the animation, the game dismisses it. The memory attach
 would buy something only for accessories the player does *not* own, which nobody has asked for.
 
+## Resolved end-to-end (2026-09-09)
+
+`SetupOrnament` came back under a staged protocol and **works**:
+
+- **Detach verified first**, on the legitimately-summoned Shovel so the server still held truth and
+  a desync would have been recoverable. `SetupOrnament(0, 0)` removed the model cleanly and the
+  character returned to idle. No crash.
+- **Full sequence works**: attach 57 → play 13383 → detach when the game cancels the animation.
+  Early stop via `/tchallenges shovel off` works too.
+
+So `0` **is** an accepted argument, and the original bug really was only ever the invented `-1`. The
+function was never the problem; the value was. Two crashes came from one number that nothing in the
+client ever writes.
+
+The protocol is what made the retry defensible, and is the reusable part: **verify the teardown
+before building on it, on state the server can restore.** Not "be more careful with the same guess".
+
 ## Lessons
 
 1. **A parameter's type is not documentation of its domain.** `short` did not mean −1 was legal. The
