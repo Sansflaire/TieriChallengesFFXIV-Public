@@ -55,6 +55,18 @@ internal sealed class DigHuntOverlay : IDisposable
     private PanacheSurface? _banner;
     private PanacheSurface? _radar;
 
+    /// <summary>
+    /// Accumulated pulse phase, advanced by frequency × frame time.
+    ///
+    /// <para><b>It must be integrated, not computed from absolute time.</b> The first version used
+    /// <c>sin(time × hz)</c>, and because <c>time</c> is seconds since the overlay was created, a
+    /// small change in <c>hz</c> produced an enormous jump in phase — five minutes in, nudging the
+    /// rate from 3.0 to 3.1 Hz leaps thirty whole cycles. So walking towards the spot, which is
+    /// exactly when <c>hz</c> changes every frame, made the light strobe erratically instead of
+    /// speeding up smoothly. Integrating means changing the rate changes only the rate.</para>
+    /// </summary>
+    private float _radarPhase;
+
     public DigHuntOverlay(ITextureProvider texProvider) => _texProvider = texProvider;
 
     public void Dispose()
@@ -73,7 +85,15 @@ internal sealed class DigHuntOverlay : IDisposable
         DrawBanner(active, time);
 
         if (active.RadarCloseness is { } closeness)
-            DrawRadar(active, closeness, time);
+        {
+            DrawRadar(closeness);
+        }
+        else
+        {
+            // Out of radar range: start the next appearance from a known point rather than from
+            // wherever the last one happened to stop.
+            _radarPhase = 0f;
+        }
     }
 
     // ── the banner ───────────────────────────────────────────────────────────
@@ -101,7 +121,7 @@ internal sealed class DigHuntOverlay : IDisposable
                                       0f, ImGui.GetIO().DeltaTime, forceRedraw: false);
 
         if (tex.HasValue) ImGui.Image(tex.Value, new Vector2(physW, physH));
-        ImGui.End();
+        EndHud();
     }
 
     private static Node BuildBanner(IDigTest test, float time)
@@ -198,8 +218,15 @@ internal sealed class DigHuntOverlay : IDisposable
     /// The Clue Trail's ring. Pulse frequency scales with closeness and the fill goes solid the
     /// moment a dig would land — so "solid" is a promise the player can act on, not a decoration.
     /// </summary>
-    private void DrawRadar(IDigTest test, float closeness, float time)
+    private void DrawRadar(float closeness)
     {
+        // Advance the phase by this frame's share of the current rate. Wrapped so the accumulator
+        // cannot drift into float values where sin loses precision over a long session.
+        float hz = MinPulseHz + closeness * (MaxPulseHz - MinPulseHz);
+
+        _radarPhase += ImGui.GetIO().DeltaTime * MathF.Tau * hz;
+        if (_radarPhase > MathF.Tau) _radarPhase %= MathF.Tau;
+
         float uiScale = UiScale.Factor;
         int   phys    = (int)(RadarSize * uiScale);
 
@@ -214,22 +241,44 @@ internal sealed class DigHuntOverlay : IDisposable
         _radar.Resize(phys, phys);
         _radar.Scale = uiScale;
 
-        var (tex, _) = _radar.Render(BuildRadar(closeness, time), time, Vector2.Zero, false, false,
-                                     0f, ImGui.GetIO().DeltaTime, forceRedraw: false);
+        float time = (float)(DateTime.UtcNow - _start).TotalSeconds;
+
+        var (tex, _) = _radar.Render(BuildRadar(closeness, _radarPhase), time, Vector2.Zero, false,
+                                     false, 0f, ImGui.GetIO().DeltaTime, forceRedraw: false);
 
         if (tex.HasValue) ImGui.Image(tex.Value, new Vector2(phys, phys));
-        ImGui.End();
+        EndHud();
     }
 
-    private static Node BuildRadar(float closeness, float time)
+    /// <summary>
+    /// Breathing room between the ring and the edge of its surface.
+    ///
+    /// <para>A node sized to exactly fill the surface has the outer half of its border stroke fall
+    /// outside it, and a rounded node loses its widest points to the corners as well — so the ring
+    /// arrived visibly flattened at top, bottom and sides. The margin has to exceed half the border
+    /// width; it is comfortably more so the pulse has somewhere to sit.</para>
+    /// </summary>
+    private const float RadarMargin = 5f;
+
+    /// <summary>
+    /// Pulse rate at the edge of radar range and just before the spot.
+    ///
+    /// <para>Scaling frequency rather than size is what makes this read as a detector rather than a
+    /// progress bar — the rhythm registers before the ring is consciously read.</para>
+    ///
+    /// <para><b>The top end is deliberately not fast.</b> It was 7 Hz, which is both unpleasant to
+    /// stand next to and inside the band where flashing imagery is a genuine hazard for
+    /// photosensitive players. 4 Hz still reads as clearly urgent, and the last stretch resolves to
+    /// a steady fill anyway.</para>
+    /// </summary>
+    private const float MinPulseHz = 1.0f;
+    private const float MaxPulseHz = 4.0f;
+
+    private static Node BuildRadar(float closeness, float phase)
     {
         bool solid = closeness >= 1f;
 
-        // 1.2 Hz at the outer edge climbing to about 7 Hz just before the spot. Scaling frequency
-        // rather than size is what makes this read as a detector rather than as a progress bar —
-        // the player hears the rhythm change before they consciously read the ring.
-        float hz   = 1.2f + closeness * 5.8f;
-        float wave = 0.5f + 0.5f * MathF.Sin(time * MathF.Tau * hz);
+        float wave = 0.5f + 0.5f * MathF.Sin(phase);
 
         // Never fully transparent even at the outer edge: a ring that vanishes between beats reads
         // as a bug rather than as a slow pulse.
@@ -245,23 +294,26 @@ internal sealed class DigHuntOverlay : IDisposable
         });
 
         // A square node with a radius of half its side is a circle — the framework has no circle
-        // primitive and does not need one.
+        // primitive and does not need one. Inset from the surface edge so the stroke fits; see
+        // RadarMargin.
+        const float Dial = RadarSize - RadarMargin * 2f;
+
         root.AppendChild(new Node().WithStyle(s =>
         {
             s.Position        = PositionMode.Absolute;
-            s.Left            = 0;
-            s.Top             = 0;
-            s.WidthMode       = SizeMode.Fixed; s.Width  = RadarSize;
-            s.HeightMode      = SizeMode.Fixed; s.Height = RadarSize;
-            s.BorderRadius    = RadarSize / 2f;
+            s.Left            = RadarMargin;
+            s.Top             = RadarMargin;
+            s.WidthMode       = SizeMode.Fixed; s.Width  = Dial;
+            s.HeightMode      = SizeMode.Fixed; s.Height = Dial;
+            s.BorderRadius    = Dial / 2f;
             s.BackgroundColor = Ink.WithOpacity(0.55f);
             s.BorderColor     = accent.WithOpacity(0.90f);
             s.BorderWidth     = 2;
             s.PointerEvents   = PointerEvents.None;
         }));
 
-        // The pulsing core, inset so the outer ring always stays legible as a boundary.
-        const float Inset = 14f;
+        // The pulsing core, inset again so the outer ring always stays legible as a boundary.
+        const float Inset = RadarMargin + 11f;
         const float Core  = RadarSize - Inset * 2f;
 
         root.AppendChild(new Node().WithStyle(s =>
@@ -281,8 +333,18 @@ internal sealed class DigHuntOverlay : IDisposable
 
     // ── shared host-window plumbing ──────────────────────────────────────────
 
+    /// <summary>
+    /// Opens a borderless HUD window sized exactly to its image.
+    ///
+    /// <para><b>Window padding is forced to zero.</b> An ImGui window's content region is its size
+    /// minus padding, so a window sized to the image clips the image by the padding on the right and
+    /// bottom — invisible on a wide banner, obvious on a small square dial. Paired with
+    /// <see cref="EndHud"/>, which pops it; every exit path has to go through one or the other or
+    /// the style stack unbalances for every window drawn afterwards.</para>
+    /// </summary>
     private static bool BeginHud(string id, Vector2 pos, int w, int h)
     {
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
         ImGui.SetNextWindowPos(pos, ImGuiCond.Always);
         ImGui.SetNextWindowSize(new Vector2(w, h), ImGuiCond.Always);
         ImGui.SetNextWindowBgAlpha(0f);
@@ -299,8 +361,14 @@ internal sealed class DigHuntOverlay : IDisposable
 
         if (ImGui.Begin(id, flags)) return true;
 
-        ImGui.End();
+        EndHud();
         return false;
+    }
+
+    private static void EndHud()
+    {
+        ImGui.End();
+        ImGui.PopStyleVar();
     }
 
     private static PColor AccentFor(DigBand band) => band switch
