@@ -84,6 +84,31 @@ IsValidGPoseSession. **Nothing sets an actor's model identity** — the only "mo
 `ModelTransform`, i.e. position/rotation/scale. No prop attachment, no equipment, and GPose-gated
 besides.
 
+**3. The real model path, measured 2026-09-09.** Read off the summoned accessory's own
+`CharacterBase` (`ModelResourceHandle.FileName`), so no convention is involved:
+
+```
+chara/monster/m6017/obj/body/b0002/model/m6017b0002.mdl
+```
+
+**A fashion accessory is a MONSTER model.** That single fact explains the whole investigation:
+
+- `m6017` in the animation key `ornament_sp/m6017/onm_sp01` is the **same id as the model**. The
+  accessory and its special animation share a monster model number.
+- The ornament actor has no weapon triple because it is not a weapon-type actor at all.
+- All six guessed paths failed for two independent reasons: `Ornament.Model` (**4936**) is NOT the
+  render model id — **6017** is — and the body is **b0002**, not b0001. Wrong id and wrong body.
+- Earlier readings of `m####` were both wrong and are superseded. It is neither
+  "6000 + Ornament row id" nor purely "an animation set": it is the **monster model id**. The
+  player's own idle while holding an accessory (`ornament_sp/m6001/onm_pose01_loop`) is a separate
+  generic pose set; the accessory's own model and special animation are `m6017`.
+
+**Consequence for the Penumbra redirect route:** it is a monster model, not a weapon model, so
+redirecting a weapon path onto it is a skeleton/rig mismatch and is unlikely to render correctly.
+Trying costs nothing and cannot crash — Penumbra only redirects paths — but it should not be
+expected to work. The game's own way to show this model is to spawn a monster-model actor and
+attach it to a bone, which is precisely what `SetupOrnament` does.
+
 **What remains** is `OrnamentContainer.SetupOrnament` — the game's own bone-attach machinery, and
 the function that crashed twice (see [BROKEN.md](../BROKEN.md) 012). Both values it now needs are
 ones the game itself was **observed** using (attach `57`, none `0`), unlike the invented `-1` that
