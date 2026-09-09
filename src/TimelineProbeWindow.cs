@@ -160,6 +160,8 @@ internal sealed unsafe class TimelineProbeWindow
             ImGui.Separator();
             DrawWeaponModels(chara);
             ImGui.Separator();
+            DrawLoadedModelPaths(chara);
+            ImGui.Separator();
             DrawModelPathCheck();
             ImGui.Separator();
             DrawTrace();
@@ -486,6 +488,65 @@ internal sealed unsafe class TimelineProbeWindow
     }
 
     private readonly HashSet<string> _weaponSeen = new();
+
+    // ── ask the game what it actually loaded ─────────────────────────────────
+
+    /// <summary>
+    /// Prints the real model file paths the summoned accessory is rendering from.
+    ///
+    /// <para>All six guessed path conventions came back negative, which means the conventions were
+    /// wrong — the asset is obviously present, the game is drawing it. So stop guessing shapes and
+    /// read the answer: the Ornament actor has a <c>DrawObject</c>, which is a
+    /// <see cref="CharacterBase"/>, whose models each carry a <c>ModelResourceHandle</c> with the
+    /// <c>FileName</c> the game loaded. That is the exact path, with no convention involved.</para>
+    ///
+    /// <para>Once known, it is the input to the Penumbra redirect route: point an equippable
+    /// weapon's path at this file and the shovel renders in her hand with no memory writes.</para>
+    /// </summary>
+    private void DrawLoadedModelPaths(Character* chara)
+    {
+        ImGui.TextColored(Accent, "Loaded model paths (read-only — the real answer)");
+
+        if (chara == null) { ImGui.TextDisabled("  not logged in"); return; }
+
+        var orn = chara->OrnamentData.OrnamentObject;
+        if (orn == null)
+        {
+            ImGui.TextDisabled("  Summon the accessory — its paths can only be read while it is drawn.");
+            return;
+        }
+
+        try
+        {
+            var draw = ((Character*)orn)->GameObject.DrawObject;
+            if (draw == null) { ImGui.TextDisabled("  ornament has no DrawObject yet"); return; }
+
+            var cb = (FFXIVClientStructs.FFXIV.Client.Graphics.Scene.CharacterBase*)draw;
+            int slots = cb->SlotCount;
+            ImGui.Text($"  SlotCount {slots}");
+
+            var models = cb->ModelsSpan;
+            for (int i = 0; i < models.Length; i++)
+            {
+                var m = models[i].Value;
+                if (m == null) continue;
+
+                var mrh = m->ModelResourceHandle;
+                if (mrh == null) continue;
+
+                string path = mrh->ResourceHandle.FileName.ToString();
+                if (string.IsNullOrEmpty(path)) continue;
+
+                ImGui.TextColored(Good, $"  [{i}] {path}");
+                if (_weaponSeen.Add("mdl|" + path))
+                    Diag.Info($"[AnimProbe] ORNAMENT MODEL PATH [{i}] {path}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ImGui.TextDisabled($"  unreadable ({ex.Message})");
+        }
+    }
 
     // ── does the model actually exist as a weapon-format asset? ──────────────
 
