@@ -125,22 +125,23 @@ internal sealed class DigTestsWindow
         ImGui.Spacing();
         ImGui.TextColored(Head, "DIG ANIMATION LENGTH");
         ImGui.TextColored(Rule,
-            "How long the dig plays before it ends itself and the shovel comes off.\n"
-          + "0 = no cap: run until the game cancels it (walking, jumping, etc). That is the\n"
-          + "current shipped default. The cap and the game's own cancel are not alternatives —\n"
-          + "whichever happens first wins, so this never stops you walking out of a dig.\n"
-          + "Drives PropService, which SHIPS. Tell me the number you like and it becomes the default.");
+            $"How long the dig plays before it ends itself and the shovel comes off.\n"
+          + $"SHIPPED DEFAULT: {PropService.DefaultHoldMilliseconds / 1000f:0.##}s — found by testing, and what\n"
+          + "every dig uses unless a saved dig-tuning.json overrides it. 0 = no cap: run until the\n"
+          + "game cancels it. The cap and the game's own cancel are not alternatives — whichever\n"
+          + "comes first wins, so this never stops you walking out of a dig.\n"
+          + "Drives PropService, which SHIPS, so this governs EVERY dig action.");
 
         ImGui.SliderFloat("Dig length (seconds)", ref DigTuning.DigHoldSeconds, 0f, 15f,
                           DigTuning.DigHoldSeconds <= 0f ? "no cap" : "%.2f s");
+
+        // Applied on release rather than every frame. A per-frame Apply would make this slider the
+        // authority over PropService's shipped default for as long as the window is open, which is
+        // exactly the drift the default-derived initialiser exists to prevent.
         if (ImGui.IsItemDeactivatedAfterEdit()) { DigTuning.Apply(); DigTuning.Save(); }
 
-        // Applied live so the very next dig uses it — waiting for a reload to feel a timing change
-        // would make this slider useless for the thing it exists to do.
-        DigTuning.Apply();
-
         ImGui.SameLine();
-        ImGui.TextDisabled($"= {Plugin.Props.HoldMilliseconds} ms");
+        ImGui.TextDisabled($"in effect: {Plugin.Props.HoldMilliseconds} ms");
 
         if (ImGui.Button("Test dig now")) Say(Plugin.Props.Dig());
         ImGui.SameLine();

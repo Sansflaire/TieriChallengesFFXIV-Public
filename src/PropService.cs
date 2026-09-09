@@ -55,9 +55,23 @@ internal sealed unsafe class PropService
     private long   _playStartedMs;
 
     /// <summary>
+    /// The dig length, in milliseconds. <b>9 seconds — found by testing, not chosen.</b> Trist
+    /// dialled it in with the lab slider across real digs and settled here; it is the length at
+    /// which an uninterrupted dig reads as a complete action rather than as a loop that was cut off.
+    /// Do not "tidy" it to a rounder number, and if it ever needs to change, change it the same way
+    /// it was found.
+    /// </summary>
+    public const int DefaultHoldMilliseconds = 9000;
+
+    /// <summary>
     /// How long the animation is allowed to run before the performance ends itself and the prop is
     /// removed, in milliseconds. <b>0 means no cap</b> — run until the game cancels the animation,
-    /// which is the original behaviour.
+    /// which was the behaviour before <see cref="DefaultHoldMilliseconds"/> was settled on.
+    ///
+    /// <para><b>Every dig goes through here</b>, because every dig goes through
+    /// <see cref="Start"/> — the tests, the chat commands and any challenge content all call
+    /// <see cref="Dig"/>, and the cap is enforced in <see cref="Tick"/>'s watching stage that all of
+    /// them pass through. There is no second path to keep in step.</para>
     ///
     /// <para>A cap and the game's own cancel are not alternatives; whichever happens first wins. The
     /// cap does not stop the player walking out of a dig, it only stops a dig that nothing
@@ -71,7 +85,7 @@ internal sealed unsafe class PropService
     /// Release warning as a signal that a dev branch has leaked, which is a signal worth keeping
     /// sharp rather than learning to ignore.</para>
     /// </summary>
-    public int HoldMilliseconds { get; set; }
+    public int HoldMilliseconds { get; set; } = DefaultHoldMilliseconds;
 
     /// <summary>Frames to wait for the model to appear before playing anyway.</summary>
     private const int AttachGrace = 300;

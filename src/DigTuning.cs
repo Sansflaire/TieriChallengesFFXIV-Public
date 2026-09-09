@@ -88,10 +88,15 @@ internal static class DigTuning
     /// <para>This is the one tuning value that is not a distance, and the one that drives something
     /// in the PUBLIC build: it is applied to <see cref="PropService.HoldMilliseconds"/>, which ships
     /// because challenge content plays the dig. The knob is dev-only; the behaviour it sets is not.
-    /// When a number is settled on it becomes the default in <c>PropService</c> and this slider
-    /// simply starts there.</para>
+    /// </para>
+    ///
+    /// <para><b>The default is derived from <see cref="PropService.DefaultHoldMilliseconds"/>, never
+    /// written out again here.</b> Two copies of the shipped default is two numbers that can drift,
+    /// and the drift would be invisible: the slider would simply open on a value that was not what
+    /// the plugin actually does. A saved <c>dig-tuning.json</c> still wins over the default — that
+    /// is a deliberate override, and "Reset ALL tuning" puts it back.</para>
     /// </summary>
-    public static float DigHoldSeconds;
+    public static float DigHoldSeconds = PropService.DefaultHoldMilliseconds / 1000f;
 
     /// <summary>
     /// Pushes the values that live somewhere else into their real home. Called after
@@ -106,8 +111,19 @@ internal static class DigTuning
 
     // ── persistence ──────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Bumped when a stored value's MEANING changes, not when a field is added. Version 2 exists
+    /// because <c>DigHoldSeconds</c> shipped for one version defaulting to 0 ("no cap"), so any
+    /// save written by that version recorded a 0 the user never chose — and on load that 0 would
+    /// have silently overridden the 9s default with the exact behaviour it replaced. A missing or
+    /// older version therefore takes the shipped default rather than the stored number.
+    /// </summary>
+    private const int CurrentVersion = 2;
+
     private sealed class Dto
     {
+        public int Version { get; set; }
+
         public float HuntNearby { get; set; }
         public float HuntWarm { get; set; }
         public float HuntHot { get; set; }
@@ -150,7 +166,7 @@ internal static class DigTuning
     {
         ResetHunt(); ResetSite(); ResetTrail();
         MaxRise        = 25f;
-        DigHoldSeconds = 0f;
+        DigHoldSeconds = PropService.DefaultHoldMilliseconds / 1000f;
         Apply();
     }
 
@@ -184,9 +200,17 @@ internal static class DigTuning
 
             // NOT guarded by Pos: 0 is a meaningful value here ("no cap"), and Pos rejects
             // anything non-positive. Clamped rather than defaulted, so a hand-typed 3.5 survives.
-            DigHoldSeconds = float.IsFinite(d.DigHoldSeconds) && d.DigHoldSeconds >= 0f
+            //
+            // The migration is deliberately as NARROW as it can be: only a pre-version-2 file whose
+            // value is exactly 0 is discarded. That is the one value the previous version could
+            // write without the user ever having chosen it — saving any other slider wrote the
+            // then-default 0 along with it. A pre-version-2 file holding 4.5 means somebody moved
+            // that slider on purpose, and a migration has no business overruling them.
+            bool unchosenZero = d.Version < CurrentVersion && d.DigHoldSeconds == 0f;
+
+            DigHoldSeconds = !unchosenZero && float.IsFinite(d.DigHoldSeconds) && d.DigHoldSeconds >= 0f
                                  ? MathF.Min(d.DigHoldSeconds, 60f)
-                                 : 0f;
+                                 : PropService.DefaultHoldMilliseconds / 1000f;
 
             Apply();
             Diag.Info("[Dig] tuning loaded.");
@@ -207,6 +231,7 @@ internal static class DigTuning
         {
             var dto = new Dto
             {
+                Version = CurrentVersion,
                 HuntNearby = HuntNearby, HuntWarm = HuntWarm, HuntHot = HuntHot, HuntDig = HuntDig,
                 HuntMinPlacement = HuntMinPlacement, HuntMaxPlacement = HuntMaxPlacement,
                 SiteSize = SiteSize, SitePieces = SitePieces,
