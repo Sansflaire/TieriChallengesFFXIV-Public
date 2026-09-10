@@ -42,6 +42,17 @@ internal sealed class DigHuntOverlay : IDisposable
     private const int ReminderH = 88;
 
     /// <summary>
+    /// Gap between the bottom of the dial and the top of the clue text, in logical pixels.
+    ///
+    /// <para><b>This number only means what it says because the text layers are Fit-height.</b> They
+    /// were fixed at the full surface height, which let the framework centre the text vertically
+    /// inside an 88px box — so most of the visible gap was that centring, not this gap, and changing
+    /// this had a fraction of the effect it appeared to. Top-aligned, the distance on screen is the
+    /// distance set here.</para>
+    /// </summary>
+    private const float ReminderGapPx = 18f;
+
+    /// <summary>
     /// Reminder timing: fade in, hold, fade out. The total deliberately outlasts a dig, so a dig
     /// that reveals the NEXT clue shows that clue instead of fading out just before it arrives.
     /// </summary>
@@ -174,7 +185,7 @@ internal sealed class DigHuntOverlay : IDisposable
     /// as its own number rather than folded into the draw so it stays obvious that the label is
     /// offset from the canvas on purpose.</para>
     /// </summary>
-    private const float LabelLiftPx = 9f;
+    private const float LabelLiftPx = 20f;
 
     /// <summary>
     /// Builds the dial textures at <b>exactly</b> the size they will be drawn, by reducing the
@@ -452,7 +463,7 @@ internal sealed class DigHuntOverlay : IDisposable
         var viewport = ImGui.GetMainViewport();
         var pos = new Vector2(
             viewport.Pos.X + (viewport.Size.X - physW) * 0.5f,
-            viewport.Pos.Y + viewport.Size.Y * TopFraction + (RadarSize + 14) * uiScale);
+            viewport.Pos.Y + viewport.Size.Y * TopFraction + (RadarSize + ReminderGapPx) * uiScale);
 
         if (!BeginHud("##tc_dig_reminder", pos, physW, physH)) return;
 
@@ -502,7 +513,12 @@ internal sealed class DigHuntOverlay : IDisposable
             s.Left         = offset.X;
             s.Top          = offset.Y;
             s.WidthMode    = SizeMode.Fixed; s.Width  = ReminderW;
-            s.HeightMode   = SizeMode.Fixed; s.Height = ReminderH;
+
+            // Fit, NOT the surface height. A fixed-height text node lets the framework centre the
+            // line vertically inside it, which put the text far lower than ReminderGapPx claimed
+            // and made that constant nearly inert. Fit puts the first line at the top, so the gap
+            // above is the only thing deciding where the text sits.
+            s.HeightMode   = SizeMode.Fit;
             s.FontSize     = 21f;
             s.Bold         = true;
             s.Color        = colour;
