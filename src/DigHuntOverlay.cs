@@ -185,7 +185,22 @@ internal sealed class DigHuntOverlay : IDisposable
     /// as its own number rather than folded into the draw so it stays obvious that the label is
     /// offset from the canvas on purpose.</para>
     /// </summary>
-    private const float LabelLiftPx = 20f;
+    private const float LabelLiftPx = 26f;
+
+    /// <summary>
+    /// Empty space reserved ABOVE the dial inside its window, so the lifted label has somewhere to
+    /// be drawn.
+    ///
+    /// <para><b>Without this the lift is a clip, not a move.</b> The window was exactly the dial's
+    /// size, so every pixel the label rose above the dial's own rect fell outside the window and
+    /// ImGui cut it off — raising the lift further only removed more of the word. The window is now
+    /// taller by this much and shifted up by the same, so the dial stays exactly where it was on
+    /// screen and the space appears above it rather than pushing anything down.</para>
+    ///
+    /// <para>Must exceed <see cref="LabelLiftPx"/> plus the outline and shadow reach, or the top of
+    /// the lettering clips again.</para>
+    /// </summary>
+    private const float LabelHeadroomPx = 38f;
 
     /// <summary>
     /// Builds the dial textures at <b>exactly</b> the size they will be drawn, by reducing the
@@ -547,17 +562,25 @@ internal sealed class DigHuntOverlay : IDisposable
         float uiScale = UiScale.Factor;
         int   phys    = (int)(RadarSize * uiScale);
 
+        int headroom = (int)MathF.Round(LabelHeadroomPx * uiScale);
+
         var viewport = ImGui.GetMainViewport();
+
+        // The window starts ABOVE the dial by exactly the headroom and is that much taller, so the
+        // dial itself still lands on TopFraction. The reminder below is positioned from the dial's
+        // own position, not this one, so it does not move either.
         var pos = new Vector2(
             viewport.Pos.X + (viewport.Size.X - phys) * 0.5f,
-            // Sits at TopFraction itself now. It used to be pushed down by the banner's height;
-            // with the banner gone, the dial IS the top of the HUD.
-            viewport.Pos.Y + viewport.Size.Y * TopFraction);
+            viewport.Pos.Y + viewport.Size.Y * TopFraction - headroom);
 
         // The one HUD window that takes input — it is a button. Kept small and only present while
         // the dial is visible, so the amount of screen that can swallow a click is one small circle
         // for the few seconds it is up.
-        if (!BeginHud("##tc_dig_radar", pos, phys, phys, acceptInput: true)) return;
+        if (!BeginHud("##tc_dig_radar", pos, phys, phys + headroom, acceptInput: true)) return;
+
+        // Step past the reserved space, so everything below draws from the dial's top-left exactly
+        // as it did before the headroom existed — including the hit rect.
+        ImGui.SetCursorPosY(ImGui.GetCursorPosY() + headroom);
 
         EnsureDialArt(phys);
 
