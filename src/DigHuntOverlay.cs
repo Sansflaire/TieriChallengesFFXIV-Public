@@ -11,6 +11,8 @@ using PanacheUI.Components;
 using PanacheUI.Core;
 using PanacheUI.Rendering;
 
+using SkiaSharp;
+
 namespace TieriChallengesFFXIV;
 
 /// <summary>
@@ -106,29 +108,47 @@ internal sealed class DigHuntOverlay : IDisposable
     /// which of the two is on screen.</para>
     /// </summary>
     /// <summary>
-    /// The texture SOURCES, resolved once. The usable wrap is asked for fresh every frame.
+    /// The dial textures, built by this class at the exact size they are drawn — see
+    /// <see cref="EnsureDialArt"/>. Owned here, and therefore disposed here.
     ///
-    /// <para><b>The wrap must not be cached, and caching it is what broke the first attempt.</b>
-    /// <c>GetWrapOrDefault</c> returns null while the image is still being loaded — which it always
-    /// is on the frame the file is first requested. Storing that null behind a one-shot "already
-    /// tried" latch meant the answer was decided during the single frame it could not yet be known,
-    /// and the dial fell back to the drawn circles forever. Re-asking is the documented pattern and
-    /// costs a dictionary lookup.</para>
-    ///
-    /// <para>These wraps are owned by Dalamud's shared-texture cache, so this class must never
-    /// dispose them.</para>
+    /// <para>These replaced shared textures loaded straight from file. That route handed the
+    /// reduction to the GPU sampler, which is what made the artwork look low-resolution; it also
+    /// returned null on the frame a file was first requested, which is a trap if the result is
+    /// cached behind a one-shot latch. Building them here avoids both.</para>
     /// </summary>
-    private ISharedImmediateTexture? _dialOuterSrc;
-    private ISharedImmediateTexture? _dialCentreSrc;
-    private bool _dialResolved;
+    private IDalamudTextureWrap? _dialOuter;
+    private IDalamudTextureWrap? _dialCentre;
+
+    /// <summary>Device-pixel size the current pair was built for. 0 = nothing built yet.</summary>
+    private int _dialBuiltFor;
 
     private const string CentreFile = "NatalMSQDigIcon_centerIcon.png";
     private const string OuterFile  = "NatalMSQDigIcon_outerCircle.png";
 
-    private void EnsureDialArt()
+    /// <summary>
+    /// Builds the dial textures at <b>exactly</b> the size they will be drawn, by reducing the
+    /// source in steps rather than letting the GPU sampler do it.
+    ///
+    /// <para><b>This is where the "low resolution" look came from, and it was not a shortage of
+    /// source detail.</b> The artwork is 1254px drawn at ~128, so about ninety-six source pixels
+    /// fall under each output pixel — and a bilinear tap reads four of them. Nearly all the detail
+    /// supplied was being skipped, and which four got picked shifted with sub-pixel position, so
+    /// thin strokes thinned, dropped out, or doubled. More source resolution cannot help a sampler
+    /// that ignores it.</para>
+    ///
+    /// <para><b>Halving averages an exact 2×2 block, so every source pixel contributes.</b> Repeat
+    /// until within 2× of the target, then one high-quality resample covers the short hop. That is
+    /// what mipmapping does internally, done explicitly here because nothing in this path builds a
+    /// mip chain — the same reasoning, and the same fix, as PanacheUI's own icon scaling.</para>
+    ///
+    /// <para>Rebuilt when the UI scale changes the target size, so a larger scale genuinely
+    /// resolves more detail instead of magnifying the small copy.</para>
+    /// </summary>
+    private void EnsureDialArt(int targetPx)
     {
-        if (_dialResolved) return;
-        _dialResolved = true;
+        if (targetPx <= 0 || targetPx == _dialBuiltFor) return;
+
+        _dialBuiltFor = targetPx;
 
         try
         {
@@ -145,16 +165,85 @@ internal sealed class DigHuntOverlay : IDisposable
                 return;
             }
 
-            _dialCentreSrc = _texProvider.GetFromFile(centre);
-            _dialOuterSrc  = _texProvider.GetFromFile(outer);
-            Diag.Info("[Dig] dial artwork resolved.");
+            var newCentre = BuildScaled(centre, targetPx);
+            var newOuter  = BuildScaled(outer,  targetPx);
+
+            if (newCentre == null || newOuter == null)
+            {
+                newCentre?.Dispose();
+                newOuter?.Dispose();
+                return;
+            }
+
+            // Swapped in only once BOTH succeeded, so a half-built pair never reaches the draw.
+            _dialCentre?.Dispose();
+            _dialOuter?.Dispose();
+            _dialCentre = newCentre;
+            _dialOuter  = newOuter;
+
+            Diag.Info($"[Dig] dial artwork resampled to {targetPx}px.");
         }
         catch (Exception ex)
         {
-            Diag.Error($"[Dig] dial artwork failed to resolve: {ex.Message}");
-            _dialCentreSrc = null;
-            _dialOuterSrc  = null;
+            Diag.Error($"[Dig] dial artwork failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Decodes a PNG and reduces it to <paramref name="target"/> square by progressive halving plus
+    /// one final resample. Returns null on any failure — the drawn dial is always a valid fallback.
+    /// </summary>
+    private IDalamudTextureWrap? BuildScaled(string path, int target)
+    {
+        SKBitmap? working = null;
+
+        try
+        {
+            working = SKBitmap.Decode(path);
+            if (working == null) return null;
+
+            // Halve while a halved copy would still be at least the target. Each step is an exact
+            // 2×2 average, which is the only way every source pixel gets a vote.
+            while (working.Width / 2 >= target && working.Width > 2)
+            {
+                // LINEAR for the halving steps, deliberately: at exactly 2:1 a linear filter
+                // averages the 2×2 block and nothing else, which is precisely the "every pixel
+                // votes" property this loop exists for. A cubic here would reach outside the block
+                // and soften it for no gain.
+                var half = working.Resize(
+                    new SKImageInfo(working.Width / 2, working.Height / 2,
+                                    SKColorType.Bgra8888, SKAlphaType.Unpremul),
+                    new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
+
+                if (half == null) break;
+
+                working.Dispose();
+                working = half;
+            }
+
+            // Mitchell for the final, non-power-of-two hop — the standard choice for downscaling
+            // artwork, sharper than linear without the ringing a sharper cubic puts on edges.
+            var final = working.Resize(
+                new SKImageInfo(target, target, SKColorType.Bgra8888, SKAlphaType.Unpremul),
+                new SKSamplingOptions(SKCubicResampler.Mitchell));
+
+            if (final == null) return null;
+
+            try
+            {
+                return _texProvider.CreateFromRaw(
+                    RawImageSpecification.Bgra32(target, target),
+                    final.Bytes,
+                    $"TieriChallenges.Dial.{System.IO.Path.GetFileNameWithoutExtension(path)}");
+            }
+            finally { final.Dispose(); }
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Dig] resample of '{System.IO.Path.GetFileName(path)}' failed: {ex.Message}");
+            return null;
+        }
+        finally { working?.Dispose(); }
     }
 
     private PanacheSurface? _banner;
@@ -206,10 +295,9 @@ internal sealed class DigHuntOverlay : IDisposable
         _banner?.Dispose(); _banner = null;
         _radar?.Dispose();  _radar  = null;
 
-        // The dial's textures are NOT disposed here: they belong to Dalamud's shared-texture cache,
-        // which hands out wraps it owns. Only the sources are dropped.
-        _dialOuterSrc  = null;
-        _dialCentreSrc = null;
+        // These ARE ours — built by CreateFromRaw rather than borrowed from the shared cache.
+        _dialOuter?.Dispose();  _dialOuter  = null;
+        _dialCentre?.Dispose(); _dialCentre = null;
     }
 
     public void Draw(DigTests tests)
@@ -398,7 +486,7 @@ internal sealed class DigHuntOverlay : IDisposable
         // for the few seconds it is up.
         if (!BeginHud("##tc_dig_radar", pos, phys, phys, acceptInput: true)) return;
 
-        EnsureDialArt();
+        EnsureDialArt(phys);
 
         bool  solid  = closeness >= 1f;
         var   accent = solid ? DigCol : Green;
@@ -409,16 +497,19 @@ internal sealed class DigHuntOverlay : IDisposable
         // complaint. The swing is still obvious against a dark backing; it just never disappears.
         float fill = solid ? 1f : 0.55f + 0.45f * wave;
 
-        // Asked for every frame, never cached — see the field remark. Null simply means "not ready
-        // yet", so the drawn dial covers the first frame or two and the artwork takes over.
-        var dialOuter  = _dialOuterSrc?.GetWrapOrDefault();
-        var dialCentre = _dialCentreSrc?.GetWrapOrDefault();
+        var dialOuter  = _dialOuter;
+        var dialCentre = _dialCentre;
 
         if (dialOuter != null && dialCentre != null)
         {
             // Artwork path. The ring holds steady and only the centre pulses — the border is the
             // thing that says "a dial is here", and a border that blinks out takes the dial with it.
-            var origin   = ImGui.GetCursorScreenPos();
+            //
+            // Snapped to whole device pixels: the textures are built at exactly this size, so a
+            // fractional destination would have the GPU resample a 1:1 blit across a half-pixel
+            // offset and give back the sharpness the resampling just bought.
+            var raw      = ImGui.GetCursorScreenPos();
+            var origin   = new Vector2(MathF.Round(raw.X), MathF.Round(raw.Y));
             var size     = new Vector2(phys, phys);
             var drawList = ImGui.GetWindowDrawList();
 
