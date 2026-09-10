@@ -216,6 +216,29 @@ internal sealed class DigTestsWindow
         ImGui.SliderFloat("Breathe speed", ref DigTuning.RaySpeed, 0.02f, 3f, "%.2f Hz");
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
+        ImGui.SliderFloat("Shortest stretch", ref DigTuning.RayMinLength, 0f, 1f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Fade shape", ref DigTuning.RayFalloff, 0.2f, 5f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.TextColored(Rule,
+            "The three VARIANCE sliders are how unlike each other the beams are. Width spreads the\n"
+          + "angular slices, speed spreads their breathing rates, reach keeps some of them shorter\n"
+          + "than the rest. All three at 0 gives a perfectly regular star; the defaults give\n"
+          + "something that never quite repeats.\n"
+          + "Beams always fill the whole 360 whatever the width spread — the widths are weights\n"
+          + "normalised to a full turn, not sizes with gaps between them.");
+
+        ImGui.SliderFloat("Width variance", ref DigTuning.RayWidthVariance, 0f, 3f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Speed variance", ref DigTuning.RaySpeedVariance, 0f, 1f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Reach variance", ref DigTuning.RayReachVariance, 0f, 1f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
         if (ImGui.Button("Reset light burst")) { DigTuning.ResetRays(); DigTuning.Save(); }
 
         ImGui.Spacing();

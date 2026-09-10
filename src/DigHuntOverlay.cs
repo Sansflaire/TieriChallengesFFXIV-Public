@@ -582,8 +582,32 @@ internal sealed class DigHuntOverlay : IDisposable
 
     // ── the light burst ──────────────────────────────────────────────────────
 
-    /// <summary>How many slices each ray is cut into along its length. See the alpha note below.</summary>
-    private const int RaySegments = 9;
+    /// <summary>
+    /// How many slices each beam is cut into along its length.
+    ///
+    /// <para>32, not 9. Nine left visible steps in what is supposed to be a smooth fade; the cost of
+    /// a slice is one quad, so there is no reason to be frugal here.</para>
+    /// </summary>
+    private const int RaySegments = 32;
+
+    /// <summary>
+    /// Stable pseudo-random in [0,1) from a beam index and a salt, so each beam gets its own width,
+    /// speed, reach and starting phase.
+    ///
+    /// <para><b>Hashed rather than drawn from a random source, deliberately.</b> These values are
+    /// read every frame and have to be identical every time or the burst would reshuffle itself
+    /// sixty times a second. A hash gives per-beam variety that is nonetheless completely stable,
+    /// with no table to allocate, keep, or invalidate when the beam count changes.</para>
+    /// </summary>
+    private static float Hash01(int index, int salt)
+    {
+        unchecked
+        {
+            uint h = (uint)(index * 374761393 + salt * 668265263);
+            h = (h ^ (h >> 13)) * 1274126177u;
+            return ((h ^ (h >> 16)) & 0xFFFFFF) / (float)0x1000000;
+        }
+    }
 
     /// <summary>
     /// A burst of light behind the dial: wedges radiating from under the backing disc, each
@@ -616,72 +640,94 @@ internal sealed class DigHuntOverlay : IDisposable
         float opacity = Math.Clamp(DigTuning.RayOpacity, 0f, 1f) * fade;
         if (opacity <= 0.002f) return;
 
-        var rgb = DigTuning.RayColor;
+        var  rgb     = DigTuning.RayColor;
+        float falloff = MathF.Max(0.2f, DigTuning.RayFalloff);
+        float minLen  = Math.Clamp(DigTuning.RayMinLength, 0f, 1f);
 
-        // Widest a ray gets, as a share of the gap between neighbours. Under a half so there is
-        // always dark between them — rays that touch are a filled disc, not a burst.
-        float span = MathF.Tau / count * 0.30f;
+        float widthVar = Math.Clamp(DigTuning.RayWidthVariance, 0f, 3f);
+        float speedVar = Math.Clamp(DigTuning.RaySpeedVariance, 0f, 1f);
+        float reachVar = Math.Clamp(DigTuning.RayReachVariance, 0f, 1f);
+
+        // Widths are weights normalised to a full turn, so the beams TILE — no gaps. Gaps were what
+        // made the last version read as a cog rather than as light: a burst is a disc of light with
+        // an uneven outer edge, not a ring of separate spikes with dark between them.
+        Span<float> width = stackalloc float[MaxRays];
+        float total = 0f;
 
         for (int i = 0; i < count; i++)
         {
-            // Spread by the golden angle. Neighbouring rays get phases that are nowhere near each
-            // other and the sequence never falls into step for any ray count, which is exactly what
-            // a handful of hand-picked offsets would fail to do at some counts and not others.
-            float rate = 0.75f + 0.5f * Frac(i * 0.6180339f);
+            width[i] = 0.35f + Hash01(i, 1) * widthVar;
+            total   += width[i];
+        }
 
-            _rayPhase[i] += dt * MathF.Tau * MathF.Max(0.01f, DigTuning.RaySpeed) * rate;
+        if (total <= 0f) return;
+
+        // ANTIALIASED FILL OFF for the whole burst, and this is the fix for the white lines.
+        //
+        // A beam's fade is built from slices at descending alpha, and ImGui feathers the edge of
+        // every filled poly by about a pixel. Two abutting slices therefore each lay down a
+        // half-covered edge over the same pixels, and the two blends ADD — producing a bright seam
+        // exactly where the two were supposed to join invisibly. It reads as a hard line ruled
+        // across the beam, which is precisely what it is. With feathering off the slices meet on
+        // exact pixel boundaries and the ramp is continuous.
+        var savedFlags = drawList.Flags;
+        drawList.Flags &= ~ImDrawListFlags.AntiAliasedFill;
+
+        float cursor = 0f;
+
+        for (int i = 0; i < count; i++)
+        {
+            float span = MathF.Tau * width[i] / total;
+
+            float a0 = cursor;
+            float a1 = cursor + span;
+            cursor   = a1;
+
+            // Own speed, own reach, own starting point in the cycle. All hashed off the index so
+            // they are stable frame to frame — see Hash01.
+            float rate = 1f + (Hash01(i, 2) * 2f - 1f) * speedVar;
+
+            _rayPhase[i] += dt * MathF.Tau * MathF.Max(0.01f, DigTuning.RaySpeed) * MathF.Max(0.05f, rate);
             if (_rayPhase[i] > MathF.Tau) _rayPhase[i] %= MathF.Tau;
 
-            float wave  = 0.5f + 0.5f * MathF.Sin(_rayPhase[i] + i * 2.399963f);
-            float len   = reach * (0.30f + 0.70f * wave);
-            if (len <= 1f) continue;
+            float wave = 0.5f + 0.5f * MathF.Sin(_rayPhase[i] + Hash01(i, 4) * MathF.Tau);
 
-            float angle = MathF.Tau * i / count;
+            // Not every beam reaches as far, even at full stretch.
+            float span01 = 1f - Hash01(i, 3) * reachVar;
+            float len    = reach * span01 * (minLen + (1f - minLen) * wave);
+            if (len <= 1f) continue;
 
             for (int s = 0; s < RaySegments; s++)
             {
                 float t0 = s       / (float)RaySegments;
                 float t1 = (s + 1) / (float)RaySegments;
 
-                // Alpha from the slice's midpoint, squared-ish so the ray is bright where it leaves
-                // the disc and gone well before its nominal tip.
+                // Alpha from the slice's midpoint. Reaches exactly zero at the tip, so a beam ends
+                // by running out rather than by stopping.
                 float mid = (t0 + t1) * 0.5f;
-                float a   = opacity * (1f - mid) * (1f - mid) * (1f - mid * 0.5f);
-                if (a <= 0.002f) continue;
+                float a   = opacity * MathF.Pow(1f - mid, falloff);
+                if (a <= 0.0015f) continue;
 
                 float r0 = innerR + len * t0;
                 float r1 = innerR + len * t1;
-
-                // Flares as it travels: narrow at the disc, wider out. A constant-width beam reads
-                // as a spoke on a wheel rather than as light.
-                float w0 = span * (0.30f + 0.70f * t0);
-                float w1 = span * (0.30f + 0.70f * t1);
 
                 // Wound consistently around the ring — AddQuadFilled goes through
                 // AddConvexPolyFilled, which renders a figure-of-eight as two slivers rather than
                 // erroring.
                 drawList.AddQuadFilled(
-                    centre + Polar(angle - w0, r0),
-                    centre + Polar(angle + w0, r0),
-                    centre + Polar(angle + w1, r1),
-                    centre + Polar(angle - w1, r1),
+                    centre + Polar(a0, r0),
+                    centre + Polar(a1, r0),
+                    centre + Polar(a1, r1),
+                    centre + Polar(a0, r1),
                     Tint(rgb, a));
             }
         }
 
-        // The haze the rays come out of. Three discs rather than one, so the edge of the glow is
-        // soft — a single circle has a hard rim and reads as a plate behind the dial.
-        for (int ring = 3; ring >= 1; ring--)
-        {
-            float r = innerR * (1f + 0.22f * ring);
-            drawList.AddCircleFilled(centre, r, Tint(rgb, opacity * 0.10f / ring), 48);
-        }
+        drawList.Flags = savedFlags;
     }
 
     private static Vector2 Polar(float angle, float radius) =>
         new(MathF.Cos(angle) * radius, MathF.Sin(angle) * radius);
-
-    private static float Frac(float v) => v - MathF.Floor(v);
 
     /// <summary>
     /// Draws whichever banner is running. Its own full-width strip of a window, so a banner sliding
@@ -1573,11 +1619,19 @@ internal sealed class DigHuntOverlay : IDisposable
     private const float FillDrop = 0.42f;
 
     /// <summary>
-    /// How far the fill layer is inset from the edge layer, as a fraction of the drawn HEIGHT — so a
-    /// banner four times the dial's size gets a rim four times as thick and the two look like the
-    /// same treatment rather than one having a hairline and the other a stripe.
+    /// Width of the bright edge, as a fraction of the drawn HEIGHT — so a banner four times the
+    /// dial's size gets a rim four times as thick and the two look like the same treatment rather
+    /// than one having a hairline and the other a stripe.
     /// </summary>
-    private const float EdgeInsetFraction = 0.020f;
+    private const float EdgeRimFraction = 0.018f;
+
+    /// <summary>
+    /// Stamps for the rim, and bands within each stamp. Twelve directions rather than the outline's
+    /// eight because the rim is wider than an outline and would show its corners at eight; ten bands
+    /// because the rim is a narrow strip and cannot show the stepping a whole fill can.
+    /// </summary>
+    private const int RimSteps = 12;
+    private const int RimBands = 10;
 
     /// <summary>How far toward white the top of each layer is pushed. Edge first, then fill.</summary>
     private const float EdgeWhiteMix = 0.90f;
@@ -1660,11 +1714,18 @@ internal sealed class DigHuntOverlay : IDisposable
     /// outline around the outside, a white-to-accent rim just INSIDE the edge, and a fill on a
     /// steep light-to-dark ramp.
     ///
-    /// <para><b>The inner rim is made by scale, because a draw list cannot erode a silhouette.</b>
-    /// Drawing the shape twice — once full size in the rim colours, once very slightly smaller in
-    /// the fill colours — leaves exactly the difference between the two showing as a band around
-    /// the inside of every edge. There is no way to shrink a shape's coverage by stamping it, since
-    /// overlapping copies only ever cover MORE; scaling is the one lever that removes area.</para>
+    /// <para><b>The rim is STAMPED, never scaled.</b> An earlier version drew the fill as a slightly
+    /// smaller copy of the shape so the layer beneath showed through as an inner band. That is only
+    /// correct for artwork centred in its canvas: scaling shrinks everything toward the CANVAS
+    /// centre, so a letter sitting off to one side slides inward as it shrinks and its "rim" comes
+    /// out fat on the outside edge and absent on the inside. On the lettering it looked like a
+    /// second, smaller copy of the word laid over the first — which is exactly what it was.</para>
+    ///
+    /// <para>Stamping has no such dependence on where the artwork sits: every copy is the same shape
+    /// at the same size, just displaced, so the band it leaves follows the silhouette exactly at
+    /// every point of every glyph. The rim therefore lands just OUTSIDE the shape and inside the
+    /// dark outline, rather than inside the shape — visually the same bright edge under the black,
+    /// and geometrically correct for artwork of any layout.</para>
     ///
     /// <para><b>Every layer's gradient spans the WHOLE image, not each letter.</b> That falls out of
     /// how <see cref="GradientImage"/> works — bands are slices of the destination rectangle — and
@@ -1677,22 +1738,40 @@ internal sealed class DigHuntOverlay : IDisposable
     {
         if (alpha <= 0.002f) return;
 
-        // 1. The dark outline, which lands outside the shape because the copies underneath only
-        //    show where they stick out past the layers drawn over them.
-        Stamp(drawList, tex, origin, size, outline, Tint(Ink, 0.85f * alpha));
+        float rim = MathF.Max(1f, size.Y * EdgeRimFraction);
 
-        // 2. The rim. White at the top falling to the accent at the bottom — a hue ramp, not a
-        //    brightness one, which is why GradientImage needs its two-colour form.
+        // 1. The dark outline, furthest out, so it frames the rim as well as the fill.
+        Stamp(drawList, tex, origin, size, outline + rim, Tint(Ink, 0.85f * alpha), RimSteps);
+
+        // 2. The bright edge, between the black and the fill. White at the top falling to the
+        //    accent at the bottom — a hue ramp, not a brightness one, which is why GradientImage
+        //    needs its two-colour form.
+        GradientStamp(drawList, tex, origin, size, rim,
+                      Vector3.Lerp(rgb, Vector3.One, EdgeWhiteMix), rgb, alpha);
+
+        // 3. The fill, at TRUE size and true position. Nothing is scaled or displaced.
         GradientImage(drawList, tex.Handle, origin, origin + size,
-                      Vector3.Lerp(rgb, Vector3.One, EdgeWhiteMix), rgb, alpha, bands);
-
-        // 3. The fill, inset so the rim survives around it.
-        float inset = MathF.Max(1f, size.Y * EdgeInsetFraction);
-
-        GradientImage(drawList, tex.Handle,
-                      origin + new Vector2(inset, inset),
-                      origin + size - new Vector2(inset, inset),
                       Vector3.Lerp(rgb, Vector3.One, FillWhiteMix), rgb * FillDrop, alpha, bands);
+    }
+
+    /// <summary>
+    /// <see cref="Stamp"/>, but each copy is itself vertically graded. Used for the bright rim,
+    /// which has to fade white-to-accent down the artwork like every other layer.
+    /// </summary>
+    private static void GradientStamp(ImDrawListPtr drawList, IDalamudTextureWrap tex,
+                                      Vector2 origin, Vector2 size, float offset,
+                                      Vector3 top, Vector3 bottom, float alpha)
+    {
+        if (offset <= 0f) return;
+
+        for (int i = 0; i < RimSteps; i++)
+        {
+            float a = MathF.Tau * i / RimSteps;
+            var   d = new Vector2(MathF.Cos(a) * offset, MathF.Sin(a) * offset);
+
+            GradientImage(drawList, tex.Handle, origin + d, origin + size + d,
+                          top, bottom, alpha, RimBands);
+        }
     }
 
     /// <summary>A PanacheUI colour as an ImGui tint, with an extra opacity applied.</summary>

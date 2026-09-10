@@ -235,11 +235,35 @@ internal static class DigTuning
     /// stone or night.</para>
     /// </summary>
     public static bool    RaysEnabled = true;
-    public static int     RayCount    = 14;
-    public static float   RayReach    = 95f;
-    public static float   RayOpacity  = 0.45f;
-    public static float   RaySpeed    = 0.35f;
+    public static int     RayCount    = 18;
+    public static float   RayReach    = 130f;
+    public static float   RayOpacity  = 0.80f;
+    public static float   RaySpeed    = 0.18f;
     public static Vector3 RayColor    = DefaultRayColor;
+
+    /// <summary>
+    /// How unlike each other the beams are. Width decides how much the angular slices differ,
+    /// speed how much their breathing rates differ, reach how much shorter some stay than others.
+    ///
+    /// <para><b>Beams always TILE the full turn regardless of the width spread</b> — the widths are
+    /// weights normalised to 360°, not independent sizes with space between them. Gaps were what
+    /// made the first attempt read as a cog rather than as light.</para>
+    /// </summary>
+    public static float RayWidthVariance = 1.0f;
+    public static float RaySpeedVariance = 0.55f;
+    public static float RayReachVariance = 0.45f;
+
+    /// <summary>
+    /// How short a beam pulls back to at its trough, as a share of its own full reach — 0 means it
+    /// retracts to nothing, 1 means it never moves.
+    /// </summary>
+    public static float RayMinLength = 0.35f;
+
+    /// <summary>
+    /// Shape of the fade along a beam. 1 is a straight ramp to nothing; higher concentrates the
+    /// light near the icon and lets the outer end trail away sooner.
+    /// </summary>
+    public static float RayFalloff = 1.6f;
 
     public static readonly Vector3 DefaultRayColor = new(1f, 1f, 1f);
 
@@ -398,6 +422,11 @@ internal static class DigTuning
         public float RayColorR { get; set; }
         public float RayColorG { get; set; }
         public float RayColorB { get; set; }
+        public float RayWidthVariance { get; set; }
+        public float RaySpeedVariance { get; set; }
+        public float RayReachVariance { get; set; }
+        public float RayMinLength { get; set; }
+        public float RayFalloff { get; set; }
     }
 
     private static string Path =>
@@ -442,8 +471,10 @@ internal static class DigTuning
 
     public static void ResetRays()
     {
-        RaysEnabled = true; RayCount = 14; RayReach = 95f;
-        RayOpacity = 0.45f; RaySpeed = 0.35f; RayColor = DefaultRayColor;
+        RaysEnabled = true; RayCount = 18; RayReach = 130f;
+        RayOpacity = 0.80f; RaySpeed = 0.18f; RayColor = DefaultRayColor;
+        RayWidthVariance = 1.0f; RaySpeedVariance = 0.55f; RayReachVariance = 0.45f;
+        RayMinLength = 0.35f; RayFalloff = 1.6f;
     }
 
     public static void ResetAll()
@@ -531,11 +562,17 @@ internal static class DigTuning
             if (d.RaysSaved == true)
             {
                 RaysEnabled = d.RaysEnabled;
-                RayCount    = d.RayCount > 0 ? Math.Clamp(d.RayCount, 3, 48) : 14;
-                RayReach    = Clamp(d.RayReach,   10f, 400f, 95f);
-                RayOpacity  = Clamp(d.RayOpacity,  0f,   1f, 0.45f);
-                RaySpeed    = Clamp(d.RaySpeed, 0.02f,   3f, 0.35f);
+                RayCount    = d.RayCount > 0 ? Math.Clamp(d.RayCount, 3, 48) : 18;
+                RayReach    = Clamp(d.RayReach,   10f, 500f, 130f);
+                RayOpacity  = Clamp(d.RayOpacity,  0f,   1f, 0.80f);
+                RaySpeed    = Clamp(d.RaySpeed, 0.02f,   3f, 0.18f);
                 RayColor    = Rgb(d.RayColorR, d.RayColorG, d.RayColorB);
+
+                RayWidthVariance = Clamp(d.RayWidthVariance, 0f, 3f, 1.0f);
+                RaySpeedVariance = Clamp(d.RaySpeedVariance, 0f, 1f, 0.55f);
+                RayReachVariance = Clamp(d.RayReachVariance, 0f, 1f, 0.45f);
+                RayMinLength     = Clamp(d.RayMinLength,     0f, 1f, 0.35f);
+                RayFalloff       = Clamp(d.RayFalloff,     0.2f, 5f, 1.6f);
             }
             else ResetRays();
 
@@ -648,6 +685,9 @@ internal static class DigTuning
                 RaysEnabled = RaysEnabled, RayCount = RayCount, RayReach = RayReach,
                 RayOpacity = RayOpacity, RaySpeed = RaySpeed,
                 RayColorR = RayColor.X, RayColorG = RayColor.Y, RayColorB = RayColor.Z,
+                RayWidthVariance = RayWidthVariance, RaySpeedVariance = RaySpeedVariance,
+                RayReachVariance = RayReachVariance, RayMinLength = RayMinLength,
+                RayFalloff = RayFalloff,
             };
 
             // Temp-then-replace, like the completion stores: a half-written tuning file read on the
