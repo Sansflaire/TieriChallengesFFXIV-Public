@@ -1,6 +1,16 @@
 # Session rules are local-only — never committed (global rule).
 CLAUDE.md
 
+# AGENTS.md is the same rules, under the name other agent harnesses auto-read. It is ignored for
+# exactly the reason CLAUDE.md is — a copy under a second name defeats the rule that keeps the
+# first one out of a PUBLIC repo.
+#
+# It shipped untracked-and-unignored on 2026-09-10: a verbatim 1201-line copy of the gitignored
+# CLAUDE.md, thirteen days stale, one wildcard add away from being published. Same shape as the
+# stray /HELP.md below — a second copy of a file that already has a source of truth, free to be
+# committed by accident and free to drift in the meantime. It is now a pointer, not a copy.
+AGENTS.md
+
 # Local secrets. Holds the suggestion endpoint (Discord webhook / Worker URL), which is baked
 # into the built DLL. Committing it would put a live credential in git history forever.
 src/Secrets.props
