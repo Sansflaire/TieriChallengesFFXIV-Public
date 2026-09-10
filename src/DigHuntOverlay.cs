@@ -3,6 +3,8 @@ using System;
 using System.Numerics;
 
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Textures;
+using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
 
 using PanacheUI.Components;
@@ -60,6 +62,59 @@ internal sealed class DigHuntOverlay : IDisposable
     /// </summary>
     private bool _radarHovered;
 
+    /// <summary>
+    /// The dig dial's artwork: a steady outer ring and a pulsing centre.
+    ///
+    /// <para>Both are white-on-transparent silhouettes, so a tint multiplies cleanly and the same
+    /// pair serves every band colour. Resolved once and cached — <c>GetFromFile</c> is cheap on
+    /// repeat but this runs every frame, and a null result must not turn into a per-frame disk
+    /// probe.</para>
+    ///
+    /// <para><b>Absent artwork is a supported state, not a failure.</b> The PNGs are copied for the
+    /// Debug build only, so the public build genuinely has none — and the drawn circles this
+    /// replaces are still there as the fallback. Nothing about the dial's behaviour depends on
+    /// which of the two is on screen.</para>
+    /// </summary>
+    private IDalamudTextureWrap? _dialOuter;
+    private IDalamudTextureWrap? _dialCentre;
+    private bool _dialLoadAttempted;
+
+    private const string CentreFile = "NatalMSQDigIcon_centerIcon.png";
+    private const string OuterFile  = "NatalMSQDigIcon_outerCircle.png";
+
+    private void EnsureDialArt()
+    {
+        if (_dialLoadAttempted) return;
+        _dialLoadAttempted = true;
+
+        try
+        {
+            string? dir = System.IO.Path.GetDirectoryName(
+                Plugin.PluginInterface.AssemblyLocation.FullName);
+            if (dir == null) return;
+
+            string folder = System.IO.Path.Combine(dir, "digicons");
+
+            string centre = System.IO.Path.Combine(folder, CentreFile);
+            string outer  = System.IO.Path.Combine(folder, OuterFile);
+
+            if (!System.IO.File.Exists(centre) || !System.IO.File.Exists(outer))
+            {
+                Diag.Info("[Dig] dial artwork not present — using the drawn dial.");
+                return;
+            }
+
+            _dialCentre = _texProvider.GetFromFile(centre).GetWrapOrDefault();
+            _dialOuter  = _texProvider.GetFromFile(outer).GetWrapOrDefault();
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Dig] dial artwork failed to load: {ex.Message}");
+            _dialCentre = null;
+            _dialOuter  = null;
+        }
+    }
+
     private PanacheSurface? _banner;
     private PanacheSurface? _radar;
 
@@ -108,6 +163,10 @@ internal sealed class DigHuntOverlay : IDisposable
     {
         _banner?.Dispose(); _banner = null;
         _radar?.Dispose();  _radar  = null;
+
+        // Owned wraps: GetWrapOrDefault hands back a wrap this class is responsible for.
+        _dialOuter?.Dispose();  _dialOuter  = null;
+        _dialCentre?.Dispose(); _dialCentre = null;
     }
 
     public void Draw(DigTests tests)
@@ -296,17 +355,47 @@ internal sealed class DigHuntOverlay : IDisposable
         // for the few seconds it is up.
         if (!BeginHud("##tc_dig_radar", pos, phys, phys, acceptInput: true)) return;
 
-        _radar ??= new PanacheSurface(_texProvider, phys, phys);
-        _radar.Resize(phys, phys);
-        _radar.Scale = uiScale;
+        EnsureDialArt();
 
-        float time = (float)(DateTime.UtcNow - _start).TotalSeconds;
+        bool  solid = closeness >= 1f;
+        var   accent = solid ? DigCol : Green;
+        float wave   = 0.5f + 0.5f * MathF.Sin(_radarPhase);
+        float fill   = solid ? 1f : 0.18f + 0.62f * wave;
 
-        var (tex, _) = _radar.Render(BuildRadar(closeness, _radarPhase, fade, _radarHovered), time,
-                                     Vector2.Zero, false, false, 0f, ImGui.GetIO().DeltaTime,
-                                     forceRedraw: false);
+        if (_dialOuter != null && _dialCentre != null)
+        {
+            // Artwork path. The ring holds steady and only the centre pulses — the border is the
+            // thing that says "a dial is here", and a border that blinks out takes the dial with it.
+            var origin   = ImGui.GetCursorScreenPos();
+            var size     = new Vector2(phys, phys);
+            var drawList = ImGui.GetWindowDrawList();
 
-        if (tex.HasValue) ImGui.Image(tex.Value, new Vector2(phys, phys));
+            float ringAlpha = (_radarHovered ? 1f : 0.90f) * fade;
+
+            drawList.AddImage(_dialOuter.Handle, origin, origin + size,
+                              Vector2.Zero, Vector2.One, Tint(accent, ringAlpha));
+
+            drawList.AddImage(_dialCentre.Handle, origin, origin + size,
+                              Vector2.Zero, Vector2.One, Tint(accent, fill * fade));
+
+            // Claims the same rectangle for hit-testing, since AddImage draws without laying
+            // anything out.
+            ImGui.Dummy(size);
+        }
+        else
+        {
+            _radar ??= new PanacheSurface(_texProvider, phys, phys);
+            _radar.Resize(phys, phys);
+            _radar.Scale = uiScale;
+
+            float time = (float)(DateTime.UtcNow - _start).TotalSeconds;
+
+            var (tex, _) = _radar.Render(BuildRadar(closeness, _radarPhase, fade, _radarHovered),
+                                         time, Vector2.Zero, false, false, 0f,
+                                         ImGui.GetIO().DeltaTime, forceRedraw: false);
+
+            if (tex.HasValue) ImGui.Image(tex.Value, new Vector2(phys, phys));
+        }
 
         // Hit-test the CIRCLE, not the square it is drawn in. The corners are transparent, and a
         // click that lands on nothing visible but still counts is the kind of thing that feels
@@ -454,6 +543,11 @@ internal sealed class DigHuntOverlay : IDisposable
         ImGui.End();
         ImGui.PopStyleVar();
     }
+
+    /// <summary>A PanacheUI colour as an ImGui tint, with an extra opacity applied.</summary>
+    private static uint Tint(PColor c, float alpha)
+        => ImGui.GetColorU32(new Vector4(c.R / 255f, c.G / 255f, c.B / 255f,
+                                         Math.Clamp(alpha, 0f, 1f)));
 
     private static PColor AccentFor(DigBand band) => band switch
     {
