@@ -70,21 +70,6 @@ internal sealed unsafe class InputBlock : IDisposable
     /// </summary>
     public bool Blocking { get; set; }
 
-    /// <summary>
-    /// Facing to pin the character to while blocking, or null to leave rotation alone.
-    ///
-    /// <para><b>This has to be written from inside the hook, not from a tick.</b> The first attempt
-    /// wrote it from <c>PropService.Tick</c>, which runs on the DRAW loop — after the scene for that
-    /// frame has already been rendered — so the game recomputed rotation from the mouse on the next
-    /// update and the held value was never the one drawn. The RMI detour runs inside the game's own
-    /// movement processing, which is the phase rotation is actually applied in, so a write here
-    /// lands for the frame being built.</para>
-    ///
-    /// <para>Rotation is not position: this is a facing angle, which the sibling movement plugins
-    /// write routinely, and it carries none of the displacement concerns that make writing
-    /// <c>Position</c> forbidden.</para>
-    /// </summary>
-    public float? HeldRotation { get; set; }
 
     public bool MovementHooked => _rmiWalkHook != null;
     public bool JumpHooked     => _useActionHook != null;
@@ -133,7 +118,9 @@ internal sealed unsafe class InputBlock : IDisposable
             Diag.Error($"[Input] rotation hook unavailable, facing may drift mid-dig: {ex.Message}");
         }
 
-        Plugin.Framework.Update += OnFrameworkUpdate;
+        // No framework-update subscription: all three blocks are hooks, so there is nothing to do
+        // per tick. The per-tick work that used to live here — clearing keys and re-pinning
+        // rotation — is exactly what the note below explains should not come back.
     }
 
     /// <summary>
@@ -170,92 +157,21 @@ internal sealed unsafe class InputBlock : IDisposable
         _setRotationHook!.Original(thisPtr, value);
     }
 
-    /// <summary>
-    /// Second of the three points the facing is pinned at — see <see cref="PinRotation"/>.
-    /// </summary>
-    private void OnFrameworkUpdate(Dalamud.Plugin.Services.IFramework _)
-    {
-        if (!Blocking) return;
-
-        SuppressKeys();
-        PinRotation();
-    }
-
-    /// <summary>
-    /// Movement, turn and jump keys, cleared before the game reads them.
-    ///
-    /// <para><b>Why this is needed when the movement floats are already zeroed.</b> Some behaviours
-    /// are driven by the RAW KEY STATE rather than by the movement the keys produce — holding Q or E
-    /// with right-mouse snaps the character's facing to the camera, and that happens whether or not
-    /// the resulting movement is discarded. Zeroing the floats removes the motion and leaves the
-    /// side effect, which is exactly what was still turning the body mid-dig.</para>
-    ///
-    /// <para>Clearing the key at source removes both, and does it <i>before</i> the game acts rather
-    /// than trying to undo the result afterwards — which is what the three rotation pins were doing,
-    /// and why they kept losing to it.</para>
-    /// </summary>
-    private static readonly VirtualKey[] MovementKeys =
-    {
-        VirtualKey.W, VirtualKey.A, VirtualKey.S, VirtualKey.D,   // move / turn
-        VirtualKey.Q, VirtualKey.E,                               // strafe — the camera-snap pair
-        VirtualKey.SPACE,                                         // jump
-        VirtualKey.UP, VirtualKey.DOWN, VirtualKey.LEFT, VirtualKey.RIGHT,
-
-        // The mouse buttons were briefly cleared here too, to stop both-buttons-held rotating the
-        // character. It did not work — the game does not read them from this table — and it cost
-        // every click on the game's own UI for the length of a dig. Both problems went away with
-        // the SetRotation hook, which stops the facing change at its source and leaves clicking
-        // alone. Do not add them back to chase a rotation bug; fix it at the writer instead.
-    };
-
-    private static void SuppressKeys()
-    {
-        try
-        {
-            foreach (var key in MovementKeys)
-            {
-                // Not every key is one the game is listening for; asking for an invalid one throws.
-                if (Plugin.KeyState.IsVirtualKeyValid(key))
-                    Plugin.KeyState[key] = false;
-            }
-        }
-        catch (Exception ex)
-        {
-            Diag.Error($"[Input] key suppression failed: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Forces the character back to <see cref="HeldRotation"/>.
-    ///
-    /// <para><b>Called from three different phases of the frame, and that is deliberate rather than
-    /// lazy.</b> Camera-driven facing — hold strafe, move the mouse, the body swings to face the
-    /// screen — is applied by the move controller, and that controller is not among the structs
-    /// available here, so there is no single write site to intercept. Without knowing where in the
-    /// frame it lands, the only reliable answer is to reassert the value in the game-logic phase
-    /// (framework update), the movement phase (the RMI detour) and the render phase
-    /// (<c>PropService.Tick</c>): whichever the game's write falls between, one of ours is still
-    /// after it.</para>
-    ///
-    /// <para>If the true write site is ever identified, this collapses to one place and the other
-    /// two should go.</para>
-    /// </summary>
-    public void PinRotation()
-    {
-        if (HeldRotation is not { } rot) return;
-
-        try
-        {
-            var lp = Plugin.ObjectTable.LocalPlayer;
-            if (lp == null || lp.Address == nint.Zero) return;
-
-            ((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)lp.Address)->Rotation = rot;
-        }
-        catch (Exception ex)
-        {
-            Diag.Error($"[Input] rotation pin failed: {ex.Message}");
-        }
-    }
+    // ── Two approaches that were removed, and must not come back ─────────────
+    //
+    // CLEARING KEY STATE (W/A/S/D/Q/E/Space via IKeyState, 0.84.42.21–23). It stopped movement, and
+    // it did so by LYING TO THE GAME ABOUT THE KEYBOARD: a key held right through a dig was reported
+    // as released, so when the block lifted the game had no record of it being down and the player
+    // had to let go and press it again. Blocking an input's EFFECT instead leaves the key honestly
+    // held, and movement resumes by itself the instant the dig ends. Its one unique job was the Q/E
+    // camera snap, which the SetRotation hook now handles at the source.
+    //
+    // PINNING ROTATION every frame from three phases (0.84.42.19–23). A losing race against a write
+    // whose timing was unknown. Intercepting the writer made it redundant. If facing ever drifts
+    // again the answer is to find the other writer, not to add a fourth pin.
+    //
+    // The rule both share: block what an input DOES, never pretend the input did not happen. State
+    // the player owns — which keys are down — has to stay true, or the block outlives itself.
 
     /// <summary>
     /// Disposes both hooks. Safe from any teardown path — disposing a hook restores the game's own
@@ -265,10 +181,7 @@ internal sealed unsafe class InputBlock : IDisposable
     /// </summary>
     public void Dispose()
     {
-        Blocking     = false;
-        HeldRotation = null;
-
-        try { Plugin.Framework.Update -= OnFrameworkUpdate; } catch { /* teardown must not throw */ }
+        Blocking = false;
 
         try { _rmiWalkHook?.Dispose(); }     catch { /* teardown must not throw */ }
         try { _useActionHook?.Dispose(); }   catch { /* teardown must not throw */ }
@@ -297,9 +210,9 @@ internal sealed unsafe class InputBlock : IDisposable
                 if (sumForward  != null) *sumForward  = 0f;
                 if (sumTurnLeft != null) *sumTurnLeft = 0f;
 
-                // Zeroing the turn float only covers turn KEYS. Camera-driven facing bypasses these
-                // floats entirely, so the facing is pinned as well — here, in the movement phase.
-                PinRotation();
+                // Rotation is NOT touched here. Turn keys reach these floats, but camera-driven
+                // facing does not, so this was never the right layer for it — see the SetRotation
+                // hook, which catches every route regardless of input or frame timing.
             }
         }
         catch (Exception ex)

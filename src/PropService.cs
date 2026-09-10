@@ -55,20 +55,6 @@ internal sealed unsafe class PropService
     private long   _playStartedMs;
 
     /// <summary>
-    /// Facing captured when the performance began, rewritten every frame while it runs.
-    ///
-    /// <para><b>Zeroing the RMI turn input is not enough.</b> That covers turn keys, but a
-    /// right-mouse drag turns the character directly rather than through the movement floats, so
-    /// the body would still swing round mid-dig with movement fully blocked. Holding the value is
-    /// the only way to cover every route at once, including ones not enumerated here.</para>
-    ///
-    /// <para>Rotation is not position: this writes a facing angle, which is what the sibling
-    /// movement plugins do routinely, and carries none of the displacement concerns that make
-    /// writing <c>Position</c> forbidden.</para>
-    /// </summary>
-    private float _heldRotation;
-
-    /// <summary>
     /// <b>Short Dig — 4 seconds.</b> The default, and the length a routine dig should be.
     /// Found by testing with the lab slider, not chosen.
     /// </summary>
@@ -370,10 +356,6 @@ internal sealed unsafe class PropService
         _ornament = ornamentRow;
         _timeline = timelineId;
 
-        // Captured before anything else moves the character, so the dig is performed facing exactly
-        // where the player was pointing when it started.
-        var chara0 = LocalChara();
-        _heldRotation = chara0 != null ? chara0->Rotation : 0f;
 
         string? r = SetOrnament(ornamentRow);
         if (r != null) return r;
@@ -385,8 +367,6 @@ internal sealed unsafe class PropService
         // Held from the moment the prop is asked for, not from when the animation starts: the
         // attach takes frames, and a step taken during them would cancel the dig before it began.
         SetInputBlocked(true);
-        try { Plugin.Input.HeldRotation = _heldRotation; }
-        catch (Exception ex) { Diag.Error($"[Prop] rotation hold failed: {ex.Message}"); }
 
         return "performing.";
     }
@@ -453,10 +433,6 @@ internal sealed unsafe class PropService
 
             _frames++;
 
-            // The render-phase pin, third of three — see InputBlock.PinRotation for why the facing
-            // is reasserted in several phases rather than one.
-            try { Plugin.Input.PinRotation(); }
-            catch (Exception ex) { Diag.Error($"[Prop] rotation pin failed: {ex.Message}"); }
 
             ushort slot0 = chara->Timeline.TimelineSequencer.TimelineIds[0];
 
@@ -660,10 +636,6 @@ internal sealed unsafe class PropService
         try
         {
             Plugin.Input.Blocking = blocked;
-
-            // Released together with the block, never separately — a pinned facing outliving the
-            // dig would leave the player unable to turn with no indication why.
-            if (!blocked) Plugin.Input.HeldRotation = null;
         }
         catch (Exception ex) { Diag.Error($"[Prop] input block toggle failed: {ex.Message}"); }
     }
