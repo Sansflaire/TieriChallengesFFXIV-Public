@@ -50,7 +50,15 @@ internal sealed class DigHuntOverlay : IDisposable
     private static readonly PColor DigCol = PColor.FromHex("#FFCC33");
 
     private readonly ITextureProvider _texProvider;
+    private readonly Action?          _onDig;
     private readonly DateTime         _start = DateTime.UtcNow;
+
+    /// <summary>
+    /// Whether the dial was under the pointer last frame. One frame stale by construction — the
+    /// tree has to be built before ImGui can be asked what the mouse is over — which is invisible
+    /// at any frame rate and is the same trade every hover cue in this plugin makes.
+    /// </summary>
+    private bool _radarHovered;
 
     private PanacheSurface? _banner;
     private PanacheSurface? _radar;
@@ -85,7 +93,16 @@ internal sealed class DigHuntOverlay : IDisposable
     /// </summary>
     private float _radarCloseness;
 
-    public DigHuntOverlay(ITextureProvider texProvider) => _texProvider = texProvider;
+    /// <param name="onDig">
+    /// Runs when the dial is clicked. Supplied by the plugin rather than reached for here, so this
+    /// class stays presentation — it draws what a test reports and forwards a click, and does not
+    /// itself decide that a click means "dig".
+    /// </param>
+    public DigHuntOverlay(ITextureProvider texProvider, Action? onDig = null)
+    {
+        _texProvider = texProvider;
+        _onDig       = onDig;
+    }
 
     public void Dispose()
     {
@@ -274,7 +291,10 @@ internal sealed class DigHuntOverlay : IDisposable
             viewport.Pos.X + (viewport.Size.X - phys) * 0.5f,
             viewport.Pos.Y + viewport.Size.Y * TopFraction + SurfaceH * uiScale + 8f);
 
-        if (!BeginHud("##tc_dig_radar", pos, phys, phys)) return;
+        // The one HUD window that takes input — it is a button. Kept small and only present while
+        // the dial is visible, so the amount of screen that can swallow a click is a 96px circle
+        // for the few seconds it is up.
+        if (!BeginHud("##tc_dig_radar", pos, phys, phys, acceptInput: true)) return;
 
         _radar ??= new PanacheSurface(_texProvider, phys, phys);
         _radar.Resize(phys, phys);
@@ -282,10 +302,29 @@ internal sealed class DigHuntOverlay : IDisposable
 
         float time = (float)(DateTime.UtcNow - _start).TotalSeconds;
 
-        var (tex, _) = _radar.Render(BuildRadar(closeness, _radarPhase, fade), time, Vector2.Zero,
-                                     false, false, 0f, ImGui.GetIO().DeltaTime, forceRedraw: false);
+        var (tex, _) = _radar.Render(BuildRadar(closeness, _radarPhase, fade, _radarHovered), time,
+                                     Vector2.Zero, false, false, 0f, ImGui.GetIO().DeltaTime,
+                                     forceRedraw: false);
 
         if (tex.HasValue) ImGui.Image(tex.Value, new Vector2(phys, phys));
+
+        // Hit-test the CIRCLE, not the square it is drawn in. The corners are transparent, and a
+        // click that lands on nothing visible but still counts is the kind of thing that feels
+        // broken — and here it would also be stealing a click from the game for no reason.
+        _radarHovered = false;
+
+        if (ImGui.IsItemHovered())
+        {
+            var min    = ImGui.GetItemRectMin();
+            var centre = new Vector2(min.X + phys * 0.5f, min.Y + phys * 0.5f);
+            float r    = phys * 0.5f;
+
+            _radarHovered = Vector2.DistanceSquared(ImGui.GetMousePos(), centre) <= r * r;
+        }
+
+        if (_radarHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            _onDig?.Invoke();
+
         EndHud();
     }
 
@@ -313,7 +352,7 @@ internal sealed class DigHuntOverlay : IDisposable
     private const float MinPulseHz = 1.0f;
     private const float MaxPulseHz = 4.0f;
 
-    private static Node BuildRadar(float closeness, float phase, float fade)
+    private static Node BuildRadar(float closeness, float phase, float fade, bool hovered)
     {
         bool solid = closeness >= 1f;
 
@@ -346,8 +385,11 @@ internal sealed class DigHuntOverlay : IDisposable
             s.HeightMode      = SizeMode.Fixed; s.Height = Dial;
             s.BorderRadius    = Dial / 2f;
             s.BackgroundColor = Ink.WithOpacity(0.55f * fade);
-            s.BorderColor     = accent.WithOpacity(0.90f * fade);
-            s.BorderWidth     = 2;
+
+            // The one cue that it is clickable. A ring that is already pulsing cannot say "hover"
+            // by changing brightness alone, so hover thickens the rim as well.
+            s.BorderColor     = accent.WithOpacity((hovered ? 1f : 0.90f) * fade);
+            s.BorderWidth     = hovered ? 3 : 2;
             s.PointerEvents   = PointerEvents.None;
         }));
 
@@ -381,7 +423,7 @@ internal sealed class DigHuntOverlay : IDisposable
     /// <see cref="EndHud"/>, which pops it; every exit path has to go through one or the other or
     /// the style stack unbalances for every window drawn afterwards.</para>
     /// </summary>
-    private static bool BeginHud(string id, Vector2 pos, int w, int h)
+    private static bool BeginHud(string id, Vector2 pos, int w, int h, bool acceptInput = false)
     {
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
         ImGui.SetNextWindowPos(pos, ImGuiCond.Always);
@@ -395,8 +437,11 @@ internal sealed class DigHuntOverlay : IDisposable
                   | ImGuiWindowFlags.NoScrollWithMouse
                   | ImGuiWindowFlags.NoSavedSettings
                   | ImGuiWindowFlags.NoFocusOnAppearing
-                  | ImGuiWindowFlags.NoNav
-                  | ImGuiWindowFlags.NoInputs;   // never intercept a click
+                  | ImGuiWindowFlags.NoNav;
+
+        // NoInputs by default — a HUD that eats clicks aimed at the game is hostile. The dial opts
+        // out because it IS a button; nothing else should.
+        if (!acceptInput) flags |= ImGuiWindowFlags.NoInputs;
 
         if (ImGui.Begin(id, flags)) return true;
 

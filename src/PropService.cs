@@ -285,6 +285,18 @@ internal sealed unsafe class PropService
     /// <summary>True while a prop is attached or an animation is being driven.</summary>
     public bool IsPerforming => _stage != Stage.Off;
 
+    /// <summary>
+    /// Whether the last performance <b>ran to its end</b> rather than being cut short.
+    ///
+    /// <para>This is what lets a dig only count when the animation actually played: an interrupted
+    /// dig — zoning, a cutscene, an explicit stop — leaves this false, so callers can hold the
+    /// reward until the work is genuinely done. Read it after <see cref="IsPerforming"/> goes
+    /// false.</para>
+    /// </summary>
+    public bool LastPerformanceCompleted { get; private set; }
+
+    private bool _completedNaturally;
+
     // ── preconditions ────────────────────────────────────────────────────────
 
     /// <summary>
@@ -374,6 +386,11 @@ internal sealed unsafe class PropService
     /// <summary>Ends the performance and removes the prop. Safe to call when nothing is running.</summary>
     public string Stop()
     {
+        // Latched here, once, for whoever is watching for the performance to end. Anything that did
+        // not set the flag on its way in was an interruption by definition.
+        LastPerformanceCompleted = _completedNaturally;
+        _completedNaturally      = false;
+
         _stage           = Stage.Off;
         _frames          = 0;
         _cancelRequested = false;
@@ -471,7 +488,16 @@ internal sealed unsafe class PropService
                     // Two ways out, whichever comes first. The game owns the cancel
                     // (IsMotionCanceledByMoving) and we only notice it; the cap is ours and ends a
                     // dig that nothing interrupted rather than letting it loop.
-                    if (slot0 != _timeline) { Stop(); break; }
+                    if (slot0 != _timeline)
+                    {
+                        // The animation left the slot. With a cap set, that means something
+                        // interrupted it. With NO cap the loop ending is the only "finished" signal
+                        // there is, so it has to count — otherwise an uncapped dig could never
+                        // complete at all.
+                        _completedNaturally = HoldMilliseconds <= 0;
+                        Stop();
+                        break;
+                    }
 
                     // Every frame — the game recalculates its own speeds, so a single write can be
                     // undone on the next update. See ApplySpeed.
@@ -481,7 +507,10 @@ internal sealed unsafe class PropService
                     // amount of DIG rather than the same amount of clock.
                     int cap = ScaleHold(_appliedSpeed);
                     if (cap > 0 && Environment.TickCount64 - _playStartedMs >= cap)
+                    {
+                        _completedNaturally = true;    // played its full length
                         Stop();
+                    }
                     break;
             }
         }

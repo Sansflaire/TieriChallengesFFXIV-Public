@@ -168,6 +168,24 @@ internal sealed class DigTrailService : IDigTest
         if (!_inZone)                       return animation + " Wrong zone.";
         if (_distance > DigTuning.TrailDig)  return animation + " Nothing but dirt here.";
 
+        // Judged now, banked on completion — see IDigTest.DigFinished.
+        _pendingAdvance = true;
+        return animation + " You strike something…";
+    }
+
+    public void DigFinished(bool completed)
+    {
+        bool advance = _pendingAdvance;
+        _pendingAdvance = false;
+
+        if (!advance || _phase != Phase.Running) return;
+
+        if (!completed)
+        {
+            Plugin.ChatGui.Print("[Challenges] You stopped digging too soon — the clue stays buried.");
+            return;
+        }
+
         _index++;
 
         if (_index < _stops.Count)
@@ -178,7 +196,8 @@ internal sealed class DigTrailService : IDigTest
             var next = _stops[_index];
             string clue = string.IsNullOrWhiteSpace(next.Clue) ? "(no clue written)" : next.Clue;
 
-            return animation + $" A clue! {clue}";
+            Plugin.ChatGui.Print($"[Challenges] A clue! {clue}");
+            return;
         }
 
         _endedAtMs = Environment.TickCount64;
@@ -190,8 +209,11 @@ internal sealed class DigTrailService : IDigTest
         string time = CompletionStore.FormatRaceTime(ElapsedSeconds);
         Diag.Info($"[Trail] finished in {time} over {_digs} dig(s).");
 
-        return $"That's the end of the trail! {time}, {_digs} dig(s).";
+        Plugin.ChatGui.Print($"[Challenges] That's the end of the trail! {time}, {_digs} dig(s).");
     }
+
+    /// <summary>Whether the running dig would turn up the next clue, if allowed to finish.</summary>
+    private bool _pendingAdvance;
 
     public string Stop()
     {

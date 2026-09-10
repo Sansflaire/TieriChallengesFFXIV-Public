@@ -358,8 +358,12 @@ public sealed class Plugin : IDalamudPlugin
         DigTrailStore.Load();
         _digTestsWindow = new DigTestsWindow(_digTests);
 
+        // Clicking the dial digs. The overlay forwards the click; deciding what a click MEANS stays
+        // out here, so the overlay does not grow game logic.
         if (PanacheAvailability.IsAvailable)
-            _digOverlay = new DigHuntOverlay(TextureProvider);
+            _digOverlay = new DigHuntOverlay(
+                TextureProvider,
+                () => ChatGui.Print("[Challenges] " + _digTests.Dig()));
 
         if (PanacheAvailability.IsAvailable)
             _soundTestWindow = new SoundTestWindow(TextureProvider);

@@ -41,7 +41,22 @@ internal interface IDigTest
     float? RadarCloseness { get; }
 
     string Start();
+
+    /// <summary>
+    /// Begins a dig. <b>Does not award anything</b> — it decides what the dig WOULD find and holds
+    /// it until <see cref="DigFinished"/> says the animation actually played.
+    /// </summary>
     string Dig();
+
+    /// <summary>
+    /// The dig animation ended. <paramref name="completed"/> is false when it was cut short.
+    ///
+    /// <para>A find is only banked on a completed dig: the reward is for doing the work, and an
+    /// interrupted dig did not do it. Judging the hit at dig time and applying it here is safe
+    /// because input is blocked for the duration, so the player cannot have moved in between.</para>
+    /// </summary>
+    void DigFinished(bool completed);
+
     string Stop();
     void   Tick();
 

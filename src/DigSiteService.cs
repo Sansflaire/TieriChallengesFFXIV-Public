@@ -202,6 +202,26 @@ internal sealed class DigSiteService : IDigTest
 
         if (hit < 0) return animation + " Nothing but dirt here.";
 
+        // Judged now, banked on completion — see IDigTest.DigFinished. The index is safe to hold
+        // because nothing can change the list while a dig runs.
+        _pendingPiece = hit;
+        return animation + " You strike something…";
+    }
+
+    public void DigFinished(bool completed)
+    {
+        int hit = _pendingPiece;
+        _pendingPiece = -1;
+
+        if (hit < 0 || _phase != Phase.Digging) return;
+        if (hit >= _pieces.Count)               return;   // list changed under us; drop it quietly
+
+        if (!completed)
+        {
+            Plugin.ChatGui.Print("[Challenges] You stopped digging too soon — the piece stays buried.");
+            return;
+        }
+
         _found.Add(_pieces[hit]);
         _pieces.RemoveAt(hit);
 
@@ -210,7 +230,8 @@ internal sealed class DigSiteService : IDigTest
             try { Plugin.Sound.Play(SoundService.Cue.ObjectiveProgress); }
             catch (Exception ex) { Diag.Error($"[Site] piece cue failed: {ex.Message}"); }
 
-            return animation + $" A piece! {_found.Count} of {PieceTotal}.";
+            Plugin.ChatGui.Print($"[Challenges] A piece! {_found.Count} of {PieceTotal}.");
+            return;
         }
 
         _endedAtMs = Environment.TickCount64;
@@ -222,8 +243,11 @@ internal sealed class DigSiteService : IDigTest
         string time = CompletionStore.FormatRaceTime(ElapsedSeconds);
         Diag.Info($"[Site] relic assembled in {time} over {_digs} dig(s).");
 
-        return $"You got the relic! {time}, {_digs} dig(s).";
+        Plugin.ChatGui.Print($"[Challenges] You got the relic! {time}, {_digs} dig(s).");
     }
+
+    /// <summary>Index into <c>_pieces</c> the running dig would turn up, or -1.</summary>
+    private int _pendingPiece = -1;
 
     public string Stop()
     {

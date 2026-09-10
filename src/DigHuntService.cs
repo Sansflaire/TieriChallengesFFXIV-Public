@@ -145,8 +145,28 @@ internal sealed class DigHuntService : IDigTest
     {
         string animation = Plugin.Props.Dig();
 
-        if (_phase != Phase.Hunting)          return animation;
-        if (_distance > DigTuning.HuntDig)    return animation + " Nothing but dirt here.";
+        if (_phase != Phase.Hunting) return animation;
+
+        // Judged now, banked later. Position cannot change while the dig runs — input is blocked —
+        // so evaluating here and applying on completion gives the same answer as re-testing at the
+        // end, without needing the player to still be there for a second check.
+        _pendingHit = _distance <= DigTuning.HuntDig;
+
+        return animation + (_pendingHit ? " You strike something…" : " Nothing but dirt here.");
+    }
+
+    public void DigFinished(bool completed)
+    {
+        bool hit = _pendingHit;
+        _pendingHit = false;
+
+        if (!hit || _phase != Phase.Hunting) return;
+
+        if (!completed)
+        {
+            Plugin.ChatGui.Print("[Challenges] You stopped digging too soon — it is still down there.");
+            return;
+        }
 
         _endedAtMs = Environment.TickCount64;
         _phase     = Phase.Found;
@@ -157,8 +177,11 @@ internal sealed class DigHuntService : IDigTest
         string time = CompletionStore.FormatRaceTime(ElapsedSeconds);
         Diag.Info($"[Hunt] found in {time} after {SenseCount} sense(s).");
 
-        return $"You found it! {time}, {SenseCount} sense(s).";
+        Plugin.ChatGui.Print($"[Challenges] You found it! {time}, {SenseCount} sense(s).");
     }
+
+    /// <summary>Whether the dig currently running would find the spot, if it is allowed to finish.</summary>
+    private bool _pendingHit;
 
     public string Stop()
     {

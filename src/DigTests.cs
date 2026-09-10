@@ -79,8 +79,28 @@ internal sealed class DigTests
     /// no longer "active" by some readings but still needs its clock read. Each guards itself with
     /// an early-out, so the idle cost is three branch tests.
     /// </summary>
+    /// <summary>Whether a prop performance was running last frame — see <see cref="Tick"/>.</summary>
+    private bool _wasPerforming;
+
     public void Tick()
     {
+        // Watch for the dig animation ending, and tell the active test whether it ran to the end.
+        // Polled rather than evented: this class already ticks every frame, and a poll cannot leave
+        // a subscription behind on a plugin reload.
+        //
+        // Ordered after Props.Tick in the draw path, so a performance that ended THIS frame is seen
+        // this frame rather than one late.
+        bool performing = Plugin.Props.IsPerforming;
+
+        if (_wasPerforming && !performing)
+        {
+            var active = Active;
+            try { active?.DigFinished(Plugin.Props.LastPerformanceCompleted); }
+            catch (Exception ex) { Diag.Error($"[Dig] dig-finished failed: {ex.Message}"); }
+        }
+
+        _wasPerforming = performing;
+
         foreach (var t in _all)
         {
             try { t.Tick(); }
