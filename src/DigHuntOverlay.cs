@@ -167,6 +167,16 @@ internal sealed class DigHuntOverlay : IDisposable
     private IDalamudTextureWrap? _labelDig;
 
     /// <summary>
+    /// How far the word is lifted above its authored position, in logical pixels.
+    ///
+    /// <para>The artwork is drawn at the dial's own rect, which is where it was composed — this is a
+    /// deliberate nudge off that, so the lettering clears the rim rather than sitting into it. Kept
+    /// as its own number rather than folded into the draw so it stays obvious that the label is
+    /// offset from the canvas on purpose.</para>
+    /// </summary>
+    private const float LabelLiftPx = 9f;
+
+    /// <summary>
     /// Builds the dial textures at <b>exactly</b> the size they will be drawn, by reducing the
     /// source in steps rather than letting the GPU sampler do it.
     ///
@@ -629,8 +639,12 @@ internal sealed class DigHuntOverlay : IDisposable
             var label = solid ? _labelDig : _labelClue;
             if (label != null)
             {
-                Stamp(drawList, label, origin, size, outline, Tint(Ink, 0.85f * fade));
-                drawList.AddImage(label.Handle, origin, origin + size,
+                // Lifted clear of the rim. Rides the press with everything else, so the word sinks
+                // with the dial instead of hovering while the button moves under it.
+                var labelOrigin = origin - new Vector2(0f, LabelLiftPx * uiScale);
+
+                Stamp(drawList, label, labelOrigin, size, outline, Tint(Ink, 0.85f * fade));
+                drawList.AddImage(label.Handle, labelOrigin, labelOrigin + size,
                                   Vector2.Zero, Vector2.One, Tint(accentRgb, ringAlpha));
             }
 
