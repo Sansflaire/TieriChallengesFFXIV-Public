@@ -57,8 +57,12 @@ internal sealed unsafe class InputBlock : IDisposable
         ActionManager* thisPtr, ActionType actionType, uint actionId, ulong targetId,
         uint extraParam, ActionManager.UseActionMode mode, uint comboRouteId, bool* outOptAreaTargeted);
 
-    private Hook<RmiWalkDelegate>?   _rmiWalkHook;
-    private Hook<UseActionDelegate>? _useActionHook;
+    private delegate void SetRotationDelegate(
+        FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* thisPtr, float value);
+
+    private Hook<RmiWalkDelegate>?     _rmiWalkHook;
+    private Hook<UseActionDelegate>?   _useActionHook;
+    private Hook<SetRotationDelegate>? _setRotationHook;
 
     /// <summary>
     /// While true, movement and jump do nothing. Owned by <see cref="PropService"/>, which sets it
@@ -113,7 +117,57 @@ internal sealed unsafe class InputBlock : IDisposable
             Diag.Error($"[Input] jump hook unavailable, jumping stays possible mid-dig: {ex.Message}");
         }
 
+        // The authoritative rotation block. Everything else that touches facing in this class is a
+        // fallback for if this signature ever fails to resolve.
+        try
+        {
+            _setRotationHook = Plugin.GameInterop.HookFromAddress<SetRotationDelegate>(
+                (nint)FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject
+                      .MemberFunctionPointers.SetRotation,
+                SetRotationDetour);
+            _setRotationHook.Enable();
+        }
+        catch (Exception ex)
+        {
+            _setRotationHook = null;
+            Diag.Error($"[Input] rotation hook unavailable, facing may drift mid-dig: {ex.Message}");
+        }
+
         Plugin.Framework.Update += OnFrameworkUpdate;
+    }
+
+    /// <summary>
+    /// Refuses facing changes to the local player while a dig runs.
+    ///
+    /// <para><b>This is the correct place, and the four attempts before it were not.</b> Zeroing the
+    /// movement floats missed every camera-driven turn, because those never pass through the floats.
+    /// Clearing keys fixed Q/E but not the mouse. Re-writing the rotation from three phases of the
+    /// frame only ever undid the change a frame late, because the game's write happens between our
+    /// pins and the render. Intercepting the WRITER sidesteps all of that: it does not matter which
+    /// input caused it, nor when in the frame it fires, because the value never lands.</para>
+    ///
+    /// <para><b>Only the local player, and only while blocking.</b> Every character in the zone
+    /// rotates through this function; filtering by pointer is what keeps a dig from freezing the
+    /// world. Other objects, and every call outside a dig, go straight through untouched.</para>
+    /// </summary>
+    private void SetRotationDetour(
+        FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* thisPtr, float value)
+    {
+        try
+        {
+            if (Blocking && thisPtr != null)
+            {
+                var lp = Plugin.ObjectTable.LocalPlayer;
+                if (lp != null && lp.Address == (nint)thisPtr)
+                    return;      // swallowed — the facing simply does not change
+            }
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Input] rotation detour failed: {ex.Message}");
+        }
+
+        _setRotationHook!.Original(thisPtr, value);
     }
 
     /// <summary>
@@ -147,16 +201,11 @@ internal sealed unsafe class InputBlock : IDisposable
         VirtualKey.SPACE,                                         // jump
         VirtualKey.UP, VirtualKey.DOWN, VirtualKey.LEFT, VirtualKey.RIGHT,
 
-        // The mouse buttons, for the same reason as Q and E. Both-buttons-held is a movement input
-        // with no key behind it, and right-held turns the body to the camera — neither goes through
-        // the movement floats, so neither could be zeroed and neither could be undone afterwards.
-        // The game reads these from the same key-state table, so clearing them works identically.
-        //
-        // NOTE this also swallows clicks on the game's own UI for the few seconds a dig lasts. That
-        // is a real cost, accepted because the request was that every input be blocked until the
-        // dig ends, and because a click that moves the camera is the very thing being stopped.
-        // Dalamud's own windows are unaffected — ImGui does not read input from here.
-        VirtualKey.LBUTTON, VirtualKey.RBUTTON,
+        // The mouse buttons were briefly cleared here too, to stop both-buttons-held rotating the
+        // character. It did not work — the game does not read them from this table — and it cost
+        // every click on the game's own UI for the length of a dig. Both problems went away with
+        // the SetRotation hook, which stops the facing change at its source and leaves clicking
+        // alone. Do not add them back to chase a rotation bug; fix it at the writer instead.
     };
 
     private static void SuppressKeys()
@@ -221,11 +270,13 @@ internal sealed unsafe class InputBlock : IDisposable
 
         try { Plugin.Framework.Update -= OnFrameworkUpdate; } catch { /* teardown must not throw */ }
 
-        try { _rmiWalkHook?.Dispose(); }   catch { /* teardown must not throw */ }
-        try { _useActionHook?.Dispose(); } catch { /* teardown must not throw */ }
+        try { _rmiWalkHook?.Dispose(); }     catch { /* teardown must not throw */ }
+        try { _useActionHook?.Dispose(); }   catch { /* teardown must not throw */ }
+        try { _setRotationHook?.Dispose(); } catch { /* teardown must not throw */ }
 
-        _rmiWalkHook   = null;
-        _useActionHook = null;
+        _rmiWalkHook     = null;
+        _useActionHook   = null;
+        _setRotationHook = null;
     }
 
     private bool RmiWalkDetour(
