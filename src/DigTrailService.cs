@@ -61,6 +61,23 @@ internal sealed class DigTrailService : IDigTest
     /// </summary>
     public bool IsFinished => _phase == Phase.Done;
 
+    /// <summary>
+    /// How many trails have been started, and how many have been finished, since load. Only ever
+    /// increase.
+    /// </summary>
+    /// <remarks>
+    /// <b>Counters, not the booleans above, are what the HUD banners key off — and the booleans
+    /// were not good enough.</b> A finished trail stays <see cref="IsActive"/> for the whole
+    /// fifteen seconds its result is on screen, so starting a new one during that hold is a
+    /// transition from active-and-done to active-and-running: the "did it just become active" edge
+    /// never fires and the TRAIL START banner is silently skipped. Restarting quickly is the normal
+    /// way to test a trail, which is why it looked like the banner "usually" did not appear.
+    /// <para>A counter cannot be missed by a poller that compares values rather than watching for a
+    /// change of level, no matter what the state does in between.</para>
+    /// </remarks>
+    public int StartCount  { get; private set; }
+    public int FinishCount { get; private set; }
+
     public int   StopTotal     => _stops.Count;
     public int   StopIndex     => _index;
     public int   Digs          => _digs;
@@ -115,7 +132,11 @@ internal sealed class DigTrailService : IDigTest
     {
         get
         {
-            if (_phase == Phase.Done)    return $"{_digs} dig(s) along the way.";
+            // Nothing at the end. The clue slot holds the CLUE or it holds nothing, and a trail
+            // that is over has no clue — the TRAIL END banner is what announces the finish, and the
+            // time and dig count go to chat where they can be read afterwards. Putting a summary
+            // here would make the slot mean two different things.
+            if (_phase == Phase.Done)    return string.Empty;
             if (_phase != Phase.Running) return string.Empty;
 
             var stop = Current;
@@ -163,6 +184,10 @@ internal sealed class DigTrailService : IDigTest
         _inZone      = false;
         _startedAtMs = Environment.TickCount64;
         _phase       = Phase.Running;
+
+        // Bumped only once the start has actually succeeded — every refusal above returns before
+        // here, so the banner cannot announce a trail that never began.
+        StartCount++;
 
         var first = _stops[0];
         string clue = string.IsNullOrWhiteSpace(first.Clue) ? "(no clue written)" : first.Clue;
@@ -220,6 +245,7 @@ internal sealed class DigTrailService : IDigTest
 
         _endedAtMs = Environment.TickCount64;
         _phase     = Phase.Done;
+        FinishCount++;
 
         try { Plugin.Sound.Play(SoundService.Cue.ChallengeComplete); }
         catch (Exception ex) { Diag.Error($"[Trail] end cue failed: {ex.Message}"); }

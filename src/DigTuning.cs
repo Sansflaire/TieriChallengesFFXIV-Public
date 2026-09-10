@@ -224,6 +224,25 @@ internal static class DigTuning
     public static readonly Vector3 DefaultClueFace    = new(1.00f, 0.90f, 0.42f);
     public static readonly Vector3 DefaultClueOutline = new(0.05f, 0.04f, 0.08f);
 
+    /// <summary>
+    /// The burst of light behind the dial once a dig would land — see
+    /// <c>DigHuntOverlay.DrawRays</c>.
+    ///
+    /// <para><b>Colour is a knob and needs to be.</b> ImGui blends normally rather than additively,
+    /// so white light drawn over snow is white on white and simply is not there. A real light effect
+    /// would add rather than blend and would blow out against anything; this cannot, so on pale
+    /// ground the rays want a colour with somewhere to go — amber against snow, white against
+    /// stone or night.</para>
+    /// </summary>
+    public static bool    RaysEnabled = true;
+    public static int     RayCount    = 14;
+    public static float   RayReach    = 95f;
+    public static float   RayOpacity  = 0.45f;
+    public static float   RaySpeed    = 0.35f;
+    public static Vector3 RayColor    = DefaultRayColor;
+
+    public static readonly Vector3 DefaultRayColor = new(1f, 1f, 1f);
+
     // ── shared ───────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -367,6 +386,18 @@ internal static class DigTuning
         public float ClueOutlineWidth { get; set; }
         public float ClueShadowOffset { get; set; }
         public float ClueFontSize { get; set; }
+
+        /// <summary>Same present-marker trick as <see cref="ClueStyleSaved"/>, for the ray block.</summary>
+        public bool? RaysSaved { get; set; }
+
+        public bool  RaysEnabled { get; set; }
+        public int   RayCount { get; set; }
+        public float RayReach { get; set; }
+        public float RayOpacity { get; set; }
+        public float RaySpeed { get; set; }
+        public float RayColorR { get; set; }
+        public float RayColorG { get; set; }
+        public float RayColorB { get; set; }
     }
 
     private static string Path =>
@@ -409,9 +440,15 @@ internal static class DigTuning
         ClueFontSize     = 22f;
     }
 
+    public static void ResetRays()
+    {
+        RaysEnabled = true; RayCount = 14; RayReach = 95f;
+        RayOpacity = 0.45f; RaySpeed = 0.35f; RayColor = DefaultRayColor;
+    }
+
     public static void ResetAll()
     {
-        ResetHunt(); ResetSite(); ResetTrail(); ResetHud(); ResetClueStyle();
+        ResetHunt(); ResetSite(); ResetTrail(); ResetHud(); ResetClueStyle(); ResetRays();
         MaxRise        = 25f;
         DigHoldSeconds = PropService.DefaultHoldMilliseconds / 1000f;
         DigSpeed       = 1f;
@@ -490,6 +527,17 @@ internal static class DigTuning
                 ClueFontSize     = Clamp(d.ClueFontSize,    10f, 48f, 22f);
             }
             else ResetClueStyle();
+
+            if (d.RaysSaved == true)
+            {
+                RaysEnabled = d.RaysEnabled;
+                RayCount    = d.RayCount > 0 ? Math.Clamp(d.RayCount, 3, 48) : 14;
+                RayReach    = Clamp(d.RayReach,   10f, 400f, 95f);
+                RayOpacity  = Clamp(d.RayOpacity,  0f,   1f, 0.45f);
+                RaySpeed    = Clamp(d.RaySpeed, 0.02f,   3f, 0.35f);
+                RayColor    = Rgb(d.RayColorR, d.RayColorG, d.RayColorB);
+            }
+            else ResetRays();
 
             // NOT guarded by Pos: 0 is a meaningful value here ("no cap"), and Pos rejects
             // anything non-positive. Clamped rather than defaulted, so a hand-typed 3.5 survives.
@@ -596,6 +644,10 @@ internal static class DigTuning
                 ClueOutline = ClueOutline, ClueShadow = ClueShadow, ClueGradient = ClueGradient,
                 ClueOutlineWidth = ClueOutlineWidth, ClueShadowOffset = ClueShadowOffset,
                 ClueFontSize = ClueFontSize,
+                RaysSaved = true,
+                RaysEnabled = RaysEnabled, RayCount = RayCount, RayReach = RayReach,
+                RayOpacity = RayOpacity, RaySpeed = RaySpeed,
+                RayColorR = RayColor.X, RayColorG = RayColor.Y, RayColorB = RayColor.Z,
             };
 
             // Temp-then-replace, like the completion stores: a half-written tuning file read on the

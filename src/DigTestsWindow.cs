@@ -188,6 +188,37 @@ internal sealed class DigTestsWindow
         if (ImGui.Button("Reset clue text")) { DigTuning.ResetClueStyle(); DigTuning.Save(); }
 
         ImGui.Spacing();
+        ImGui.TextColored(Head, "LIGHT BURST (behind the dial, in dig range only)");
+        ImGui.TextColored(Rule,
+            "Rays of light behind the dial once a dig would land. Each ray breathes on its own\n"
+          + "clock, so the burst expands and contracts unevenly instead of pumping as one.\n"
+          + "COLOUR MATTERS MORE THAN YOU'D THINK: ImGui blends normally rather than additively,\n"
+          + "so white light drawn over snow is white on white and simply is not there. A real\n"
+          + "light effect would ADD and blow out; this cannot. On pale ground give the rays a\n"
+          + "colour with somewhere to go — amber against snow, white against stone or night.\n"
+          + "Drawn into the background draw list, so they pass under every plugin window and\n"
+          + "never steal a click.");
+
+        if (ImGui.Checkbox("Light burst", ref DigTuning.RaysEnabled)) DigTuning.Save();
+
+        ImGui.ColorEdit3("Ray colour", ref DigTuning.RayColor);
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderInt("Rays", ref DigTuning.RayCount, 3, 48);
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Reach", ref DigTuning.RayReach, 10f, 400f, "%.0f px");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Ray opacity", ref DigTuning.RayOpacity, 0f, 1f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Breathe speed", ref DigTuning.RaySpeed, 0.02f, 3f, "%.2f Hz");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        if (ImGui.Button("Reset light burst")) { DigTuning.ResetRays(); DigTuning.Save(); }
+
+        ImGui.Spacing();
         ImGui.TextColored(Head, "DIG ANIMATION LENGTH");
         ImGui.TextColored(Rule,
             $"How long the dig plays before it ends itself and the shovel comes off.\n"

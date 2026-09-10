@@ -311,6 +311,7 @@ internal sealed class DigHuntOverlay : IDisposable
 
     private Banner _banner;
     private long   _bannerAt;
+    private bool   _bannerArtWarned;
 
     /// <summary>
     /// Trail Start: slides in from the left as it fades up, holds, then fades out where it stands.
@@ -329,14 +330,17 @@ internal sealed class DigHuntOverlay : IDisposable
     private const float SlideOutTo  =  0.60f;
 
     /// <summary>
-    /// Whether the trail was running / finished last frame, so the two transitions can be spotted.
+    /// The trail's start and finish counts as last seen. <b>-1 means "not yet seen"</b>, which is
+    /// what suppresses a banner for a trail that was already running when this overlay first drew —
+    /// on a hot reload, for instance, where announcing a start that happened before the plugin
+    /// existed would be a lie.
     ///
-    /// <para>Edge-detected here rather than announced by the service, so every decision about what
-    /// appears on screen stays on this side of the line. <see cref="DigTrailService"/> exposes plain
-    /// state; this decides that a transition in it is worth a banner.</para>
+    /// <para>Read from the service rather than pushed by it, so every decision about what appears on
+    /// screen stays on this side of the line. <see cref="DigTrailService"/> exposes plain counts;
+    /// this decides a change in one is worth a banner.</para>
     /// </summary>
-    private bool _trailWasActive;
-    private bool _trailWasFinished;
+    private int _seenStarts   = -1;
+    private int _seenFinishes = -1;
 
     /// <summary>
     /// How far the word is lifted above its authored position, in logical pixels.
@@ -576,6 +580,109 @@ internal sealed class DigHuntOverlay : IDisposable
     private static float EaseOut(float u) { float v = 1f - u; return 1f - v * v * v; }
     private static float EaseIn(float u) => u * u * u;
 
+    // ── the light burst ──────────────────────────────────────────────────────
+
+    /// <summary>How many slices each ray is cut into along its length. See the alpha note below.</summary>
+    private const int RaySegments = 9;
+
+    /// <summary>
+    /// A burst of light behind the dial: wedges radiating from under the backing disc, each
+    /// breathing in and out on its own clock.
+    ///
+    /// <para><b>Sliced along its length, for the third time in this file and for the same reason.</b>
+    /// A ray has to fade to nothing at its tip or it reads as a painted triangle, and
+    /// <c>AddQuadFilled</c> takes one colour per quad — so the falloff is built from several quads
+    /// at descending alpha rather than from a gradient. The slices share exact edges, so the ray is
+    /// continuous; only its alpha steps.</para>
+    ///
+    /// <para><b>Drawn into the BACKGROUND draw list, not the dial's window.</b> The rays reach far
+    /// past the dial and a window sized to the artwork would simply cut them off — the same trap the
+    /// CLUE! lettering hit. Enlarging the dial's window is not the answer either: that window takes
+    /// input because it is a button, so a bigger one would swallow clicks aimed at the game across a
+    /// much larger patch of screen. The background list is unclipped, takes no input, and paints
+    /// under every ImGui window, which is exactly the layer this belongs on.</para>
+    ///
+    /// <para><b>It will look weak on snow, and that is a limit rather than a bug.</b> A light effect
+    /// wants additive blending; a draw list gives normal alpha blending, so white over white is
+    /// white. That is why the colour is a knob — on pale ground the burst needs a colour with
+    /// somewhere to go.</para>
+    /// </summary>
+    private void DrawRays(ImDrawListPtr drawList, Vector2 centre, float innerR,
+                          float fade, float uiScale, float dt)
+    {
+        int count = Math.Clamp(DigTuning.RayCount, 3, MaxRays);
+
+        float reach   = MathF.Max(4f, DigTuning.RayReach) * uiScale;
+        float opacity = Math.Clamp(DigTuning.RayOpacity, 0f, 1f) * fade;
+        if (opacity <= 0.002f) return;
+
+        var rgb = DigTuning.RayColor;
+
+        // Widest a ray gets, as a share of the gap between neighbours. Under a half so there is
+        // always dark between them — rays that touch are a filled disc, not a burst.
+        float span = MathF.Tau / count * 0.30f;
+
+        for (int i = 0; i < count; i++)
+        {
+            // Spread by the golden angle. Neighbouring rays get phases that are nowhere near each
+            // other and the sequence never falls into step for any ray count, which is exactly what
+            // a handful of hand-picked offsets would fail to do at some counts and not others.
+            float rate = 0.75f + 0.5f * Frac(i * 0.6180339f);
+
+            _rayPhase[i] += dt * MathF.Tau * MathF.Max(0.01f, DigTuning.RaySpeed) * rate;
+            if (_rayPhase[i] > MathF.Tau) _rayPhase[i] %= MathF.Tau;
+
+            float wave  = 0.5f + 0.5f * MathF.Sin(_rayPhase[i] + i * 2.399963f);
+            float len   = reach * (0.30f + 0.70f * wave);
+            if (len <= 1f) continue;
+
+            float angle = MathF.Tau * i / count;
+
+            for (int s = 0; s < RaySegments; s++)
+            {
+                float t0 = s       / (float)RaySegments;
+                float t1 = (s + 1) / (float)RaySegments;
+
+                // Alpha from the slice's midpoint, squared-ish so the ray is bright where it leaves
+                // the disc and gone well before its nominal tip.
+                float mid = (t0 + t1) * 0.5f;
+                float a   = opacity * (1f - mid) * (1f - mid) * (1f - mid * 0.5f);
+                if (a <= 0.002f) continue;
+
+                float r0 = innerR + len * t0;
+                float r1 = innerR + len * t1;
+
+                // Flares as it travels: narrow at the disc, wider out. A constant-width beam reads
+                // as a spoke on a wheel rather than as light.
+                float w0 = span * (0.30f + 0.70f * t0);
+                float w1 = span * (0.30f + 0.70f * t1);
+
+                // Wound consistently around the ring — AddQuadFilled goes through
+                // AddConvexPolyFilled, which renders a figure-of-eight as two slivers rather than
+                // erroring.
+                drawList.AddQuadFilled(
+                    centre + Polar(angle - w0, r0),
+                    centre + Polar(angle + w0, r0),
+                    centre + Polar(angle + w1, r1),
+                    centre + Polar(angle - w1, r1),
+                    Tint(rgb, a));
+            }
+        }
+
+        // The haze the rays come out of. Three discs rather than one, so the edge of the glow is
+        // soft — a single circle has a hard rim and reads as a plate behind the dial.
+        for (int ring = 3; ring >= 1; ring--)
+        {
+            float r = innerR * (1f + 0.22f * ring);
+            drawList.AddCircleFilled(centre, r, Tint(rgb, opacity * 0.10f / ring), 48);
+        }
+    }
+
+    private static Vector2 Polar(float angle, float radius) =>
+        new(MathF.Cos(angle) * radius, MathF.Sin(angle) * radius);
+
+    private static float Frac(float v) => v - MathF.Floor(v);
+
     /// <summary>
     /// Draws whichever banner is running. Its own full-width strip of a window, so a banner sliding
     /// off the side is not clipped by a window sized to the artwork.
@@ -606,7 +713,21 @@ internal sealed class DigHuntOverlay : IDisposable
         EnsureBannerArt(w, h);
 
         var art = _banner == Banner.TrailStart ? _bannerStart : _bannerEnd;
-        if (art == null) return;
+
+        if (art == null)
+        {
+            // Said once per banner rather than swallowed. A banner that never draws because its PNG
+            // is missing looks exactly like a banner that was never triggered, and that ambiguity is
+            // what makes "it usually doesn't appear" hard to chase.
+            if (!_bannerArtWarned)
+            {
+                _bannerArtWarned = true;
+                Diag.Error($"[Dig] {_banner} banner has no artwork — check digicons\\ beside the DLL.");
+            }
+
+            _banner = Banner.None;
+            return;
+        }
 
         float top = viewport.Pos.Y + viewport.Size.Y * BannerTopFraction;
 
@@ -629,10 +750,7 @@ internal sealed class DigHuntOverlay : IDisposable
                           min + size + new Vector2(shadow, shadow),
                           Vector2.Zero, Vector2.One, Tint(Ink, 0.45f * alpha));
 
-        Stamp(drawList, art, min, size, outline, Tint(Ink, 0.85f * alpha));
-
-        GradientImage(drawList, art.Handle, min, min + size, Rgb(DigCol), alpha,
-                      BannerGradientBands);
+        DrawEmblem(drawList, art, min, size, Rgb(DigCol), alpha, outline, BannerGradientBands);
 
         EndHud();
     }
@@ -661,6 +779,20 @@ internal sealed class DigHuntOverlay : IDisposable
     /// dial reads as steady-and-lit rather than as flashing harder than it did a moment ago.</para>
     /// </summary>
     private float _shinePhase;
+
+    /// <summary>
+    /// One accumulated phase per light ray, so each breathes on its own schedule.
+    ///
+    /// <para><b>An array rather than one shared phase with per-ray offsets, and that is a precision
+    /// decision, not a stylistic one.</b> Rays run at DIFFERENT rates — that is what stops the burst
+    /// pumping in unison — so a single accumulator would have to be multiplied by each ray's rate,
+    /// and it could then only be wrapped at a value that is a whole number of cycles for every rate
+    /// at once. There is no such value. Left unwrapped it grows until <c>sin</c> loses precision and
+    /// the burst starts juddering after a long session. Wrapped per ray, each stays in [0, τ)
+    /// forever and none of that arises.</para>
+    /// </summary>
+    private const int MaxRays = 48;
+    private readonly float[] _rayPhase = new float[MaxRays];
 
     /// <summary>
     /// Radar opacity envelope, 0 (invisible) to 1 (full). Ramps towards whichever the range says.
@@ -811,14 +943,27 @@ internal sealed class DigHuntOverlay : IDisposable
     /// </summary>
     private void WatchTrail(DigTrailService trail)
     {
-        bool active   = trail.IsActive;
-        bool finished = trail.IsFinished;
+        // Compare COUNTS, never levels. The previous version watched IsActive/IsFinished for a
+        // change of level and dropped the start banner whenever a trail was restarted during the
+        // fifteen seconds the last one's result was still up — active-and-done to active-and-running
+        // is not an edge, so nothing fired. Restarting quickly is how a trail gets tested, so that
+        // was most starts. See DigTrailService.StartCount.
+        int starts    = trail.StartCount;
+        int finishes  = trail.FinishCount;
 
-        if (active && !_trailWasActive && !finished) Show(Banner.TrailStart);
-        if (finished && !_trailWasFinished)          Show(Banner.TrailEnd);
+        if (starts != _seenStarts)
+        {
+            bool first = _seenStarts < 0;
+            _seenStarts = starts;
+            if (!first) Show(Banner.TrailStart);
+        }
 
-        _trailWasActive   = active;
-        _trailWasFinished = finished;
+        if (finishes != _seenFinishes)
+        {
+            bool first = _seenFinishes < 0;
+            _seenFinishes = finishes;
+            if (!first) Show(Banner.TrailEnd);
+        }
     }
 
     private void Show(Banner kind)
@@ -925,6 +1070,12 @@ internal sealed class DigHuntOverlay : IDisposable
     /// </summary>
     private void ShowReminder() =>
         _reminderUntil = Environment.TickCount64 + (long)(ReminderHold * 1000f);
+
+    /// <summary>
+    /// Ends the current showing early. The opacity still ramps down over the normal fade-out — this
+    /// only withdraws the request to be visible, it does not blank anything.
+    /// </summary>
+    private void HideReminder() => _reminderUntil = Environment.TickCount64;
 
     private static Node BuildReminder(string text, float alpha)
     {
@@ -1091,6 +1242,18 @@ internal sealed class DigHuntOverlay : IDisposable
             // Order is the whole effect: shadow, ground, then rim and figure each over their own
             // outline. Anything drawn out of this order loses its separation.
 
+            // 0. The light behind, when a dig would land. Painted into the BACKGROUND draw list
+            //    rather than this window: it reaches far past the dial, and this window is sized to
+            //    the artwork AND takes input because it is a button — so growing it to fit would
+            //    swallow game clicks across a much larger patch of screen. See DrawRays.
+            if (solid && DigTuning.RaysEnabled)
+            {
+                DrawRays(ImGui.GetBackgroundDrawList(),
+                         anchor + size * 0.5f,
+                         phys * 0.5f * BackingFraction,
+                         fade, uiScale, ImGui.GetIO().DeltaTime);
+            }
+
             // 1. Depth. One offset stamp of both shapes, dark and soft, so the dial sits ON the
             //    world rather than being printed flat against it.
             uint shadowCol = Tint(Ink, 0.45f * fade);
@@ -1123,15 +1286,13 @@ internal sealed class DigHuntOverlay : IDisposable
                 }
             }
 
-            // 3. Rim, outlined. Gradient-tinted from here down — see GradientImage.
-            Stamp(drawList, dialOuter, origin, size, outline, Tint(Ink, 0.85f * fade));
-            GradientImage(drawList, dialOuter.Handle, origin, origin + size, accentRgb, ringAlpha);
+            // 3. Rim: outline, inner white-to-accent edge, then the fill on the steep ramp.
+            DrawEmblem(drawList, dialOuter, origin, size, accentRgb, ringAlpha, outline, GradientBands);
 
-            // 4. Figure, outlined. Its alpha carries the pulse, so the outline pulses with it —
-            //    an outline holding steady while its fill breathes reads as two objects.
+            // 4. Figure. Its alpha carries the pulse, so the outline pulses with it — an outline
+            //    holding steady while its fill breathes reads as two objects.
             float centreAlpha = fill * fade;
-            Stamp(drawList, dialCentre, origin, size, outline, Tint(Ink, 0.85f * centreAlpha));
-            GradientImage(drawList, dialCentre.Handle, origin, origin + size, accentRgb, centreAlpha);
+            DrawEmblem(drawList, dialCentre, origin, size, accentRgb, centreAlpha, outline, GradientBands);
 
             // 5. The word, over the top. Same rect as the dial — the lettering was authored into
             //    the top of the same canvas, so this is where it curves over the rim by design.
@@ -1143,9 +1304,8 @@ internal sealed class DigHuntOverlay : IDisposable
                 // with the dial instead of hovering while the button moves under it.
                 var labelOrigin = origin - new Vector2(0f, LabelLiftPx * uiScale);
 
-                Stamp(drawList, label, labelOrigin, size, outline, Tint(Ink, 0.85f * fade));
-                GradientImage(drawList, label.Handle, labelOrigin, labelOrigin + size,
-                              accentRgb, ringAlpha);
+                DrawEmblem(drawList, label, labelOrigin, size, accentRgb, ringAlpha, outline,
+                           GradientBands);
             }
 
             // Claims the same rectangle for hit-testing, since AddImage draws without laying
@@ -1190,17 +1350,20 @@ internal sealed class DigHuntOverlay : IDisposable
             bool onSpot = closeness >= 1f;
             _hiddenForDig = onSpot;
 
-            // A dig ALWAYS shows the clue, hit or miss.
+            // A dig on the RIGHT spot retires the clue; a miss keeps it up, because it is still the
+            // answer to a question the player has not solved.
             //
-            // This deliberately reverses the earlier rule that a successful dig cleared the clue
-            // along with the button. That rule was reasoned from "the question is settled" and was
-            // wrong in practice for a plain reason: after a good dig the clue line becomes the NEXT
-            // clue, so clearing it threw away the very thing the dig was for. The result was digging
-            // correctly and being told nothing.
+            // Retired by an EARLY EXIT — the deadline is pulled back to now so the envelope ramps
+            // down normally — rather than by clearing it. A clue that vanishes on the frame of the
+            // click reads as a glitch; one that fades reads as being finished with.
             //
-            // Nothing needs clearing to avoid a stale clue lingering, either — the text simply
-            // changes when the dig lands, and the change triggers its own fresh showing.
-            ShowReminder();
+            // This costs nothing on the way to the next clue, which is the trap an earlier version
+            // fell into by clearing outright and killing the arriving clue with it. The next clue
+            // does not come from here at all: it turns up when the dig completes, and the CHANGE of
+            // line triggers its own fresh showing. The two are independent, so retiring the old one
+            // cannot suppress the new one.
+            if (onSpot) HideReminder();
+            else        ShowReminder();
 
             _onDig?.Invoke();
         }
@@ -1401,6 +1564,26 @@ internal sealed class DigHuntOverlay : IDisposable
     private const int   GradientBands = 24;
 
     /// <summary>
+    /// The interior ramp, which is deliberately much steeper than <see cref="GradientDrop"/>.
+    ///
+    /// <para>The gentle drop is right for a whole element read at a glance; an emblem's FILL wants
+    /// to look lit, and a light-to-dark fall of less than a third does not sell that. This is the
+    /// number that makes the artwork look like the reference rather than like a flat tint.</para>
+    /// </summary>
+    private const float FillDrop = 0.42f;
+
+    /// <summary>
+    /// How far the fill layer is inset from the edge layer, as a fraction of the drawn HEIGHT — so a
+    /// banner four times the dial's size gets a rim four times as thick and the two look like the
+    /// same treatment rather than one having a hairline and the other a stripe.
+    /// </summary>
+    private const float EdgeInsetFraction = 0.020f;
+
+    /// <summary>How far toward white the top of each layer is pushed. Edge first, then fill.</summary>
+    private const float EdgeWhiteMix = 0.90f;
+    private const float FillWhiteMix = 0.30f;
+
+    /// <summary>
     /// Draws an image tinted with a vertical gradient: <paramref name="rgb"/> at the top falling to
     /// <see cref="GradientDrop"/> of it at the bottom.
     ///
@@ -1421,6 +1604,19 @@ internal sealed class DigHuntOverlay : IDisposable
     private static void GradientImage(ImDrawListPtr drawList, ImTextureID tex,
                                       Vector2 min, Vector2 max, Vector3 rgb, float alpha,
                                       int bands = GradientBands, float drop = GradientDrop)
+        // A drop of 1 is a flat tint. Switching a gradient off goes through here rather than round
+        // it, so "no gradient" cannot drift from "gradient" in any other respect.
+        => GradientImage(drawList, tex, min, max, rgb, rgb * drop, alpha, bands);
+
+    /// <summary>
+    /// The two-colour form. <paramref name="top"/> and <paramref name="bottom"/> need not be shades
+    /// of one another — the emblem's edge layer runs white to the accent, which is a hue change and
+    /// not a brightness one.
+    /// </summary>
+    private static void GradientImage(ImDrawListPtr drawList, ImTextureID tex,
+                                      Vector2 min, Vector2 max,
+                                      Vector3 top, Vector3 bottom, float alpha,
+                                      int bands = GradientBands)
     {
         if (alpha <= 0.002f) return;
 
@@ -1429,9 +1625,7 @@ internal sealed class DigHuntOverlay : IDisposable
 
         if (bands < 1) bands = 1;
 
-        // A drop of 1 is a flat tint. Switching the gradient off goes through here rather than
-        // round it, so "no gradient" cannot drift from "gradient" in any other respect.
-        var bottom = rgb * drop;
+        var rgb = top;
 
         float yPrev = MathF.Round(min.Y);
 
@@ -1459,6 +1653,46 @@ internal sealed class DigHuntOverlay : IDisposable
 
             yPrev = yNext;
         }
+    }
+
+    /// <summary>
+    /// Draws one piece of white-on-transparent artwork the way the reference art is shaded: a dark
+    /// outline around the outside, a white-to-accent rim just INSIDE the edge, and a fill on a
+    /// steep light-to-dark ramp.
+    ///
+    /// <para><b>The inner rim is made by scale, because a draw list cannot erode a silhouette.</b>
+    /// Drawing the shape twice — once full size in the rim colours, once very slightly smaller in
+    /// the fill colours — leaves exactly the difference between the two showing as a band around
+    /// the inside of every edge. There is no way to shrink a shape's coverage by stamping it, since
+    /// overlapping copies only ever cover MORE; scaling is the one lever that removes area.</para>
+    ///
+    /// <para><b>Every layer's gradient spans the WHOLE image, not each letter.</b> That falls out of
+    /// how <see cref="GradientImage"/> works — bands are slices of the destination rectangle — and
+    /// it is the point: per-letter shading would make each character read as its own object instead
+    /// of the lettering reading as one lit surface.</para>
+    /// </summary>
+    private static void DrawEmblem(ImDrawListPtr drawList, IDalamudTextureWrap tex,
+                                   Vector2 origin, Vector2 size, Vector3 rgb, float alpha,
+                                   float outline, int bands)
+    {
+        if (alpha <= 0.002f) return;
+
+        // 1. The dark outline, which lands outside the shape because the copies underneath only
+        //    show where they stick out past the layers drawn over them.
+        Stamp(drawList, tex, origin, size, outline, Tint(Ink, 0.85f * alpha));
+
+        // 2. The rim. White at the top falling to the accent at the bottom — a hue ramp, not a
+        //    brightness one, which is why GradientImage needs its two-colour form.
+        GradientImage(drawList, tex.Handle, origin, origin + size,
+                      Vector3.Lerp(rgb, Vector3.One, EdgeWhiteMix), rgb, alpha, bands);
+
+        // 3. The fill, inset so the rim survives around it.
+        float inset = MathF.Max(1f, size.Y * EdgeInsetFraction);
+
+        GradientImage(drawList, tex.Handle,
+                      origin + new Vector2(inset, inset),
+                      origin + size - new Vector2(inset, inset),
+                      Vector3.Lerp(rgb, Vector3.One, FillWhiteMix), rgb * FillDrop, alpha, bands);
     }
 
     /// <summary>A PanacheUI colour as an ImGui tint, with an extra opacity applied.</summary>
