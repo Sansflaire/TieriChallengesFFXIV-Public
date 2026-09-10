@@ -723,11 +723,20 @@ internal sealed class DigHuntOverlay : IDisposable
         if (_radarHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             _pressedAtMs = Environment.TickCount64;
-            _reminderAt  = _pressedAtMs;
 
             // Only a dig from the RIGHT spot takes the button away. A miss leaves it up, because
             // the player still needs it — hiding it would punish the wrong guess twice.
-            _hiddenForDig = closeness >= 1f;
+            bool onSpot = closeness >= 1f;
+            _hiddenForDig = onSpot;
+
+            // The clue goes with it, and for the same reason. A reminder of where to dig is only
+            // worth reading while the answer is still wanted; once the right hole is being dug the
+            // question is settled, and leaving the old clue on screen would contradict the button
+            // that just conceded the point. A MISS keeps it — that is exactly when it is wanted.
+            //
+            // Cleared outright rather than faded, so it leaves with the button instead of trailing
+            // a second behind it.
+            _reminderAt = onSpot ? 0 : _pressedAtMs;
 
             _onDig?.Invoke();
         }
