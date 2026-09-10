@@ -12,7 +12,7 @@ focus, InteractionManager, ClearFocus, PUI.TextInput, escape
 did nothing to it — the keystrokes went to the game instead, moving the character and opening
 chat.
 
-**Stage two (0.83.37.1).** Fixing that introduced a worse fault, caught by Trist before it was
+**Stage two (0.83.37.1).** Fixing that introduced a worse fault, caught by Sansflaire before it was
 felt: once a field had been focused, clicking away out into the world did not release the
 keyboard. The plugin went on claiming it every frame, with the window still open and no field
 visibly focused, leaving the game deaf to the keyboard with no way back short of closing the
@@ -42,7 +42,7 @@ never reaches the surface, so focus survived indefinitely.
   click before the surface sees it, and its own text fields need the keyboard.
 - A closed window never holds focus. The keyboard is already back when hidden — `PumpKeyboard`
   stops running — but the focus itself would survive and re-claim it on reopen.
-- **Escape releases everything**, plugin-wide, from one handler (`Plugin.HandleEscape`). Trist's
+- **Escape releases everything**, plugin-wide, from one handler (`Plugin.HandleEscape`). Sansflaire's
   standing rule, raised in response to this bug.
 
 ## Lessons

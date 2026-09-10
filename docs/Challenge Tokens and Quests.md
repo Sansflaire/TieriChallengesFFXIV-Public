@@ -54,7 +54,7 @@ go down because they spent Tokens.**
 <!-- SECTION:accounts -->
 ## 2. The three account tiers
 
-Driving constraint, in Trist's words: *"The goal is to never burden the user with forcing them
+Driving constraint, in Sansflaire's words: *"The goal is to never burden the user with forcing them
 to enter data or do things that are not plain ol' 'play the game'. I hate pop-ups,
 advertisements, account bullshit, etc myself."*
 
@@ -79,7 +79,7 @@ not even anonymous ones.
 <!-- SECTION:identity -->
 ## 3. Identity: why the local secret replaces IP
 
-Trist's proposal was to key accounts on **player name + server + IP at time of creation**.
+Sansflaire's proposal was to key accounts on **player name + server + IP at time of creation**.
 
 **Recommendation: drop IP entirely.** It costs real risk and buys close to nothing:
 
@@ -110,7 +110,7 @@ Consequences, all good:
 
 ### Hashing name+world
 
-Trist: *"If we can change to hashing player name + server I'd want to change to do that fully."*
+Sansflaire: *"If we can change to hashing player name + server I'd want to change to do that fully."*
 
 Do it, with one correction. FFXIV `name@world` is **low-entropy** — the world list is public
 and names are dictionary-ish, so a plain salted hash in a leaked database is enumerable by
@@ -119,7 +119,7 @@ brute force. Use an **HMAC with a server-side pepper** that never ships to clien
 - Client sends `name@world` in plaintext **over TLS**, transiently, in the request body.
 - Server HMACs it with the pepper and stores **only the hash**. Plaintext never hits disk.
 - Admin lookup still works: a player writes in claiming an old name, you HMAC the claim and
-  search for it. **The support workflow Trist wants is fully preserved.**
+  search for it. **The support workflow Sansflaire wants is fully preserved.**
 
 This mirrors the reasoning already written into [`BanService`](../src/BanService.cs) — hashes
 so the stored file "can only ever answer 'is THIS identity banned?', one guess at a time."
@@ -138,7 +138,7 @@ silently sends the new one. The player sees nothing and loses nothing.
 
 Keep an **append-only label history** on the account row — every `(identityHash, firstSeen,
 lastSeen)` the account has ever presented. That gives exactly the backwards-compatible admin
-trail Trist asked for: a player writes in saying "I used to be Foo@Balmung," you HMAC it,
+trail Sansflaire asked for: a player writes in saying "I used to be Foo@Balmung," you HMAC it,
 find the row, restore.
 
 ### When a popup IS needed
@@ -151,11 +151,11 @@ Then, once, on first window open:
 > We found **1,240 Challenge Tokens** for a character with this name.
 > Is this you?  **[Yes, restore]  [No, start fresh]  [Don't ask again]**
 
-That is Trist's proposed flow, preserved — but fired in the rare case it is genuinely useful
+That is Sansflaire's proposed flow, preserved — but fired in the rare case it is genuinely useful
 rather than on every dynamic-IP change.
 
 **Note the claim-transfer hole:** if someone renames *into* a name a scoring player used to
-hold, they would be offered that account. Stakes are low and Trist has said cheating is not a
+hold, they would be offered that account. Stakes are low and Sansflaire has said cheating is not a
 serious concern, so the proposed handling is: auto-merge silently below a Token threshold,
 require Lodestone verification above it.
 
@@ -164,7 +164,7 @@ require Lodestone verification above it.
 <!-- SECTION:lodestone -->
 ## 5. Lodestone linking
 
-The flow Trist described is exactly right and is what Discord FC bots already use:
+The flow Sansflaire described is exactly right and is what Discord FC bots already use:
 
 1. Server issues a short random token.
 2. Player pastes it into their Lodestone character profile comment.
@@ -204,7 +204,7 @@ Decided: reuse the existing sync path rather than invent one.
   active. The data volume is trivial.
 - The client syncs on plugin load and caches.
 
-**Past-due completions are accepted.** Trist: *"If a player completes a challenge that is
+**Past-due completions are accepted.** Sansflaire: *"If a player completes a challenge that is
 past-due but they never synced so it still is active for them, that received completion + score
 awarded should be allowed to still go through."* The server does **not** reject on expiry.
 
@@ -219,7 +219,7 @@ the server in §12 is for. Two different jobs, two different tools.
 <!-- SECTION:synccost -->
 ## 7. Sync cost — the real numbers
 
-Trist asked how much strain frequent syncing would realistically put on the network/game.
+Sansflaire asked how much strain frequent syncing would realistically put on the network/game.
 
 **Answer: effectively zero, and the existing implementation is already the safe shape.**
 Verified in [`ChallengeSyncService.cs`](../src/ChallengeSyncService.cs): `SyncAsync` is fully
@@ -244,7 +244,7 @@ already documented in `BanService`. That is a budget to respect, not a bandwidth
 - **Sync on plugin load** — matches existing behaviour.
 - **Lazy re-sync**: when the main window opens, if the active-quest pointer is older than the
   current hour boundary, fetch. Otherwise use cache.
-- **Manual "Check for current quest" button**, always available. (Trist asked for this
+- **Manual "Check for current quest" button**, always available. (Sansflaire asked for this
   regardless — agreed, and it doubles as the fix for any staleness complaint.)
 - **No background timer.** Nothing fetches while the player is just playing.
 
@@ -267,7 +267,7 @@ Tier (Hourly | Daily | Weekly)
 ```
 
 **Completing any one route closes the entire tier for that window.** Doing the Weekly HUNT
-denies the Weekly CRAFT and GATHER and awards the Weekly Tokens once. Confirmed by Trist.
+denies the Weekly CRAFT and GATHER and awards the Weekly Tokens once. Confirmed by Sansflaire.
 
 ### Brackets and the anti-cheese rule
 
@@ -281,7 +281,7 @@ claimed bracket. For **Lodestone-linked accounts the server can verify it indepe
 for anonymous accounts a mismatch pattern goes to the review queue, not to a ban.
 
 Optional flavour toggles — visit a zone, equip specific gear, emote, mount — are **guidance
-only, never real objectives.** Confirmed by Trist. They must never gate completion.
+only, never real objectives.** Confirmed by Sansflaire. They must never gate completion.
 
 **Never require "reach level N."** Explicitly ruled out.
 
@@ -293,7 +293,7 @@ only, never real objectives.** Confirmed by Trist. They must never gate completi
 Generate multi-part quests by **backward-chaining from the reward**, never by forward-assembling
 random steps. Forward assembly produces incoherent chores ("kill 5 rats, craft a bronze sword,
 turn in a carrot"). Backward chaining produces the coherent hunt→gather→craft→turn-in chain
-Trist described, for free, out of the recipe tree.
+Sansflaire described, for free, out of the recipe tree.
 
 1. Seed picks a **capstone item** from `Recipe` at the target bracket.
 2. Expand its recipe one level → ingredients.
@@ -336,7 +336,7 @@ compile time. Vendor sourcing needs `GetSubrowExcelSheet<T>()`, not the ordinary
 
 ### 9a. Drop data comes from a curated offline dataset
 
-Decided by Trist 2026-08-26: since the game ships no drop data, **community databases are the only
+Decided by Sansflaire 2026-08-26: since the game ships no drop data, **community databases are the only
 source**, e.g. Garland Tools (`garlandtools.org/db/#item/5554` → Morbol Vine → Drop → mob list →
 mob pages give locations). The same applies to NPC shop inventories.
 
@@ -358,7 +358,7 @@ never the runtime detection.
 
 ### 9b. Content exclusion rules — what the generator must refuse
 
-Trist's constraints, 2026-08-26. A generated quest must **never** require:
+Sansflaire's constraints, 2026-08-26. A generated quest must **never** require:
 
 | Excluded | Why |
 |---|---|
@@ -383,7 +383,7 @@ constant, or every generated quest silently becomes non-compliant at the next ex
 <!-- SECTION:detection -->
 ## 10. Detection — what is confirmed
 
-Trist's absolute rule: *"We'll only ever work with data the game/plugin/dalamud/Claude can
+Sansflaire's absolute rule: *"We'll only ever work with data the game/plugin/dalamud/Claude can
 detect with certainty."* Every verb needs a proven detector before it enters the pool.
 
 ### ✅ Kill tracking — already answered, do not re-derive
@@ -405,7 +405,7 @@ So: **kill mob X, count N — yes, with the hook. Approved and pattern identifie
 
 ### ✅ Gather / Craft / Obtain — verified this session
 
-Trist flagged this as critical. **Verified against the installed API 15 Dalamud** at
+Sansflaire flagged this as critical. **Verified against the installed API 15 Dalamud** at
 `addon/Hooks/dev/Dalamud.dll`: `IGameInventory` exists, with `InventoryChanged`, `ItemAdded`,
 `ItemRemoved`, `ItemChanged`, `ItemMoved`, plus `GameInventoryItem`, `GameInventoryEvent`,
 `GameInventoryType` and typed args (`ItemAddedArgs`).
@@ -428,7 +428,7 @@ hooks and no guessing.
 | Hunt N of mob M | `ActionEffectHandler.Receive` hook | ✅ Approved, pattern known |
 | Visit zone / area | Existing area engine | ✅ Already shipping |
 | Equip / Emote / Mount | `PlayerStateReader` | ✅ Already shipping |
-| Reach level | — | ⛔ **Ruled out by Trist** |
+| Reach level | — | ⛔ **Ruled out by Sansflaire** |
 
 **Correction (2026-08-26):** an earlier revision of this document claimed none of these services
 were injected yet. That was wrong — it came from a truncated grep, and absence of output was
@@ -486,7 +486,7 @@ is attractive but it directly undercuts the §8 hardest-bracket rule. Flagged, n
 <!-- SECTION:server -->
 ## 12. Server architecture
 
-**Recommendation: Cloudflare Workers + D1.** Trist has already shipped a Cloudflare Worker in
+**Recommendation: Cloudflare Workers + D1.** Sansflaire has already shipped a Cloudflare Worker in
 this project for the Discord suggestion relay — see
 [`Discord Suggestions Setup.md`](Discord%20Suggestions%20Setup.md) — so the deployment path,
 account, and tooling are known-good rather than a new dependency.
@@ -520,12 +520,12 @@ append-only design.
 <!-- SECTION:anticheat -->
 ## 13. Anti-cheat posture
 
-Trist's stance, recorded verbatim in spirit: cheating is *"not a super serious problem."*
+Sansflaire's stance, recorded verbatim in spirit: cheating is *"not a super serious problem."*
 Tiers 3 and 4 from the earlier threat model (recompiled DLL, memory editing) are explicitly
 **out of scope** — they are unclosable anyway, since the client runs on the attacker's machine.
 Only tiers 1 and 2 matter.
 
-**Governing principle, Trist's words:** *"Assume that it's a software bug rather than nefarious
+**Governing principle, Sansflaire's words:** *"Assume that it's a software bug rather than nefarious
 player activity."* And on exploits: *"Shame on me for allowing them to get through — no need to
 be harsh on the player for exploiting something easily available."*
 
@@ -560,7 +560,7 @@ fail-open and cache-backed, which is the right posture to inherit.
 
 ### Offline completions — dropped
 
-Raised earlier as a soft spot; Trist's response: *"it's odd that this could happen when the
+Raised earlier as a soft spot; Sansflaire's response: *"it's odd that this could happen when the
 plugin itself is used while playing an online-only MMO."* Correct. **Not a real case.** The
 client should still queue and retry on transient failure, but no special trust handling.
 
@@ -569,7 +569,7 @@ client should still queue and retry on transient failure, but no special trust h
 <!-- SECTION:review -->
 ## 14. The review queue
 
-Trist wants anomalies *"logged and stored in a 'review cheating behavior' location for me to
+Sansflaire wants anomalies *"logged and stored in a 'review cheating behavior' location for me to
 work on/review individually"* — and, crucially, **bugs fixed rather than ignored.**
 
 So the queue is a **bug-detection tool first and an enforcement tool second.** A table in D1
@@ -606,7 +606,7 @@ column is what makes it visible at a glance.
 | 10 | **"Reach level N" is ruled out** as an objective | 2026-08-26 |
 | 11 | Plugin is **fully functional with only a download**; accounts are optional | 2026-08-26 |
 | 12 | Three account tiers: Local / Anonymous-default / Lodestone-linked | 2026-08-26 |
-| 13 | **Drop IP** from identity — recommended, pending Trist's confirmation | 2026-08-26 |
+| 13 | **Drop IP** from identity — recommended, pending Sansflaire's confirmation | 2026-08-26 |
 | 14 | Identity is a **local random secret**; name+world is a label | 2026-08-26 |
 | 15 | Store **HMAC(pepper, name@world)**, never plaintext at rest | 2026-08-26 |
 | 16 | Lodestone link targets the **numeric character ID**, not the name | 2026-08-26 |
@@ -617,7 +617,7 @@ column is what makes it visible at a glance.
 | 21 | Supersedes **Q10** ("no points, ranks, or badges") | 2026-08-26 |
 | 22 | **Breadcrumbs are batched** onto the completion call, never sent per-step | 2026-08-26 |
 | 23 | **Per-row salt AND server-side pepper** — salt adds little, but it is cheap | 2026-08-26 |
-| 24 | **We maintain our own curated raw-materials list**, worked off permanently and extended rather than regenerated. Contents to be defined with Trist | 2026-08-26 |
+| 24 | **We maintain our own curated raw-materials list**, worked off permanently and extended rather than regenerated. Contents to be defined with Sansflaire | 2026-08-26 |
 
 Everything not yet built is inventoried in [`Tokens Build Backlog.md`](Tokens%20Build%20Backlog.md).
 
@@ -637,11 +637,11 @@ Carried into [`../research/OPEN_QUESTIONS.md`](../research/OPEN_QUESTIONS.md) as
 - Confirm `ItemAdded` + `ICondition` provenance actually distinguishes gathered / crafted /
   bought in practice. APIs are confirmed present; **behaviour is not yet observed.**
 
-**Design, deferred by Trist:**
+**Design, deferred by Sansflaire:**
 - Full quest step structure ("we'll go over what the quest structure should be later")
 - Bracket boundaries and per-expansion coverage ("we'll discuss this later, remind me")
 - Reroll pricing vs. the hardest-bracket rule (§11)
 - Claim-transfer threshold for silent merge vs. Lodestone gate (§4)
 
-**Confirmation needed from Trist:**
+**Confirmation needed from Sansflaire:**
 - Dropping IP from the identity model (§3) — this is a change to his stated proposal.

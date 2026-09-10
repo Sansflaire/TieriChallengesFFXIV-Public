@@ -37,7 +37,7 @@ internal static class ZoneIndex
 
     /// <summary>
     /// Residential zones get their own group rather than being scattered through the expansion
-    /// that happened to introduce them — Trist's call, and the in-game Teleport menu agrees: it
+    /// that happened to introduce them — Sansflaire's call, and the in-game Teleport menu agrees: it
     /// gives housing its own filter tab, not a slot under A Realm Reborn.
     /// </summary>
     private const uint ResidentialExpansion = uint.MaxValue - 1;
@@ -118,7 +118,7 @@ internal static class ZoneIndex
 
     /// <summary>
     /// DEVELOPER BUILDS ONLY. Every zone AND every duty (dungeon/trial/raid/…) in the game, not
-    /// just the ones an aetheryte or an authored challenge already reaches — Trist's own
+    /// just the ones an aetheryte or an authored challenge already reaches — Sansflaire's own
     /// "where do I still need to write a challenge" census, greyed by <see cref="Tally"/> exactly
     /// like the normal Zone tab already dims a populated-vs-empty zone.
     ///

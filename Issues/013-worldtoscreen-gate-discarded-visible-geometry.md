@@ -7,7 +7,7 @@
 
 ## What happened
 
-Test 2's Area Surveillance site is drawn as four gradient walls. Trist reported:
+Test 2's Area Surveillance site is drawn as four gradient walls. Sansflaire reported:
 
 > "If I turn my camera in certain angles, I can see some sort of wall you're drawing, but it's
 > invisible/gone most of the time when I look around. It's definitely not drawing in the normal

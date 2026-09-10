@@ -9,7 +9,7 @@ namespace TieriChallengesFFXIV;
 /// Shared ImGui skin for every raw-ImGui surface in this plugin, so a popup that cannot be built
 /// from PanacheUI nodes still LOOKS like the rest of it.
 ///
-/// <para><b>Standing rule, confirmed by Trist 2026-08-24: every public-facing surface in this
+/// <para><b>Standing rule, confirmed by Sansflaire 2026-08-24: every public-facing surface in this
 /// plugin must match the main window's style, whether or not it is actually rendered by
 /// PanacheUI.</b> The Challenge Creator is exempt — it is dev-only, never seen by a player, and
 /// DESIGN_SYSTEM §10 anti-pattern 8 already permits it to stay plain.</para>
@@ -28,7 +28,7 @@ namespace TieriChallengesFFXIV;
 /// system (<c>PanacheThemes.Active</c>). Matching those fixed constants is there­fore both
 /// correct (it is genuinely "the main window's style") and safe: reading the live Panache theme
 /// here would require a PanacheUI reference, which is exactly what these files must not have.
-/// If Trist ever wants this to track a swapped Panache theme live, that needs a different
+/// If Sansflaire ever wants this to track a swapped Panache theme live, that needs a different
 /// architecture — say so before assuming this file should grow one.</para>
 /// </summary>
 internal static class DialogTheme

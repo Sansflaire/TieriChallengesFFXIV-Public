@@ -64,7 +64,7 @@ internal static class AttunementService
     private static long _nextRefreshMs;
 
     /// <summary>
-    /// Trist's rule: residential areas are never spoilered, for anyone (2026-08-24 — see
+    /// Sansflaire's rule: residential areas are never spoilered, for anyone (2026-08-24 — see
     /// <see cref="IsResidential"/>). Otherwise, a zone outside an expansion the player has REACHED
     /// is spoilered outright; inside a reached expansion, only zones the player has never been
     /// unlocked into are spoilered; everything else shows. Territory 0 ("not tied to a zone") is
@@ -232,7 +232,7 @@ internal static class AttunementService
 
     /// <summary>
     /// Housing wards and interiors — <c>TerritoryIntendedUse</c> 13/14, the same pair
-    /// <c>ZoneIndex.IsResidential</c> and ClaudeAccessXIV's <c>isHousing</c> flag use. Trist's
+    /// <c>ZoneIndex.IsResidential</c> and ClaudeAccessXIV's <c>isHousing</c> flag use. Sansflaire's
     /// call (2026-08-24): residential areas are unlocked for everyone regardless of attunement or
     /// visit history — nothing about a housing ward is a story spoiler the way an unreached MSQ
     /// zone is, and gating them behind ownership (the only "attunement" a ward actually has) was

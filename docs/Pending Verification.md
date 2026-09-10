@@ -1,4 +1,4 @@
-# Pending Verification — things Trist still needs to test, check, or decide
+# Pending Verification — things Sansflaire still needs to test, check, or decide
 
 **This is the standing reminder list.** Claude re-reads it and raises anything still `⬜ TODO` at
 the start of any session touching Challenge Tokens or randomized quests. Nothing leaves this file
@@ -70,7 +70,7 @@ one **selected as `.png`** followed the rename rather than coming back blank —
 
 ---
 
-## ⬜ Needs a decision from Trist
+## ⬜ Needs a decision from Sansflaire
 
 ### D1 — Public repo history
 The design doc, including the original detailed §13 anti-cheat thresholds, **is already on
@@ -82,11 +82,11 @@ Options: (a) leave it — design commentary, no credentials; (b) rewrite public 
 (disruptive, requires force-push). **Recommendation: (a).**
 
 ### D2 — Quest step structure (Q14)
-Deferred by Trist. Note the new constraint from the drop-table finding: **Hunt cannot chain into
+Deferred by Sansflaire. Note the new constraint from the drop-table finding: **Hunt cannot chain into
 Craft**, so multi-part material flow must run Gather → Craft or vendor → Craft.
 
 ### D3 — Bracket boundaries and per-expansion coverage (Q15)
-Deferred by Trist.
+Deferred by Sansflaire.
 
 ### D4 — Reroll pricing vs. the hardest-bracket rule
 Spending Tokens to reroll a route undercuts the anti-cheese rule. Undecided.
@@ -117,7 +117,7 @@ not the name. Unbuilt.
 `TOKEN_PEPPER`, `ADMIN_KEY`, `LODESTONE_UA` — see `SECURITY.local.md` §6.
 
 **No pepper exists yet** (verified 2026-08-26 — nothing in the repo, the worker, or
-`SECRETS.local.md` mentions one). When it is generated, back it up to all three places Trist
+`SECRETS.local.md` mentions one). When it is generated, back it up to all three places Sansflaire
 asked for, in this order:
 
 1. **Private vault repo** (`Sansflaire/TieriChallengesFFXIV`) — the durable copy
@@ -144,12 +144,12 @@ tree, not just its top level. The expansion window must be data, not a constant.
 | — | Does `MonsterNote` exist for Hunt routes? (Q12, partial) | **Yes** — `MonsterNote` and `MonsterNoteTarget` both present and bind normally. Schema still unread (see V3). | 2026-08-26 |
 | — | Are `IGameInventory` / `ICondition` available and injected? | **Yes, both** — already injected in `Plugin.cs`, and `InventoryWatcher` already consumes all six inventory events. (An earlier claim that they were missing was wrong.) | 2026-08-26 |
 | — | Is `GilShopItem` reachable via `GetExcelSheet<T>()`? | **No** — it is a subrow sheet (`IExcelSubrow<T>`). Needs `GetSubrowExcelSheet<T>()`. | 2026-08-26 |
-| — | Identity model: name+world+IP? | **No — dropped.** Identity is a locally-generated 128-bit secret; name+world is a label. Trist agreed 2026-08-26. Removes the rename problem entirely. | 2026-08-26 |
-| — | Do the JPEG q94 backgrounds (0.84.38.2) look acceptable in game? | **Yes** — Trist confirmed by eye on a local display. The PNG→JPEG conversion stands; no re-encode needed. Masters remain recoverable from git history before `2d36391` if that ever changes. | 2026-08-26 |
+| — | Identity model: name+world+IP? | **No — dropped.** Identity is a locally-generated 128-bit secret; name+world is a label. Sansflaire agreed 2026-08-26. Removes the rename problem entirely. | 2026-08-26 |
+| — | Do the JPEG q94 backgrounds (0.84.38.2) look acceptable in game? | **Yes** — Sansflaire confirmed by eye on a local display. The PNG→JPEG conversion stands; no re-encode needed. Masters remain recoverable from git history before `2d36391` if that ever changes. | 2026-08-26 |
 
 ## Map coordinate conversion — `places-of-interest.json` (added 2026-08-27)
 
-⬜ **TODO — needs Trist in game.** `MarkerToMap(raw, sizeFactor) = 41/(sf/100) * (raw/2048) + 1`
+⬜ **TODO — needs Sansflaire in game.** `MarkerToMap(raw, sizeFactor) = 41/(sf/100) * (raw/2048) + 1`
 converts `MapMarker` X/Y into the coordinates the game displays. It is **spot-checked, not
 proven**: Summerford Farms lands at (25.2, 16.8) against a known (25, 17). Not confirmed across
 differing `SizeFactor` values (100 / 200 / 400), and housing maps with non-zero `OffsetX/Y` are

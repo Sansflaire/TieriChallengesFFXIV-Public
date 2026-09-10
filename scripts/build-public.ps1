@@ -6,7 +6,7 @@
     This is the ONLY sanctioned way to produce something for players.
 
     It builds Release and nothing else, then refuses to continue unless the artifact proves it
-    is a public build. The dev build is what Trist runs in-game; shipping it would hand players
+    is a public build. The dev build is what Sansflaire runs in-game; shipping it would hand players
     the Challenge Creator and the developer diagnostics.
 
     Guards, in order:

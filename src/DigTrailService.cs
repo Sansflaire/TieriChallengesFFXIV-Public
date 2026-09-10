@@ -147,7 +147,7 @@ internal sealed class DigTrailService : IDigTest
             if (!_inZone) return $"Travel to {ZoneName(stop.Territory)}.";
 
             // NO "this is the place, dig" line, ever. That slot on the HUD holds the CLUE or it
-            // holds nothing — Trist's call, 2026-09-10.
+            // holds nothing — Sansflaire's call, 2026-09-10.
             //
             // It was redundant on its own terms: the dial already turns yellow, stops pulsing and
             // reads DIG!, which says the same thing in the place the player is already looking. But

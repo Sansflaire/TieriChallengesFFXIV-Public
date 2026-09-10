@@ -1,6 +1,6 @@
 # Challenge Tokens — Build Backlog (everything that does not exist yet)
 
-Created 2026-08-26 at Trist's request: *"Can you create a list of everything that we DON'T have
+Created 2026-08-26 at Sansflaire's request: *"Can you create a list of everything that we DON'T have
 that we discussed wanting to get created."*
 
 **Scope:** every component discussed for Challenge Tokens + randomized quests that has **no code
@@ -45,7 +45,7 @@ kill hook (Hunt routes) ─────────────┘
 
 1. **V1 probe run** (`/tchallenges probe`) — decides whether Gather/Craft are detectable at all.
    Everything downstream assumes yes. **Tool built, never run.**
-2. **Curated raw-materials list** — the generator's input. Trist owns the contents.
+2. **Curated raw-materials list** — the generator's input. Sansflaire owns the contents.
 3. **Kill hook** — Hunt routes cannot exist without it, and it was already required for 1.0.
 4. **Generator** — needs 2 and 3.
 5. **Server** — can be built in parallel with 4.
@@ -58,11 +58,11 @@ kill hook (Hunt routes) ─────────────┘
 
 | # | Item | Status | Notes |
 |---|---|---|---|
-| D1 | **Curated raw-materials list** | ⬜ | **Trist's plan, 2026-08-26:** we own and maintain our own list of raw materials and where each comes from, and work off it permanently — extended when we add to it, never regenerated. Trist will go over the contents and schema later. This replaces any notion of live third-party lookup. |
+| D1 | **Curated raw-materials list** | ⬜ | **Sansflaire's plan, 2026-08-26:** we own and maintain our own list of raw materials and where each comes from, and work off it permanently — extended when we add to it, never regenerated. Sansflaire will go over the contents and schema later. This replaces any notion of live third-party lookup. |
 | D2 | Extraction workflow for D1 | ⬜ | One-time dev-side pass over community DBs (Garland Tools et al.) to seed the list. Never runs on a player's machine. Check redistribution terms before bulk-copying a community dataset. |
 | D3 | Quest generator (backward-chaining) | ⬜ | Capstone → recipe → ingredient sourcing → topological steps. Also derives difficulty, Token value and minimum plausible completion time from the same walk. |
 | D4 | Exclusion-rule data | ⬜ | Savage/extreme from current **or previous** expansion, and beast-tribe-currency items. Must apply across the capstone's ENTIRE ingredient tree. The expansion window must be data, not a constant. |
-| D5 | Bracket definitions | ⬜ | Level bands per route. Q15, deferred by Trist. |
+| D5 | Bracket definitions | ⬜ | Level bands per route. Q15, deferred by Sansflaire. |
 | D6 | `active.json` + publisher | ⬜ | Names the live Hourly/Daily/Weekly quest ids. Publisher extends the existing Creator→Publish path. |
 | D7 | Quest archive | ⬜ | Every quest ever issued, retained. Small. |
 
@@ -101,12 +101,12 @@ kill hook (Hunt routes) ─────────────┘
 | # | Item | Status | Notes |
 |---|---|---|---|
 | C1 | Quest definition sync | 🟨 | Extend `ChallengeSyncService` to fetch `active.json` + quest bodies. The fetch/verify/cache machinery already exists and already falls back to raw on API rate-limit. |
-| C2 | Sync jitter | ⬜ | Random 0–300 s offset so an hourly rotation does not stampede. Trist notes the scenario is unlikely; it is ~3 lines. |
+| C2 | Sync jitter | ⬜ | Random 0–300 s offset so an hourly rotation does not stampede. Sansflaire notes the scenario is unlikely; it is ~3 lines. |
 | C3 | Manual "check for current quest" button | ⬜ | Plus a short cooldown and a "Last synced HH:MM" label — the right fix for click-mashing, since the rate limit is already handled by fallback. |
 | C4 | Quest display UI | ⬜ | Tier × Route × Bracket, showing only the hardest bracket the player qualifies for. |
 | C5 | Bracket eligibility evaluation | ⬜ | From the player's own job levels, client-side. |
 | C6 | Quest instance state machine | ⬜ | accept → steps → complete, with local persistence. |
-| C7 | **Breadcrumb recorder** | ⬜ | **Confirmed IN by Trist 2026-08-26.** Record each step locally with a timestamp; send the whole trail **attached to the completion**, never per-step. One request per quest instead of ~7 — the difference between 15k and 105k requests/day at 5k actives. |
+| C7 | **Breadcrumb recorder** | ⬜ | **Confirmed IN by Sansflaire 2026-08-26.** Record each step locally with a timestamp; send the whole trail **attached to the completion**, never per-step. One request per quest instead of ~7 — the difference between 15k and 105k requests/day at 5k actives. |
 | C8 | Completion submission | ⬜ | Posts instance id + breadcrumb trail. **Never posts a Token value.** |
 | C9 | Token balance display | ⬜ | Lifetime (score, never falls) shown separately from Balance (spendable). |
 | C10 | Token spending UI | ⬜ | Needs §7. |
@@ -126,7 +126,7 @@ relay, so the account, CLI and deploy path are proven. **None of the Token serve
 | S3 | Idempotency | ⬜ | One instance awards Tokens at most once, ever. |
 | S4 | Server-side Token value lookup | ⬜ | The structural anti-cheat: the client says *what* completed, the server decides *what it is worth*. |
 | S5 | **`TOKEN_PEPPER`** | ⬜ | Verified absent. Back up to (1) private vault repo, (2) local PC beside `SansflaireCertificate\`, (3) `SECRETS.local.md`, then `wrangler secret put`. **Losing it makes every stored `identityHash` unlookupable forever.** |
-| S6 | Per-row salt | ⬜ | **Trist 2026-08-26: do it anyway** — "it's just a little extra." Stored per account row alongside the peppered HMAC. |
+| S6 | Per-row salt | ⬜ | **Sansflaire 2026-08-26: do it anyway** — "it's just a little extra." Stored per account row alongside the peppered HMAC. |
 | S7 | `ADMIN_KEY`, `LODESTONE_UA` | ⬜ | See `SECURITY.local.md` §6. |
 | S8 | Lodestone verification scraper | ⬜ | Queued, rate-limited ~1/sec, **one-shot only** — at link time and on manual re-link. Never scheduled. Target the numeric character ID (survives renames and world transfers). |
 | S9 | Materialized leaderboard | ⬜ | Computed on a cron, served cached. Never per-request. |
@@ -141,8 +141,8 @@ relay, so the account, CLI and deploy path are proven. **None of the Token serve
 
 | # | Item | Status | Notes |
 |---|---|---|---|
-| W1 | Public profile / leaderboard | ⬜ | Trist: no public display of who uses the plugin. Hashed identity means opt-in display names if ever wanted. |
-| W2 | Admin review view | ⬜ | Trist is the only admin for now. |
+| W1 | Public profile / leaderboard | ⬜ | Sansflaire: no public display of who uses the plugin. Hashed identity means opt-in display names if ever wanted. |
+| W2 | Admin review view | ⬜ | Sansflaire is the only admin for now. |
 | W3 | Resync endpoint for a wiped install | ⬜ | Nearly free once S2 exists — the local file is only a cache. |
 
 ---
@@ -179,6 +179,6 @@ None exist as *purchasable*. The good news is most reuse a working system, so th
 
 | Date | Decision |
 |---|---|
-| 2026-08-26 | **Breadcrumbs are batched**, attached to the completion. Confirmed by Trist. |
+| 2026-08-26 | **Breadcrumbs are batched**, attached to the completion. Confirmed by Sansflaire. |
 | 2026-08-26 | **Per-row salt in addition to the server-side pepper.** "It's just a little extra." |
-| 2026-08-26 | **We own a curated raw-materials list** and work off it permanently. Contents/schema to be defined with Trist later. |
+| 2026-08-26 | **We own a curated raw-materials list** and work off it permanently. Contents/schema to be defined with Sansflaire later. |

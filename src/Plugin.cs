@@ -56,7 +56,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static ProgressStore Progress { get; private set; } = null!;
 
     /// <summary>
-    /// True in Trist's developer build, false in the public artifact. Set from the DEV_BUILD
+    /// True in Sansflaire's developer build, false in the public artifact. Set from the DEV_BUILD
     /// compile constant, which TieriChallengesFFXIV.csproj defines for the Debug configuration
     /// only. Dev-only features are additionally compiled out entirely — this flag is for UI
     /// branching, not for security.
@@ -190,7 +190,7 @@ public sealed class Plugin : IDalamudPlugin
     /// The three dig tests — Sense Hunt, Area Surveillance, Clue Trail — and the lab that carries
     /// their rules, commands, buttons and settings. Entirely dev-only, gate and all: unlike
     /// <see cref="Props"/>, which ships because challenge content calls it, these are experiments a
-    /// player must not be able to reach. Trist's call, 2026-09-09.
+    /// player must not be able to reach. Sansflaire's call, 2026-09-09.
     /// </summary>
     private readonly DigTests       _digTests = new();
     private readonly DigTestsWindow _digTestsWindow;
@@ -708,7 +708,7 @@ public sealed class Plugin : IDalamudPlugin
 
                 // DEV ONLY, deliberately. PropService itself ships publicly so challenge content
                 // can call it, but a PLAYER must not be able to summon a shovel on demand — the
-                // dig belongs to a challenge, not to a chat command. Trist's call.
+                // dig belongs to a challenge, not to a chat command. Sansflaire's call.
                 case "dig":
                     ChatGui.Print("[Challenges] " + Props.Dig());
                     break;
@@ -1202,7 +1202,7 @@ public sealed class Plugin : IDalamudPlugin
     /// The popup last, since it is the only part that can be delayed behind another.
     /// </summary>
     /// <summary>
-    /// <b>Escape stops whatever the plugin started.</b> Standing rule, Trist 2026-08-26.
+    /// <b>Escape stops whatever the plugin started.</b> Standing rule, Sansflaire 2026-08-26.
     ///
     /// <para>Runs once per frame, before any window draws, so a release lands on the very frame
     /// the key goes down rather than one frame later. One call site rather than one per surface:

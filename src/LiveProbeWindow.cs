@@ -10,7 +10,7 @@ namespace TieriChallengesFFXIV;
 
 /// <summary>
 /// <b>Developer-only.</b> Drives <see cref="LiveProbe"/> from a checklist so a live-game question
-/// can be answered without a back-and-forth conversation: Trist records one labelled action per
+/// can be answered without a back-and-forth conversation: Sansflaire records one labelled action per
 /// row, hits Write Report, and the JSON lands on disk for Claude to read afterwards.
 ///
 /// <para>Raw ImGui deliberately. Dev-only surfaces are explicitly exempt from the

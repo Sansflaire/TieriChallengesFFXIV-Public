@@ -8,7 +8,7 @@
 ## What happened
 
 `PropService` gained a playback-speed multiplier for the dig animation, driven through
-`ActionTimelineSequencer.SetSlotSpeed`. It shipped, and Trist reported:
+`ActionTimelineSequencer.SetSlotSpeed`. It shipped, and Sansflaire reported:
 
 > "The speed multiplier did not work. It just ended the animation that played at normal speed in
 > half the time (at 2x speed)."

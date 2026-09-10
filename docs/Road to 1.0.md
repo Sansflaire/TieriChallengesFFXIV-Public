@@ -44,25 +44,25 @@ exact asset name — and bump `AssemblyVersion` in the public repo's `pluginmast
 
 ## What 1.0 is — scope decisions
 
-Settled with Trist on 2026-08-22. These are decisions, not guesses; the milestone table below
+Settled with Sansflaire on 2026-08-22. These are decisions, not guesses; the milestone table below
 follows from them.
 
 | Decision | Answer | Consequence |
 |----------|--------|-------------|
-| **What the plugin is** | A **curated catalogue** authored by Trist. Players complete challenges; they do not author them. | The Challenge Creator stays dev-only permanently. Every shipped challenge needs a working detector — a challenge nothing can complete is not shippable. |
+| **What the plugin is** | A **curated catalogue** authored by Sansflaire. Players complete challenges; they do not author them. | The Challenge Creator stays dev-only permanently. Every shipped challenge needs a working detector — a challenge nothing can complete is not shippable. |
 | **What ships to players** | **The PUBLIC (Release) build only. Never the dev build.** | Enforced by `scripts/build-public.ps1`, which builds Release only and aborts if developer strings are found in the artifact. Do not publish a DLL that did not come out of that script. |
-| **Feedback channel** | An in-plugin **Suggest** button posting to Trist's Discord. | Endpoint lives in gitignored `src/Secrets.props`, baked into the DLL at build time. See [Discord Suggestions Setup](Discord%20Suggestions%20Setup.md) — the raw-webhook-vs-proxy decision is still open. |
+| **Feedback channel** | An in-plugin **Suggest** button posting to Sansflaire's Discord. | Endpoint lives in gitignored `src/Secrets.props`, baked into the DLL at build time. See [Discord Suggestions Setup](Discord%20Suggestions%20Setup.md) — the raw-webhook-vs-proxy decision is still open. |
 | **Progress scope** | **Account-wide**, as already built. | No migration, no storage rework. Closed with zero work. |
-| **Distribution** | **Trist's own plugin repo** via a `pluginmaster.json` users add in Dalamud. | No third-party review process or constraints. Needs GitHub releases, a maintained pluginmaster, and signing. |
+| **Distribution** | **Sansflaire's own plugin repo** via a `pluginmaster.json` users add in Dalamud. | No third-party review process or constraints. Needs GitHub releases, a maintained pluginmaster, and signing. |
 | **Enemy challenge type** | **Required for 1.0.** | An `ActionEffectHandler.Receive` hook is in scope, following DamageMeter's proven pattern. The coarse creature filter is accepted — `ModelChara.Type`, specific `BNpcName`, and name matching — because no plant/beast taxonomy exists in the game data. |
 | **Catalogue size at launch** | **Start small (~15–20), grow after launch.** | The catalogue is a living thing released in point updates, not a launch blocker. |
-| **How curated challenges ship** | **Built into the plugin.** Trist authors with the dev Creator, then the new challenges reach players through commit → push → build. | Needs an export path out of the dev pluginConfig into a source-controlled catalogue that compiles into the DLL. See the note below. |
+| **How curated challenges ship** | **Built into the plugin.** Sansflaire authors with the dev Creator, then the new challenges reach players through commit → push → build. | Needs an export path out of the dev pluginConfig into a source-controlled catalogue that compiles into the DLL. See the note below. |
 | **Discoverability** | **Zone name + written hint only.** | Finding the exact spot is part of the challenge. No player-facing in-world markers — the overlay stays a dev placement aid. Cheap, and it makes the description text load-bearing. |
 | **Rewards** | **Just completion + date**, as already built. | No points, ranks, or badges. Closed with zero work. |
 
 ### Note on the authoring pipeline (milestone 11)
 
-Trist's requirement: *"the plugin should have the challenges built in, so when I create more with
+Sansflaire's requirement: *"the plugin should have the challenges built in, so when I create more with
 my dev version, I'd want them added as commit + push + build to the public version."*
 
 Recommended shape, to be confirmed before building: a dev-only **Export catalogue** action writes

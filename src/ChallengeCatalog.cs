@@ -556,7 +556,7 @@ public static class ChallengeCatalog
 
     // There was a FaceOf() here that made a chain present as its CURRENT STEP — the row's title was
     // the step's title, so a quest read "Step 2" in the list with the challenge's real name nowhere
-    // on screen. Trist's call, 2026-08-26: a row identifies the CHALLENGE, and the step is context
+    // on screen. Sansflaire's call, 2026-08-26: a row identifies the CHALLENGE, and the step is context
     // the row carries alongside it, never a replacement for its name. Combined now stamps the
     // challenge's own Title/Detail/Hint, and how far through it is travels separately as StepLabel.
 

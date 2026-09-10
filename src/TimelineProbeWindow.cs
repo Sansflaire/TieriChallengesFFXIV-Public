@@ -1160,7 +1160,7 @@ internal sealed unsafe class TimelineProbeWindow
 
     /// <summary>
     /// Plays one ActionTimeline row on the local player and returns a human-readable result. This
-    /// is the whole of what Trist actually wanted out of this investigation — the dig animation, on
+    /// is the whole of what Sansflaire actually wanted out of this investigation — the dig animation, on
     /// demand, with no accessory owned — so it lives behind a command rather than only inside a
     /// probe window that has to be opened and typed into.
     ///

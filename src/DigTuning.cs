@@ -10,7 +10,7 @@ namespace TieriChallengesFFXIV;
 /// DEVELOPER BUILD ONLY. Every distance the three dig tests measure against, in one place, editable
 /// live from <see cref="DigTestsWindow"/>.
 ///
-/// <para><b>Why these are not consts.</b> Trist asked for a debug way to define the ranges, and the
+/// <para><b>Why these are not consts.</b> Sansflaire asked for a debug way to define the ranges, and the
 /// reason is that none of these numbers can be reasoned out at a desk — "close enough to dig" is a
 /// feel, and the only way to find it is to stand in a field and try it. A const would mean a
 /// rebuild per guess, and a rebuild hot-reloads the plugin, which is a thing to do to somebody's
@@ -44,7 +44,7 @@ internal static class DigTuning
     // ── Test 2: Area Surveillance ────────────────────────────────────────────
 
     /// <summary>
-    /// Side length of the drawn square site, in yalms. 50, not 70 — Trist asked for roughly half
+    /// Side length of the drawn square site, in yalms. 50, not 70 — Sansflaire asked for roughly half
     /// the ground to search, and halving an AREA means dividing the side by √2, not by two.
     /// 70 → 49.5, taken as 50.
     /// </summary>
@@ -174,7 +174,7 @@ internal static class DigTuning
     /// precisely the case a const cannot serve.</para>
     ///
     /// <para>The defaults are set to drop the pair slightly and open the gap wide enough for a line
-    /// of the game's text to sit centred between them, which is the arrangement Trist asked for
+    /// of the game's text to sit centred between them, which is the arrangement Sansflaire asked for
     /// (2026-09-10). Treat them as a starting point, not an answer.</para>
     /// </summary>
     public static float HudDropPx    = DefaultHudDropPx;

@@ -125,7 +125,7 @@ internal sealed class MainWindow : IDisposable
     /// <summary>
     /// The zone/expansion list the master pane actually walks. Normally the reachable-and-
     /// authored set; in dev builds, with <see cref="Configuration.DevShowAllContent"/> on, the
-    /// full game census instead — Trist's "what still needs a challenge" tracker.
+    /// full game census instead — Sansflaire's "what still needs a challenge" tracker.
     /// </summary>
     private IReadOnlyList<ZoneIndex.Expansion> ZoneExpansions()
     {
@@ -846,7 +846,7 @@ internal sealed class MainWindow : IDisposable
         // ever look at the left button. Reading it here at the ImGui level, cross-referenced
         // against whichever row _hoverNext resolves to THIS frame (below, after Render), is the
         // documented workaround rather than a Panache change — see the 2026-08-24 conversation
-        // with Trist on adding real OnRightClick to Panache later.
+        // with Sansflaire on adding real OnRightClick to Panache later.
         bool rightClick = ImGui.IsMouseClicked(ImGuiMouseButton.Right)
                         && ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows
                                                | ImGuiHoveredFlags.AllowWhenBlockedByPopup
@@ -2212,7 +2212,7 @@ internal sealed class MainWindow : IDisposable
         // as the public build does — including this whole menu. /tchallenges preview comes back.
         if (!_config.PublicPreview)
         {
-            // Dev items are mostly unillustrated by Trist's call — the developer surface does not
+            // Dev items are mostly unillustrated by Sansflaire's call — the developer surface does not
             // need to look finished — and Ico.None still reserves the column so this menu lines up
             // with the public ones beside it in the same bar. Sound test is the exception: it was
             // asked for by name once a music note existed in the set.
@@ -2752,7 +2752,7 @@ internal sealed class MainWindow : IDisposable
         // Completing a challenge means you were there — it stops being a spoiler the moment you
         // earn it, which is also why this is keyed off `done` rather than off attunement directly
         // (a WholeZone GearInArea challenge can complete without ever standing near an aetheryte).
-        // Dev builds bypass this entirely outside public-preview: Trist authoring a zone's content
+        // Dev builds bypass this entirely outside public-preview: Sansflaire authoring a zone's content
         // must not have that zone spoilered to himself.
         bool spoilered = !done && !DevBypassesSpoilers
                        && AttunementService.IsZoneSpoilered(_config, ZoneIndex.TerritoryOf(_config, def.Id));

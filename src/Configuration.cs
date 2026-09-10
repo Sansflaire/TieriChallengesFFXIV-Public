@@ -235,7 +235,7 @@ public sealed class CustomChallenge
     public ChallengeArea? RaceQuit { get; set; }
 
     /// <summary>
-    /// Whether leaving <see cref="RaceQuit"/> ends the run. Off by default — Trist's call: a race
+    /// Whether leaving <see cref="RaceQuit"/> ends the run. Off by default — Sansflaire's call: a race
     /// with no bounding area is a perfectly good race, and a quit volume the author forgot to size
     /// properly would end runs for reasons the player cannot see.
     /// </summary>
@@ -397,7 +397,7 @@ public sealed class Configuration : IPluginConfiguration
 
     /// <summary>
     /// DEV BUILDS ONLY. Widens the Zone tab from "reachable + authored" (~75 entries) to every
-    /// zone and duty in the game (~350+), via <c>ZoneIndex.AllGameContent</c> — Trist's own census
+    /// zone and duty in the game (~350+), via <c>ZoneIndex.AllGameContent</c> — Sansflaire's own census
     /// of where a challenge has NOT been written yet. Field exists in every build (harmless,
     /// mirrors <see cref="PublicPreview"/>'s pattern) but the toggle to set it only renders behind
     /// <c>#if DEV_BUILD</c>, so it can never be reached from a Release build.

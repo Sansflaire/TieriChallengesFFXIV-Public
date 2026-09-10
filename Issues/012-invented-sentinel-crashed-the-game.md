@@ -15,7 +15,7 @@ was implemented as:
 chara->OrnamentData.SetupOrnament(-1, 0);   // "detach"
 ```
 
-Trist pressed the detach button. **The game crashed** — Dalamud caught the process going down and
+Sansflaire pressed the detach button. **The game crashed** — Dalamud caught the process going down and
 started a minidump.
 
 ## Root cause
@@ -42,7 +42,7 @@ So there was never a negative id in the client's model of an ornament. `-1` as a
 
 ## It crashed a second time, three minutes later, and that one was self-inflicted
 
-Trist relaunched, and crashed again **while loading into his character**, having touched nothing.
+Sansflaire relaunched, and crashed again **while loading into his character**, having touched nothing.
 The log is unambiguous:
 
 ```
@@ -59,7 +59,7 @@ The log is unambiguous:
 which called `SetupOrnament(-1)`.** The fixed build then loaded perfectly — too late, because the
 container had already been corrupted by the outgoing one.
 
-So: *rebuilding while Trist was in game is what crashed him.* Dalamud reloads a dev plugin whenever
+So: *rebuilding while Sansflaire was in game is what crashed him.* Dalamud reloads a dev plugin whenever
 its DLL changes, which means **`Dispose` runs at a moment chosen by whoever is compiling, not by the
 user.** A teardown that touches game memory is therefore strictly more dangerous than a button — the
 developer can fire it remotely, during a loading screen, with no warning.
@@ -153,7 +153,7 @@ of that. `0` is now a plausible, in-domain candidate rather than an invented out
 which is a real improvement, but plausible is not verified and this file exists because that
 distinction was ignored once already.
 
-**And it is not needed.** Trist owns the Shovel, so the supported route works end to end: the game
+**And it is not needed.** Sansflaire owns the Shovel, so the supported route works end to end: the game
 summons the accessory, the plugin only plays the animation, the game dismisses it. The memory attach
 would buy something only for accessories the player does *not* own, which nobody has asked for.
 
@@ -182,7 +182,7 @@ before building on it, on state the server can restore.** Not "be more careful w
    authority was the *storage* type everywhere else in the struct family, and it said unsigned.
 2. **Never invent a sentinel for a native API.** Find a real caller, observe a real value, or do not
    call it. This is the standing "NEVER ASSUME WHEN YOU MUST KNOW" rule, and the cost of breaking it
-   here was Trist's game process.
+   here was Sansflaire's game process.
 3. **A C# try/catch does not make a native call safe.** Guard with a precondition. If the argument
    cannot be validated, do not make the call.
 4. **Never build an acquire with no verified release.** "Attach a model" is only shippable once
@@ -195,7 +195,7 @@ before building on it, on state the server can restore.** Not "be more careful w
    changes, so unload fires at a moment chosen by whoever is compiling — mid-loading-screen, mid-
    fight, with no user action at all. Unload teardown gets the same "managed state only" bar as the
    Escape handler, for the same reason.
-7. **Don't rebuild a dev plugin while Trist is in game unless the unload path is known safe.** The
+7. **Don't rebuild a dev plugin while Sansflaire is in game unless the unload path is known safe.** The
    rebuild *is* a reload. Check whether the game is up first (`GET /status` on the brain answers it
    in one call) — and if unload only touches managed state, as it now does, this stops mattering.
 8. **A decoupled write is the worst kind.** The bad value was stored silently and killed the process

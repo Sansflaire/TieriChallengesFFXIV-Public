@@ -6,7 +6,7 @@
 
 ## Symptom
 
-A real player (Trist's friend) reported the Zone tab's detail-pane header showing the real zone
+A real player (Sansflaire's friend) reported the Zone tab's detail-pane header showing the real zone
 name ("Empyreum") in large text, while the master list one column over showed the same zone as
 "??? (unexplored)". Separately, the friend reported that after physically walking into a
 residential ward, the challenge inside it still read "Explore this zone to reveal this

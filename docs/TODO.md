@@ -9,13 +9,13 @@ hold the reasoning and must not track status themselves, or the three will drift
 
 Created 2026-08-26. Nothing on this list is built yet.
 
-## The rules (Trist, 2026-08-26 — see `CLAUDE.md` §6A)
+## The rules (Sansflaire, 2026-08-26 — see `CLAUDE.md` §6A)
 
-1. **This is THE official list.** We work off it. Trist requests something → it goes on with a
+1. **This is THE official list.** We work off it. Sansflaire requests something → it goes on with a
    permanent ID. We change something in the project → **its item comes off, in the same commit as
    the change.** Not later, not in a cleanup pass. *(Implemented as "move to Done with the date",
    matching the `OPEN_QUESTIONS.md` convention — off the active list either way.)*
-2. **Assume Trist cannot test.** If he asks for the next thing to work on and has not said he is
+2. **Assume Sansflaire cannot test.** If he asks for the next thing to work on and has not said he is
    at home, offer only a **🤖** item — completable with nobody but Claude. Never propose an
    in-game action, a decision, or visual sign-off unless he says he is available.
 3. **Priority order**, applied as a tiebreak chain top-down:
@@ -26,7 +26,7 @@ Created 2026-08-26. Nothing on this list is built yet.
 items with the next free number in their block; leave gaps where things are dropped.
 
 **Tags:** 🤖 Claude can do this alone · ⚡ cheap · 🔴 blocks other work · 🔒 needs a secret ·
-🙋 **needs Trist** (in-game action, decision, or sign-off)
+🙋 **needs Sansflaire** (in-game action, decision, or sign-off)
 
 **Blocked items carry an indented `⛔ Blocked by:` line.** An item with no such line can be
 started right now. Update the indented line in the same edit that changes a dependency.
@@ -48,10 +48,10 @@ started right now. Update the indented line in the same edit that changes a depe
       the open question**, and it may want a `LICENSE`/attribution note in the repo root. Same
       shape as R5; decide both together. Not a blocker — flagged, not assumed resolved.
 
-## 📋 Review & decide — needs Trist
+## 📋 Review & decide — needs Sansflaire
 
 - [ ] **V1** 🙋 Public repo history — leave the already-pushed anti-cheat §13, or rewrite? *(rec: leave)*
-- [ ] **V2** 🙋 🔴 Curated raw-materials list — contents + schema *(Trist owns this)*
+- [ ] **V2** 🙋 🔴 Curated raw-materials list — contents + schema *(Sansflaire owns this)*
 - [ ] **V3** 🙋 Quest step structure — what a multi-part quest actually looks like
   - ⛔ Blocked by: **R1** *(step verbs must be things we can actually detect)*
 - [ ] **V4** 🙋 🔴 Bracket boundaries — level bands + per-expansion coverage
@@ -193,7 +193,7 @@ started right now. Update the indented line in the same edit that changes a depe
 
 ## Startable right now — nothing blocks these
 
-### 🤖 Claude can do these alone — the answer to "what's next?" when Trist is away
+### 🤖 Claude can do these alone — the answer to "what's next?" when Sansflaire is away
 
 Listed in **rule 3 priority order**, so the top item is the default recommendation:
 
@@ -211,7 +211,7 @@ Listed in **rule 3 priority order**, so the top item is the default recommendati
 | 9 | **A2** `ADMIN_KEY`, `LODESTONE_UA` | 🔒 unblocks I27 |
 | 10 | **R5** Garland Tools terms | Research; unblocks A3, but the answer may be "ask a human" |
 
-### 🙋 Needs Trist — only offer these when he says he is available
+### 🙋 Needs Sansflaire — only offer these when he says he is available
 
 **R1** *(in-game, ~5 min — the highest-value item on the whole list)* · **R4** · **V1** · **V2** ·
 **V4** · **V5** · **V6** · **V7** · **V8**
@@ -243,7 +243,7 @@ Moved here with the date and the answer — never deleted.
 | **I45** Three dig minigame tests + a way to tune their ranges | **Done, all three, dev-only.** **Sense Hunt** (`DigHuntService`): one buried spot, an on-demand 8-point compass Sense whose bearing is a deliberate SNAPSHOT, bands warming RED→YELLOW→GREEN→DIG, timed. **Area Surveillance** (`DigSiteService`): a drawn site with N spaced pieces that assemble into the relic — no warming here, sweeping is the thing being tested. **Clue Trail** (`DigTrailService`): ordered spots, each dig yielding the next clue, with a radar ring that pulses faster approaching and goes SOLID exactly when a dig will land. Ranges live in `DigTuning` (own JSON, live sliders). Everything — rules, commands, buttons, settings — is in `DigTestsWindow` behind `#if DEV_BUILD`; verified absent from the Release DLL. | 2026-09-09 |
 | **I46** In-world opaque→transparent gradient walls for box volumes | **Done** (`DigVolumeRender.DrawGradientBox`), used by Surveillance. Banded `AddQuadFilled` — ImGui has no per-vertex gradient for an arbitrary quad, and a projected wall is never screen-axis-aligned so `AddRectFilledMultiColor` does not apply. `PrimReserve`/`PrimWriteVtx`/`PrimWriteIdx` **are** exposed and would give the exact two-triangle version; not taken because `_VtxCurrentIdx` could not be verified (a .NET 10 assembly will not load into PS 5.1 reflection) and a wrong index count corrupts the shared draw list. Upgrade path recorded in `CLAUDE.md` §3. | 2026-09-09 |
 | Spawn the Shovel into the player's hands without owning it | **Done, verified unowned 2026-09-09.** `SetupOrnament(57)` attach -> `PlayActionTimeline(13383)` dig -> `SetupOrnament(0)` detach, driven by `/tchallenges shovel` (+ `off`). No ownership at any layer. Three safe routes were eliminated by testing first - Glamourer/weapon override, Brio IPC, Penumbra redirect - and the crashed function came back only under a staged detach-first protocol. See **BROKEN.md 012** and OPEN_QUESTIONS Dead Ends. | 2026-09-09 |
-| **R10** Shovel model + animation via the supported route | **Works, and the missing fact is now observed.** Trist owns the Shovel; the game summoned it (`OrnamentId 0 -> 57`) and dismissed it (`57 -> 0`) through its own Fashion Accessory menu while the plugin only watched and played the animation — no memory write at any point. **The game's "no ornament" value is `0`**, which is the number the crashed revision invented as `-1` (see **BROKEN.md 012**). That does not license `SetupOrnament(0,0)` — a field's none-value is not proof of a function's accepted argument — and it is not needed, since the supported route covers every accessory the player owns. | 2026-09-06 |
+| **R10** Shovel model + animation via the supported route | **Works, and the missing fact is now observed.** Sansflaire owns the Shovel; the game summoned it (`OrnamentId 0 -> 57`) and dismissed it (`57 -> 0`) through its own Fashion Accessory menu while the plugin only watched and played the animation — no memory write at any point. **The game's "no ornament" value is `0`**, which is the number the crashed revision invented as `-1` (see **BROKEN.md 012**). That does not license `SetupOrnament(0,0)` — a field's none-value is not proof of a function's accepted argument — and it is not needed, since the supported route covers every accessory the player owns. | 2026-09-06 |
 | **R9** Does the coupled attach→play→auto-detach sequence work? | **Dead — the feature it tested no longer exists.** The ornament attach path was removed one commit after R9 was written, because its teardown (`SetupOrnament(-1)`) hard-crashed the game twice; there is no **Perform** button to run. Nothing is lost: Q17 proved the animation plays with no ornament attached, so the attach was never needed for it. Re-opening this needs a **verified** way to remove an attached model — see **BROKEN.md 012**, and prefer a supported path (Penumbra/Glamourer already attach models every character swap) over poking `OrnamentContainer` directly. | 2026-08-28 |
 | **R8** Can an arbitrary `ActionTimeline` row be played on the local player, unowned? | **Yes.** Row 13383 (`ornament_sp/m6017/onm_sp01`) played bare — no ornament attached, nothing owned. `Resident: true` did not require the model. No gate is bypassed: the row is absent from the `Emote` sheet, so `ExecuteEmote`/`IsEmoteUnlocked` never apply. Also corrected the accessory identity — it is the **Shovel** (Ornament row 57), not Fallen Angel Wings; the inferred `6000 + row id` mapping was wrong. See **Q17**. | 2026-08-28 |
 | Are mob drop tables in the client sheets? | **No.** Loot is server-side; no `DropList`/`LootTable`/`BNpcDrop`/`MonsterDrop` exists. Hunt routes are kill-count only and cannot chain into Craft. | 2026-08-26 |

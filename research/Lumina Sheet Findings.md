@@ -53,7 +53,7 @@ A mob row **cannot** point at an item in client data. Loot is server-side. This 
 should not be re-investigated.
 
 **Consequence (unchanged, now certain):** Hunt routes are kill-count only and cannot chain into
-Craft. Material flow must run Gather→Craft or vendor→Craft. Curated external data (Trist's own
+Craft. Material flow must run Gather→Craft or vendor→Craft. Curated external data (Sansflaire's own
 materials list) is the only route to item→mob mapping.
 
 ## 3. The Hunting Log gives mob → zone → count

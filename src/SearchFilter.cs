@@ -17,7 +17,7 @@ namespace TieriChallengesFFXIV;
 /// </summary>
 internal sealed class DebouncedSearch
 {
-    /// <summary>How long the typing has to stop for. Trist's spec: at least a second.</summary>
+    /// <summary>How long the typing has to stop for. Sansflaire's spec: at least a second.</summary>
     private const long DelayMs = 1000;
 
     private string _raw    = string.Empty;

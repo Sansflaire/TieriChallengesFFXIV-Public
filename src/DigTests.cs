@@ -13,7 +13,7 @@ namespace TieriChallengesFFXIV;
 /// mean" genuinely unanswerable. Starting a test therefore stops whatever else was running, and
 /// says so.</para>
 ///
-/// <para>The whole feature is dev-only, gate and all — Trist's call: these are tests, and a player
+/// <para>The whole feature is dev-only, gate and all — Sansflaire's call: these are tests, and a player
 /// must not be able to reach the rules, the commands, the buttons or the settings. That is a
 /// stricter split than <see cref="PropService"/>, which ships because challenge content calls it.
 /// If a hunt ever becomes real challenge content, un-gating is deleting the <c>#if</c> from these

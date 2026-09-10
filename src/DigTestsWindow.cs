@@ -10,7 +10,7 @@ namespace TieriChallengesFFXIV;
 /// DEVELOPER BUILD ONLY. The dig-test lab: one clearly-labelled section per test, each carrying its
 /// <b>rules, commands, buttons and settings</b> together in one place.
 ///
-/// <para><b>Why everything lives here rather than being spread around.</b> Trist's instruction was
+/// <para><b>Why everything lives here rather than being spread around.</b> Sansflaire's instruction was
 /// that each test be a very obvious section only the dev build can reach. A test whose rules are in
 /// a doc, whose commands are in the command switch and whose ranges are in a header is four places
 /// to forget one of — and the one people forget is the gate. Everything about a test being inside a
