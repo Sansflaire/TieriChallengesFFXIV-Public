@@ -37,6 +37,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static ICondition              Condition       { get; private set; } = null!;
     [PluginService] internal static IGameInventory          GameInventory   { get; private set; } = null!;
     [PluginService] internal static IGameInteropProvider    GameInterop     { get; private set; } = null!;
+    [PluginService] internal static IKeyState               KeyState        { get; private set; } = null!;
 
     /// <summary>
     /// Event-driven "do I hold item X?" map. Static because <see cref="ConditionEvaluator"/> is

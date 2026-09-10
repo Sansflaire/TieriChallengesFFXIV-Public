@@ -1,5 +1,6 @@
 using System;
 
+using Dalamud.Game.ClientState.Keys;
 using Dalamud.Hooking;
 
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -120,7 +121,48 @@ internal sealed unsafe class InputBlock : IDisposable
     /// </summary>
     private void OnFrameworkUpdate(Dalamud.Plugin.Services.IFramework _)
     {
-        if (Blocking) PinRotation();
+        if (!Blocking) return;
+
+        SuppressKeys();
+        PinRotation();
+    }
+
+    /// <summary>
+    /// Movement, turn and jump keys, cleared before the game reads them.
+    ///
+    /// <para><b>Why this is needed when the movement floats are already zeroed.</b> Some behaviours
+    /// are driven by the RAW KEY STATE rather than by the movement the keys produce — holding Q or E
+    /// with right-mouse snaps the character's facing to the camera, and that happens whether or not
+    /// the resulting movement is discarded. Zeroing the floats removes the motion and leaves the
+    /// side effect, which is exactly what was still turning the body mid-dig.</para>
+    ///
+    /// <para>Clearing the key at source removes both, and does it <i>before</i> the game acts rather
+    /// than trying to undo the result afterwards — which is what the three rotation pins were doing,
+    /// and why they kept losing to it.</para>
+    /// </summary>
+    private static readonly VirtualKey[] MovementKeys =
+    {
+        VirtualKey.W, VirtualKey.A, VirtualKey.S, VirtualKey.D,   // move / turn
+        VirtualKey.Q, VirtualKey.E,                               // strafe — the camera-snap pair
+        VirtualKey.SPACE,                                         // jump
+        VirtualKey.UP, VirtualKey.DOWN, VirtualKey.LEFT, VirtualKey.RIGHT,
+    };
+
+    private static void SuppressKeys()
+    {
+        try
+        {
+            foreach (var key in MovementKeys)
+            {
+                // Not every key is one the game is listening for; asking for an invalid one throws.
+                if (Plugin.KeyState.IsVirtualKeyValid(key))
+                    Plugin.KeyState[key] = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Input] key suppression failed: {ex.Message}");
+        }
     }
 
     /// <summary>
