@@ -39,7 +39,39 @@ internal sealed class DigHuntOverlay : IDisposable
     /// three wrapped lines — it is text on the world, not a panel.
     /// </summary>
     private const int ReminderW = 560;
-    private const int ReminderH = 88;
+
+    /// <summary>
+    /// 96, not 88 — the outline reaches above the first line and the shadow below the last, and a
+    /// surface sized to the type alone clips both.
+    /// </summary>
+    private const int ReminderH = 96;
+
+    /// <summary>
+    /// The clue's three layers: a light-yellow face over a white rim over a dark drop shadow.
+    ///
+    /// <para><b>Plain white type does not survive snow, sand or a lit wall.</b> That is not a
+    /// contrast problem a colour can fix on its own — whatever colour the face is, some ground in
+    /// Eorzea is that colour. So the legibility comes from the SHADOW, which is dark against every
+    /// bright surface, while the white rim separates the face from it and keeps the letters from
+    /// reading as smudged. The face is then free to be a colour that belongs with the gold dial
+    /// rather than one chosen to fight the background.</para>
+    ///
+    /// <para>The rim is deliberately drawn OUTSIDE the shadow's offset, so the shadow still shows
+    /// past it down and right. A rim wider than the shadow's offset swallows it and the whole
+    /// effect flattens to outlined text.</para>
+    /// </summary>
+    private static readonly PColor ClueFace    = PColor.FromHex("#FFF0A8");
+    private static readonly PColor ClueRim     = PColor.White;
+
+    private const float ClueRimPx     = 2f;
+    private const float ClueShadowPx  = 4f;
+    private const int   ClueRimSteps  = 8;
+
+    /// <summary>
+    /// Pushes every layer down inside the surface so the rim's upward reach has somewhere to go.
+    /// Vertical only: shifting horizontally too would move the centred text off the box's centre.
+    /// </summary>
+    private const float ClueTopInset = 3f;
 
     /// <summary>
     /// Gap between the bottom of the dial and the top of the clue text, in logical pixels, plus the
@@ -778,9 +810,10 @@ internal sealed class DigHuntOverlay : IDisposable
     /// <para>Held long enough to outlast the dig itself, so a dig that reveals the NEXT clue shows
     /// that clue rather than fading out just before it arrives.</para>
     ///
-    /// <para>Drawn with two text nodes rather than one: the dark copy offset behind the white one is
-    /// the shadow. Without it white type is unreadable against snow, sand or a lit wall — the same
-    /// contrast problem the dial's backing disc solves, solved the way text solves it.</para>
+    /// <para>Light yellow, ringed in white, over a dark drop shadow — see <see cref="ClueFace"/>.
+    /// This is the same contrast problem the dial's backing disc solves, solved the way type solves
+    /// it: plain white was unreadable on snow, and no choice of face colour fixes that on its own
+    /// because some ground in Eorzea is always going to be that colour.</para>
     /// </summary>
     private void DrawReminder(IDigTest test)
     {
@@ -818,13 +851,14 @@ internal sealed class DigHuntOverlay : IDisposable
         if (tex.HasValue)
         {
             // Drawn through the gradient rather than ImGui.Image, so the clue falls off downward
-            // like everything else on this HUD. The face is painted WHITE inside the surface
-            // precisely so a tint can decide its colour here.
+            // like everything else on this HUD. Tinted at WHITE, so the gradient is the only thing
+            // it changes — the face and rim colours are decided inside the surface, where they can
+            // differ from each other.
             //
             // The shadow layer rides along untouched: a tint MULTIPLIES, and black multiplied by
-            // anything is still black. That is the whole reason one surface can carry both — no
-            // second render pass, and the shadow cannot drift out of register with the face
-            // because it is the same texture.
+            // anything is still black. That is the whole reason one surface can carry all three
+            // layers — no second render pass, and they cannot drift out of register with each
+            // other because they are the same texture.
             var min = ImGui.GetCursorScreenPos();
             GradientImage(ImGui.GetWindowDrawList(), tex.Value,
                           min, min + new Vector2(physW, physH), Vector3.One, 1f);
@@ -853,10 +887,24 @@ internal sealed class DigHuntOverlay : IDisposable
             s.HeightMode = SizeMode.Fixed; s.Height = ReminderH;
         });
 
-        // Shadow first, then the face directly over it. Two absolutely-positioned copies of the
-        // same string, so they cannot wrap differently and split.
-        root.AppendChild(TextLayer(text, new Vector2(2f, 2f), PColor.Black.WithOpacity(0.75f * alpha)));
-        root.AppendChild(TextLayer(text, Vector2.Zero,        PColor.White.WithOpacity(alpha)));
+        // Back to front: shadow, rim, face. Every layer is the same string in the same fixed-width
+        // box, so they cannot wrap differently and split apart.
+        root.AppendChild(TextLayer(text, new Vector2(ClueShadowPx, ClueShadowPx),
+                                   PColor.Black.WithOpacity(0.80f * alpha)));
+
+        // The rim, stamped around the face the same way the dial's artwork outline is — eight
+        // directions, because at four the diagonals of a letter get an edge on their flats and
+        // none on their corners.
+        for (int i = 0; i < ClueRimSteps; i++)
+        {
+            float a = MathF.Tau * i / ClueRimSteps;
+
+            root.AppendChild(TextLayer(text,
+                new Vector2(MathF.Cos(a) * ClueRimPx, MathF.Sin(a) * ClueRimPx),
+                ClueRim.WithOpacity(alpha)));
+        }
+
+        root.AppendChild(TextLayer(text, Vector2.Zero, ClueFace.WithOpacity(alpha)));
 
         return root;
     }
@@ -866,7 +914,7 @@ internal sealed class DigHuntOverlay : IDisposable
         {
             s.Position     = PositionMode.Absolute;
             s.Left         = offset.X;
-            s.Top          = offset.Y;
+            s.Top          = offset.Y + ClueTopInset;
             s.WidthMode    = SizeMode.Fixed; s.Width  = ReminderW;
 
             // Fit, NOT the surface height. A fixed-height text node lets the framework centre the

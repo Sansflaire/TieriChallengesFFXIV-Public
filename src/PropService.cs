@@ -87,7 +87,19 @@ internal sealed unsafe class PropService
     /// <para><b>Every dig goes through here</b>, because every dig goes through
     /// <see cref="Start"/> — the tests, the chat commands and any challenge content all call
     /// <see cref="Dig"/>, and the cap is enforced in <see cref="Tick"/>'s watching stage that all of
-    /// them pass through. There is no second path to keep in step.</para>
+    /// them pass through. There is no second path to keep in step. The same is true of
+    /// <see cref="PlaybackSpeed"/>, which is written in that same stage.</para>
+    ///
+    /// <para><b>The one thing that does NOT obey either knob is <c>TimelineProbeWindow</c></b>, and
+    /// deliberately: it calls <c>PlayActionTimeline</c> and <c>SetupOrnament</c> directly, because it
+    /// exists to find out what the raw calls do. Routing it through here would defeat its whole
+    /// purpose. It is a dev-only throwaway probe and not a dig action — but it is the answer to
+    /// "does the tuning affect everything", so it is named here rather than left to be discovered.</para>
+    ///
+    /// <para><b>Both knobs are global, not per-call.</b> <see cref="ShortDigMilliseconds"/> and
+    /// <see cref="LongDigMilliseconds"/> exist as names for content to ask by, but there is no
+    /// overload yet that takes one — content would have to set this property and put it back. Worth
+    /// building when the first challenge actually needs two lengths in one zone.</para>
     ///
     /// <para>A cap and the game's own cancel are not alternatives; whichever happens first wins. The
     /// cap does not stop the player walking out of a dig, it only stops a dig that nothing

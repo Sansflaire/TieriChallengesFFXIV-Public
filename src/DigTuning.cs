@@ -180,7 +180,13 @@ internal static class DigTuning
     public static float HudDropPx    = DefaultHudDropPx;
     public static float HudClueGapPx = DefaultHudClueGapPx;
 
-    public const float DefaultHudDropPx    = 14f;
+    /// <summary>
+    /// 0, not 14. The first pass dropped the pair AND opened the gap, and only the gap was needed —
+    /// widening the space is what let the game's banner sit between them, so the drop on top of it
+    /// just pushed the whole assembly too low. Kept as a knob at zero rather than removed: it is
+    /// the control for exactly this, and the next HUD layout it has to coexist with will want it.
+    /// </summary>
+    public const float DefaultHudDropPx    = 0f;
     public const float DefaultHudClueGapPx = 46f;
 
     // ── shared ───────────────────────────────────────────────────────────────
@@ -255,7 +261,7 @@ internal static class DigTuning
     /// Gating on "older than current" would make every future bump re-run every past migration and
     /// overrule values the user chose deliberately in between.</para>
     /// </summary>
-    private const int CurrentVersion = 5;
+    private const int CurrentVersion = 6;
 
     private sealed class Dto
     {
@@ -444,6 +450,14 @@ internal static class DigTuning
             // overruled.
             if (d.Version < 5 && DigSpeedMethod == (int)PropService.SpeedMode.Everything)
                 DigSpeedMethod = (int)PropService.SpeedMode.SlotFunction;
+
+            // Version 6: the HUD drop shipped for one version at 14, which was too low once the
+            // clue gap was doing the real work. Same narrow rule as every migration above — only
+            // the exact old default is overruled, because that is the one value the previous
+            // version wrote for anyone who never touched the slider. A deliberately chosen 14 is
+            // indistinguishable from an untouched one and is the price of that rule; every other
+            // number survives.
+            if (d.Version < 6 && HudDropPx == 14f) HudDropPx = DefaultHudDropPx;
 
             Apply();
             Diag.Info("[Dig] tuning loaded.");
