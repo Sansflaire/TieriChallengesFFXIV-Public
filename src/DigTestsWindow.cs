@@ -188,6 +188,20 @@ internal sealed class DigTestsWindow
         if (ImGui.Button("Reset clue text")) { DigTuning.ResetClueStyle(); DigTuning.Save(); }
 
         ImGui.Spacing();
+        ImGui.TextColored(Head, "DIG ARTWORK");
+        ImGui.TextColored(Rule,
+            "How dark the BOTTOM of the dial, the CLUE!/DIG! word and the trail banners go, as a\n"
+          + "multiplier on their colour. 1 is flat; lower is a stronger top-to-bottom fall.\n"
+          + "There is deliberately no inner-edge highlight setting. Reproducing the reference\n"
+          + "art's white-to-gold band inside the black outline was tried twice — once by drawing\n"
+          + "the fill as a smaller copy, once by ringing the shape with displaced copies — and\n"
+          + "both mangled the artwork. The effect needs EROSION, which a draw list cannot do:\n"
+          + "blending only ever adds coverage. It would have to be baked into the PNG.");
+
+        ImGui.SliderFloat("Artwork gradient", ref DigTuning.IconGradientDrop, 0.2f, 1f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.Spacing();
         ImGui.TextColored(Head, "LIGHT BURST (behind the dial, in dig range only)");
         ImGui.TextColored(Rule,
             "Rays of light behind the dial once a dig would land. Each ray breathes on its own\n"

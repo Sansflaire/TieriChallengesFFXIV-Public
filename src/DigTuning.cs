@@ -265,6 +265,18 @@ internal static class DigTuning
     /// </summary>
     public static float RayFalloff = 1.6f;
 
+    /// <summary>
+    /// How dark the BOTTOM of a piece of dig artwork goes, as a multiplier on its colour. 1 is a
+    /// flat tint; lower is a stronger top-to-bottom fall.
+    ///
+    /// <para>The default is the value that was on screen before any of the shading work, so this
+    /// slider starts by changing nothing. It exists because a stronger fall is the one part of
+    /// "make the artwork look lit" that is safe — it touches colour only. The other parts, an inner
+    /// edge highlight by scaling or by stamping, both wrecked the artwork; see the block at the top
+    /// of <c>DigHuntOverlay</c>'s gradient section before attempting either again.</para>
+    /// </summary>
+    public static float IconGradientDrop = 0.70f;
+
     public static readonly Vector3 DefaultRayColor = new(1f, 1f, 1f);
 
     // ── shared ───────────────────────────────────────────────────────────────
@@ -427,6 +439,7 @@ internal static class DigTuning
         public float RayReachVariance { get; set; }
         public float RayMinLength { get; set; }
         public float RayFalloff { get; set; }
+        public float IconGradientDrop { get; set; }
     }
 
     private static string Path =>
@@ -475,6 +488,7 @@ internal static class DigTuning
         RayOpacity = 0.80f; RaySpeed = 0.18f; RayColor = DefaultRayColor;
         RayWidthVariance = 1.0f; RaySpeedVariance = 0.55f; RayReachVariance = 0.45f;
         RayMinLength = 0.35f; RayFalloff = 1.6f;
+        IconGradientDrop = 0.70f;
     }
 
     public static void ResetAll()
@@ -573,6 +587,7 @@ internal static class DigTuning
                 RayReachVariance = Clamp(d.RayReachVariance, 0f, 1f, 0.45f);
                 RayMinLength     = Clamp(d.RayMinLength,     0f, 1f, 0.35f);
                 RayFalloff       = Clamp(d.RayFalloff,     0.2f, 5f, 1.6f);
+                IconGradientDrop = Clamp(d.IconGradientDrop, 0.2f, 1f, 0.70f);
             }
             else ResetRays();
 
@@ -687,7 +702,7 @@ internal static class DigTuning
                 RayColorR = RayColor.X, RayColorG = RayColor.Y, RayColorB = RayColor.Z,
                 RayWidthVariance = RayWidthVariance, RaySpeedVariance = RaySpeedVariance,
                 RayReachVariance = RayReachVariance, RayMinLength = RayMinLength,
-                RayFalloff = RayFalloff,
+                RayFalloff = RayFalloff, IconGradientDrop = IconGradientDrop,
             };
 
             // Temp-then-replace, like the completion stores: a half-written tuning file read on the

@@ -1609,33 +1609,36 @@ internal sealed class DigHuntOverlay : IDisposable
     private const float GradientDrop  = 0.70f;
     private const int   GradientBands = 24;
 
-    /// <summary>
-    /// The interior ramp, which is deliberately much steeper than <see cref="GradientDrop"/>.
-    ///
-    /// <para>The gentle drop is right for a whole element read at a glance; an emblem's FILL wants
-    /// to look lit, and a light-to-dark fall of less than a third does not sell that. This is the
-    /// number that makes the artwork look like the reference rather than like a flat tint.</para>
-    /// </summary>
-    private const float FillDrop = 0.42f;
+    // ── DO NOT ADD AN INNER EDGE HIGHLIGHT HERE. IT HAS FAILED TWICE. ────────
+    //
+    // The reference artwork has a white-to-gold band just inside its black outline, and reproducing
+    // it from a white silhouette on a draw list was attempted two ways. Both shipped and both were
+    // immediately, visibly wrong:
+    //
+    //   1. SCALE (0.84.42.41). Draw the fill as a slightly smaller copy so the layer beneath shows
+    //      as an inner band. Only correct for artwork centred in its canvas — scaling pulls
+    //      everything toward the CANVAS centre, so an off-centre letter slides inward as it shrinks
+    //      and the "band" is fat outside and absent inside. On TRAIL START! it read as a second,
+    //      smaller copy of the word laid over the first, because that is what it was.
+    //
+    //   2. STAMP (0.84.42.42). Ring the shape with displaced copies in the rim colours. Geometrically
+    //      sound, and much worse to look at: twelve full-size copies at an offset build a thick spiky
+    //      halo whose outline is the union of twelve shifted silhouettes, so every serif grows a
+    //      fringe and small artwork is swallowed whole. The CLUE emblem became unrecognisable.
+    //
+    // The technique both attempts needed is EROSION — shrinking a shape's coverage inward from its
+    // own edge — and a draw list cannot do it. Blending only ever adds coverage; there is no
+    // subtract, no stencil, and no per-pixel access. It would need the effect baked into the PNG by
+    // whoever draws it, or a real shader pass. Neither is a thing to reach for from here.
+    //
+    // What follows is the treatment that works: a thin dark outline, and one gradient fill.
 
     /// <summary>
-    /// Width of the bright edge, as a fraction of the drawn HEIGHT — so a banner four times the
-    /// dial's size gets a rim four times as thick and the two look like the same treatment rather
-    /// than one having a hairline and the other a stripe.
+    /// Vertical falloff for the artwork fill, as a live knob rather than a constant — this is the
+    /// one part of the "make it look lit" attempt that is safe, because it changes colour only and
+    /// touches no geometry.
     /// </summary>
-    private const float EdgeRimFraction = 0.018f;
-
-    /// <summary>
-    /// Stamps for the rim, and bands within each stamp. Twelve directions rather than the outline's
-    /// eight because the rim is wider than an outline and would show its corners at eight; ten bands
-    /// because the rim is a narrow strip and cannot show the stepping a whole fill can.
-    /// </summary>
-    private const int RimSteps = 12;
-    private const int RimBands = 10;
-
-    /// <summary>How far toward white the top of each layer is pushed. Edge first, then fill.</summary>
-    private const float EdgeWhiteMix = 0.90f;
-    private const float FillWhiteMix = 0.30f;
+    private static float IconDrop => Math.Clamp(DigTuning.IconGradientDrop, 0.2f, 1f);
 
     /// <summary>
     /// Draws an image tinted with a vertical gradient: <paramref name="rgb"/> at the top falling to
@@ -1710,27 +1713,18 @@ internal sealed class DigHuntOverlay : IDisposable
     }
 
     /// <summary>
-    /// Draws one piece of white-on-transparent artwork the way the reference art is shaded: a dark
-    /// outline around the outside, a white-to-accent rim just INSIDE the edge, and a fill on a
-    /// steep light-to-dark ramp.
+    /// Draws one piece of white-on-transparent artwork: a thin dark outline, then the shape at true
+    /// size on a vertical gradient. That is all, and the block above this one is why.
     ///
-    /// <para><b>The rim is STAMPED, never scaled.</b> An earlier version drew the fill as a slightly
-    /// smaller copy of the shape so the layer beneath showed through as an inner band. That is only
-    /// correct for artwork centred in its canvas: scaling shrinks everything toward the CANVAS
-    /// centre, so a letter sitting off to one side slides inward as it shrinks and its "rim" comes
-    /// out fat on the outside edge and absent on the inside. On the lettering it looked like a
-    /// second, smaller copy of the word laid over the first — which is exactly what it was.</para>
+    /// <para>The outline is stamped, which is safe precisely because it is THIN — at a pixel or two
+    /// the union of eight displaced copies is indistinguishable from the silhouette's own edge. The
+    /// same trick at rim width is what destroyed the artwork, so treat the offset here as something
+    /// that must stay small rather than as a dial to turn up.</para>
     ///
-    /// <para>Stamping has no such dependence on where the artwork sits: every copy is the same shape
-    /// at the same size, just displaced, so the band it leaves follows the silhouette exactly at
-    /// every point of every glyph. The rim therefore lands just OUTSIDE the shape and inside the
-    /// dark outline, rather than inside the shape — visually the same bright edge under the black,
-    /// and geometrically correct for artwork of any layout.</para>
-    ///
-    /// <para><b>Every layer's gradient spans the WHOLE image, not each letter.</b> That falls out of
-    /// how <see cref="GradientImage"/> works — bands are slices of the destination rectangle — and
-    /// it is the point: per-letter shading would make each character read as its own object instead
-    /// of the lettering reading as one lit surface.</para>
+    /// <para><b>The gradient spans the WHOLE image, not each letter.</b> That falls out of how
+    /// <see cref="GradientImage"/> works — bands are slices of the destination rectangle — and it is
+    /// the point: per-letter shading would make each character read as its own object instead of the
+    /// lettering reading as one lit surface.</para>
     /// </summary>
     private static void DrawEmblem(ImDrawListPtr drawList, IDalamudTextureWrap tex,
                                    Vector2 origin, Vector2 size, Vector3 rgb, float alpha,
@@ -1738,40 +1732,9 @@ internal sealed class DigHuntOverlay : IDisposable
     {
         if (alpha <= 0.002f) return;
 
-        float rim = MathF.Max(1f, size.Y * EdgeRimFraction);
+        Stamp(drawList, tex, origin, size, outline, Tint(Ink, 0.85f * alpha));
 
-        // 1. The dark outline, furthest out, so it frames the rim as well as the fill.
-        Stamp(drawList, tex, origin, size, outline + rim, Tint(Ink, 0.85f * alpha), RimSteps);
-
-        // 2. The bright edge, between the black and the fill. White at the top falling to the
-        //    accent at the bottom — a hue ramp, not a brightness one, which is why GradientImage
-        //    needs its two-colour form.
-        GradientStamp(drawList, tex, origin, size, rim,
-                      Vector3.Lerp(rgb, Vector3.One, EdgeWhiteMix), rgb, alpha);
-
-        // 3. The fill, at TRUE size and true position. Nothing is scaled or displaced.
-        GradientImage(drawList, tex.Handle, origin, origin + size,
-                      Vector3.Lerp(rgb, Vector3.One, FillWhiteMix), rgb * FillDrop, alpha, bands);
-    }
-
-    /// <summary>
-    /// <see cref="Stamp"/>, but each copy is itself vertically graded. Used for the bright rim,
-    /// which has to fade white-to-accent down the artwork like every other layer.
-    /// </summary>
-    private static void GradientStamp(ImDrawListPtr drawList, IDalamudTextureWrap tex,
-                                      Vector2 origin, Vector2 size, float offset,
-                                      Vector3 top, Vector3 bottom, float alpha)
-    {
-        if (offset <= 0f) return;
-
-        for (int i = 0; i < RimSteps; i++)
-        {
-            float a = MathF.Tau * i / RimSteps;
-            var   d = new Vector2(MathF.Cos(a) * offset, MathF.Sin(a) * offset);
-
-            GradientImage(drawList, tex.Handle, origin + d, origin + size + d,
-                          top, bottom, alpha, RimBands);
-        }
+        GradientImage(drawList, tex.Handle, origin, origin + size, rgb, alpha, bands, IconDrop);
     }
 
     /// <summary>A PanacheUI colour as an ImGui tint, with an extra opacity applied.</summary>
