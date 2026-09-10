@@ -388,7 +388,11 @@ internal sealed class DigTestsWindow
           + "  faster as you close, going SOLID exactly when a dig will land — that is a promise,\n"
           + "  which is why radar range is clamped above the dig radius.\n"
           + "  A trail MAY cross zones: being in the wrong one is travel, not failure, and the HUD\n"
-          + "  names the zone to head for instead of showing a clue you cannot act on.");
+          + "  names the zone to head for instead of showing a clue you cannot act on.\n"
+          + "  Starting throws a TRAIL START! banner that slides in from the left and fades where\n"
+          + "  it lands; finishing throws TRAIL END! in the same spot, which then leaves to the\n"
+          + "  right. Both are fired by the overlay watching this test's state — nothing in here\n"
+          + "  reaches into the HUD to play an animation.");
 
         ImGui.TextColored(Head, "WHY THIS IS AUTHORED AND NOT GENERATED");
         ImGui.TextColored(Rule,

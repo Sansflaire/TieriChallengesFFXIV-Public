@@ -218,6 +218,66 @@ internal sealed class DigHuntOverlay : IDisposable
     private IDalamudTextureWrap? _labelClue;
     private IDalamudTextureWrap? _labelDig;
 
+    // ── the trail banners ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The two big one-shot announcements. 2:1 artwork, unlike everything else here, and white on
+    /// transparent like everything else here — so the gold is ours to set and the vertical gradient
+    /// is ours to paint.
+    /// </summary>
+    private const string TrailStartFile = "TrailStart!_digIcon.png";
+    private const string TrailEndFile   = "TrailEnd!_digIcon.png";
+
+    private const float BannerAspect        = 1774f / 887f;
+    private const float BannerWidthFraction = 0.46f;
+
+    /// <summary>Where the banner's TOP sits, as a fraction of viewport height.</summary>
+    private const float BannerTopFraction = 0.34f;
+
+    /// <summary>
+    /// More bands than the dial gets. The banner is several times taller on screen, and banding is a
+    /// function of how many pixels each step has to cover — the same 24 steps that are invisible at
+    /// 128px would be a visible ladder here.
+    /// </summary>
+    private const int BannerGradientBands = 40;
+
+    private IDalamudTextureWrap? _bannerStart;
+    private IDalamudTextureWrap? _bannerEnd;
+
+    /// <summary>Width the banner pair was built for. 0 = nothing built yet.</summary>
+    private int _bannerBuiltFor;
+
+    private enum Banner { None, TrailStart, TrailEnd }
+
+    private Banner _banner;
+    private long   _bannerAt;
+
+    /// <summary>
+    /// Trail Start: slides in from the left as it fades up, holds, then fades out where it stands.
+    /// Trail End: snaps into view in that same spot, holds, then leaves to the right as it fades.
+    ///
+    /// <para>The asymmetry is the point — arriving and departing should not look like the same
+    /// event played twice. Start takes its time entering because nothing has happened yet; End is
+    /// abrupt because something just did, and then it clears off rather than lingering over a
+    /// finished trail.</para>
+    /// </summary>
+    private const float StartIn = 0.45f, StartHold = 1.7f, StartOut = 0.35f;
+    private const float EndIn   = 0.18f, EndHold   = 1.3f, EndOut   = 0.55f;
+
+    /// <summary>Travel distance for each slide, as a fraction of the viewport's width.</summary>
+    private const float SlideInFrom = -0.60f;
+    private const float SlideOutTo  =  0.60f;
+
+    /// <summary>
+    /// Whether the trail was running / finished last frame, so the two transitions can be spotted.
+    ///
+    /// <para>Edge-detected here rather than announced by the service, so every decision about what
+    /// appears on screen stays on this side of the line. <see cref="DigTrailService"/> exposes plain
+    /// state; this decides that a transition in it is worth a banner.</para>
+    /// </summary>
+    private bool _trailWasActive;
+    private bool _trailWasFinished;
+
     /// <summary>
     /// How far the word is lifted above its authored position, in logical pixels.
     ///
@@ -283,8 +343,8 @@ internal sealed class DigHuntOverlay : IDisposable
                 return;
             }
 
-            var newCentre = BuildScaled(centre, targetPx);
-            var newOuter  = BuildScaled(outer,  targetPx);
+            var newCentre = BuildScaled(centre, targetPx, targetPx);
+            var newOuter  = BuildScaled(outer,  targetPx, targetPx);
 
             if (newCentre == null || newOuter == null)
             {
@@ -300,8 +360,8 @@ internal sealed class DigHuntOverlay : IDisposable
             _dialOuter  = newOuter;
 
             // Labels are optional: a missing one costs the word, not the dial.
-            var newClue = BuildScaled(System.IO.Path.Combine(folder, ClueFile), targetPx);
-            var newDig  = BuildScaled(System.IO.Path.Combine(folder, DigFile),  targetPx);
+            var newClue = BuildScaled(System.IO.Path.Combine(folder, ClueFile), targetPx, targetPx);
+            var newDig  = BuildScaled(System.IO.Path.Combine(folder, DigFile),  targetPx, targetPx);
 
             if (newClue != null) { _labelClue?.Dispose(); _labelClue = newClue; }
             if (newDig  != null) { _labelDig?.Dispose();  _labelDig  = newDig;  }
@@ -315,10 +375,15 @@ internal sealed class DigHuntOverlay : IDisposable
     }
 
     /// <summary>
-    /// Decodes a PNG and reduces it to <paramref name="target"/> square by progressive halving plus
-    /// one final resample. Returns null on any failure — the drawn dial is always a valid fallback.
+    /// Decodes a PNG and reduces it to <paramref name="targetW"/> × <paramref name="targetH"/> by
+    /// progressive halving plus one final resample. Returns null on any failure — the drawn dial is
+    /// always a valid fallback.
+    ///
+    /// <para>Non-square because the two trail banners are 2:1 while everything else is square. The
+    /// halving loop stops as soon as EITHER axis would fall below its target, so the short axis can
+    /// never be reduced past what the final resample needs.</para>
     /// </summary>
-    private IDalamudTextureWrap? BuildScaled(string path, int target)
+    private IDalamudTextureWrap? BuildScaled(string path, int targetW, int targetH)
     {
         SKBitmap? working = null;
 
@@ -327,9 +392,10 @@ internal sealed class DigHuntOverlay : IDisposable
             working = SKBitmap.Decode(path);
             if (working == null) return null;
 
-            // Halve while a halved copy would still be at least the target. Each step is an exact
-            // 2×2 average, which is the only way every source pixel gets a vote.
-            while (working.Width / 2 >= target && working.Width > 2)
+            // Halve while a halved copy would still be at least the target on BOTH axes. Each step
+            // is an exact 2×2 average, which is the only way every source pixel gets a vote.
+            while (working.Width / 2 >= targetW && working.Height / 2 >= targetH
+                   && working.Width > 2 && working.Height > 2)
             {
                 // LINEAR for the halving steps, deliberately: at exactly 2:1 a linear filter
                 // averages the 2×2 block and nothing else, which is precisely the "every pixel
@@ -349,7 +415,7 @@ internal sealed class DigHuntOverlay : IDisposable
             // Mitchell for the final, non-power-of-two hop — the standard choice for downscaling
             // artwork, sharper than linear without the ringing a sharper cubic puts on edges.
             var final = working.Resize(
-                new SKImageInfo(target, target, SKColorType.Bgra8888, SKAlphaType.Unpremul),
+                new SKImageInfo(targetW, targetH, SKColorType.Bgra8888, SKAlphaType.Unpremul),
                 new SKSamplingOptions(SKCubicResampler.Mitchell));
 
             if (final == null) return null;
@@ -357,7 +423,7 @@ internal sealed class DigHuntOverlay : IDisposable
             try
             {
                 return _texProvider.CreateFromRaw(
-                    RawImageSpecification.Bgra32(target, target),
+                    RawImageSpecification.Bgra32(targetW, targetH),
                     final.Bytes,
                     $"TieriChallenges.Dial.{System.IO.Path.GetFileNameWithoutExtension(path)}");
             }
@@ -369,6 +435,146 @@ internal sealed class DigHuntOverlay : IDisposable
             return null;
         }
         finally { working?.Dispose(); }
+    }
+
+    /// <summary>
+    /// Builds the two banners at the width they will be drawn, by the same route as the dial — see
+    /// <see cref="EnsureDialArt"/> for why the GPU sampler is not trusted with the reduction.
+    /// </summary>
+    private void EnsureBannerArt(int targetW, int targetH)
+    {
+        if (targetW <= 0 || targetH <= 0 || targetW == _bannerBuiltFor) return;
+
+        _bannerBuiltFor = targetW;
+
+        try
+        {
+            string? dir = Plugin.PluginInterface.AssemblyLocation.Directory?.FullName;
+            if (string.IsNullOrEmpty(dir)) return;
+
+            string folder = System.IO.Path.Combine(dir!, "digicons");
+
+            // Built independently: a missing End banner should not cost the Start one. Each is
+            // simply not drawn if it failed.
+            var start = BuildScaled(System.IO.Path.Combine(folder, TrailStartFile), targetW, targetH);
+            var end   = BuildScaled(System.IO.Path.Combine(folder, TrailEndFile),   targetW, targetH);
+
+            if (start != null) { _bannerStart?.Dispose(); _bannerStart = start; }
+            if (end   != null) { _bannerEnd?.Dispose();   _bannerEnd   = end;   }
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Dig] banner artwork failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Where a banner is in its life: its opacity, and how far it is displaced sideways as a
+    /// fraction of the viewport's width. False once it is over.
+    /// </summary>
+    private static bool BannerFrame(Banner kind, float t, out float alpha, out float slide)
+    {
+        alpha = 0f;
+        slide = 0f;
+
+        if (t < 0f) return false;
+
+        bool start = kind == Banner.TrailStart;
+
+        float fadeIn  = start ? StartIn   : EndIn;
+        float hold    = start ? StartHold : EndHold;
+        float fadeOut = start ? StartOut  : EndOut;
+
+        if (t < fadeIn)
+        {
+            float u = t / fadeIn;
+            alpha = u;
+
+            // Eased OUT, so it decelerates into place instead of arriving at full speed and
+            // stopping dead. Only Start travels on the way in.
+            slide = start ? SlideInFrom * (1f - EaseOut(u)) : 0f;
+            return true;
+        }
+
+        t -= fadeIn;
+        if (t < hold) { alpha = 1f; return true; }
+
+        t -= hold;
+        if (t < fadeOut)
+        {
+            float u = t / fadeOut;
+            alpha = 1f - u;
+
+            // Eased IN: it leaves reluctantly and then accelerates away. Only End travels out.
+            slide = start ? 0f : SlideOutTo * EaseIn(u);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static float EaseOut(float u) { float v = 1f - u; return 1f - v * v * v; }
+    private static float EaseIn(float u) => u * u * u;
+
+    /// <summary>
+    /// Draws whichever banner is running. Its own full-width strip of a window, so a banner sliding
+    /// off the side is not clipped by a window sized to the artwork.
+    /// </summary>
+    private void DrawBanner()
+    {
+        if (_banner == Banner.None) return;
+
+        float t = (Environment.TickCount64 - _bannerAt) / 1000f;
+
+        if (!BannerFrame(_banner, t, out float alpha, out float slide))
+        {
+            _banner = Banner.None;
+            return;
+        }
+
+        var viewport = ImGui.GetMainViewport();
+
+        int w = (int)MathF.Round(viewport.Size.X * BannerWidthFraction);
+        int h = (int)MathF.Round(w / BannerAspect);
+        if (w <= 0 || h <= 0) return;
+
+        float uiScale = UiScale.Factor;
+
+        // Room for the outline and shadow to reach past the artwork without being cut off.
+        int pad = (int)MathF.Ceiling((OutlinePx + ShadowPx) * uiScale) + 2;
+
+        EnsureBannerArt(w, h);
+
+        var art = _banner == Banner.TrailStart ? _bannerStart : _bannerEnd;
+        if (art == null) return;
+
+        float top = viewport.Pos.Y + viewport.Size.Y * BannerTopFraction;
+
+        if (!BeginHud("##tc_dig_banner", new Vector2(viewport.Pos.X, top - pad),
+                      (int)viewport.Size.X, h + pad * 2)) return;
+
+        var drawList = ImGui.GetWindowDrawList();
+
+        float x = viewport.Pos.X + (viewport.Size.X - w) * 0.5f + slide * viewport.Size.X;
+
+        var min  = new Vector2(MathF.Round(x), MathF.Round(top));
+        var size = new Vector2(w, h);
+
+        float shadow  = ShadowPx  * uiScale;
+        float outline = OutlinePx * uiScale;
+
+        // Same three layers as the dial, and in the same order: depth, rim, face. The banner is
+        // large text over open world, which is exactly the case a bare tint cannot survive.
+        drawList.AddImage(art.Handle, min + new Vector2(shadow, shadow),
+                          min + size + new Vector2(shadow, shadow),
+                          Vector2.Zero, Vector2.One, Tint(Ink, 0.45f * alpha));
+
+        Stamp(drawList, art, min, size, outline, Tint(Ink, 0.85f * alpha));
+
+        GradientImage(drawList, art.Handle, min, min + size, Rgb(DigCol), alpha,
+                      BannerGradientBands);
+
+        EndHud();
     }
 
     private PanacheSurface? _radar;
@@ -433,6 +639,9 @@ internal sealed class DigHuntOverlay : IDisposable
         _labelClue?.Dispose(); _labelClue = null;
         _labelDig?.Dispose();  _labelDig  = null;
 
+        _bannerStart?.Dispose(); _bannerStart = null;
+        _bannerEnd?.Dispose();   _bannerEnd   = null;
+
         // These ARE ours — built by CreateFromRaw rather than borrowed from the shared cache.
         _dialOuter?.Dispose();  _dialOuter  = null;
         _dialCentre?.Dispose(); _dialCentre = null;
@@ -440,6 +649,12 @@ internal sealed class DigHuntOverlay : IDisposable
 
     public void Draw(DigTests tests)
     {
+        // Before the early-out: a banner outlives the thing that triggered it. The End banner in
+        // particular is thrown by a trail that is on its way to stopping, so gating this on there
+        // being an active test would cut it off partway through.
+        WatchTrail(tests.Trail);
+        DrawBanner();
+
         var active = tests.Active;
 
         if (active == null)
@@ -520,6 +735,36 @@ internal sealed class DigHuntOverlay : IDisposable
     /// <summary>True while the dial is withheld for a dig started from the right spot.</summary>
     private bool _hiddenForDig;
 
+    /// <summary>
+    /// Turns the trail's two state transitions into the two banners.
+    ///
+    /// <para><b>Edges, not levels.</b> The trail reports "running" and "finished" for as long as
+    /// each lasts, so reacting to the state itself would restart the banner every frame. Only the
+    /// moment it changes counts.</para>
+    ///
+    /// <para>Start is deliberately gated on <c>!IsFinished</c> as well. A trail is briefly both
+    /// active and finished while its result is on screen, and without that the End banner's own
+    /// stop — which flips active back to false and then true on the next run — could be read as a
+    /// fresh start.</para>
+    /// </summary>
+    private void WatchTrail(DigTrailService trail)
+    {
+        bool active   = trail.IsActive;
+        bool finished = trail.IsFinished;
+
+        if (active && !_trailWasActive && !finished) Show(Banner.TrailStart);
+        if (finished && !_trailWasFinished)          Show(Banner.TrailEnd);
+
+        _trailWasActive   = active;
+        _trailWasFinished = finished;
+    }
+
+    private void Show(Banner kind)
+    {
+        _banner   = kind;
+        _bannerAt = Environment.TickCount64;
+    }
+
     // ── the clue reminder ────────────────────────────────────────────────────
 
     /// <summary>
@@ -570,7 +815,23 @@ internal sealed class DigHuntOverlay : IDisposable
         var (tex, _) = _reminder.Render(BuildReminder(text, alpha), time, Vector2.Zero, false,
                                         false, 0f, ImGui.GetIO().DeltaTime, forceRedraw: false);
 
-        if (tex.HasValue) ImGui.Image(tex.Value, new Vector2(physW, physH));
+        if (tex.HasValue)
+        {
+            // Drawn through the gradient rather than ImGui.Image, so the clue falls off downward
+            // like everything else on this HUD. The face is painted WHITE inside the surface
+            // precisely so a tint can decide its colour here.
+            //
+            // The shadow layer rides along untouched: a tint MULTIPLIES, and black multiplied by
+            // anything is still black. That is the whole reason one surface can carry both — no
+            // second render pass, and the shadow cannot drift out of register with the face
+            // because it is the same texture.
+            var min = ImGui.GetCursorScreenPos();
+            GradientImage(ImGui.GetWindowDrawList(), tex.Value,
+                          min, min + new Vector2(physW, physH), Vector3.One, 1f);
+
+            ImGui.Dummy(new Vector2(physW, physH));
+        }
+
         EndHud();
     }
 
@@ -757,17 +1018,15 @@ internal sealed class DigHuntOverlay : IDisposable
                 }
             }
 
-            // 3. Rim, outlined.
+            // 3. Rim, outlined. Gradient-tinted from here down — see GradientImage.
             Stamp(drawList, dialOuter, origin, size, outline, Tint(Ink, 0.85f * fade));
-            drawList.AddImage(dialOuter.Handle, origin, origin + size,
-                              Vector2.Zero, Vector2.One, Tint(accentRgb, ringAlpha));
+            GradientImage(drawList, dialOuter.Handle, origin, origin + size, accentRgb, ringAlpha);
 
             // 4. Figure, outlined. Its alpha carries the pulse, so the outline pulses with it —
             //    an outline holding steady while its fill breathes reads as two objects.
             float centreAlpha = fill * fade;
             Stamp(drawList, dialCentre, origin, size, outline, Tint(Ink, 0.85f * centreAlpha));
-            drawList.AddImage(dialCentre.Handle, origin, origin + size,
-                              Vector2.Zero, Vector2.One, Tint(accentRgb, centreAlpha));
+            GradientImage(drawList, dialCentre.Handle, origin, origin + size, accentRgb, centreAlpha);
 
             // 5. The word, over the top. Same rect as the dial — the lettering was authored into
             //    the top of the same canvas, so this is where it curves over the rim by design.
@@ -780,8 +1039,8 @@ internal sealed class DigHuntOverlay : IDisposable
                 var labelOrigin = origin - new Vector2(0f, LabelLiftPx * uiScale);
 
                 Stamp(drawList, label, labelOrigin, size, outline, Tint(Ink, 0.85f * fade));
-                drawList.AddImage(label.Handle, labelOrigin, labelOrigin + size,
-                                  Vector2.Zero, Vector2.One, Tint(accentRgb, ringAlpha));
+                GradientImage(drawList, label.Handle, labelOrigin, labelOrigin + size,
+                              accentRgb, ringAlpha);
             }
 
             // Claims the same rectangle for hit-testing, since AddImage draws without laying
@@ -1018,6 +1277,78 @@ internal sealed class DigHuntOverlay : IDisposable
         return new PColor((byte)MathF.Round(rgb.X * 255f),
                           (byte)MathF.Round(rgb.Y * 255f),
                           (byte)MathF.Round(rgb.Z * 255f));
+    }
+
+    // ── the vertical gradient ────────────────────────────────────────────────
+
+    /// <summary>
+    /// How much darker the bottom of a tinted image is than its top, as a multiplier, and how many
+    /// horizontal bands the gradient is built from.
+    ///
+    /// <para>0.70 is a gentle drop — enough to read as lit from above, not enough to look like two
+    /// colours. It matches the fall the supplied artwork already has painted into it, so a tinted
+    /// element and an untinted one sit together instead of one looking flat beside the other.</para>
+    /// </summary>
+    private const float GradientDrop  = 0.70f;
+    private const int   GradientBands = 24;
+
+    /// <summary>
+    /// Draws an image tinted with a vertical gradient: <paramref name="rgb"/> at the top falling to
+    /// <see cref="GradientDrop"/> of it at the bottom.
+    ///
+    /// <para><b>Banded, for the same reason the in-world gradient walls are.</b> A draw list's
+    /// <c>AddImage</c> takes ONE tint for the whole quad — there is no per-vertex colour on that
+    /// path — so the gradient is built by slicing the image into horizontal strips and giving each
+    /// its own flat tint. Each strip's UV range is exactly its share of the source, so the artwork
+    /// is uncut; only the colour steps. The per-vertex route via <c>PrimReserve</c>/<c>PrimWriteVtx</c>
+    /// exists and would give a true two-triangle gradient, and is deliberately not taken here for
+    /// the reason recorded in CLAUDE.md: a wrong index count corrupts the shared draw list, which is
+    /// a graphical crash rather than a wrong colour.</para>
+    ///
+    /// <para><b>Band edges are rounded to whole pixels and the UVs derived from the rounded
+    /// positions</b>, never the other way round. Fractional abutting quads leave sub-pixel seams —
+    /// <c>AddImage</c> has no antialiasing to hide them — and a row of hairlines across a piece of
+    /// lettering is far more visible than the banding this is trading against.</para>
+    /// </summary>
+    private static void GradientImage(ImDrawListPtr drawList, ImTextureID tex,
+                                      Vector2 min, Vector2 max, Vector3 rgb, float alpha,
+                                      int bands = GradientBands)
+    {
+        if (alpha <= 0.002f) return;
+
+        float height = max.Y - min.Y;
+        if (height <= 0f || max.X <= min.X) return;
+
+        if (bands < 1) bands = 1;
+
+        var bottom = rgb * GradientDrop;
+
+        float yPrev = MathF.Round(min.Y);
+
+        for (int i = 0; i < bands; i++)
+        {
+            float yNext = i == bands - 1
+                ? MathF.Round(max.Y)
+                : MathF.Round(min.Y + height * (i + 1) / bands);
+
+            // A band that rounded away to nothing is skipped rather than drawn zero-high — its
+            // share of the gradient is simply covered by its neighbours.
+            if (yNext <= yPrev) continue;
+
+            float v0 = (yPrev - min.Y) / height;
+            float v1 = (yNext - min.Y) / height;
+
+            // The colour at the band's own MIDPOINT, so the visible steps straddle the true ramp
+            // instead of all sitting on one side of it.
+            var col = Tint(Vector3.Lerp(rgb, bottom, (v0 + v1) * 0.5f), alpha);
+
+            drawList.AddImage(tex,
+                              new Vector2(min.X, yPrev), new Vector2(max.X, yNext),
+                              new Vector2(0f, v0),       new Vector2(1f, v1),
+                              col);
+
+            yPrev = yNext;
+        }
     }
 
     /// <summary>A PanacheUI colour as an ImGui tint, with an extra opacity applied.</summary>

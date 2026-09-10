@@ -50,6 +50,17 @@ internal sealed class DigTrailService : IDigTest
 
     public bool IsActive => _phase != Phase.Off;
 
+    /// <summary>
+    /// True once the last stop has been dug, for as long as the result is still on screen.
+    ///
+    /// <para>Plain state, deliberately — not an event and not a call into the HUD. The overlay
+    /// edge-detects this and <see cref="IsActive"/> to decide when to throw its two banners up,
+    /// which keeps every presentation decision on the presentation side. A service that reached
+    /// into the overlay to play an animation would be the thing that makes "nothing in the overlay
+    /// decides anything" stop being true.</para>
+    /// </summary>
+    public bool IsFinished => _phase == Phase.Done;
+
     public int   StopTotal     => _stops.Count;
     public int   StopIndex     => _index;
     public int   Digs          => _digs;
