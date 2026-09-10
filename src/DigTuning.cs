@@ -189,6 +189,41 @@ internal static class DigTuning
     public const float DefaultHudDropPx    = 0f;
     public const float DefaultHudClueGapPx = 46f;
 
+    /// <summary>
+    /// How the clue line is painted. Face colour, rim colour, and whether each layer is drawn at
+    /// all.
+    ///
+    /// <para><b>The rim defaults to near-black, not white.</b> A white rim was tried and is close to
+    /// useless: its whole job is to separate the face from the ground, and the grounds that defeat
+    /// yellow type — snow, frost, pale stone, lit grass — are the exact grounds a white rim
+    /// disappears into. A dark rim works against every bright surface AND every dark one, because
+    /// the face it is separating is light. That asymmetry is why outlined game text is nearly always
+    /// dark-on-light rather than the reverse.</para>
+    ///
+    /// <para>All of it is adjustable because "readable" depends on ground this plugin cannot
+    /// predict, and Eorzea's ground is not one colour — same reasoning as the site colour picker.
+    /// </para>
+    /// </summary>
+    public static Vector3 ClueFaceColor    = DefaultClueFace;
+    public static Vector3 ClueOutlineColor = DefaultClueOutline;
+
+    public static bool ClueOutline  = true;
+    public static bool ClueShadow   = true;
+
+    /// <summary>
+    /// The downward colour falloff on the clue. On by default because it matches the artwork, but a
+    /// toggle because it necessarily dims the BOTTOM of the type — which is the part that has to
+    /// survive the worst ground.
+    /// </summary>
+    public static bool ClueGradient = true;
+
+    public static float ClueOutlineWidth = 2.5f;
+    public static float ClueShadowOffset = 4f;
+    public static float ClueFontSize     = 22f;
+
+    public static readonly Vector3 DefaultClueFace    = new(1.00f, 0.90f, 0.42f);
+    public static readonly Vector3 DefaultClueOutline = new(0.05f, 0.04f, 0.08f);
+
     // ── shared ───────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -309,6 +344,29 @@ internal static class DigTuning
         /// </summary>
         public float? HudDropPx { get; set; }
         public float? HudClueGapPx { get; set; }
+
+        /// <summary>
+        /// Marks the whole clue-style block as present.
+        ///
+        /// <para><b>The all-zero-means-absent trick the site colours use cannot work here.</b> The
+        /// rim's default IS very nearly black, so "did somebody choose this, or is it a missing
+        /// field?" has no answer from the value alone. One explicit flag settles it for every field
+        /// in the block at once.</para>
+        /// </summary>
+        public bool? ClueStyleSaved { get; set; }
+
+        public float ClueFaceR { get; set; }
+        public float ClueFaceG { get; set; }
+        public float ClueFaceB { get; set; }
+        public float ClueOutlineR { get; set; }
+        public float ClueOutlineG { get; set; }
+        public float ClueOutlineB { get; set; }
+        public bool  ClueOutline { get; set; }
+        public bool  ClueShadow { get; set; }
+        public bool  ClueGradient { get; set; }
+        public float ClueOutlineWidth { get; set; }
+        public float ClueShadowOffset { get; set; }
+        public float ClueFontSize { get; set; }
     }
 
     private static string Path =>
@@ -339,9 +397,21 @@ internal static class DigTuning
         HudDropPx = DefaultHudDropPx; HudClueGapPx = DefaultHudClueGapPx;
     }
 
+    public static void ResetClueStyle()
+    {
+        ClueFaceColor    = DefaultClueFace;
+        ClueOutlineColor = DefaultClueOutline;
+        ClueOutline      = true;
+        ClueShadow       = true;
+        ClueGradient     = true;
+        ClueOutlineWidth = 2.5f;
+        ClueShadowOffset = 4f;
+        ClueFontSize     = 22f;
+    }
+
     public static void ResetAll()
     {
-        ResetHunt(); ResetSite(); ResetTrail(); ResetHud();
+        ResetHunt(); ResetSite(); ResetTrail(); ResetHud(); ResetClueStyle();
         MaxRise        = 25f;
         DigHoldSeconds = PropService.DefaultHoldMilliseconds / 1000f;
         DigSpeed       = 1f;
@@ -405,6 +475,21 @@ internal static class DigTuning
 
             HudClueGapPx = d.HudClueGapPx is { } hg && float.IsFinite(hg)
                             ? Math.Clamp(hg, 0f, 400f) : DefaultHudClueGapPx;
+
+            // One flag for the whole block — see Dto.ClueStyleSaved for why the all-zero test the
+            // site colours use cannot work for a colour whose default is nearly black.
+            if (d.ClueStyleSaved == true)
+            {
+                ClueFaceColor    = Rgb(d.ClueFaceR,    d.ClueFaceG,    d.ClueFaceB);
+                ClueOutlineColor = Rgb(d.ClueOutlineR, d.ClueOutlineG, d.ClueOutlineB);
+                ClueOutline      = d.ClueOutline;
+                ClueShadow       = d.ClueShadow;
+                ClueGradient     = d.ClueGradient;
+                ClueOutlineWidth = Clamp(d.ClueOutlineWidth, 0f, 8f,  2.5f);
+                ClueShadowOffset = Clamp(d.ClueShadowOffset, 0f, 12f, 4f);
+                ClueFontSize     = Clamp(d.ClueFontSize,    10f, 48f, 22f);
+            }
+            else ResetClueStyle();
 
             // NOT guarded by Pos: 0 is a meaningful value here ("no cap"), and Pos rejects
             // anything non-positive. Clamped rather than defaulted, so a hand-typed 3.5 survives.
@@ -472,6 +557,14 @@ internal static class DigTuning
     private static float Pos(float v, float fallback) =>
         float.IsFinite(v) && v > 0f ? v : fallback;
 
+    private static float Clamp(float v, float lo, float hi, float fallback) =>
+        float.IsFinite(v) ? Math.Clamp(v, lo, hi) : fallback;
+
+    private static Vector3 Rgb(float r, float g, float b) =>
+        new(Math.Clamp(float.IsFinite(r) ? r : 0f, 0f, 1f),
+            Math.Clamp(float.IsFinite(g) ? g : 0f, 0f, 1f),
+            Math.Clamp(float.IsFinite(b) ? b : 0f, 0f, 1f));
+
     public static void Save()
     {
         try
@@ -495,6 +588,14 @@ internal static class DigTuning
                 MaxRise = MaxRise, DigHoldSeconds = DigHoldSeconds, DigSpeed = DigSpeed,
                 DigSpeedMethod = DigSpeedMethod,
                 HudDropPx = HudDropPx, HudClueGapPx = HudClueGapPx,
+                ClueStyleSaved = true,
+                ClueFaceR = ClueFaceColor.X, ClueFaceG = ClueFaceColor.Y, ClueFaceB = ClueFaceColor.Z,
+                ClueOutlineR = ClueOutlineColor.X,
+                ClueOutlineG = ClueOutlineColor.Y,
+                ClueOutlineB = ClueOutlineColor.Z,
+                ClueOutline = ClueOutline, ClueShadow = ClueShadow, ClueGradient = ClueGradient,
+                ClueOutlineWidth = ClueOutlineWidth, ClueShadowOffset = ClueShadowOffset,
+                ClueFontSize = ClueFontSize,
             };
 
             // Temp-then-replace, like the completion stores: a half-written tuning file read on the

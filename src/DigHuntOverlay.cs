@@ -41,10 +41,13 @@ internal sealed class DigHuntOverlay : IDisposable
     private const int ReminderW = 560;
 
     /// <summary>
-    /// 96, not 88 — the outline reaches above the first line and the shadow below the last, and a
-    /// surface sized to the type alone clips both.
+    /// Tall enough for three wrapped lines at the current font size, plus room for the rim to reach
+    /// above the first and the shadow below the last. Derived rather than fixed, because the font
+    /// size is now a knob and a surface sized to yesterday's font clips today's.
     /// </summary>
-    private const int ReminderH = 96;
+    private static int ReminderH =>
+        (int)MathF.Ceiling(DigTuning.ClueFontSize * 1.35f * 3f
+                           + ClueTopInset + ClueShadowPx + ClueRimPx + 6f);
 
     /// <summary>
     /// The clue's three layers: a light-yellow face over a white rim over a dark drop shadow.
@@ -60,12 +63,13 @@ internal sealed class DigHuntOverlay : IDisposable
     /// past it down and right. A rim wider than the shadow's offset swallows it and the whole
     /// effect flattens to outlined text.</para>
     /// </summary>
-    private static readonly PColor ClueFace    = PColor.FromHex("#FFF0A8");
-    private static readonly PColor ClueRim     = PColor.White;
+    private static PColor ClueFace => FromVec(DigTuning.ClueFaceColor);
+    private static PColor ClueRim  => FromVec(DigTuning.ClueOutlineColor);
 
-    private const float ClueRimPx     = 2f;
-    private const float ClueShadowPx  = 4f;
-    private const int   ClueRimSteps  = 8;
+    private static float ClueRimPx    => DigTuning.ClueOutline ? DigTuning.ClueOutlineWidth : 0f;
+    private static float ClueShadowPx => DigTuning.ClueShadow  ? DigTuning.ClueShadowOffset : 0f;
+
+    private const int ClueRimSteps = 8;
 
     /// <summary>
     /// Pushes every layer down inside the surface so the rim's upward reach has somewhere to go.
@@ -94,15 +98,39 @@ internal sealed class DigHuntOverlay : IDisposable
     private static float DropPx => DigTuning.HudDropPx;
 
     /// <summary>
-    /// Reminder timing: fade in, hold, fade out. The total deliberately outlasts a dig, so a dig
-    /// that reveals the NEXT clue shows that clue instead of fading out just before it arrives.
+    /// Reminder timing: seconds to fade fully in, seconds to fade fully out, and how long it asks to
+    /// stay up for after each trigger.
     /// </summary>
-    private const float ReminderIn    = 0.35f;
-    private const float ReminderOut   = 1.0f;
-    private const float ReminderTotal = 8.0f;
+    private const float ReminderIn   = 0.35f;
+    private const float ReminderOut  = 1.0f;
+    private const float ReminderHold = 6.5f;
 
-    /// <summary>When the reminder was triggered. 0 = not showing.</summary>
-    private long _reminderAt;
+    /// <summary>
+    /// Reminder opacity, 0 to 1. <b>A value that ramps, not an animation with a start.</b>
+    ///
+    /// <para>This is the same correction the radar ring already carries, made for the same reason
+    /// and after the same bug. The reminder used to be "elapsed since triggered", run through a
+    /// three-phase curve — which meant re-triggering while it was fading out reset elapsed to 0 and
+    /// therefore snapped the opacity to 0 before climbing again. Digging as a clue faded produced a
+    /// blink rather than the clue coming back.</para>
+    ///
+    /// <para>Ramping toward a target has no such seam: whatever the opacity currently is, it simply
+    /// starts moving the other way. Re-triggering can only ever extend, never restart.</para>
+    /// </summary>
+    private float _reminderAlpha;
+
+    /// <summary>Tick until which the reminder wants to be visible. Extended by every trigger.</summary>
+    private long _reminderUntil;
+
+    /// <summary>
+    /// The line last shown, so a CHANGE of line can trigger a fresh showing.
+    ///
+    /// <para>This is what actually gets the next clue on screen. A dig takes seconds, and the new
+    /// clue does not exist until it finishes — so the showing triggered by the CLICK is displaying
+    /// the old line and is half spent by the time the new one arrives. Triggering on the text
+    /// changing gives every new clue its own full duration, whenever it turns up.</para>
+    /// </summary>
+    private string _reminderText = string.Empty;
 
     private PanacheSurface? _reminder;
 
@@ -693,11 +721,13 @@ internal sealed class DigHuntOverlay : IDisposable
         {
             // Nothing running: the next test starts from silence rather than inheriting a
             // half-faded ring from the last one.
-            _radarFade   = 0f;
-            _radarPhase  = 0f;
-            _shinePhase  = 0f;
-            _reminderAt  = 0;
-            _hiddenForDig = false;
+            _radarFade     = 0f;
+            _radarPhase    = 0f;
+            _shinePhase    = 0f;
+            _reminderAlpha = 0f;
+            _reminderUntil = 0;
+            _reminderText  = string.Empty;
+            _hiddenForDig  = false;
             return;
         }
 
@@ -817,16 +847,32 @@ internal sealed class DigHuntOverlay : IDisposable
     /// </summary>
     private void DrawReminder(IDigTest test)
     {
-        if (_reminderAt == 0) return;
+        string text = test.Subtitle ?? string.Empty;
 
-        float elapsed = (Environment.TickCount64 - _reminderAt) / 1000f;
-        float alpha   = ReminderAlpha(elapsed);
+        // A line that has CHANGED is new information, and gets its own full showing — see
+        // _reminderText. Checked before the visibility test, so a clue arriving while nothing is on
+        // screen brings the reminder back rather than being missed.
+        if (!string.Equals(text, _reminderText, StringComparison.Ordinal))
+        {
+            _reminderText = text;
+            if (!string.IsNullOrWhiteSpace(text)) ShowReminder();
+        }
 
-        if (alpha <= 0.002f) { _reminderAt = 0; return; }
+        bool want = !string.IsNullOrWhiteSpace(text)
+                    && Environment.TickCount64 < _reminderUntil;
 
-        string text = test.Subtitle;
-        if (string.IsNullOrWhiteSpace(text)) return;
+        // Ramp toward the target rather than replaying a curve from a start time. Extending the
+        // hold while it is fading out simply reverses the ramp from wherever it had got to.
+        float dt     = ImGui.GetIO().DeltaTime;
+        float target = want ? 1f : 0f;
+        float step   = dt / MathF.Max(0.05f, want ? ReminderIn : ReminderOut);
 
+        if      (_reminderAlpha < target) _reminderAlpha = MathF.Min(target, _reminderAlpha + step);
+        else if (_reminderAlpha > target) _reminderAlpha = MathF.Max(target, _reminderAlpha - step);
+
+        if (_reminderAlpha <= 0.002f) { _reminderAlpha = 0f; return; }
+
+        float alpha   = _reminderAlpha;
         float uiScale = UiScale.Factor;
         int   physW   = (int)(ReminderW * uiScale);
         int   physH   = (int)(ReminderH * uiScale);
@@ -860,8 +906,10 @@ internal sealed class DigHuntOverlay : IDisposable
             // layers — no second render pass, and they cannot drift out of register with each
             // other because they are the same texture.
             var min = ImGui.GetCursorScreenPos();
+
             GradientImage(ImGui.GetWindowDrawList(), tex.Value,
-                          min, min + new Vector2(physW, physH), Vector3.One, 1f);
+                          min, min + new Vector2(physW, physH), Vector3.One, 1f,
+                          GradientBands, DigTuning.ClueGradient ? GradientDrop : 1f);
 
             ImGui.Dummy(new Vector2(physW, physH));
         }
@@ -869,15 +917,14 @@ internal sealed class DigHuntOverlay : IDisposable
         EndHud();
     }
 
-    /// <summary>Fade in, hold, fade out. Sums to <see cref="ReminderTotal"/>.</summary>
-    private static float ReminderAlpha(float elapsed)
-    {
-        if (elapsed < 0f)             return 0f;
-        if (elapsed < ReminderIn)     return elapsed / ReminderIn;
-        if (elapsed < ReminderTotal - ReminderOut) return 1f;
-        if (elapsed < ReminderTotal)  return (ReminderTotal - elapsed) / ReminderOut;
-        return 0f;
-    }
+    /// <summary>
+    /// Asks the reminder to be visible for a full hold from now.
+    ///
+    /// <para>Sets an absolute deadline rather than adding to one, so hammering the dig button keeps
+    /// the clue up for one full duration instead of stacking a queue of them.</para>
+    /// </summary>
+    private void ShowReminder() =>
+        _reminderUntil = Environment.TickCount64 + (long)(ReminderHold * 1000f);
 
     private static Node BuildReminder(string text, float alpha)
     {
@@ -888,20 +935,30 @@ internal sealed class DigHuntOverlay : IDisposable
         });
 
         // Back to front: shadow, rim, face. Every layer is the same string in the same fixed-width
-        // box, so they cannot wrap differently and split apart.
-        root.AppendChild(TextLayer(text, new Vector2(ClueShadowPx, ClueShadowPx),
-                                   PColor.Black.WithOpacity(0.80f * alpha)));
+        // box, so they cannot wrap differently and split apart. Each of the two lower layers is
+        // skippable from the lab — with both off this is plain coloured type, which is a legitimate
+        // thing to want on ground that already contrasts.
+        float shadowPx = ClueShadowPx;
+        if (shadowPx > 0f)
+            root.AppendChild(TextLayer(text, new Vector2(shadowPx, shadowPx),
+                                       PColor.Black.WithOpacity(0.80f * alpha)));
 
         // The rim, stamped around the face the same way the dial's artwork outline is — eight
         // directions, because at four the diagonals of a letter get an edge on their flats and
         // none on their corners.
-        for (int i = 0; i < ClueRimSteps; i++)
+        float rimPx = ClueRimPx;
+        if (rimPx > 0f)
         {
-            float a = MathF.Tau * i / ClueRimSteps;
+            var rim = ClueRim;
 
-            root.AppendChild(TextLayer(text,
-                new Vector2(MathF.Cos(a) * ClueRimPx, MathF.Sin(a) * ClueRimPx),
-                ClueRim.WithOpacity(alpha)));
+            for (int i = 0; i < ClueRimSteps; i++)
+            {
+                float a = MathF.Tau * i / ClueRimSteps;
+
+                root.AppendChild(TextLayer(text,
+                    new Vector2(MathF.Cos(a) * rimPx, MathF.Sin(a) * rimPx),
+                    rim.WithOpacity(alpha)));
+            }
         }
 
         root.AppendChild(TextLayer(text, Vector2.Zero, ClueFace.WithOpacity(alpha)));
@@ -922,7 +979,7 @@ internal sealed class DigHuntOverlay : IDisposable
             // and made that constant nearly inert. Fit puts the first line at the top, so the gap
             // above is the only thing deciding where the text sits.
             s.HeightMode   = SizeMode.Fit;
-            s.FontSize     = 21f;
+            s.FontSize     = DigTuning.ClueFontSize;
             s.Bold         = true;
             s.Color        = colour;
             s.TextAlign    = TextAlign.Center;
@@ -1133,14 +1190,17 @@ internal sealed class DigHuntOverlay : IDisposable
             bool onSpot = closeness >= 1f;
             _hiddenForDig = onSpot;
 
-            // The clue goes with it, and for the same reason. A reminder of where to dig is only
-            // worth reading while the answer is still wanted; once the right hole is being dug the
-            // question is settled, and leaving the old clue on screen would contradict the button
-            // that just conceded the point. A MISS keeps it — that is exactly when it is wanted.
+            // A dig ALWAYS shows the clue, hit or miss.
             //
-            // Cleared outright rather than faded, so it leaves with the button instead of trailing
-            // a second behind it.
-            _reminderAt = onSpot ? 0 : _pressedAtMs;
+            // This deliberately reverses the earlier rule that a successful dig cleared the clue
+            // along with the button. That rule was reasoned from "the question is settled" and was
+            // wrong in practice for a plain reason: after a good dig the clue line becomes the NEXT
+            // clue, so clearing it threw away the very thing the dig was for. The result was digging
+            // correctly and being told nothing.
+            //
+            // Nothing needs clearing to avoid a stale clue lingering, either — the text simply
+            // changes when the dig lands, and the change triggers its own fresh showing.
+            ShowReminder();
 
             _onDig?.Invoke();
         }
@@ -1319,13 +1379,13 @@ internal sealed class DigHuntOverlay : IDisposable
             : Vector3.Lerp(Rgb(Green),    Rgb(DigCol), (t - WarmSplit) / (1f - WarmSplit));
     }
 
-    private static PColor RampColor(float closeness)
-    {
-        var rgb = Ramp(closeness);
-        return new PColor((byte)MathF.Round(rgb.X * 255f),
-                          (byte)MathF.Round(rgb.Y * 255f),
-                          (byte)MathF.Round(rgb.Z * 255f));
-    }
+    private static PColor RampColor(float closeness) => FromVec(Ramp(closeness));
+
+    /// <summary>A 0..1 float colour as a PanacheUI byte colour.</summary>
+    private static PColor FromVec(Vector3 rgb) =>
+        new((byte)MathF.Round(Math.Clamp(rgb.X, 0f, 1f) * 255f),
+            (byte)MathF.Round(Math.Clamp(rgb.Y, 0f, 1f) * 255f),
+            (byte)MathF.Round(Math.Clamp(rgb.Z, 0f, 1f) * 255f));
 
     // ── the vertical gradient ────────────────────────────────────────────────
 
@@ -1360,7 +1420,7 @@ internal sealed class DigHuntOverlay : IDisposable
     /// </summary>
     private static void GradientImage(ImDrawListPtr drawList, ImTextureID tex,
                                       Vector2 min, Vector2 max, Vector3 rgb, float alpha,
-                                      int bands = GradientBands)
+                                      int bands = GradientBands, float drop = GradientDrop)
     {
         if (alpha <= 0.002f) return;
 
@@ -1369,7 +1429,9 @@ internal sealed class DigHuntOverlay : IDisposable
 
         if (bands < 1) bands = 1;
 
-        var bottom = rgb * GradientDrop;
+        // A drop of 1 is a flat tint. Switching the gradient off goes through here rather than
+        // round it, so "no gradient" cannot drift from "gradient" in any other respect.
+        var bottom = rgb * drop;
 
         float yPrev = MathF.Round(min.Y);
 

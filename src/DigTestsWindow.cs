@@ -37,6 +37,7 @@ internal sealed class DigTestsWindow
     private static readonly Vector4 Rule    = new(0.68f, 0.68f, 0.76f, 1f);
     private static readonly Vector4 Running = new(0.44f, 0.86f, 0.62f, 1f);
     private static readonly Vector4 Cmd     = new(0.55f, 0.75f, 0.95f, 1f);
+    private static readonly Vector4 Warn    = new(0.95f, 0.62f, 0.35f, 1f);
 
     public DigTestsWindow(DigTests tests) => _tests = tests;
 
@@ -140,6 +141,51 @@ internal sealed class DigTestsWindow
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
         if (ImGui.Button("Reset HUD placement")) { DigTuning.ResetHud(); DigTuning.Save(); }
+
+        ImGui.Spacing();
+        ImGui.TextColored(Head, "CLUE TEXT");
+        ImGui.TextColored(Rule,
+            "How the clue line under the dial is painted.\n"
+          + "The OUTLINE's job is to separate the face from the ground, so a dark one is almost\n"
+          + "always right: the grounds that defeat light type — snow, frost, pale stone, lit\n"
+          + "grass — are exactly the ones a white outline vanishes into. A white outline was\n"
+          + "tried and is the reason this section exists.\n"
+          + "The SHADOW is what carries legibility against bright ground; the outline stops the\n"
+          + "face reading as smudged into it. Keep the outline narrower than the shadow offset,\n"
+          + "or the outline swallows the shadow and you are back to plain outlined text.\n"
+          + "The GRADIENT matches the artwork but necessarily dims the BOTTOM of the type, which\n"
+          + "is the part that has to survive the worst ground. Switch it off if it costs more\n"
+          + "than it looks worth.");
+
+        ImGui.ColorEdit3("Face colour", ref DigTuning.ClueFaceColor);
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.ColorEdit3("Outline colour", ref DigTuning.ClueOutlineColor);
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        if (ImGui.Checkbox("Outline", ref DigTuning.ClueOutline)) DigTuning.Save();
+        ImGui.SameLine();
+        if (ImGui.Checkbox("Drop shadow", ref DigTuning.ClueShadow)) DigTuning.Save();
+        ImGui.SameLine();
+        if (ImGui.Checkbox("Vertical gradient", ref DigTuning.ClueGradient)) DigTuning.Save();
+
+        ImGui.SliderFloat("Outline width", ref DigTuning.ClueOutlineWidth, 0f, 8f, "%.1f px");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Shadow offset", ref DigTuning.ClueShadowOffset, 0f, 12f, "%.1f px");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Font size", ref DigTuning.ClueFontSize, 10f, 48f, "%.0f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        if (DigTuning.ClueOutline && DigTuning.ClueShadow
+            && DigTuning.ClueOutlineWidth >= DigTuning.ClueShadowOffset)
+        {
+            ImGui.TextColored(Warn,
+                "Outline is as wide as the shadow offset — the shadow is hidden behind it.");
+        }
+
+        if (ImGui.Button("Reset clue text")) { DigTuning.ResetClueStyle(); DigTuning.Save(); }
 
         ImGui.Spacing();
         ImGui.TextColored(Head, "DIG ANIMATION LENGTH");
