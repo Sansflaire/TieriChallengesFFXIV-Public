@@ -75,43 +75,55 @@ internal sealed class DigHuntOverlay : IDisposable
     /// replaces are still there as the fallback. Nothing about the dial's behaviour depends on
     /// which of the two is on screen.</para>
     /// </summary>
-    private IDalamudTextureWrap? _dialOuter;
-    private IDalamudTextureWrap? _dialCentre;
-    private bool _dialLoadAttempted;
+    /// <summary>
+    /// The texture SOURCES, resolved once. The usable wrap is asked for fresh every frame.
+    ///
+    /// <para><b>The wrap must not be cached, and caching it is what broke the first attempt.</b>
+    /// <c>GetWrapOrDefault</c> returns null while the image is still being loaded — which it always
+    /// is on the frame the file is first requested. Storing that null behind a one-shot "already
+    /// tried" latch meant the answer was decided during the single frame it could not yet be known,
+    /// and the dial fell back to the drawn circles forever. Re-asking is the documented pattern and
+    /// costs a dictionary lookup.</para>
+    ///
+    /// <para>These wraps are owned by Dalamud's shared-texture cache, so this class must never
+    /// dispose them.</para>
+    /// </summary>
+    private ISharedImmediateTexture? _dialOuterSrc;
+    private ISharedImmediateTexture? _dialCentreSrc;
+    private bool _dialResolved;
 
     private const string CentreFile = "NatalMSQDigIcon_centerIcon.png";
     private const string OuterFile  = "NatalMSQDigIcon_outerCircle.png";
 
     private void EnsureDialArt()
     {
-        if (_dialLoadAttempted) return;
-        _dialLoadAttempted = true;
+        if (_dialResolved) return;
+        _dialResolved = true;
 
         try
         {
-            string? dir = System.IO.Path.GetDirectoryName(
-                Plugin.PluginInterface.AssemblyLocation.FullName);
-            if (dir == null) return;
+            string? dir = Plugin.PluginInterface.AssemblyLocation.Directory?.FullName;
+            if (string.IsNullOrEmpty(dir)) return;
 
-            string folder = System.IO.Path.Combine(dir, "digicons");
-
+            string folder = System.IO.Path.Combine(dir!, "digicons");
             string centre = System.IO.Path.Combine(folder, CentreFile);
             string outer  = System.IO.Path.Combine(folder, OuterFile);
 
             if (!System.IO.File.Exists(centre) || !System.IO.File.Exists(outer))
             {
-                Diag.Info("[Dig] dial artwork not present — using the drawn dial.");
+                Diag.Info($"[Dig] dial artwork not in '{folder}' — using the drawn dial.");
                 return;
             }
 
-            _dialCentre = _texProvider.GetFromFile(centre).GetWrapOrDefault();
-            _dialOuter  = _texProvider.GetFromFile(outer).GetWrapOrDefault();
+            _dialCentreSrc = _texProvider.GetFromFile(centre);
+            _dialOuterSrc  = _texProvider.GetFromFile(outer);
+            Diag.Info("[Dig] dial artwork resolved.");
         }
         catch (Exception ex)
         {
-            Diag.Error($"[Dig] dial artwork failed to load: {ex.Message}");
-            _dialCentre = null;
-            _dialOuter  = null;
+            Diag.Error($"[Dig] dial artwork failed to resolve: {ex.Message}");
+            _dialCentreSrc = null;
+            _dialOuterSrc  = null;
         }
     }
 
@@ -164,9 +176,10 @@ internal sealed class DigHuntOverlay : IDisposable
         _banner?.Dispose(); _banner = null;
         _radar?.Dispose();  _radar  = null;
 
-        // Owned wraps: GetWrapOrDefault hands back a wrap this class is responsible for.
-        _dialOuter?.Dispose();  _dialOuter  = null;
-        _dialCentre?.Dispose(); _dialCentre = null;
+        // The dial's textures are NOT disposed here: they belong to Dalamud's shared-texture cache,
+        // which hands out wraps it owns. Only the sources are dropped.
+        _dialOuterSrc  = null;
+        _dialCentreSrc = null;
     }
 
     public void Draw(DigTests tests)
@@ -362,7 +375,12 @@ internal sealed class DigHuntOverlay : IDisposable
         float wave   = 0.5f + 0.5f * MathF.Sin(_radarPhase);
         float fill   = solid ? 1f : 0.18f + 0.62f * wave;
 
-        if (_dialOuter != null && _dialCentre != null)
+        // Asked for every frame, never cached — see the field remark. Null simply means "not ready
+        // yet", so the drawn dial covers the first frame or two and the artwork takes over.
+        var dialOuter  = _dialOuterSrc?.GetWrapOrDefault();
+        var dialCentre = _dialCentreSrc?.GetWrapOrDefault();
+
+        if (dialOuter != null && dialCentre != null)
         {
             // Artwork path. The ring holds steady and only the centre pulses — the border is the
             // thing that says "a dial is here", and a border that blinks out takes the dial with it.
@@ -372,10 +390,10 @@ internal sealed class DigHuntOverlay : IDisposable
 
             float ringAlpha = (_radarHovered ? 1f : 0.90f) * fade;
 
-            drawList.AddImage(_dialOuter.Handle, origin, origin + size,
+            drawList.AddImage(dialOuter.Handle, origin, origin + size,
                               Vector2.Zero, Vector2.One, Tint(accent, ringAlpha));
 
-            drawList.AddImage(_dialCentre.Handle, origin, origin + size,
+            drawList.AddImage(dialCentre.Handle, origin, origin + size,
                               Vector2.Zero, Vector2.One, Tint(accent, fill * fade));
 
             // Claims the same rectangle for hit-testing, since AddImage draws without laying
