@@ -125,8 +125,15 @@ internal sealed class DigTrailService : IDigTest
             // in reads as a broken clue.
             if (!_inZone) return $"Travel to {ZoneName(stop.Territory)}.";
 
-            if (RadarCloseness is >= 1f) return "This is the place. Dig.";
-
+            // NO "this is the place, dig" line, ever. That slot on the HUD holds the CLUE or it
+            // holds nothing — Trist's call, 2026-09-10.
+            //
+            // It was redundant on its own terms: the dial already turns yellow, stops pulsing and
+            // reads DIG!, which says the same thing in the place the player is already looking. But
+            // the real damage was that it REPLACED the clue at the moment of arrival, so a player
+            // who wanted to re-read what they were looking for got a message telling them what they
+            // could already see. It also made the line change on every crossing of the dig radius,
+            // which re-triggered the reminder each time you stepped over the boundary.
             return string.IsNullOrWhiteSpace(stop.Clue) ? "(no clue written for this stop)" : stop.Clue;
         }
     }
