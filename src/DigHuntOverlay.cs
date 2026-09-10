@@ -35,8 +35,36 @@ internal sealed class DigHuntOverlay : IDisposable
     private const int SurfaceW = 420;
     private const int SurfaceH = 82;
 
-    /// <summary>Radar surface, drawn just under the banner. Square, so the ring is a circle.</summary>
-    private const int RadarSize = 96;
+    /// <summary>
+    /// Radar surface, drawn just under the banner. Square, so the ring is a circle.
+    ///
+    /// <para>128, not 96. The artwork is line art reduced from 1254px, so every doubling of the
+    /// drawn size is the difference between a stroke surviving and a stroke falling below a pixel.
+    /// This is the cheapest legibility gain available and the only one that adds no ink.</para>
+    /// </summary>
+    private const int RadarSize = 128;
+
+    /// <summary>
+    /// How much of the dial's width the dark backing disc covers, matching the ring art's inner
+    /// circle. Behind the figure, inside the rim.
+    ///
+    /// <para><b>This is the change that actually makes the dial readable.</b> The icon was hard to
+    /// see because it was thin strokes over whatever the world happened to be — pale flagstones one
+    /// moment, grass the next — and no tint fixes that, because the problem is the background, not
+    /// the figure. A dark disc gives the artwork a guaranteed ground to sit on, which is why every
+    /// game HUD icon has one.</para>
+    /// </summary>
+    private const float BackingFraction = 0.68f;
+
+    /// <summary>
+    /// Outline and shadow offsets, in logical pixels before UI scale.
+    ///
+    /// <para>Both are drawn by re-stamping the same silhouette in near-black behind itself — eight
+    /// directions for a rim, one larger down-right pass for depth. No second set of artwork is
+    /// needed, and the outline tracks the figure exactly because it IS the figure.</para>
+    /// </summary>
+    private const float OutlinePx = 1.5f;
+    private const float ShadowPx  = 3f;
 
     /// <summary>
     /// Distance down from the top of the viewport, as a fraction of its height. Low enough to clear
@@ -48,8 +76,10 @@ internal sealed class DigHuntOverlay : IDisposable
     private static readonly PColor Cold   = PColor.FromHex("#8C8AA0");
     private static readonly PColor Red    = PColor.FromHex("#E5484D");
     private static readonly PColor Yellow = PColor.FromHex("#E3B341");
-    private static readonly PColor Green  = PColor.FromHex("#7FD6A9");
-    private static readonly PColor DigCol = PColor.FromHex("#FFCC33");
+    // Brighter and more saturated than the banner's equivalents on purpose: these are tinting line
+    // art over open world, where the banner's colours sit on their own dark panel.
+    private static readonly PColor Green  = PColor.FromHex("#8CF5B4");
+    private static readonly PColor DigCol = PColor.FromHex("#FFD84D");
 
     private readonly ITextureProvider _texProvider;
     private readonly Action?          _onDig;
@@ -370,10 +400,14 @@ internal sealed class DigHuntOverlay : IDisposable
 
         EnsureDialArt();
 
-        bool  solid = closeness >= 1f;
+        bool  solid  = closeness >= 1f;
         var   accent = solid ? DigCol : Green;
         float wave   = 0.5f + 0.5f * MathF.Sin(_radarPhase);
-        float fill   = solid ? 1f : 0.18f + 0.62f * wave;
+
+        // The trough is 0.55, not 0.18. A pulse that fades almost to nothing spends half its cycle
+        // illegible, which reads as a flicker rather than a heartbeat — and legibility was the
+        // complaint. The swing is still obvious against a dark backing; it just never disappears.
+        float fill = solid ? 1f : 0.55f + 0.45f * wave;
 
         // Asked for every frame, never cached — see the field remark. Null simply means "not ready
         // yet", so the drawn dial covers the first frame or two and the artwork takes over.
@@ -388,13 +422,39 @@ internal sealed class DigHuntOverlay : IDisposable
             var size     = new Vector2(phys, phys);
             var drawList = ImGui.GetWindowDrawList();
 
-            float ringAlpha = (_radarHovered ? 1f : 0.90f) * fade;
+            float ringAlpha = (_radarHovered ? 1f : 0.95f) * fade;
+            float outline   = OutlinePx * uiScale;
+            float shadow    = ShadowPx  * uiScale;
 
+            // Order is the whole effect: shadow, ground, then rim and figure each over their own
+            // outline. Anything drawn out of this order loses its separation.
+
+            // 1. Depth. One offset stamp of both shapes, dark and soft, so the dial sits ON the
+            //    world rather than being printed flat against it.
+            uint shadowCol = Tint(Ink, 0.45f * fade);
+            drawList.AddImage(dialOuter.Handle,  origin + new Vector2(shadow, shadow),
+                              origin + size + new Vector2(shadow, shadow),
+                              Vector2.Zero, Vector2.One, shadowCol);
+            drawList.AddImage(dialCentre.Handle, origin + new Vector2(shadow, shadow),
+                              origin + size + new Vector2(shadow, shadow),
+                              Vector2.Zero, Vector2.One, shadowCol);
+
+            // 2. The backing disc — the reason the figure is legible over anything at all.
+            var  centreScreen = origin + size * 0.5f;
+            float backingR    = phys * 0.5f * BackingFraction;
+            drawList.AddCircleFilled(centreScreen, backingR, Tint(Ink, 0.72f * fade), 48);
+
+            // 3. Rim, outlined.
+            Stamp(drawList, dialOuter, origin, size, outline, Tint(Ink, 0.85f * fade));
             drawList.AddImage(dialOuter.Handle, origin, origin + size,
                               Vector2.Zero, Vector2.One, Tint(accent, ringAlpha));
 
+            // 4. Figure, outlined. Its alpha carries the pulse, so the outline pulses with it —
+            //    an outline holding steady while its fill breathes reads as two objects.
+            float centreAlpha = fill * fade;
+            Stamp(drawList, dialCentre, origin, size, outline, Tint(Ink, 0.85f * centreAlpha));
             drawList.AddImage(dialCentre.Handle, origin, origin + size,
-                              Vector2.Zero, Vector2.One, Tint(accent, fill * fade));
+                              Vector2.Zero, Vector2.One, Tint(accent, centreAlpha));
 
             // Claims the same rectangle for hit-testing, since AddImage draws without laying
             // anything out.
@@ -560,6 +620,28 @@ internal sealed class DigHuntOverlay : IDisposable
     {
         ImGui.End();
         ImGui.PopStyleVar();
+    }
+
+    /// <summary>
+    /// Re-stamps a silhouette eight ways around its own position, producing an outline that follows
+    /// the artwork exactly — because it is the artwork.
+    ///
+    /// <para>Eight directions rather than four: at four, diagonal strokes get an outline on their
+    /// flat sides and none on their corners, which reads as a broken edge rather than a rim.</para>
+    /// </summary>
+    private static void Stamp(ImDrawListPtr drawList, IDalamudTextureWrap tex,
+                              Vector2 origin, Vector2 size, float offset, uint colour)
+    {
+        if (offset <= 0f) return;
+
+        for (int i = 0; i < 8; i++)
+        {
+            float a = MathF.Tau * i / 8f;
+            var   d = new Vector2(MathF.Cos(a) * offset, MathF.Sin(a) * offset);
+
+            drawList.AddImage(tex.Handle, origin + d, origin + size + d,
+                              Vector2.Zero, Vector2.One, colour);
+        }
     }
 
     /// <summary>A PanacheUI colour as an ImGui tint, with an extra opacity applied.</summary>
