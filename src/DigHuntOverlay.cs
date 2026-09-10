@@ -42,15 +42,24 @@ internal sealed class DigHuntOverlay : IDisposable
     private const int ReminderH = 88;
 
     /// <summary>
-    /// Gap between the bottom of the dial and the top of the clue text, in logical pixels.
+    /// Gap between the bottom of the dial and the top of the clue text, in logical pixels, plus the
+    /// downward nudge applied to the pair as a whole. <b>Both are live tuning values</b> — see
+    /// <see cref="DigTuning.HudClueGapPx"/> for why they cannot be constants: the game prints its
+    /// own location banner into that gap, and where it lands is not something this plugin can read.
     ///
-    /// <para><b>This number only means what it says because the text layers are Fit-height.</b> They
+    /// <para><b>The gap only means what it says because the text layers are Fit-height.</b> They
     /// were fixed at the full surface height, which let the framework centre the text vertically
     /// inside an 88px box — so most of the visible gap was that centring, not this gap, and changing
-    /// this had a fraction of the effect it appeared to. Top-aligned, the distance on screen is the
+    /// it had a fraction of the effect it appeared to. Top-aligned, the distance on screen is the
     /// distance set here.</para>
     /// </summary>
-    private const float ReminderGapPx = 18f;
+    private static float ReminderGapPx => DigTuning.HudClueGapPx;
+
+    /// <summary>
+    /// Downward offset applied to the dial AND the clue together, so the pair moves without the gap
+    /// between them changing.
+    /// </summary>
+    private static float DropPx => DigTuning.HudDropPx;
 
     /// <summary>
     /// Reminder timing: fade in, hold, fade out. The total deliberately outlasts a dig, so a dig
@@ -97,22 +106,54 @@ internal sealed class DigHuntOverlay : IDisposable
     private const float ShadowPx  = 3f;
 
     /// <summary>
+    /// The shine that appears around the rim once a dig would land: how far it reaches past the
+    /// artwork in logical pixels, how many nested stamps build it, and how slowly it breathes.
+    ///
+    /// <para><b>It is the same silhouette, stamped outward at falling alpha</b> — three rings of
+    /// sixteen offsets each. There is no blur available on a draw list, and none is needed: nested
+    /// copies of the shape at decreasing opacity is exactly what a bloom is, and because the halo IS
+    /// the ring artwork it follows every notch of it rather than being a circle drawn near it.</para>
+    ///
+    /// <para>Sixteen directions rather than the outline's eight. An outline sits tight against the
+    /// edge where eight is plenty; a halo reaching seven pixels out would show its corners.</para>
+    /// </summary>
+    private const float GlowPx    = 7f;
+    private const int   GlowRings = 3;
+    private const int   GlowSteps = 16;
+    private const float ShineHz   = 0.9f;
+
+    /// <summary>
     /// Distance down from the top of the viewport, as a fraction of its height. Low enough to clear
     /// the default target bar, high enough to stay out of the way of a fight.
     /// </summary>
     private const float TopFraction = 0.16f;
 
-    private static readonly PColor Ink    = PColor.FromHex("#12101A");
-    private static readonly PColor Cold   = PColor.FromHex("#8C8AA0");
-    private static readonly PColor Red    = PColor.FromHex("#E5484D");
-    private static readonly PColor Yellow = PColor.FromHex("#E3B341");
-    // Brighter and more saturated than the banner's equivalents on purpose: these are tinting line
-    // art over open world, where the banner's colours sit on their own dark panel.
+    private static readonly PColor Ink = PColor.FromHex("#12101A");
+
+    // Bright and saturated on purpose: these tint line art drawn over the open world, where the
+    // removed banner's equivalents had their own dark panel to sit on.
     private static readonly PColor Green  = PColor.FromHex("#8CF5B4");
     private static readonly PColor DigCol = PColor.FromHex("#FFD84D");
 
-    /// <summary>The far end of the proximity ramp — a flat neutral, so "cold" reads as no signal.</summary>
-    private static readonly PColor GreyCol = PColor.FromHex("#A8ADB5");
+    /// <summary>
+    /// The far end of the proximity ramp.
+    ///
+    /// <para><b>Blue, not grey.</b> Grey is what a HUD element looks like when it is disabled, so
+    /// the coldest end of a live readout was reading as "not working" rather than as "a long way
+    /// off". A saturated blue is unmistakably switched-on while still being as far from the warm end
+    /// as a hue can get — and blue → green → yellow is the temperature order everything else in this
+    /// plugin already uses, so the dial now agrees with the bands.</para>
+    /// </summary>
+    private static readonly PColor DeepBlue = PColor.FromHex("#2F5BE8");
+
+    /// <summary>
+    /// Where the ramp stops travelling blue → green and starts travelling green → yellow.
+    ///
+    /// <para>Deliberately late. Green has to be a place the dial visibly ARRIVES at and sits in for
+    /// a moment, or it is just a colour the gradient passes through on its way to yellow and carries
+    /// no meaning. The last quarter is the "very close" stretch, and yellow is reserved for it.</para>
+    /// </summary>
+    private const float WarmSplit = 0.75f;
 
     /// <summary>How long the click press lasts. Long enough to see, short enough to feel instant.</summary>
     private const long PressMs = 150;
@@ -345,6 +386,17 @@ internal sealed class DigHuntOverlay : IDisposable
     private float _radarPhase;
 
     /// <summary>
+    /// Phase of the "you are standing on it" shine around the rim. Its own accumulator, and
+    /// integrated for the same reason <see cref="_radarPhase"/> is.
+    ///
+    /// <para><b>It must not share the pulse's phase or its rate.</b> The pulse is at its fastest
+    /// exactly when the shine appears — <see cref="MaxPulseHz"/>, four beats a second — and a halo
+    /// breathing at that rate is a strobe, not a glow. The shine runs at its own slow rate so the
+    /// dial reads as steady-and-lit rather than as flashing harder than it did a moment ago.</para>
+    /// </summary>
+    private float _shinePhase;
+
+    /// <summary>
     /// Radar opacity envelope, 0 (invisible) to 1 (full). Ramps towards whichever the range says.
     ///
     /// <para><b>A value, not an animation.</b> A triggered fade would have to start, and therefore
@@ -396,6 +448,7 @@ internal sealed class DigHuntOverlay : IDisposable
             // half-faded ring from the last one.
             _radarFade   = 0f;
             _radarPhase  = 0f;
+            _shinePhase  = 0f;
             _reminderAt  = 0;
             _hiddenForDig = false;
             return;
@@ -407,7 +460,32 @@ internal sealed class DigHuntOverlay : IDisposable
 
         // A dig started from the right spot takes the button away for its duration. Cleared the
         // moment the performance ends, so being back in range simply brings it back.
-        if (_hiddenForDig && !Plugin.Props.IsPerforming) _hiddenForDig = false;
+        if (_hiddenForDig && !Plugin.Props.IsPerforming)
+        {
+            _hiddenForDig = false;
+
+            // …unless the dig that took it away also ENDED the thing it was pointing at. Then it
+            // does not come back at all.
+            //
+            // This is what put a flash on the end of a trail. The fade envelope was still pinned at
+            // full — the player was standing on the spot for the whole dig — so releasing the button
+            // handed a fully-opaque dial to a ramp that then had to walk it down to nothing. The
+            // dial reappeared for the length of RadarFadeSeconds after the trail was already over,
+            // reading as a last blink rather than as a fade-out, because the thing it faded out FROM
+            // was never on screen: it had been hidden the whole time it was at full.
+            //
+            // Snapped rather than ramped, and snapped HERE rather than by shortening the ramp: a
+            // fade is for leaving a range, and this is not that. There is nothing left to point at.
+            //
+            // Safe to read RadarCloseness now — Plugin.DrawUI ticks the tests before it draws this,
+            // so a dig that finished this frame has already been banked by DigTests.Tick.
+            if (!active.RadarCloseness.HasValue)
+            {
+                _radarFade  = 0f;
+                _radarPhase = 0f;
+                _shinePhase = 0f;
+            }
+        }
 
         var  closeness = active.RadarCloseness;
         bool inRange   = closeness.HasValue;
@@ -478,7 +556,8 @@ internal sealed class DigHuntOverlay : IDisposable
         var viewport = ImGui.GetMainViewport();
         var pos = new Vector2(
             viewport.Pos.X + (viewport.Size.X - physW) * 0.5f,
-            viewport.Pos.Y + viewport.Size.Y * TopFraction + (RadarSize + ReminderGapPx) * uiScale);
+            viewport.Pos.Y + viewport.Size.Y * TopFraction
+                           + (DropPx + RadarSize + ReminderGapPx) * uiScale);
 
         if (!BeginHud("##tc_dig_reminder", pos, physW, physH)) return;
 
@@ -559,6 +638,9 @@ internal sealed class DigHuntOverlay : IDisposable
         _radarPhase += ImGui.GetIO().DeltaTime * MathF.Tau * hz;
         if (_radarPhase > MathF.Tau) _radarPhase %= MathF.Tau;
 
+        _shinePhase += ImGui.GetIO().DeltaTime * MathF.Tau * ShineHz;
+        if (_shinePhase > MathF.Tau) _shinePhase %= MathF.Tau;
+
         float uiScale = UiScale.Factor;
         int   phys    = (int)(RadarSize * uiScale);
 
@@ -567,11 +649,11 @@ internal sealed class DigHuntOverlay : IDisposable
         var viewport = ImGui.GetMainViewport();
 
         // The window starts ABOVE the dial by exactly the headroom and is that much taller, so the
-        // dial itself still lands on TopFraction. The reminder below is positioned from the dial's
-        // own position, not this one, so it does not move either.
+        // dial itself still lands on TopFraction. The reminder below adds the SAME drop, so the two
+        // move as one and the gap between them is decided only by ReminderGapPx.
         var pos = new Vector2(
             viewport.Pos.X + (viewport.Size.X - phys) * 0.5f,
-            viewport.Pos.Y + viewport.Size.Y * TopFraction - headroom);
+            viewport.Pos.Y + viewport.Size.Y * TopFraction + DropPx * uiScale - headroom);
 
         // The one HUD window that takes input — it is a button. Kept small and only present while
         // the dial is visible, so the amount of screen that can swallow a click is one small circle
@@ -586,12 +668,10 @@ internal sealed class DigHuntOverlay : IDisposable
 
         bool solid = closeness >= 1f;
 
-        // Grey at the edge of radar range, green on the spot. The pulse says "something is here";
-        // the colour says how near, so the two carry different information instead of both
-        // restating proximity.
-        Vector3 baseRgb = solid
-            ? Rgb(DigCol)
-            : Vector3.Lerp(Rgb(GreyCol), Rgb(Green), Math.Clamp(closeness, 0f, 1f));
+        // Deep blue at the edge of radar range, green as it closes, yellow in the last stretch. The
+        // pulse says "something is here"; the colour says how near, so the two carry different
+        // information instead of both restating proximity.
+        Vector3 baseRgb = solid ? Rgb(DigCol) : Ramp(closeness);
 
         // Click feedback. Instant depress, then an ease back over PressMs — a linear decay reads as
         // a press-and-release, where a symmetric in-out reads as a pulse and gets confused with the
@@ -659,6 +739,23 @@ internal sealed class DigHuntOverlay : IDisposable
             var  centreScreen = origin + size * 0.5f;
             float backingR    = phys * 0.5f * BackingFraction;
             drawList.AddCircleFilled(centreScreen, backingR, Tint(Ink, 0.72f * fade), 48);
+
+            // 2b. The shine. ONLY when a dig would land — it is the reward for arriving, and a glow
+            //     that were merely the brightest step of the ramp would say nothing the colour was
+            //     not already saying. Drawn under the ink outline, so it spreads outward from the
+            //     rim rather than washing over it.
+            if (solid)
+            {
+                float shine = 0.55f + 0.45f * (0.5f + 0.5f * MathF.Sin(_shinePhase));
+
+                for (int ring = 1; ring <= GlowRings; ring++)
+                {
+                    float reach = outline + GlowPx * uiScale * ring / GlowRings;
+
+                    Stamp(drawList, dialOuter, origin, size, reach,
+                          Tint(accentRgb, 0.17f * shine * fade), GlowSteps);
+                }
+            }
 
             // 3. Rim, outlined.
             Stamp(drawList, dialOuter, origin, size, outline, Tint(Ink, 0.85f * fade));
@@ -778,7 +875,7 @@ internal sealed class DigHuntOverlay : IDisposable
         // as a bug rather than as a slow pulse.
         float fill = solid ? 1f : 0.18f + 0.62f * wave;
 
-        var accent = solid ? DigCol : Green;
+        var accent = solid ? DigCol : RampColor(closeness);
 
         var root = new Node().WithStyle(s =>
         {
@@ -876,21 +973,51 @@ internal sealed class DigHuntOverlay : IDisposable
     /// the artwork exactly — because it is the artwork.
     ///
     /// <para>Eight directions rather than four: at four, diagonal strokes get an outline on their
-    /// flat sides and none on their corners, which reads as a broken edge rather than a rim.</para>
+    /// flat sides and none on their corners, which reads as a broken edge rather than a rim. The
+    /// count is a parameter because the shine reaches much further out, where eight would show as
+    /// an octagon.</para>
     /// </summary>
     private static void Stamp(ImDrawListPtr drawList, IDalamudTextureWrap tex,
-                              Vector2 origin, Vector2 size, float offset, uint colour)
+                              Vector2 origin, Vector2 size, float offset, uint colour,
+                              int steps = 8)
     {
-        if (offset <= 0f) return;
+        if (offset <= 0f || steps <= 0) return;
 
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < steps; i++)
         {
-            float a = MathF.Tau * i / 8f;
+            float a = MathF.Tau * i / steps;
             var   d = new Vector2(MathF.Cos(a) * offset, MathF.Sin(a) * offset);
 
             drawList.AddImage(tex.Handle, origin + d, origin + size + d,
                               Vector2.Zero, Vector2.One, colour);
         }
+    }
+
+    /// <summary>
+    /// The proximity colour for a closeness in 0..1: deep blue → green over the first
+    /// <see cref="WarmSplit"/>, green → the dig yellow over the rest.
+    ///
+    /// <para><b>The warm end is the dig colour itself, not a different yellow.</b> The ramp
+    /// therefore ARRIVES at exactly the colour the solid state uses, so crossing into dig range
+    /// changes the dial's behaviour — steady fill, and the shine — without changing its hue. A
+    /// separate near-yellow would put a visible colour jump at the boundary and make the two states
+    /// look like they disagree about where the spot is.</para>
+    /// </summary>
+    private static Vector3 Ramp(float closeness)
+    {
+        float t = Math.Clamp(closeness, 0f, 1f);
+
+        return t <= WarmSplit
+            ? Vector3.Lerp(Rgb(DeepBlue), Rgb(Green),  t / WarmSplit)
+            : Vector3.Lerp(Rgb(Green),    Rgb(DigCol), (t - WarmSplit) / (1f - WarmSplit));
+    }
+
+    private static PColor RampColor(float closeness)
+    {
+        var rgb = Ramp(closeness);
+        return new PColor((byte)MathF.Round(rgb.X * 255f),
+                          (byte)MathF.Round(rgb.Y * 255f),
+                          (byte)MathF.Round(rgb.Z * 255f));
     }
 
     /// <summary>A PanacheUI colour as an ImGui tint, with an extra opacity applied.</summary>
@@ -911,14 +1038,5 @@ internal sealed class DigHuntOverlay : IDisposable
         float lum = rgb.X * 0.299f + rgb.Y * 0.587f + rgb.Z * 0.114f;
         return Vector3.Lerp(rgb, new Vector3(lum), 0.5f);
     }
-
-    private static PColor AccentFor(DigBand band) => band switch
-    {
-        DigBand.Dig    => DigCol,
-        DigBand.Green  => Green,
-        DigBand.Yellow => Yellow,
-        DigBand.Red    => Red,
-        _              => Cold,
-    };
 }
 #endif

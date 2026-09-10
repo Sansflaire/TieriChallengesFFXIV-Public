@@ -123,6 +123,25 @@ internal sealed class DigTestsWindow
         Slider("Max rise (yalms)", ref DigTuning.MaxRise, 2f, 80f);
 
         ImGui.Spacing();
+        ImGui.TextColored(Head, "DIG HUD PLACEMENT");
+        ImGui.TextColored(Rule,
+            "Where the dig dial and the clue line sit, in logical pixels before UI scale.\n"
+          + "Drop moves the PAIR down together, so it never changes the gap between them.\n"
+          + "Clue gap is the space under the dial that the clue's first line starts at.\n"
+          + "These are sliders because the game prints its own location banner into that gap and\n"
+          + "we cannot read where it lands — it belongs to the game's HUD layout and moves with\n"
+          + "the player's own HUD settings. Seating our two elements around it is a look-and-nudge\n"
+          + "job, so the numbers live here rather than in the source.");
+
+        ImGui.SliderFloat("HUD drop (px)", ref DigTuning.HudDropPx, -60f, 200f, "%.0f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Clue gap (px)", ref DigTuning.HudClueGapPx, 0f, 200f, "%.0f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        if (ImGui.Button("Reset HUD placement")) { DigTuning.ResetHud(); DigTuning.Save(); }
+
+        ImGui.Spacing();
         ImGui.TextColored(Head, "DIG ANIMATION LENGTH");
         ImGui.TextColored(Rule,
             $"How long the dig plays before it ends itself and the shovel comes off.\n"

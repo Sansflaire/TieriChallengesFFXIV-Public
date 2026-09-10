@@ -39,6 +39,10 @@ libSkiaSharp.dll
 # Build output: background images copied next to the DLL. Source of truth is assets/backgrounds/.
 /backgrounds/
 
+# Build output: dig HUD artwork copied next to the DLL by CopyDigIcons (Debug only). Source of
+# truth is ref/digicons/. Anchored so it cannot also match that one.
+/digicons/
+
 # Build output: the help document copied next to the DLL by CopyHelpDocument, so HelpLibrary can
 # read it at runtime. Source of truth is docs/HELP.md. Anchored so it cannot match that one.
 # Missed when the help feature landed, which left a second HELP.md sitting untracked at the root

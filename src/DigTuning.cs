@@ -156,6 +156,33 @@ internal static class DigTuning
     public static float TrailRadar = 30f;
 
 
+    // ── the shared dig HUD ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// How far DOWN the whole dial-and-clue assembly sits from where it would otherwise be, in
+    /// logical pixels. The dial and the clue move together, so this never changes the gap between
+    /// them — only where the pair as a whole lands.
+    /// </summary>
+    /// <summary>
+    /// Gap between the bottom of the dial and the top of the clue line, in logical pixels.
+    ///
+    /// <para><b>These two are sliders for the same reason every distance here is.</b> The game
+    /// prints its own location banner in the space between the dial and the clue, and where that
+    /// banner lands is not something this plugin can measure — it belongs to the game's HUD layout,
+    /// moves with the player's own HUD configuration, and is not exposed anywhere we can read. So
+    /// the only way to seat our two elements around it is to look at the screen and nudge, which is
+    /// precisely the case a const cannot serve.</para>
+    ///
+    /// <para>The defaults are set to drop the pair slightly and open the gap wide enough for a line
+    /// of the game's text to sit centred between them, which is the arrangement Trist asked for
+    /// (2026-09-10). Treat them as a starting point, not an answer.</para>
+    /// </summary>
+    public static float HudDropPx    = DefaultHudDropPx;
+    public static float HudClueGapPx = DefaultHudClueGapPx;
+
+    public const float DefaultHudDropPx    = 14f;
+    public const float DefaultHudClueGapPx = 46f;
+
     // ── shared ───────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -269,6 +296,13 @@ internal static class DigTuning
         public float DigHoldSeconds { get; set; }
         public float DigSpeed { get; set; }
         public int?  DigSpeedMethod { get; set; }
+
+        /// <summary>
+        /// Nullable because 0 is a legitimate value for both — "no drop" and "no gap" are things
+        /// somebody might genuinely want, so absent has to be distinguishable from chosen-zero.
+        /// </summary>
+        public float? HudDropPx { get; set; }
+        public float? HudClueGapPx { get; set; }
     }
 
     private static string Path =>
@@ -294,9 +328,14 @@ internal static class DigTuning
         TrailDig = 4f; TrailRadar = 30f; RadarFadeSeconds = 2.5f;
     }
 
+    public static void ResetHud()
+    {
+        HudDropPx = DefaultHudDropPx; HudClueGapPx = DefaultHudClueGapPx;
+    }
+
     public static void ResetAll()
     {
-        ResetHunt(); ResetSite(); ResetTrail();
+        ResetHunt(); ResetSite(); ResetTrail(); ResetHud();
         MaxRise        = 25f;
         DigHoldSeconds = PropService.DefaultHoldMilliseconds / 1000f;
         DigSpeed       = 1f;
@@ -352,6 +391,14 @@ internal static class DigTuning
             TrailRadar       = Pos(d.TrailRadar,       30f);
             RadarFadeSeconds = Pos(d.RadarFadeSeconds, 2.5f);
             MaxRise          = Pos(d.MaxRise,          25f);
+
+            // Clamped, not Pos-guarded: 0 is meaningful for both, and a negative drop (lifting the
+            // pair) is a legitimate thing to want. Only a missing or non-finite value defaults.
+            HudDropPx = d.HudDropPx is { } hd && float.IsFinite(hd)
+                            ? Math.Clamp(hd, -200f, 400f) : DefaultHudDropPx;
+
+            HudClueGapPx = d.HudClueGapPx is { } hg && float.IsFinite(hg)
+                            ? Math.Clamp(hg, 0f, 400f) : DefaultHudClueGapPx;
 
             // NOT guarded by Pos: 0 is a meaningful value here ("no cap"), and Pos rejects
             // anything non-positive. Clamped rather than defaulted, so a hand-typed 3.5 survives.
@@ -433,6 +480,7 @@ internal static class DigTuning
                 RadarFadeSeconds = RadarFadeSeconds,
                 MaxRise = MaxRise, DigHoldSeconds = DigHoldSeconds, DigSpeed = DigSpeed,
                 DigSpeedMethod = DigSpeedMethod,
+                HudDropPx = HudDropPx, HudClueGapPx = HudClueGapPx,
             };
 
             // Temp-then-replace, like the completion stores: a half-written tuning file read on the
