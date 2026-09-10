@@ -83,6 +83,18 @@ internal sealed class DigHuntOverlay : IDisposable
     private static readonly PColor Green  = PColor.FromHex("#8CF5B4");
     private static readonly PColor DigCol = PColor.FromHex("#FFD84D");
 
+    /// <summary>The far end of the proximity ramp — a flat neutral, so "cold" reads as no signal.</summary>
+    private static readonly PColor GreyCol = PColor.FromHex("#A8ADB5");
+
+    /// <summary>How long the click press lasts. Long enough to see, short enough to feel instant.</summary>
+    private const long PressMs = 150;
+
+    /// <summary>How far the dial sinks when pressed, in logical pixels, down AND right.</summary>
+    private const float PressOffsetPx = 2.5f;
+
+    /// <summary>When the dial was last clicked. 0 = never.</summary>
+    private long _pressedAtMs;
+
     private readonly ITextureProvider _texProvider;
     private readonly Action?          _onDig;
     private readonly DateTime         _start = DateTime.UtcNow;
@@ -488,9 +500,30 @@ internal sealed class DigHuntOverlay : IDisposable
 
         EnsureDialArt(phys);
 
-        bool  solid  = closeness >= 1f;
-        var   accent = solid ? DigCol : Green;
-        float wave   = 0.5f + 0.5f * MathF.Sin(_radarPhase);
+        bool solid = closeness >= 1f;
+
+        // Grey at the edge of radar range, green on the spot. The pulse says "something is here";
+        // the colour says how near, so the two carry different information instead of both
+        // restating proximity.
+        Vector3 baseRgb = solid
+            ? Rgb(DigCol)
+            : Vector3.Lerp(Rgb(GreyCol), Rgb(Green), Math.Clamp(closeness, 0f, 1f));
+
+        // Click feedback. Instant depress, then an ease back over PressMs — a linear decay reads as
+        // a press-and-release, where a symmetric in-out reads as a pulse and gets confused with the
+        // one already running.
+        float press = 0f;
+        if (_pressedAtMs > 0)
+        {
+            long since = Environment.TickCount64 - _pressedAtMs;
+            press = since >= PressMs ? 0f : 1f - since / (float)PressMs;
+        }
+
+        // Darker and less saturated while held, so the dial reads as taking the click rather than
+        // merely moving.
+        var accentRgb = Vector3.Lerp(baseRgb, Desaturate(baseRgb) * 0.62f, press);
+
+        float wave = 0.5f + 0.5f * MathF.Sin(_radarPhase);
 
         // The trough is 0.55, not 0.18. A pulse that fades almost to nothing spends half its cycle
         // illegible, which reads as a flicker rather than a heartbeat — and legibility was the
@@ -509,13 +542,21 @@ internal sealed class DigHuntOverlay : IDisposable
             // fractional destination would have the GPU resample a 1:1 blit across a half-pixel
             // offset and give back the sharpness the resampling just bought.
             var raw      = ImGui.GetCursorScreenPos();
-            var origin   = new Vector2(MathF.Round(raw.X), MathF.Round(raw.Y));
+            var anchor   = new Vector2(MathF.Round(raw.X), MathF.Round(raw.Y));
             var size     = new Vector2(phys, phys);
             var drawList = ImGui.GetWindowDrawList();
 
+            // The artwork sinks; the HIT AREA does not. A button whose target moves out from under
+            // the cursor on press is a button that eats double-clicks.
+            float sink   = press * PressOffsetPx * uiScale;
+            var   origin = anchor + new Vector2(sink, sink);
+
             float ringAlpha = (_radarHovered ? 1f : 0.95f) * fade;
             float outline   = OutlinePx * uiScale;
-            float shadow    = ShadowPx  * uiScale;
+
+            // The shadow tightens as the dial sinks toward the surface — the same cue a real
+            // button gives, and the reason the press reads as depth rather than as a slide.
+            float shadow = ShadowPx * uiScale * (1f - 0.7f * press);
 
             // Order is the whole effect: shadow, ground, then rim and figure each over their own
             // outline. Anything drawn out of this order loses its separation.
@@ -538,14 +579,14 @@ internal sealed class DigHuntOverlay : IDisposable
             // 3. Rim, outlined.
             Stamp(drawList, dialOuter, origin, size, outline, Tint(Ink, 0.85f * fade));
             drawList.AddImage(dialOuter.Handle, origin, origin + size,
-                              Vector2.Zero, Vector2.One, Tint(accent, ringAlpha));
+                              Vector2.Zero, Vector2.One, Tint(accentRgb, ringAlpha));
 
             // 4. Figure, outlined. Its alpha carries the pulse, so the outline pulses with it —
             //    an outline holding steady while its fill breathes reads as two objects.
             float centreAlpha = fill * fade;
             Stamp(drawList, dialCentre, origin, size, outline, Tint(Ink, 0.85f * centreAlpha));
             drawList.AddImage(dialCentre.Handle, origin, origin + size,
-                              Vector2.Zero, Vector2.One, Tint(accent, centreAlpha));
+                              Vector2.Zero, Vector2.One, Tint(accentRgb, centreAlpha));
 
             // Claims the same rectangle for hit-testing, since AddImage draws without laying
             // anything out.
@@ -581,7 +622,10 @@ internal sealed class DigHuntOverlay : IDisposable
         }
 
         if (_radarHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            _pressedAtMs = Environment.TickCount64;
             _onDig?.Invoke();
+        }
 
         EndHud();
     }
@@ -736,9 +780,23 @@ internal sealed class DigHuntOverlay : IDisposable
     }
 
     /// <summary>A PanacheUI colour as an ImGui tint, with an extra opacity applied.</summary>
-    private static uint Tint(PColor c, float alpha)
-        => ImGui.GetColorU32(new Vector4(c.R / 255f, c.G / 255f, c.B / 255f,
-                                         Math.Clamp(alpha, 0f, 1f)));
+    private static uint Tint(PColor c, float alpha) => Tint(Rgb(c), alpha);
+
+    private static uint Tint(Vector3 rgb, float alpha)
+        => ImGui.GetColorU32(new Vector4(rgb.X, rgb.Y, rgb.Z, Math.Clamp(alpha, 0f, 1f)));
+
+    private static Vector3 Rgb(PColor c) => new(c.R / 255f, c.G / 255f, c.B / 255f);
+
+    /// <summary>
+    /// Pulls a colour halfway to its own brightness. Desaturating rather than just darkening is
+    /// what makes the press read as "pushed in" instead of "shaded" — a pressed control loses
+    /// vividness, not only light.
+    /// </summary>
+    private static Vector3 Desaturate(Vector3 rgb)
+    {
+        float lum = rgb.X * 0.299f + rgb.Y * 0.587f + rgb.Z * 0.114f;
+        return Vector3.Lerp(rgb, new Vector3(lum), 0.5f);
+    }
 
     private static PColor AccentFor(DigBand band) => band switch
     {
