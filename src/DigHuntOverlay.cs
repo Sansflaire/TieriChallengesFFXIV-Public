@@ -34,8 +34,25 @@ namespace TieriChallengesFFXIV;
 /// </summary>
 internal sealed class DigHuntOverlay : IDisposable
 {
-    private const int SurfaceW = 420;
-    private const int SurfaceH = 82;
+    /// <summary>
+    /// The clue reminder's box. Wide, because a written clue is a sentence, and only as tall as
+    /// three wrapped lines — it is text on the world, not a panel.
+    /// </summary>
+    private const int ReminderW = 560;
+    private const int ReminderH = 88;
+
+    /// <summary>
+    /// Reminder timing: fade in, hold, fade out. The total deliberately outlasts a dig, so a dig
+    /// that reveals the NEXT clue shows that clue instead of fading out just before it arrives.
+    /// </summary>
+    private const float ReminderIn    = 0.35f;
+    private const float ReminderOut   = 1.0f;
+    private const float ReminderTotal = 8.0f;
+
+    /// <summary>When the reminder was triggered. 0 = not showing.</summary>
+    private long _reminderAt;
+
+    private PanacheSurface? _reminder;
 
     /// <summary>
     /// Radar surface, drawn just under the banner. Square, so the ring is a circle.
@@ -138,6 +155,18 @@ internal sealed class DigHuntOverlay : IDisposable
     private const string OuterFile  = "NatalMSQDigIcon_outerCircle.png";
 
     /// <summary>
+    /// The word arcing over the dial. <b>Drawn at exactly the same rect as the dial</b>, because
+    /// they were authored on the same 1254px canvas — the lettering occupies its top ~12–39%, so
+    /// drawing it anywhere else would be second-guessing where the artist already put it. Measured,
+    /// not assumed.
+    /// </summary>
+    private const string ClueFile = "CLUE!_digIcon.png";
+    private const string DigFile  = "DIG!_digIcon.png";
+
+    private IDalamudTextureWrap? _labelClue;
+    private IDalamudTextureWrap? _labelDig;
+
+    /// <summary>
     /// Builds the dial textures at <b>exactly</b> the size they will be drawn, by reducing the
     /// source in steps rather than letting the GPU sampler do it.
     ///
@@ -192,6 +221,13 @@ internal sealed class DigHuntOverlay : IDisposable
             _dialOuter?.Dispose();
             _dialCentre = newCentre;
             _dialOuter  = newOuter;
+
+            // Labels are optional: a missing one costs the word, not the dial.
+            var newClue = BuildScaled(System.IO.Path.Combine(folder, ClueFile), targetPx);
+            var newDig  = BuildScaled(System.IO.Path.Combine(folder, DigFile),  targetPx);
+
+            if (newClue != null) { _labelClue?.Dispose(); _labelClue = newClue; }
+            if (newDig  != null) { _labelDig?.Dispose();  _labelDig  = newDig;  }
 
             Diag.Info($"[Dig] dial artwork resampled to {targetPx}px.");
         }
@@ -258,7 +294,6 @@ internal sealed class DigHuntOverlay : IDisposable
         finally { working?.Dispose(); }
     }
 
-    private PanacheSurface? _banner;
     private PanacheSurface? _radar;
 
     /// <summary>
@@ -304,8 +339,11 @@ internal sealed class DigHuntOverlay : IDisposable
 
     public void Dispose()
     {
-        _banner?.Dispose(); _banner = null;
-        _radar?.Dispose();  _radar  = null;
+        _reminder?.Dispose(); _reminder = null;
+        _radar?.Dispose();    _radar    = null;
+
+        _labelClue?.Dispose(); _labelClue = null;
+        _labelDig?.Dispose();  _labelDig  = null;
 
         // These ARE ours — built by CreateFromRaw rather than borrowed from the shared cache.
         _dialOuter?.Dispose();  _dialOuter  = null;
@@ -320,14 +358,20 @@ internal sealed class DigHuntOverlay : IDisposable
         {
             // Nothing running: the next test starts from silence rather than inheriting a
             // half-faded ring from the last one.
-            _radarFade  = 0f;
-            _radarPhase = 0f;
+            _radarFade   = 0f;
+            _radarPhase  = 0f;
+            _reminderAt  = 0;
+            _hiddenForDig = false;
             return;
         }
 
-        float time = (float)(DateTime.UtcNow - _start).TotalSeconds;
+        // The reminder is drawn whether or not the dial is — it exists precisely to be readable
+        // while the dial is away for the dig.
+        DrawReminder(active);
 
-        DrawBanner(active, time);
+        // A dig started from the right spot takes the button away for its duration. Cleared the
+        // moment the performance ends, so being back in range simply brings it back.
+        if (_hiddenForDig && !Plugin.Props.IsPerforming) _hiddenForDig = false;
 
         var  closeness = active.RadarCloseness;
         bool inRange   = closeness.HasValue;
@@ -351,124 +395,113 @@ internal sealed class DigHuntOverlay : IDisposable
             return;
         }
 
+        // Hidden for the dig, but only once the press has finished playing: the click has to be
+        // seen to land before the button is allowed to disappear, or it reads as the dial
+        // vanishing on contact rather than as a button being pressed.
+        if (_hiddenForDig && Environment.TickCount64 - _pressedAtMs >= PressMs) return;
+
         DrawRadar(_radarCloseness, _radarFade);
     }
 
-    // ── the banner ───────────────────────────────────────────────────────────
+    /// <summary>True while the dial is withheld for a dig started from the right spot.</summary>
+    private bool _hiddenForDig;
 
-    private void DrawBanner(IDigTest test, float time)
+    // ── the clue reminder ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The clue, in plain white type under the dial, with a drop shadow and no panel of any kind.
+    ///
+    /// <para>This replaced a full banner. A permanent panel meant the clue was always on screen and
+    /// therefore never read — and it occupied the top of the view for the whole run. Showing it only
+    /// when the player digs turns it from decoration into an answer to a question they just asked.
+    /// </para>
+    ///
+    /// <para>Held long enough to outlast the dig itself, so a dig that reveals the NEXT clue shows
+    /// that clue rather than fading out just before it arrives.</para>
+    ///
+    /// <para>Drawn with two text nodes rather than one: the dark copy offset behind the white one is
+    /// the shadow. Without it white type is unreadable against snow, sand or a lit wall — the same
+    /// contrast problem the dial's backing disc solves, solved the way text solves it.</para>
+    /// </summary>
+    private void DrawReminder(IDigTest test)
     {
+        if (_reminderAt == 0) return;
+
+        float elapsed = (Environment.TickCount64 - _reminderAt) / 1000f;
+        float alpha   = ReminderAlpha(elapsed);
+
+        if (alpha <= 0.002f) { _reminderAt = 0; return; }
+
+        string text = test.Subtitle;
+        if (string.IsNullOrWhiteSpace(text)) return;
+
         float uiScale = UiScale.Factor;
-        int   physW   = (int)(SurfaceW * uiScale);
-        int   physH   = (int)(SurfaceH * uiScale);
+        int   physW   = (int)(ReminderW * uiScale);
+        int   physH   = (int)(ReminderH * uiScale);
 
         var viewport = ImGui.GetMainViewport();
         var pos = new Vector2(
             viewport.Pos.X + (viewport.Size.X - physW) * 0.5f,
-            viewport.Pos.Y + viewport.Size.Y * TopFraction);
+            viewport.Pos.Y + viewport.Size.Y * TopFraction + (RadarSize + 14) * uiScale);
 
-        if (!BeginHud("##tc_dig_banner", pos, physW, physH)) return;
+        if (!BeginHud("##tc_dig_reminder", pos, physW, physH)) return;
 
-        // Same trick as the toasts: the surface grows physically with the UI scale and lays out
-        // against fixed logical dimensions, so BuildBanner stays unaware of the scale entirely.
-        _banner ??= new PanacheSurface(_texProvider, physW, physH);
-        _banner.Resize(physW, physH);
-        _banner.Scale = uiScale;
+        _reminder ??= new PanacheSurface(_texProvider, physW, physH);
+        _reminder.Resize(physW, physH);
+        _reminder.Scale = uiScale;
 
-        var (tex, _) = _banner.Render(BuildBanner(test, time), time, Vector2.Zero, false, false,
-                                      0f, ImGui.GetIO().DeltaTime, forceRedraw: false);
+        float time = (float)(DateTime.UtcNow - _start).TotalSeconds;
+
+        var (tex, _) = _reminder.Render(BuildReminder(text, alpha), time, Vector2.Zero, false,
+                                        false, 0f, ImGui.GetIO().DeltaTime, forceRedraw: false);
 
         if (tex.HasValue) ImGui.Image(tex.Value, new Vector2(physW, physH));
         EndHud();
     }
 
-    private static Node BuildBanner(IDigTest test, float time)
+    /// <summary>Fade in, hold, fade out. Sums to <see cref="ReminderTotal"/>.</summary>
+    private static float ReminderAlpha(float elapsed)
     {
-        var band   = test.Band;
-        var accent = AccentFor(band);
+        if (elapsed < 0f)             return 0f;
+        if (elapsed < ReminderIn)     return elapsed / ReminderIn;
+        if (elapsed < ReminderTotal - ReminderOut) return 1f;
+        if (elapsed < ReminderTotal)  return (ReminderTotal - elapsed) / ReminderOut;
+        return 0f;
+    }
 
-        // Only the call to action pulses. A HUD element that breathes for the whole run is noise;
-        // one that starts moving the moment you are standing on the spot is a signal.
-        float pulse = band == DigBand.Dig
-                        ? 0.78f + 0.22f * MathF.Sin(time * 6f)
-                        : 1f;
-
+    private static Node BuildReminder(string text, float alpha)
+    {
         var root = new Node().WithStyle(s =>
         {
-            s.WidthMode       = SizeMode.Fixed; s.Width  = SurfaceW;
-            s.HeightMode      = SizeMode.Fixed; s.Height = SurfaceH;
-            s.Flow            = Flow.Horizontal;
-            s.BackgroundColor = Ink.WithOpacity(0.94f);
-            s.BorderRadius    = 8f;
-            s.BorderColor     = accent.WithOpacity(0.45f * pulse);
-            s.BorderWidth     = 1;
+            s.WidthMode  = SizeMode.Fixed; s.Width  = ReminderW;
+            s.HeightMode = SizeMode.Fixed; s.Height = ReminderH;
         });
 
-        root.AppendChild(new Node().WithStyle(s =>
-        {
-            s.WidthMode              = SizeMode.Fixed; s.Width = 3;
-            s.HeightMode             = SizeMode.Fill;
-            s.BackgroundColor        = accent.WithOpacity(0.85f * pulse);
-            s.BorderRadiusTopLeft    = 8f;
-            s.BorderRadiusBottomLeft = 8f;
-        }));
+        // Shadow first, then the face directly over it. Two absolutely-positioned copies of the
+        // same string, so they cannot wrap differently and split.
+        root.AppendChild(TextLayer(text, new Vector2(2f, 2f), PColor.Black.WithOpacity(0.75f * alpha)));
+        root.AppendChild(TextLayer(text, Vector2.Zero,        PColor.White.WithOpacity(alpha)));
 
-        var body = new Node().WithStyle(s =>
-        {
-            s.Flow       = Flow.Vertical;
-            s.WidthMode  = SizeMode.Fill;
-            s.HeightMode = SizeMode.Fill;
-            s.Padding    = new EdgeSize(9, 14, 8, 14);
-            s.Gap        = 2;
-        });
-
-        body.AppendChild(new Node().WithText(test.Headline).WithStyle(s =>
-        {
-            s.WidthMode    = SizeMode.Fill;
-            s.HeightMode   = SizeMode.Fit;
-            s.FontSize     = 25f;
-            s.Bold         = true;
-            s.Color        = accent.WithOpacity(pulse);
-            s.TextOverflow = TextOverflow.Ellipsis;
-        }));
-
-        // Flavour left, clock right. Both on this row rather than the clock sharing the headline's
-        // row, so the two never have to be vertically aligned at wildly different font sizes.
-        var footer = new Node().WithStyle(s =>
-        {
-            s.Flow       = Flow.Horizontal;
-            s.WidthMode  = SizeMode.Fill;
-            s.HeightMode = SizeMode.Fit;
-            s.Gap        = 8;
-        });
-
-        footer.AppendChild(new Node().WithText(test.Subtitle).WithStyle(s =>
-        {
-            s.WidthMode    = SizeMode.Fill;
-            s.HeightMode   = SizeMode.Fit;
-            s.FontSize     = 12.5f;
-            s.Color        = Theme.TextMuted;
-            s.TextOverflow = TextOverflow.Ellipsis;
-        }));
-
-        // Fixed width plus TextAlign.Right is how the framework's own components right-align a
-        // value — a Fit width would hug the text and leave the clock drifting as digits change.
-        footer.AppendChild(new Node()
-            .WithText(CompletionStore.FormatRaceTime(test.ElapsedSeconds))
-            .WithStyle(s =>
-            {
-                s.WidthMode  = SizeMode.Fixed; s.Width = 92;
-                s.HeightMode = SizeMode.Fit;
-                s.FontSize   = 12.5f;
-                s.Bold       = true;
-                s.Color      = accent.WithOpacity(0.95f);
-                s.TextAlign  = TextAlign.Right;
-            }));
-
-        body.AppendChild(footer);
-        root.AppendChild(body);
         return root;
     }
+
+    private static Node TextLayer(string text, Vector2 offset, PColor colour)
+        => new Node().WithText(text).WithStyle(s =>
+        {
+            s.Position     = PositionMode.Absolute;
+            s.Left         = offset.X;
+            s.Top          = offset.Y;
+            s.WidthMode    = SizeMode.Fixed; s.Width  = ReminderW;
+            s.HeightMode   = SizeMode.Fixed; s.Height = ReminderH;
+            s.FontSize     = 21f;
+            s.Bold         = true;
+            s.Color        = colour;
+            s.TextAlign    = TextAlign.Center;
+            s.TextOverflow = TextOverflow.Wrap;
+            s.MaxLines     = 3;
+            s.PointerEvents = PointerEvents.None;
+        });
+
 
     // ── the radar ────────────────────────────────────────────────────────────
 
@@ -491,10 +524,12 @@ internal sealed class DigHuntOverlay : IDisposable
         var viewport = ImGui.GetMainViewport();
         var pos = new Vector2(
             viewport.Pos.X + (viewport.Size.X - phys) * 0.5f,
-            viewport.Pos.Y + viewport.Size.Y * TopFraction + SurfaceH * uiScale + 8f);
+            // Sits at TopFraction itself now. It used to be pushed down by the banner's height;
+            // with the banner gone, the dial IS the top of the HUD.
+            viewport.Pos.Y + viewport.Size.Y * TopFraction);
 
         // The one HUD window that takes input — it is a button. Kept small and only present while
-        // the dial is visible, so the amount of screen that can swallow a click is a 96px circle
+        // the dial is visible, so the amount of screen that can swallow a click is one small circle
         // for the few seconds it is up.
         if (!BeginHud("##tc_dig_radar", pos, phys, phys, acceptInput: true)) return;
 
@@ -588,6 +623,17 @@ internal sealed class DigHuntOverlay : IDisposable
             drawList.AddImage(dialCentre.Handle, origin, origin + size,
                               Vector2.Zero, Vector2.One, Tint(accentRgb, centreAlpha));
 
+            // 5. The word, over the top. Same rect as the dial — the lettering was authored into
+            //    the top of the same canvas, so this is where it curves over the rim by design.
+            //    DIG when a dig would land, CLUE while still looking.
+            var label = solid ? _labelDig : _labelClue;
+            if (label != null)
+            {
+                Stamp(drawList, label, origin, size, outline, Tint(Ink, 0.85f * fade));
+                drawList.AddImage(label.Handle, origin, origin + size,
+                                  Vector2.Zero, Vector2.One, Tint(accentRgb, ringAlpha));
+            }
+
             // Claims the same rectangle for hit-testing, since AddImage draws without laying
             // anything out.
             ImGui.Dummy(size);
@@ -624,6 +670,12 @@ internal sealed class DigHuntOverlay : IDisposable
         if (_radarHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             _pressedAtMs = Environment.TickCount64;
+            _reminderAt  = _pressedAtMs;
+
+            // Only a dig from the RIGHT spot takes the button away. A miss leaves it up, because
+            // the player still needs it — hiding it would punish the wrong guess twice.
+            _hiddenForDig = closeness >= 1f;
+
             _onDig?.Invoke();
         }
 
