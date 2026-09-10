@@ -146,6 +146,17 @@ internal sealed unsafe class InputBlock : IDisposable
         VirtualKey.Q, VirtualKey.E,                               // strafe — the camera-snap pair
         VirtualKey.SPACE,                                         // jump
         VirtualKey.UP, VirtualKey.DOWN, VirtualKey.LEFT, VirtualKey.RIGHT,
+
+        // The mouse buttons, for the same reason as Q and E. Both-buttons-held is a movement input
+        // with no key behind it, and right-held turns the body to the camera — neither goes through
+        // the movement floats, so neither could be zeroed and neither could be undone afterwards.
+        // The game reads these from the same key-state table, so clearing them works identically.
+        //
+        // NOTE this also swallows clicks on the game's own UI for the few seconds a dig lasts. That
+        // is a real cost, accepted because the request was that every input be blocked until the
+        // dig ends, and because a click that moves the camera is the very thing being stopped.
+        // Dalamud's own windows are unaffected — ImGui does not read input from here.
+        VirtualKey.LBUTTON, VirtualKey.RBUTTON,
     };
 
     private static void SuppressKeys()
