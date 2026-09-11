@@ -413,14 +413,6 @@ internal sealed class DigMapWindow
         ImGui.TextDisabled(tex != null ? $"map texture: {path}" : $"no map texture at {path} — drawing a grid instead");
     }
 
-    /// <summary>
-    /// The map's background image.
-    ///
-    /// <para>The path is built from <c>Map.Id</c> ("s1h1/00" becomes
-    /// <c>ui/map/s1h1/00/s1h1_00_m.tex</c>). <b>If that is wrong the window degrades to a grid and
-    /// prints the path it tried</b> rather than failing silently — the dots are the point, and the
-    /// image is context.</para>
-    /// </summary>
     /// <summary>Which corner is being dragged: 0 none, 1 north-west, 2 south-east.</summary>
     private static int _dragCorner;
 
@@ -1133,6 +1125,14 @@ internal sealed class DigMapWindow
         return true;
     }
 
+    /// <summary>
+    /// The map's background image.
+    ///
+    /// <para>The path is built from <c>Map.Id</c> ("s1h1/00" becomes
+    /// <c>ui/map/s1h1/00/s1h1_00_m.tex</c>). <b>If that is wrong the window degrades to a grid and
+    /// prints the path it tried</b> rather than failing silently — the dots are the point, and the
+    /// image is context.</para>
+    /// </summary>
     private static Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? MapTexture(
         uint mapId, out string path)
     {

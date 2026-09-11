@@ -170,7 +170,11 @@ internal sealed class DigClueWriter
         lines.Add("  Those floors are ZEROED: two facts at vagueness 1 apiece is difficulty ZERO, so");
         lines.Add("  every band's easiest setting is equally easy however many facts it hands over.");
         lines.Add("  Difficulty is only what is spent ABOVE the floor, which is why the reachable");
-        lines.Add("  ceilings differ: 8 for three facts (3+3+2), 6 for two, 4 for one.");
+        lines.Add("  ceilings differ. The LEADING fact is also capped one tier below the rest (see");
+        lines.Add("  the last note below), so the spendable points are:");
+        lines.Add("    3 facts   7   (2 above floor on the leading fact, 3, then 2)");
+        lines.Add("    2 facts   5   (2, then 3)");
+        lines.Add("    1 fact    3   (the single fact IS the leading one, so it caps at tier 3)");
         lines.Add("");
         lines.Add("  Facts are dropped from the LEAST useful end, so a HARD clue is the single most");
         lines.Add("  actionable thing that could have been said - never an arbitrary leftover.");
@@ -364,8 +368,12 @@ internal sealed class DigClueWriter
             ceiling += (i == 0 ? MaxVagueness - 1 : MaxVagueness) - floor[i];
 
         // Scaled WITHIN the band so every part of the slider does something. The ceilings differ by
-        // count — 8 for three facts, 6 for two, 4 for one — so a single global mapping would leave
-        // the top of the HARD band inert.
+        // count — 7 for three facts, 5 for two, 3 for one, once the leading-fact cap above is
+        // counted — so a single global mapping would leave the top of the HARD band inert.
+        //
+        // Those are the numbers the loop below can actually reach. The raw floors-only arithmetic
+        // gives 8/6/4; the cap takes one off each, and the ceiling is computed rather than written
+        // down precisely so the two cannot disagree.
         float within = count == 3 ? hard / 0.34f
                      : count == 2 ? (hard - 0.34f) / 0.33f
                      :              (hard - 0.67f) / 0.33f;
@@ -431,10 +439,15 @@ internal sealed class DigClueWriter
     /// That reading also makes every worked example come out right.</para>
     ///
     /// <para><b>One consequence worth knowing.</b> With the floors zeroed, the reachable maximum
-    /// differs by fact count — 8 for three facts (3+3+2 above their floors), 6 for two, 4 for one.
+    /// differs by fact count — 7 for three facts, 5 for two, 3 for one. (The floors-only arithmetic
+    /// would give 8/6/4; the leading-fact cap in <see cref="Budget"/> takes one off each, and the
+    /// ceiling is computed from the same expression the loop enforces so the two cannot disagree.)
     /// So the hardest clue this can produce is three maximally-vague facts, not one. That follows
     /// directly from the stated model and is flagged rather than quietly "corrected", since which
     /// end should be hardest is a design call and not a bug to fix unilaterally.</para>
+    ///
+    /// <para>A further consequence of the cap: on a ONE-fact clue the single fact is also the
+    /// leading one, so tier 4 is unreachable there. The vaguest a HARD clue gets is tier 3.</para>
     /// </summary>
     private const int MaxVagueness = 4;
 
@@ -454,26 +467,18 @@ internal sealed class DigClueWriter
         {
             0 => $"{Intensity(dist)}{eight} of {a.Name}",
             1 => $"somewhere {eight.ToLowerInvariant()} of {a.Name}",
-            2 => $"somewhere {four.ToLowerInvariant()} of {SideOf(a.World)} {AnchorKind(a.Name)}",
-            3 => $"{four.ToLowerInvariant()} of one of the {Plural(AnchorKind(a.Name))}",
+            2 => $"somewhere {four.ToLowerInvariant()} of {SidedKind(a.Name, a.World)}",
+            3 => $"{four.ToLowerInvariant()} of one of {KindPhrase(a.Name, plural: true)}",
 
             // NOT "not far from one of the Xs". That asserted PROXIMITY, and PickAnchor deliberately
             // reaches for distant anchors — so the vaguest tier was the one tier capable of being
             // flatly untrue. Vague and false are different things, and only the first is wanted.
             // "Reckoned from" keeps the anchor as a reference point and claims nothing about
             // distance or direction.
-            _ => $"reckoned from one of the {Plural(AnchorKind(a.Name))}",
+            _ => $"reckoned from one of {KindPhrase(a.Name, plural: true)}",
         };
     }
 
-    /// <summary>
-    /// The category-word for an anchor — its last word, which is what makes "Blue Badger Gate"
-    /// generalise to "gate" and "the Ingleside aethernet shard" to "shard".
-    ///
-    /// <para>A single-word name has no category to fall back on, so it becomes "place": "one of the
-    /// Odilies" would be nonsense, and inventing a taxonomy for NPC names is exactly the kind of
-    /// table this file has repeatedly refused to invent.</para>
-    /// </summary>
     /// <summary>
     /// Pluralises a category word without doubling an existing plural.
     ///
@@ -483,8 +488,25 @@ internal sealed class DigClueWriter
     /// to be English pluralisation.</para>
     /// </summary>
     private static string Plural(string kind) =>
-        kind.EndsWith("s", StringComparison.OrdinalIgnoreCase) ? kind : kind + "s";
+        IsPlural(kind) ? kind : kind + "s";
 
+    /// <summary>
+    /// Whether a category word is already plural. <b>The same trailing-'s' test <see cref="Plural"/>
+    /// uses, named once so the two cannot drift.</b> Crude by design and stated as such — it is
+    /// deciding article and agreement for a handful of words the game itself supplies, not parsing
+    /// English.
+    /// </summary>
+    private static bool IsPlural(string kind) =>
+        kind.EndsWith("s", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The category-word for an anchor — its last word, which is what makes "Blue Badger Gate"
+    /// generalise to "gate" and "the Ingleside aethernet shard" to "shard".
+    ///
+    /// <para>A single-word name has no category to fall back on, so it becomes "place": "one of the
+    /// Odilies" would be nonsense, and inventing a taxonomy for NPC names is exactly the kind of
+    /// table this file has repeatedly refused to invent.</para>
+    /// </summary>
     private static string AnchorKind(string name)
     {
         var parts = name.Trim().Split(' ');
@@ -494,18 +516,63 @@ internal sealed class DigClueWriter
         return last.Length < 3 ? "place" : last;
     }
 
-    /// <summary>Which side of the map something is on — for "a WESTERN gate".</summary>
+    /// <summary>
+    /// The anchor's category with its article — "the gates", "the gate".
+    ///
+    /// <para><b>One place decides the article, because agreement was being got wrong in three
+    /// different phrasings.</b> An anchor name may arrive plural ("the Wharf Rats"), and every
+    /// vague tier that generalises the anchor has to agree with it. Building the phrase here means
+    /// a tier states WHICH shape it wants and never assembles one out of fragments.</para>
+    /// </summary>
+    private static string KindPhrase(string name, bool plural)
+    {
+        string kind = AnchorKind(name);
+        return plural ? $"the {Plural(kind)}" : $"the {kind}";
+    }
+
+    /// <summary>
+    /// The anchor's category qualified by which side of the map it sits on — "a western gate",
+    /// "the eastern rats".
+    ///
+    /// <para><b>Article and number agree with the category word.</b> This read "a western rats" for
+    /// any enemy-group anchor, because the article was a fixed part of <c>SideOf</c>'s return and
+    /// the noun could be plural. A vague clue is allowed to say less; it is not allowed to read as
+    /// though nobody checked it.</para>
+    /// </summary>
+    private static string SidedKind(string name, Vector3 world)
+    {
+        string kind = AnchorKind(name);
+        string side = SideOf(world);
+
+        if (side.Length == 0) return IsPlural(kind) ? $"the {kind}" : $"a {kind}";
+
+        // "an eastern", "a western". Only "eastern" begins with a vowel of the four, but the test is
+        // written generally rather than special-cased, because the word list is not this function's
+        // to remember.
+        string article = "aeiou".IndexOf(side[0]) >= 0 ? "an" : "a";
+
+        return IsPlural(kind) ? $"the {side} {kind}" : $"{article} {side} {kind}";
+    }
+
+    /// <summary>
+    /// Which side of the map something is on, as a BARE adjective — "western", "northern" — or
+    /// empty when the map cannot be bounded.
+    ///
+    /// <para>The article used to be baked in here and that is what produced "a western rats". A
+    /// function returning an adjective cannot know what noun it will modify, so it no longer
+    /// pretends to — see <see cref="SidedKind"/>.</para>
+    /// </summary>
     private static string SideOf(Vector3 world)
     {
-        if (!DigLandmarks.WalkableBox(out var lo, out var hi)) return "a";
+        if (!DigLandmarks.WalkableBox(out var lo, out var hi)) return string.Empty;
 
         float cx = (lo.X + hi.X) * 0.5f;
         float cz = (lo.Y + hi.Y) * 0.5f;
 
         // The dominant axis, so the word says the thing that is most true rather than both.
         return MathF.Abs(world.X - cx) >= MathF.Abs(world.Z - cz)
-            ? (world.X > cx ? "an eastern" : "a western")
-            : (world.Z < cz ? "a northern" : "a southern");
+            ? (world.X > cx ? "eastern" : "western")
+            : (world.Z < cz ? "northern" : "southern");
     }
 
     /// <summary>One fact: how far, from a number down to almost nothing.</summary>
@@ -600,11 +667,23 @@ internal sealed class DigClueWriter
         // FAR-FROM replaces the direction fact rather than adding to it: it is a statement about the
         // same anchor, so having both would spend two facts on one relationship. Only when the
         // anchor really is distant, or it would simply be false.
-        bool awkward = dist >= 90f
+        //
+        // NEVER ON A ONE-FACT CLUE, and that was not being enforced. A negative constraint rules out
+        // a circle instead of pointing along a line, so on its own it says almost nothing —
+        // everywhere on a map is a long way from something. The glossary has always stated it is
+        // "NEVER issued alone", and at count 1 it was issued alone: the HARD band produced
+        // "A long way from the Ingleside aethernet shard." as the entire clue. The rule was written
+        // down and then not applied, which is the worst of both.
+        bool awkward = count >= 2
+                    && dist >= 90f
                     && (float)_rng.NextDouble() < Math.Clamp(DigTuning.RoamAwkwardness, 0f, 1f) * 0.45f;
 
+        // Plural(), not a bare + "s". An enemy-group anchor is already plural — "the Wharf Rats" —
+        // so concatenating produced "one of the ratss". That exact bug was found and fixed in
+        // DirectionFact and this second call site was missed, which is why the helper exists at all
+        // rather than the fix living inline.
         facts.Add(awkward
-            ? $"a long way from {(vague[0] >= 2 ? "one of the " + AnchorKind(a.Name) + "s" : a.Name)}"
+            ? $"a long way from {(vague[0] >= 2 ? "one of " + KindPhrase(a.Name, plural: true) : a.Name)}"
             : DirectionFact(a, spot, dist, vague[0]));
 
         if (count >= 2)
@@ -840,9 +919,8 @@ internal sealed class DigClueWriter
     /// in the code and obvious in the output. Nine strings cannot be composed wrongly, and each one
     /// is written the way a person would actually say it rather than assembled from parts that only
     /// read well on the diagonal.</para>
-    /// </summary>
-    /// <summary>
-    /// <b>Every one of these names a REGION, and none of them names a point.</b>
+    ///
+    /// <para><b>Every one of these names a REGION, and none of them names a point.</b></para>
     ///
     /// <para>The previous set said "very centre", and the clue read "Dead in the very centre of the
     /// map" — which to anyone reading it means the exact middle, to the yalm. A cell is one ninth of

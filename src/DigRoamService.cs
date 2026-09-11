@@ -207,12 +207,6 @@ internal sealed unsafe class DigRoamService : IDigTest
         return $"{_stops.Count} spot(s) buried{shortfall}. First clue: {_stops[0].Clue}";
     }
 
-    /// <summary>
-    /// A buried spot on ground that passes both of Test 2's rules.
-    ///
-    /// <para>Rejection sampling rather than anything cleverer, because "valid ground" is only
-    /// answerable by asking the geometry — there is no list of standable points to draw from.</para>
-    /// </summary>
     /// <summary>Candidates thrown away purely because the navmesh could not be consulted.</summary>
     private int _navRefusals;
 
@@ -738,7 +732,13 @@ internal sealed unsafe class DigRoamService : IDigTest
             // readout confidently printed the navmesh-derived one — and the two disagreed by enough
             // to make a correct clue look wrong. A diagnostic that reads a different source from the
             // thing it is diagnosing is worse than no diagnostic.
-            DigLandmarks.WalkableBox(out var worldLo, out var worldHi);
+            // THE SOURCE COMES BACK FROM WalkableBox ITSELF. A first attempt restated its
+            // precedence here as a ?: chain and got the labels arm wrong — it printed "map labels"
+            // on a count of four, while WalkableBox also demands their spread exceed five yalms, so
+            // a clustered set fell through to the navmesh there and was reported as labels here.
+            // That is ContentBounds' defect one size down, so the fix is the same one: ask the
+            // chooser what it chose instead of guessing alongside it.
+            DigLandmarks.WalkableBox(out var worldLo, out var worldHi, out string source);
 
             // Converted for display only, since the readout above it is in map coordinates.
             DigLandmarks.TryMapCoords(new Vector3(worldLo.X, 0f, worldLo.Y), out float blx, out float bly);
@@ -746,15 +746,6 @@ internal sealed unsafe class DigRoamService : IDigTest
 
             var lo = new Vector2(MathF.Min(blx, bhx), MathF.Min(bly, bhy));
             var hi = new Vector2(MathF.Max(blx, bhx), MathF.Max(bly, bhy));
-
-            // Names the source WalkableBox actually used, in its own precedence order, so the line
-            // cannot claim "navmesh" while a hand-drawn box is quietly overriding it.
-            string source =
-                DigTuning.TryManualBox(_territory, out _, out _, out _, out _) ? "HAND-DRAWN box"
-                : DigLandmarks.ForCurrentMap().Count >= 4                      ? "map labels"
-                : DigNavmesh.WalkableSampleCount > 0
-                    ? $"navmesh ({DigNavmesh.WalkableSampleCount} samples)"
-                    : "the map's coordinate range (nothing better available)";
 
             line += $"\n[Challenges] walkable box spans x {lo.X:0.0}-{hi.X:0.0}, y {lo.Y:0.0}-{hi.Y:0.0}"
                   + $"   centre ({(lo.X + hi.X) * 0.5f:0.0}, {(lo.Y + hi.Y) * 0.5f:0.0})"

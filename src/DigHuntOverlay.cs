@@ -191,14 +191,15 @@ internal sealed class DigHuntOverlay : IDisposable
     /// <para>Both are drawn by re-stamping the same silhouette in near-black behind itself — eight
     /// directions for a rim, one larger down-right pass for depth. No second set of artwork is
     /// needed, and the outline tracks the figure exactly because it IS the figure.</para>
-    /// </summary>
-    /// <summary>
-    /// The outline width is a live tuning value now — see <see cref="DigTuning.IconOutlineWidth"/>.
+    ///
+    /// <para>The outline width is a live tuning value — see <see cref="DigTuning.IconOutlineWidth"/>.
     /// Width is the one thing that decides whether an outer outline reads as hugging the edge or as
-    /// creeping into the art, so it belongs on a slider rather than in a constant.
+    /// creeping into the art, so it belongs on a slider rather than in a constant. The shadow's
+    /// offset stays a constant because it is depth, not legibility.</para>
     /// </summary>
     private static float OutlinePx => Math.Clamp(DigTuning.IconOutlineWidth, 0f, 6f);
 
+    /// <summary>Down-right offset of the drop shadow, in logical pixels before UI scale.</summary>
     private const float ShadowPx = 3f;
 
     /// <summary>
@@ -294,10 +295,9 @@ internal sealed class DigHuntOverlay : IDisposable
     /// Debug build only, so the public build genuinely has none — and the drawn circles this
     /// replaces are still there as the fallback. Nothing about the dial's behaviour depends on
     /// which of the two is on screen.</para>
-    /// </summary>
-    /// <summary>
-    /// The dial textures, built by this class at the exact size they are drawn — see
-    /// <see cref="EnsureDialArt"/>. Owned here, and therefore disposed here.
+    ///
+    /// <para>Built by this class at the exact size they are drawn — see
+    /// <see cref="EnsureDialArt"/>. Owned here, and therefore disposed here.</para>
     ///
     /// <para>These replaced shared textures loaded straight from file. That route handed the
     /// reduction to the GPU sampler, which is what made the artwork look low-resolution; it also

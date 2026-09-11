@@ -170,15 +170,16 @@ internal static class DigTuning
     /// of starting, so the whole trail fits in one walkable neighbourhood. Chaining each from the
     /// last would let a run wander off the map's edge one hop at a time.</para>
     /// </summary>
+    public static float RoamMinRange = 15f;
+
     /// <summary>
-    /// Nearest a spot may be to the player, and an OPTIONAL cap on how far.
+    /// An OPTIONAL cap on how far a spot may be buried from the player.
     ///
-    /// <para><b>The cap defaults to 0, meaning none — the whole map is eligible.</b> Spots are drawn
-    /// from the map's own world rectangle, so anywhere the drawn map covers can hold one. An earlier
+    /// <para><b>Defaults to 0, meaning none — the whole map is eligible.</b> Spots are drawn from
+    /// the map's own world rectangle, so anywhere the drawn map covers can hold one. An earlier
     /// version sampled a ring around the player, which let "how far did you walk before pressing
     /// Start" decide what the trail was allowed to contain.</para>
     /// </summary>
-    public static float RoamMinRange = 15f;
     public static float RoamMaxRange = 0f;
 
     /// <summary>
@@ -269,13 +270,12 @@ internal static class DigTuning
     /// near its middle, which is why this is tunable and why 0 turns it off — on a sparse map it
     /// would reject most of the zone. It earns its keep on dense maps, which is exactly where the
     /// box fails worst.</para>
-    /// </summary>
-    /// <summary>
-    /// <b>Defaults to 0 — OFF — since null zones arrived.</b> At 40 it rejected 2628 of 10000
+    ///
+    /// <para><b>Defaults to 0 — OFF — since null zones arrived.</b> At 40 it rejected 2628 of 10000
     /// candidates and its partner wall test another 2647, and the two together carved the open
     /// middle out of every plaza: both are anchored to map MARKERS, so placements cluster in a halo
     /// around markers and the spaces between them go empty. That is marker density showing through,
-    /// not walkability.
+    /// not walkability.</para>
     ///
     /// <para>They were proxies for "where can a player stand", built because nothing else could
     /// answer. A hand-drawn box plus hand-drawn null zones answers it directly, so the proxy's cost
@@ -310,13 +310,13 @@ internal static class DigTuning
     /// <para><b>Editable because this list will grow.</b> Housing wards are full of placeable props
     /// with legitimate names, and each one only reveals itself by turning up in a bad clue. A
     /// setting means the next one costs a keystroke instead of a release.</para>
-    /// </summary>
-    /// <summary>
-    /// <b>"Retainer" on its own, not "Retainer Bell".</b> The first version listed the specific
-    /// names and a clue came back reading "NORTH of Retainer" — because the anchor's name in the
-    /// data is exactly <c>Retainer</c>, and a substring ban only fires when the BAN TERM is inside
-    /// the NAME, never the other way round. Listing the longer, more precise string matched nothing.
-    /// Ban the shortest form that identifies the thing; it covers every longer one for free.
+    ///
+    /// <para><b>"Retainer" on its own, not "Retainer Bell".</b> The first version listed the
+    /// specific names and a clue came back reading "NORTH of Retainer" — because the anchor's name
+    /// in the data is exactly <c>Retainer</c>, and a substring ban only fires when the BAN TERM is
+    /// inside the NAME, never the other way round. Listing the longer, more precise string matched
+    /// nothing. Ban the shortest form that identifies the thing; it covers every longer one for
+    /// free.</para>
     /// </summary>
     public static string AnchorBans = DefaultAnchorBans;
 
@@ -594,10 +594,9 @@ internal static class DigTuning
     /// <summary>
     /// How far DOWN the whole dial-and-clue assembly sits from where it would otherwise be, in
     /// logical pixels. The dial and the clue move together, so this never changes the gap between
-    /// them — only where the pair as a whole lands.
-    /// </summary>
-    /// <summary>
-    /// Gap between the bottom of the dial and the top of the clue line, in logical pixels.
+    /// them — only where the pair as a whole lands. Its partner
+    /// <see cref="HudClueGapPx"/> is the gap between the bottom of the dial and the top of the clue
+    /// line, and both are sliders for the same reason.
     ///
     /// <para><b>These two are sliders for the same reason every distance here is.</b> The game
     /// prints its own location banner in the space between the dial and the clue, and where that
@@ -871,10 +870,9 @@ internal static class DigTuning
     /// save written by that version recorded a 0 the user never chose — and on load that 0 would
     /// have silently overridden the 9s default with the exact behaviour it replaced. A missing or
     /// older version therefore takes the shipped default rather than the stored number.
-    /// </summary>
-    /// <summary>
-    /// Version 3: the site defaults changed meaningfully (side 70 → 50, wall height 6 → 1.5), so a
-    /// file written before it holds the OLD defaults and would silently reinstate them.
+    ///
+    /// <para>Version 3: the site defaults changed meaningfully (side 70 → 50, wall height 6 → 1.5),
+    /// so a file written before it holds the OLD defaults and would silently reinstate them.</para>
     ///
     /// <para><b>Each migration is keyed to its own version, never to <c>CurrentVersion</c>.</b>
     /// Gating on "older than current" would make every future bump re-run every past migration and

@@ -164,9 +164,12 @@ internal static class DigLandmarks
     /// <summary>
     /// Which part of the map a world position falls in — "NORTH-EAST", "the middle", and so on.
     ///
-    /// <para><b>Worked in MAP coordinates, not world ones.</b> The player reads a quadrant off the
-    /// map screen, and the map is not necessarily square with the world nor centred on the origin.
-    /// Converting first means the answer is the one they can check.</para>
+    /// <para><b>Worked in WORLD coordinates, against <see cref="WalkableBox"/>.</b> This summary
+    /// used to say the opposite — "worked in MAP coordinates, not world ones" — several versions
+    /// after the body stopped converting at all, and the comment inside the method contradicted it
+    /// outright. The conversion this repo has always marked spot-checked-never-proven is the thing
+    /// that was removed; nothing has to be transformed to answer "is this east of the middle", so
+    /// nothing is.</para>
     ///
     /// <para>A central band is deliberately its own answer rather than being forced into a corner:
     /// a spot two yalms from the middle is not "north-east" in any useful sense, and saying so would
@@ -201,22 +204,6 @@ internal static class DigLandmarks
     }
 
     /// <summary>
-    /// The extent of the map's actual CONTENT in map coordinates, not the extent of its coordinate
-    /// system.
-    ///
-    /// <para><b>These are different and treating them as the same put "dead centre" on a spot that
-    /// was visibly north-east.</b> Map coordinates run 1..1+41/c, which corresponds to raw 0..2048 —
-    /// the whole square the map image could theoretically cover. A real map's geometry occupies only
-    /// part of that square, and a housing subdivision occupies a small, off-centre part of it. So the
-    /// midpoint of the coordinate range is the middle of a mostly-empty rectangle, not the middle of
-    /// anywhere a player would recognise.</para>
-    ///
-    /// <para>Derived instead from the landmarks the game itself draws on the map, which by
-    /// construction sit on the content. Falls back to the coordinate range when a map has too few
-    /// named markers to bound anything — better a known-crude answer than one computed from three
-    /// points that happen to be in one corner.</para>
-    /// </summary>
-    /// <summary>
     /// The walkable extent of this zone in <b>WORLD</b> coordinates as (x, z) pairs — the square
     /// every direction word is measured against.
     ///
@@ -235,9 +222,26 @@ internal static class DigLandmarks
     /// <para>Falls back to the landmark spread, then the map rectangle, when the navmesh cannot
     /// bound the zone.</para>
     /// </summary>
-    public static bool WalkableBox(out Vector2 lo, out Vector2 hi)
+    public static bool WalkableBox(out Vector2 lo, out Vector2 hi) =>
+        WalkableBox(out lo, out hi, out _);
+
+    /// <summary>
+    /// The same box, and <b>which of the four sources produced it</b>.
+    ///
+    /// <para><b>The source is reported by the function that chooses it, never re-derived.</b> The
+    /// Reveal diagnostic used to restate this precedence in its own <c>?:</c> chain, and got the
+    /// labels arm wrong: it printed "map labels" whenever the map had four of them, while this
+    /// method also requires their spread to be wider than five yalms. A clustered set of labels
+    /// therefore fell through to the navmesh here and was reported as labels there.</para>
+    ///
+    /// <para>That is the same defect <c>ContentBounds</c> was deleted for, one size down: a second
+    /// copy of a precedence order, in a diagnostic, disagreeing with the thing it is diagnosing.
+    /// Returning the answer alongside the box is the version that cannot drift.</para>
+    /// </summary>
+    public static bool WalkableBox(out Vector2 lo, out Vector2 hi, out string source)
     {
         lo = hi = default;
+        source  = "nothing";
 
         // ZEROTH: a box set by hand, for this territory.
         //
@@ -248,8 +252,9 @@ internal static class DigLandmarks
         if (DigTuning.TryManualBox(Plugin.ClientState.TerritoryType,
                                    out float bx0, out float bz0, out float bx1, out float bz1))
         {
-            lo = new Vector2(bx0, bz0);
-            hi = new Vector2(bx1, bz1);
+            lo     = new Vector2(bx0, bz0);
+            hi     = new Vector2(bx1, bz1);
+            source = "HAND-DRAWN box";
             return true;
         }
 
@@ -287,8 +292,9 @@ internal static class DigLandmarks
                 float padX = (maxX - minX) * 0.10f;
                 float padZ = (maxZ - minZ) * 0.10f;
 
-                lo = new Vector2(minX - padX, minZ - padZ);
-                hi = new Vector2(maxX + padX, maxZ + padZ);
+                lo     = new Vector2(minX - padX, minZ - padZ);
+                hi     = new Vector2(maxX + padX, maxZ + padZ);
+                source = $"map labels ({marks.Count})";
                 return true;
             }
         }
@@ -297,11 +303,17 @@ internal static class DigLandmarks
         // the raw rectangle — it is at least made of ground — but demoted, per the note above.
         if (TryWorldBounds(out var searchLo, out var searchHi) &&
             DigNavmesh.TryWalkableBounds(searchLo, searchHi, out lo, out hi))
+        {
+            source = $"navmesh ({DigNavmesh.WalkableSampleCount} samples)";
             return true;
+        }
 
         // LAST: the map rectangle. Known crude — it is mostly empty square for a small zone — but
         // it is never wrong about orientation, only about where the middle is.
-        return TryWorldBounds(out lo, out hi);
+        if (!TryWorldBounds(out lo, out hi)) return false;
+
+        source = "the map's coordinate range (nothing better available)";
+        return true;
     }
 
     // ContentBounds was DELETED here, and must not come back.

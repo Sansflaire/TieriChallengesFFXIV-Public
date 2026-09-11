@@ -170,14 +170,14 @@ internal sealed class DigTests
         return active.Name + ": " + r;
     }
 
+    /// <summary>Whether a prop performance was running last frame — see <see cref="Tick"/>.</summary>
+    private bool _wasPerforming;
+
     /// <summary>
     /// Ticks every test, not just the active one — a test that is winding down its result screen is
     /// no longer "active" by some readings but still needs its clock read. Each guards itself with
     /// an early-out, so the idle cost is three branch tests.
     /// </summary>
-    /// <summary>Whether a prop performance was running last frame — see <see cref="Tick"/>.</summary>
-    private bool _wasPerforming;
-
     public void Tick()
     {
         // Watch for the dig animation ending, and tell the active test whether it ran to the end.

@@ -325,11 +325,8 @@ internal static class DigVolumeRender
 
     /// <summary>
     /// Drops a point onto the floor via the caller's sampler, then lifts it clear of the surface.
-    /// Falls back to the point's own height when there is no sampler, which is what makes the snap
-    /// optional rather than mandatory at every call site.
-    /// </summary>
-    /// <summary>
-    /// Drops a point onto the floor via the caller's sampler, then lifts it clear of the surface.
+    /// With no sampler it keeps the point's own height, which is what makes the snap optional
+    /// rather than mandatory at every call site.
     ///
     /// <para><b>Returns null when the sampler rejects the point.</b> That is how a circle refuses to
     /// exist where it cannot: a marker overlapping a cliff or a wall would otherwise have some
