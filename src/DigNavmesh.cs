@@ -1,6 +1,8 @@
 #if DEV_BUILD
 using System;
+using System.Collections.Generic;
 using System.Numerics;
+using System.Threading.Tasks;
 
 using Dalamud.Plugin.Ipc;
 
@@ -159,6 +161,9 @@ internal static class DigNavmesh
                 .GetIpcSubscriber<Vector3, float, bool, bool>("vnavmesh.Query.Mesh.IsPointOnMesh");
 
             _progress = Plugin.PluginInterface.GetIpcSubscriber<float>("vnavmesh.Nav.BuildProgress");
+
+            _pathfind = Plugin.PluginInterface
+                .GetIpcSubscriber<Vector3, Vector3, bool, Task<List<Vector3>>>("vnavmesh.Nav.Pathfind");
         }
         catch (Exception ex)
         {
@@ -377,6 +382,39 @@ internal static class DigNavmesh
         _boundsTerritory = uint.MaxValue;
         _boundsValid     = false;
         _boundsHits      = 0;
+    }
+
+    /// <summary>
+    /// <c>vnavmesh.Nav.Pathfind</c> — <c>(from, to, flying)</c> returning
+    /// <c>Task&lt;List&lt;Vector3&gt;&gt;</c>. <b>The only definitive reachability test there is.</b>
+    ///
+    /// <para>Every cheap gate tried so far answers a question adjacent to the real one. On-mesh does
+    /// not mean reachable. Reachable-filtered does not mean reachable either — that was assumed and
+    /// was wrong (BROKEN.md 015). Near-a-map-marker is a dilation of the marker set, not the walkable
+    /// outline. A PATH existing from where the player is standing to the spot is not a proxy for
+    /// reachability; it is reachability.</para>
+    ///
+    /// <para><b>It is async, which is why it is not the placement gate.</b> Placement is a
+    /// synchronous rejection-sampling loop and making it await a path per candidate would restructure
+    /// it entirely. So this is a VERIFY pass instead: place with the cheap gates, then ask this
+    /// whether the results were actually reachable. If it proves reliable it is worth the
+    /// restructure; until then, measuring beats guessing — which is the whole lesson of this
+    /// session.</para>
+    /// </summary>
+    private static ICallGateSubscriber<Vector3, Vector3, bool, Task<List<Vector3>>>? _pathfind;
+
+    /// <summary>
+    /// Starts a pathfind from <paramref name="from"/> to <paramref name="to"/>. Null when vnavmesh
+    /// cannot be asked at all; otherwise a task yielding the waypoints, empty when no route exists.
+    /// </summary>
+    public static Task<List<Vector3>>? TryPathfind(Vector3 from, Vector3 to)
+    {
+        Resolve();
+
+        if (_pathfind == null) return null;
+
+        try   { return _pathfind.InvokeFunc(from, to, false); }
+        catch { return null; }
     }
 
     /// <summary>

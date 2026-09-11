@@ -120,6 +120,8 @@ internal sealed class DigMapWindow
     /// </summary>
     private void DrawCanvas(uint mapId)
     {
+        PumpVerify();
+
         DrawToggles();
         ImGui.Separator();
 
@@ -132,9 +134,15 @@ internal sealed class DigMapWindow
 
         var tex = MapTexture(mapId, out string path);
 
+        // ZOOM AND PAN. The image is drawn at zoom scale with a pan offset, and Plot below applies
+        // exactly the same transform — one place decides where things go, so a dot cannot drift away
+        // from the map under it.
+        HandleZoomPan(origin, rect, side);
+
         if (tex != null)
         {
-            drawList.AddImage(tex.Handle, origin, origin + rect);
+            drawList.AddImage(tex.Handle,
+                              origin + _pan * _zoom, origin + _pan * _zoom + rect * _zoom);
         }
         else
         {
@@ -159,7 +167,9 @@ internal sealed class DigMapWindow
             at = default;
             if (!DigLandmarks.TryMapCoords(world, out float mx, out float my)) return false;
 
-            at = origin + new Vector2((mx - 1f) / span * side, (my - 1f) / span * side);
+            // Same transform the image gets, so a dot can never drift off the map under it.
+            at = origin + _pan * _zoom
+               + new Vector2((mx - 1f) / span * side, (my - 1f) / span * side) * _zoom;
             return true;
         }
 
@@ -252,8 +262,9 @@ internal sealed class DigMapWindow
         uint red = ImGui.GetColorU32(new Vector4(1f, 0.25f, 0.25f, 0.95f));
         int outside = 0;
 
-        foreach (var s in _showSpots ? _spots : System.Linq.Enumerable.Empty<Vector3>())
+        for (int si = 0; _showSpots && si < _spots.Count; si++)
         {
+            var s = _spots[si];
             if (!Plot(s, out var at)) continue;
 
             // Counted, not hidden. A dot outside the image is the exact failure this window was
@@ -270,6 +281,22 @@ internal sealed class DigMapWindow
             }
 
             drawList.AddCircleFilled(at, 3f, red, 10);
+
+            // The verdict, when one has been asked for. A red X is the finding this window exists
+            // to surface: a spot placement accepted that no route reaches.
+            if (!_reachable.TryGetValue(si, out var verdict)) continue;
+
+            if (verdict == true)
+            {
+                drawList.AddCircle(at, 7f, ImGui.GetColorU32(new Vector4(0.35f, 1f, 0.45f, 0.95f)),
+                                   14, 2f);
+            }
+            else if (verdict == false)
+            {
+                uint x = ImGui.GetColorU32(new Vector4(1f, 0.25f, 0.25f, 1f));
+                drawList.AddLine(at - new Vector2(6f), at + new Vector2(6f), x, 2.5f);
+                drawList.AddLine(at + new Vector2(-6f, 6f), at + new Vector2(6f, -6f), x, 2.5f);
+            }
         }
 
         if (_showPlayer && Plugin.ObjectTable.LocalPlayer is { } player
@@ -300,6 +327,61 @@ internal sealed class DigMapWindow
     /// </summary>
     /// <summary>Which corner is being dragged: 0 none, 1 north-west, 2 south-east.</summary>
     private static int _dragCorner;
+
+    private static float   _zoom = 1f;
+    private static Vector2 _pan  = Vector2.Zero;
+
+    /// <summary>
+    /// Wheel to zoom about the cursor, right-drag to pan, a button to reset.
+    ///
+    /// <para><b>Zoom is about the POINTER, not the corner.</b> Zooming about the origin walks the
+    /// thing you are looking at off the edge and makes you chase it with the pan; anchoring on the
+    /// cursor keeps whatever is under it still, which is what every map does and what makes it
+    /// usable one-handed while reading dots.</para>
+    ///
+    /// <para>Right-drag rather than left: left is taken by the box corner handles, and a pan that
+    /// sometimes grabs a corner instead would be worse than no pan.</para>
+    /// </summary>
+    private static void HandleZoomPan(Vector2 origin, Vector2 rect, float side)
+    {
+        if (!ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows)) return;
+
+        float wheel = ImGui.GetIO().MouseWheel;
+
+        if (MathF.Abs(wheel) > 0.001f)
+        {
+            float before = _zoom;
+            _zoom = Math.Clamp(_zoom * (1f + wheel * 0.15f), 1f, 12f);
+
+            // Keep the point under the cursor fixed across the zoom change.
+            _pan = AnchorPan(_pan, ImGui.GetMousePos() - origin, before, _zoom);
+        }
+
+        if (ImGui.IsMouseDragging(ImGuiMouseButton.Right))
+        {
+            _pan += ImGui.GetIO().MouseDelta / _zoom;
+            ImGui.ResetMouseDragDelta(ImGuiMouseButton.Right);
+        }
+
+        // Never let the map be panned entirely off its own frame.
+        float limit = side * 1.5f;
+        _pan = Vector2.Clamp(_pan, new Vector2(-limit), new Vector2(limit));
+    }
+
+    /// <summary>
+    /// The pan that keeps the image point under <paramref name="cursor"/> in the same screen place
+    /// when the zoom changes from <paramref name="before"/> to <paramref name="after"/>.
+    ///
+    /// <para>Screen = pan*z + p*z, so the image point under the cursor is p = cursor/z - pan. Holding
+    /// p constant across a zoom change and solving for the new pan gives this.</para>
+    /// </summary>
+    private static Vector2 AnchorPan(Vector2 pan, Vector2 cursor, float before, float after)
+    {
+        if (before <= 0.0001f || after <= 0.0001f) return pan;
+
+        var point = cursor / before - pan;
+        return cursor / after - point;
+    }
 
     /// <summary>
     /// Grab handles on the box's two corners, so the bounds can be set by dragging on the map.
@@ -408,8 +490,66 @@ internal sealed class DigMapWindow
     private static bool _showSpots      = true;
     private static bool _showPlayer     = true;
 
+    /// <summary>
+    /// Per-candidate reachability, by index into <c>_spots</c>. Null while a query is in flight.
+    /// </summary>
+    private static readonly Dictionary<int, bool?> _reachable = new();
+    private static readonly List<(int Index, System.Threading.Tasks.Task<List<Vector3>> Task)> _pending = new();
+
+    /// <summary>
+    /// Asks vnavmesh for a real PATH from the player to every plotted candidate.
+    ///
+    /// <para><b>This is the only test that answers the question directly.</b> Every gate placement
+    /// uses is a proxy: on-mesh is not reachable, the reachable-filter turned out not to mean
+    /// reachable either, and near-a-marker is a dilation of the marker set rather than the walkable
+    /// outline. A path existing from where the player stands to the spot is not a proxy for
+    /// reachability, it IS reachability.</para>
+    ///
+    /// <para>It is a verify pass rather than the placement gate because it is async and placement is
+    /// a synchronous sampling loop. Measure first: if this shows the cheap gates are close, they
+    /// stay; if it shows they are not, the restructure is justified by evidence instead of by
+    /// another assumption.</para>
+    /// </summary>
+    private void StartVerify()
+    {
+        _reachable.Clear();
+        _pending.Clear();
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return;
+
+        for (int i = 0; i < _spots.Count; i++)
+        {
+            var task = DigNavmesh.TryPathfind(player.Position, _spots[i]);
+
+            if (task == null) { _reachable[i] = null; continue; }
+
+            _reachable[i] = null;
+            _pending.Add((i, task));
+        }
+    }
+
+    /// <summary>Collects finished pathfinds. Polled rather than awaited — this is a draw method.</summary>
+    private static void PumpVerify()
+    {
+        for (int i = _pending.Count - 1; i >= 0; i--)
+        {
+            var (index, task) = _pending[i];
+
+            if (!task.IsCompleted) continue;
+
+            _pending.RemoveAt(i);
+
+            // A route is a non-empty waypoint list. A faulted query is "cannot say", not "no" —
+            // recording a cancellation as unreachable would quietly indict a perfectly good spot.
+            _reachable[index] = task.IsCompletedSuccessfully
+                ? task.Result is { Count: > 0 }
+                : (bool?)null;
+        }
+    }
+
     /// <summary>The display toggles. Drawn above the map, because they change what it means.</summary>
-    private static void DrawToggles()
+    private void DrawToggles()
     {
         ImGui.Checkbox("Landmarks", ref _showLandmarks);
         ImGui.SameLine(); ImGui.Checkbox("Plot numbers", ref _showPlots);
@@ -422,6 +562,35 @@ internal sealed class DigMapWindow
 
         ImGui.TextDisabled("Plot numbers are off by default — on a housing map they outnumber the "
                          + "real landmarks several to one.");
+
+        if (ImGui.Button("Verify reachable (pathfind from you)")) StartVerify();
+        ImGui.SameLine();
+        if (ImGui.Button("Reset zoom")) { _zoom = 1f; _pan = Vector2.Zero; }
+        ImGui.SameLine();
+        ImGui.TextDisabled($"zoom {_zoom:0.0}x — wheel to zoom, right-drag to pan");
+
+        if (_pending.Count > 0)
+        {
+            ImGui.TextColored(new Vector4(1f, 0.80f, 0.35f, 1f),
+                $"pathfinding… {_pending.Count} left");
+        }
+        else if (_reachable.Count > 0)
+        {
+            int yes = 0, no = 0, unknown = 0;
+
+            foreach (var v in _reachable.Values)
+            {
+                if (v == true)       yes++;
+                else if (v == false) no++;
+                else                 unknown++;
+            }
+
+            var colour = no > 0 ? new Vector4(1f, 0.45f, 0.45f, 1f) : new Vector4(0.45f, 1f, 0.5f, 1f);
+
+            ImGui.TextColored(colour,
+                $"REACHABLE {yes}   UNREACHABLE {no}   could not say {unknown}   "
+              + "— green ring = a route exists, red X = no route.");
+        }
     }
 
     /// <summary>
