@@ -204,6 +204,36 @@ internal sealed unsafe class DigRoamService : IDigTest
     private int _rejGround, _rejRange, _rejBox, _rejAnchor, _rejNav, _rejCrowd, _rejStep, _rejRoof,
                 _rejWall, _rejNull;
 
+    /// <summary>
+    /// Where each rejected candidate was and which gate rejected it — recorded only while the debug
+    /// sampler is running.
+    ///
+    /// <para><b>A count says how many; this says WHERE.</b> The tally answers "which gate is doing
+    /// the work" and cannot answer "why is that whole plaza empty" — those are different questions.
+    /// A gate firing 2000 times spread evenly and one firing 2000 times over a single region produce
+    /// the same number and mean completely different things. Plotting the rejections turns the
+    /// second question into a picture.</para>
+    ///
+    /// <para>Positions only exist once a candidate has found ground, so "no ground" contributes
+    /// nothing here — correct, since that rejection is the void outside the zone and has no location
+    /// worth drawing.</para>
+    /// </summary>
+    public readonly List<(Vector3 Pos, string Reason)> Rejected = new();
+
+    /// <summary>Off for real runs: a trail has no use for it and it is pure cost.</summary>
+    private bool _recordRejects;
+
+    /// <summary>Bounded, so a 10,000-sample run cannot grow this without limit.</summary>
+    private const int MaxRecordedRejects = 6000;
+
+    private void Reject(string reason, Vector3 at, ref int counter)
+    {
+        counter++;
+
+        if (!_recordRejects || Rejected.Count >= MaxRecordedRejects) return;
+        Rejected.Add((at, reason));
+    }
+
     private void ResetRejections() =>
         _rejGround = _rejRange = _rejBox = _rejAnchor = _rejNav = _rejCrowd = _rejStep =
         _rejRoof = _rejWall = _rejNull = 0;
@@ -303,7 +333,7 @@ internal sealed unsafe class DigRoamService : IDigTest
             // be wrong in the direction that matters.
             if (DigLandmarks.WalkableBox(out var boxLo, out var boxHi) &&
                 (spot.X < boxLo.X || spot.X > boxHi.X || spot.Z < boxLo.Y || spot.Z > boxHi.Y))
-            { _rejBox++; continue; }
+            { Reject("outside box", spot, ref _rejBox); continue; }
 
             // HAND-DRAWN EXCLUSIONS. Checked right after the box because together they are the
             // authored answer to "where may a spot go", and both are cheap.
@@ -316,7 +346,7 @@ internal sealed unsafe class DigRoamService : IDigTest
             // silently did nothing while rectangles sat plainly on the map. Reading the zone the
             // player is actually in cannot be stale and cannot be unset.
             if (DigTuning.InNullZone(Plugin.ClientState.TerritoryType, spot.X, spot.Z))
-            { _rejNull++; continue; }
+            { Reject("null zone", spot, ref _rejNull); continue; }
 
             // NEAR SOMETHING THE MAP NAMES — the containment that follows the zone's SHAPE.
             //
@@ -334,7 +364,7 @@ internal sealed unsafe class DigRoamService : IDigTest
 
                 if (near is not { } anchor ||
                     DigGround.Flat(anchor.World, spot) > DigTuning.RoamMaxAnchorDistance)
-                { _rejAnchor++; continue; }
+                { Reject("no marker near", spot, ref _rejAnchor); continue; }
             }
 
             // Asks for REACHABLE mesh, which is a different question from "is there mesh here" and
@@ -347,7 +377,8 @@ internal sealed unsafe class DigRoamService : IDigTest
             // Null means vnavmesh could not answer at all. It is a hard requirement of this test and
             // Start refused before we got here, so reaching this is a mid-run disappearance — treat
             // it exactly like a no.
-            if (walkable != true) { _navRefusals++; _rejNav++; continue; }
+            if (walkable != true)
+            { _navRefusals++; Reject("off navmesh", spot, ref _rejNav); continue; }
 
             // SNAP TO THE MESH, then refine the height DOWNWARD FROM THE MESH POINT.
             //
@@ -366,7 +397,8 @@ internal sealed unsafe class DigRoamService : IDigTest
             // `if (walkable == null)` branch — the vnavmesh-not-installed path — so the moment the
             // navmesh started answering, the one check specifically designed to reject rooftops
             // stopped running at all. It belongs here, unconditionally, on the final position.
-            if (DigGround.IsElevated(spot, DigTuning.RoamMaxRise)) { _rejRoof++; continue; }
+            if (DigGround.IsElevated(spot, DigTuning.RoamMaxRise))
+            { Reject("roof", spot, ref _rejRoof); continue; }
 
             // WALLED OFF FROM THE NEAREST NAMED PLACE — the collision check, using the system that
             // actually stops the character rather than the one that models where it may walk.
@@ -381,7 +413,7 @@ internal sealed unsafe class DigRoamService : IDigTest
             if (DigTuning.RoamMaxAnchorDistance > 0f &&
                 DigLandmarks.Nearest(spot) is { } marker &&
                 !DigGround.SegmentClear(spot, marker.World))
-            { _rejWall++; continue; }
+            { Reject("walled off", spot, ref _rejWall); continue; }
 
             // Far enough from the others that no single dig can turn up two, and so the trail is a
             // route rather than a huddle.
@@ -395,13 +427,13 @@ internal sealed unsafe class DigRoamService : IDigTest
                     break;
                 }
 
-                if (crowded) { _rejCrowd++; continue; }
+                if (crowded) { Reject("crowded", spot, ref _rejCrowd); continue; }
             }
 
             // The wall-versus-hill test. Without it a spot can sit astride a kerb, where half its
             // dig radius is somewhere the player cannot stand.
             if (DigGround.HasStep(spot, DigTuning.RoamDig, DigTuning.SitePieceMaxStep))
-            { _rejStep++; continue; }
+            { Reject("step/ledge", spot, ref _rejStep); continue; }
 
             return true;
         }
@@ -538,6 +570,9 @@ internal sealed unsafe class DigRoamService : IDigTest
 
         ResetRejections();
 
+        Rejected.Clear();
+        _recordRejects = true;
+
         // Kept in step with the live zone as well, so anything else in TryPlace that reads the
         // field behaves the same for a sample as it does for a real run. The sampler exists to
         // exercise the REAL placement path; a field only one of its two callers assigns is a
@@ -564,6 +599,10 @@ internal sealed unsafe class DigRoamService : IDigTest
             if (TryPlace(player.Position, found, out var spot, spacing: false))
                 found.Add(spot);
         }
+
+        // Off again immediately. A real run must never pay for this, and leaving it on would also
+        // let a trail quietly accumulate into the same list.
+        _recordRejects = false;
 
         return found;
     }

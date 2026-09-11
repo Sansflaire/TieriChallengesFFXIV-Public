@@ -282,6 +282,21 @@ internal sealed class DigMapWindow
             }
         }
 
+        // REJECTED CANDIDATES, COLOURED BY THE GATE THAT KILLED THEM.
+        //
+        // This is the answer to "why is that area empty", which a count can never give: a gate
+        // firing 2000 times evenly and one firing 2000 times over a single plaza produce the same
+        // number. Drawn underneath the accepted spots and small, so it is context rather than
+        // clutter — the empty region fills with whichever colour is responsible.
+        if (_showRejects)
+        {
+            foreach (var (pos, reason) in _tests.Roam.Rejected)
+            {
+                if (!Plot(pos, out var at)) continue;
+                drawList.AddCircleFilled(at, 2f, ReasonColour(reason), 6);
+            }
+        }
+
         uint red = ImGui.GetColorU32(new Vector4(1f, 0.25f, 0.25f, 0.95f));
         int outside = 0;
 
@@ -684,6 +699,28 @@ internal sealed class DigMapWindow
     private static bool _showBox        = true;
     private static bool _showSpots      = true;
     private static bool _showPlayer     = true;
+    private static bool _showRejects;
+
+    /// <summary>One colour per rejecting gate, and the legend is generated from the same table.</summary>
+    private static readonly (string Reason, Vector4 Colour)[] ReasonLegend =
+    {
+        ("roof",           new Vector4(1.00f, 0.55f, 0.10f, 0.85f)),
+        ("walled off",     new Vector4(0.85f, 0.35f, 1.00f, 0.85f)),
+        ("no marker near", new Vector4(0.45f, 0.55f, 1.00f, 0.85f)),
+        ("off navmesh",    new Vector4(0.20f, 0.90f, 0.95f, 0.85f)),
+        ("step/ledge",     new Vector4(1.00f, 0.90f, 0.30f, 0.85f)),
+        ("null zone",      new Vector4(1.00f, 0.30f, 0.35f, 0.85f)),
+        ("outside box",    new Vector4(0.60f, 0.60f, 0.60f, 0.70f)),
+        ("crowded",        new Vector4(0.40f, 1.00f, 0.55f, 0.70f)),
+    };
+
+    private static uint ReasonColour(string reason)
+    {
+        foreach (var (r, c) in ReasonLegend)
+            if (string.Equals(r, reason, StringComparison.Ordinal)) return ImGui.GetColorU32(c);
+
+        return ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.5f));
+    }
 
     /// <summary>
     /// Per-candidate reachability, by index into <c>_spots</c>. Null while a query is in flight.
@@ -778,6 +815,18 @@ internal sealed class DigMapWindow
         ImGui.Checkbox("Candidate spots", ref _showSpots);
         ImGui.SameLine(); ImGui.Checkbox("You", ref _showPlayer);
         ImGui.SameLine(); ImGui.Checkbox("Clue anchors", ref _showClueAnchors);
+        ImGui.SameLine(); ImGui.Checkbox("Rejected", ref _showRejects);
+
+        if (_showRejects)
+        {
+            ImGui.TextDisabled("Rejected candidates, coloured by the gate that killed them —");
+
+            foreach (var (reason, colour) in ReasonLegend)
+            {
+                ImGui.SameLine();
+                ImGui.TextColored(colour, reason);
+            }
+        }
 
         ImGui.TextDisabled("Plot numbers are off by default — on a housing map they outnumber the "
                          + "real landmarks several to one.");
