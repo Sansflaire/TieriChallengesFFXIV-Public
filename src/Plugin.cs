@@ -194,6 +194,7 @@ public sealed class Plugin : IDalamudPlugin
     /// </summary>
     private readonly DigTests       _digTests = new();
     private readonly DigTestsWindow _digTestsWindow;
+    private readonly DigMapWindow   _digMapWindow;
 
     /// <summary>The dig HUD. Null when PanacheUI could not load — it is a Panache surface.</summary>
     private readonly DigHuntOverlay? _digOverlay;
@@ -357,19 +358,22 @@ public sealed class Plugin : IDalamudPlugin
         DigTuning.Load();
         DigTrailStore.Load();
         _digTestsWindow = new DigTestsWindow(_digTests);
+        _digMapWindow   = new DigMapWindow(_digTests);
 
         // Clicking the dial digs. The overlay forwards the click; deciding what a click MEANS stays
         // out here, so the overlay does not grow game logic.
         if (PanacheAvailability.IsAvailable)
             _digOverlay = new DigHuntOverlay(
                 TextureProvider,
-                () => ChatGui.Print("[Challenges] " + _digTests.Dig()));
+                () => ChatGui.Print("[Challenges] " + _digTests.Dig()),
+                () => ChatGui.Print("[Challenges] " + _digTests.Recall()));
 
         // The lab's banner preview. Wired here rather than handed to the window's constructor,
         // because the overlay is built after it and does not exist at all when Panache is missing —
         // an unwired action simply does nothing, which is the right outcome for a preview of
         // something that cannot be drawn.
         _digTestsWindow.OnPreviewBanner = end => _digOverlay?.PreviewBanner(end);
+        _digTestsWindow.OnOpenMapDebug  = () => _digMapWindow.IsVisible = true;
 
         if (PanacheAvailability.IsAvailable)
             _soundTestWindow = new SoundTestWindow(TextureProvider);
@@ -902,6 +906,9 @@ public sealed class Plugin : IDalamudPlugin
 
         try { _digTestsWindow.Draw(); }
         catch (Exception ex) { Diag.Error($"[Dig] lab window failed: {ex.Message}"); }
+
+        try { _digMapWindow.Draw(); }
+        catch (Exception ex) { Diag.Error($"[Dig] map debug window failed: {ex.Message}"); }
 #endif
 
 #if DEV_BUILD
@@ -1168,6 +1175,16 @@ public sealed class Plugin : IDalamudPlugin
 
             case "clue" when test is DigTrailService trail:
                 ChatGui.Print("[Challenges] " + trail.Recall());
+                break;
+
+            case "clue" when test is DigRoamService roamClue:
+                ChatGui.Print("[Challenges] " + roamClue.Recall());
+                break;
+
+            // Gives the spot away, and is meant to: a generated clue that cannot be followed is
+            // either a bad clue or a bad conversion, and those look identical from in-game.
+            case "where" when test is DigRoamService roamWhere:
+                ChatGui.Print("[Challenges] " + roamWhere.Reveal());
                 break;
 
             // Capturing a stop from chat matters more than it looks: authoring means walking to a

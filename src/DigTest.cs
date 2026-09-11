@@ -173,6 +173,60 @@ internal static class DigGround
         return true;
     }
 
+    /// <summary>
+    /// Ground at an XZ position anywhere on the map, with the height gate as a PARAMETER rather
+    /// than always measured against the player.
+    ///
+    /// <para><b>The player-relative rise gate cannot survive whole-map sampling.</b> It exists to
+    /// reject clifftops and rooftops near you, and across a whole zone it would instead reject every
+    /// legitimate hill, basement and terrace merely for being far from where you happen to stand.
+    /// Pass 0 to disable it and use <see cref="IsElevated"/> for the roof question instead, which
+    /// asks something local and therefore stays true anywhere.</para>
+    /// </summary>
+    public static bool TryGroundAt(Vector3 reference, float x, float z, float maxRise,
+                                   out Vector3 point)
+    {
+        point = default;
+
+        var origin = new Vector3(x, reference.Y + RayAbove, z);
+
+        if (!BGCollisionModule.RaycastMaterialFilter(origin, new Vector3(0f, -1f, 0f),
+                                                     out var hit, RayLength))
+            return false;
+
+        if (maxRise > 0f && MathF.Abs(hit.Point.Y - reference.Y) > maxRise) return false;
+
+        point = new Vector3(x, hit.Point.Y, z);
+        return true;
+    }
+
+    /// <summary>
+    /// Whether a point is standing on something with more ground a long way UNDER it — a roof, a
+    /// balcony, a bridge, the top of a wall.
+    ///
+    /// <para><b>This is the roof test that works anywhere</b>, and it replaces "is it far above the
+    /// player" which only worked nearby. It fires a second ray from just below the surface: if it
+    /// lands again with a big gap, the first surface was an elevated platform with open space under
+    /// it. Real terrain has nothing beneath it to find.</para>
+    ///
+    /// <para>It is not infallible — a solid stone plinth has no void under it and reads as terrain,
+    /// which is the right answer anyway, while a ground-floor room inside a building has the world
+    /// below it and can read as elevated. It rejects the cases that matter in a no-flying zone,
+    /// which is roofs and the tops of walls.</para>
+    /// </summary>
+    public static bool IsElevated(Vector3 point, float clearance)
+    {
+        if (clearance <= 0f) return false;
+
+        var origin = new Vector3(point.X, point.Y - 0.35f, point.Z);
+
+        if (!BGCollisionModule.RaycastMaterialFilter(origin, new Vector3(0f, -1f, 0f),
+                                                     out var hit, RayLength))
+            return false;
+
+        return point.Y - hit.Point.Y > clearance;
+    }
+
     /// <summary>Spokes and spacing for the step test. Eight directions catch any wall that crosses
     /// the circle; only a wall clipping a corner between spokes can slip past.</summary>
     private const int   StepRays       = 8;

@@ -212,6 +212,33 @@ internal static class DigLandmarks
         catch { return false; }
     }
 
+    /// <summary>
+    /// The map's full extent in WORLD coordinates — the rectangle the drawn map covers.
+    ///
+    /// <para>Derived by running the verified world-to-map conversion backwards at the map's own
+    /// edges. Map coordinates run from 1 to 1 + 41/c, which correspond to raw 0 and raw 2048, so the
+    /// world edges are <c>±1024/c - offset</c>. Sampling this rectangle is what makes the WHOLE map
+    /// eligible rather than a ring around wherever the player is standing.</para>
+    /// </summary>
+    public static bool TryWorldBounds(out Vector2 min, out Vector2 max)
+    {
+        min = max = default;
+
+        try
+        {
+            var maps = Plugin.DataManager.GetExcelSheet<LSheets.Map>();
+            if (maps?.GetRowOrDefault(CurrentMapId()) is not { } map) return false;
+
+            float c = MathF.Max(0.01f, map.SizeFactor / 100f);
+            float h = 1024f / c;
+
+            min = new Vector2(-h - map.OffsetX, -h - map.OffsetY);
+            max = new Vector2( h - map.OffsetX,  h - map.OffsetY);
+            return true;
+        }
+        catch { return false; }
+    }
+
     /// <summary>Drops the cache, so a map edited or re-entered is re-read rather than remembered.</summary>
     public static void Invalidate() => _cachedMap = 0;
 }

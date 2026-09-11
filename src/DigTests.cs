@@ -66,6 +66,27 @@ internal sealed class DigTests
         return active?.Dig() ?? Plugin.Props.Dig();
     }
 
+    /// <summary>
+    /// Says again whatever the running test last told the player. What the dial does when it is
+    /// clicked from OUT of range, where a dig would be pointless.
+    /// </summary>
+    public string Recall()
+    {
+        var active = Active;
+
+        return active switch
+        {
+            DigTrailService trail => trail.Recall(),
+            DigRoamService  roam  => roam.Recall(),
+            DigHuntService  hunt  => hunt.Sense(),
+            null                  => "nothing is running.",
+
+            // The site test has no clue to repeat — its subtitle already carries the count, so
+            // saying that back is the honest equivalent of "here is where you are".
+            _ => active.Subtitle.Length > 0 ? active.Subtitle : "nothing more to say.",
+        };
+    }
+
     public string StopAll()
     {
         var active = Active;

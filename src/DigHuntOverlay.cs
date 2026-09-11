@@ -243,6 +243,16 @@ internal sealed class DigHuntOverlay : IDisposable
     private static readonly PColor DeepBlue = PColor.FromHex("#2F5BE8");
 
     /// <summary>
+    /// The dial when there is nothing to be near — out of radar range entirely.
+    ///
+    /// <para>Grey is correct HERE and was wrong as the cold end of the proximity ramp, and the
+    /// difference is what the two states mean. A cold reading is a live detector saying "a long way
+    /// off", which grey reads as broken. This is the detector saying nothing at all: no signal, no
+    /// distance, just a button to press for the clue again. Grey is exactly right for that.</para>
+    /// </summary>
+    private static readonly PColor IdleGrey = PColor.FromHex("#A8ADB5");
+
+    /// <summary>
     /// Where the ramp stops travelling blue → green and starts travelling green → yellow.
     ///
     /// <para>Deliberately late. Green has to be a place the dial visibly ARRIVES at and sits in for
@@ -262,6 +272,7 @@ internal sealed class DigHuntOverlay : IDisposable
 
     private readonly ITextureProvider _texProvider;
     private readonly Action?          _onDig;
+    private readonly Action?          _onRecall;
     private readonly DateTime         _start = DateTime.UtcNow;
 
     /// <summary>
@@ -1021,15 +1032,28 @@ internal sealed class DigHuntOverlay : IDisposable
     /// </summary>
     private float _radarCloseness;
 
+    /// <summary>
+    /// Whether the active test is reporting a distance at all this frame. Separate from
+    /// <see cref="_radarCloseness"/>, which merely holds its last value when the signal stops.
+    /// </summary>
+    private bool _inRange;
+
     /// <param name="onDig">
     /// Runs when the dial is clicked. Supplied by the plugin rather than reached for here, so this
     /// class stays presentation — it draws what a test reports and forwards a click, and does not
     /// itself decide that a click means "dig".
     /// </param>
-    public DigHuntOverlay(ITextureProvider texProvider, Action? onDig = null)
+    /// <param name="onRecall">
+    /// Runs when the dial is clicked from OUT of range, where a dig would find nothing. Separate
+    /// from <paramref name="onDig"/> for the same reason that one is supplied rather than reached
+    /// for: this class draws what a test reports and forwards a click, and does not itself decide
+    /// what a click in a given state means.
+    /// </param>
+    public DigHuntOverlay(ITextureProvider texProvider, Action? onDig = null, Action? onRecall = null)
     {
         _texProvider = texProvider;
         _onDig       = onDig;
+        _onRecall    = onRecall;
     }
 
     public void Dispose()
@@ -1112,12 +1136,22 @@ internal sealed class DigHuntOverlay : IDisposable
 
         if (inRange) _radarCloseness = closeness!.Value;
 
+        // Held for the draw, which needs to tell "far away" from "no signal" — two states the
+        // closeness value alone cannot distinguish, since it simply stops existing out of range.
+        _inRange = inRange;
+
         // Linear ramp towards the target, so a full fade takes exactly the configured time and a
         // partial one takes proportionally less — which is what makes crossing the boundary twice
         // in quick succession look like one continuous movement rather than two events.
+        // THE DIAL IS UP FOR THE WHOLE RUN, not only within radar range.
+        //
+        // It used to appear and disappear with the signal, which made it a proximity readout and
+        // nothing else. Keeping it on screen the whole time gives it a second job that it could not
+        // have while it kept vanishing: out of range it is a grey button that says the clue again.
+        // The pulse and the colour still carry the proximity, so nothing is lost by it being there.
         float seconds = MathF.Max(0.05f, DigTuning.RadarFadeSeconds);
         float step    = ImGui.GetIO().DeltaTime / seconds;
-        float target  = inRange ? 1f : 0f;
+        float target  = 1f;
 
         if      (_radarFade < target) _radarFade = MathF.Min(target, _radarFade + step);
         else if (_radarFade > target) _radarFade = MathF.Max(target, _radarFade - step);
@@ -1432,12 +1466,14 @@ internal sealed class DigHuntOverlay : IDisposable
 
         EnsureDialArt(phys);
 
-        bool solid = closeness >= 1f;
+        bool solid = _inRange && closeness >= 1f;
 
-        // Deep blue at the edge of radar range, green as it closes, yellow in the last stretch. The
-        // pulse says "something is here"; the colour says how near, so the two carry different
-        // information instead of both restating proximity.
-        Vector3 baseRgb = solid ? Rgb(DigCol) : Ramp(closeness);
+        // Grey with no signal; deep blue at the edge of radar range, green as it closes, yellow in
+        // the last stretch. The pulse says "something is here"; the colour says how near, so the
+        // two carry different information instead of both restating proximity.
+        Vector3 baseRgb = !_inRange ? Rgb(IdleGrey)
+                        : solid     ? Rgb(DigCol)
+                                    : Ramp(closeness);
 
         float press     = PressAmount();
         var   accentRgb = PressedAccent(baseRgb, press);
@@ -1447,7 +1483,12 @@ internal sealed class DigHuntOverlay : IDisposable
         // The trough is 0.55, not 0.18. A pulse that fades almost to nothing spends half its cycle
         // illegible, which reads as a flicker rather than a heartbeat — and legibility was the
         // complaint. The swing is still obvious against a dark backing; it just never disappears.
-        float fill = solid ? 1f : 0.55f + 0.45f * wave;
+        // Steady out of range. The pulse means "something is being detected", so pulsing at nothing
+        // would be the dial claiming a signal it does not have — and an idle button that breathes
+        // is asking for attention it has not earned.
+        float fill = !_inRange ? 0.80f
+                   : solid     ? 1f
+                               : 0.55f + 0.45f * wave;
 
         var dialOuter  = _dialOuter;
         var dialCentre = _dialCentre;
@@ -1592,7 +1633,11 @@ internal sealed class DigHuntOverlay : IDisposable
             if (onSpot) HideReminder();
             else        ShowReminder();
 
-            _onDig?.Invoke();
+            // Out of range the dial is not a dig button, it is a "say that again" button. Digging
+            // where nothing is detected only costs the player the animation, and the grey makes a
+            // promise that pressing it does something useful.
+            if (_inRange) _onDig?.Invoke();
+            else          _onRecall?.Invoke();
         }
 
         EndHud();

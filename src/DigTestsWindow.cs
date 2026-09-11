@@ -45,6 +45,9 @@ internal sealed class DigTestsWindow
     /// </summary>
     public Action<bool>? OnPreviewBanner;
 
+    /// <summary>Opens the map debug view. Same arrangement as the banner preview.</summary>
+    public Action? OnOpenMapDebug;
+
     public DigTestsWindow(DigTests tests) => _tests = tests;
 
     public void Draw()
@@ -194,7 +197,29 @@ internal sealed class DigTestsWindow
         if (ImGui.Button("Repeat clue##roam")) Say(_tests.Roam.Recall());
 
         ImGui.Spacing();
-        ImGui.TextColored(Cmd, "/tchal roam start | stop | dig | clue");
+        ImGui.TextColored(Head, "GIVE IT AWAY");
+        ImGui.TextColored(Rule,
+            "Prints where the spot REALLY is and flags it on your map.\n"
+          + "IT IS ALSO THE DIAGNOSIS. A clue you cannot follow is wrong in one of two ways that\n"
+          + "look identical from in-game: the clue is unhelpful (an area label is a poor anchor —\n"
+          + "\"west of a whole subdivision\" is most of a housing ward), or the marker-to-world\n"
+          + "conversion is off and the clue describes a place the spot is not.\n"
+          + "This separates them. It prints the clue's ANCHOR position and the TRUE bearing from\n"
+          + "it to the spot. If that bearing matches the clue's wording, the maths is sound and\n"
+          + "the clue is merely hard. If it disagrees, the conversion is the bug and no amount of\n"
+          + "clue tuning will help.");
+
+        if (ImGui.Button("Reveal current spot")) Say(_tests.Roam.Reveal());
+        ImGui.SameLine();
+        if (ImGui.Button("Debug map locations")) OnOpenMapDebug?.Invoke();
+
+        ImGui.TextColored(Rule,
+            "Debug map locations draws the real map with every candidate spot on it in red and\n"
+          + "the clue landmarks in cyan — the fastest way to see whether anything can land off\n"
+          + "the edge, and whether the landmarks sit on their own labels.");
+
+        ImGui.Spacing();
+        ImGui.TextColored(Cmd, "/tchal roam start | stop | dig | clue | where");
 
         ImGui.Spacing();
         ImGui.SliderInt("Spots", ref DigTuning.RoamStops, 1, 20);
@@ -214,8 +239,29 @@ internal sealed class DigTestsWindow
         ImGui.SliderFloat("Difficulty", ref DigTuning.RoamDifficulty, 0f, 1f, "%.2f");
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
-        Slider("Nearest spot (yalms)",  ref DigTuning.RoamMinRange, 5f, 200f);
-        Slider("Furthest spot (yalms)", ref DigTuning.RoamMaxRange, 20f, 600f);
+        ImGui.TextColored(Rule,
+            "THE WHOLE MAP IS ELIGIBLE. Spots are drawn from the map's own world rectangle, so\n"
+          + "anywhere the drawn map covers can hold one. The cap below is optional and defaults\n"
+          + "to 0 = none; an earlier version sampled a ring around you, which let how far you had\n"
+          + "walked before pressing Start decide what the trail could contain.");
+
+        ImGui.SliderFloat("Nearest spot (yalms)", ref DigTuning.RoamMinRange, 0f, 200f, "%.0f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Furthest spot (0 = whole map)", ref DigTuning.RoamMaxRange, 0f, 1000f,
+                          DigTuning.RoamMaxRange <= 0f ? "whole map" : "%.0f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.TextColored(Rule,
+            "ROOF CLEARANCE is how much open space under a candidate makes it a roof rather than\n"
+          + "ground. It replaces the player-relative height gate, which cannot survive whole-map\n"
+          + "sampling — across a zone that rejects every hill and basement for being far from\n"
+          + "where you stand. Asking \"is there more ground a long way below this\" is local, so it\n"
+          + "stays true anywhere. 0 disables it.");
+
+        ImGui.SliderFloat("Roof clearance (yalms)", ref DigTuning.RoamMaxRise, 0f, 40f, "%.1f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
         Slider("Min gap between spots", ref DigTuning.RoamSpacing,  5f, 120f);
         Slider("Dig radius",            ref DigTuning.RoamDig,      1f, 30f);
         Slider("Radar appears within",  ref DigTuning.RoamRadar,    2f, 150f);

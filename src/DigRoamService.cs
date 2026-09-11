@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+
 namespace TieriChallengesFFXIV;
 
 /// <summary>
@@ -26,7 +28,7 @@ namespace TieriChallengesFFXIV;
 /// ledges, the far side of a wall you would have to fly over — and a spot inside a locked house
 /// would still get through. A navmesh query is the only real answer and this does not have one.</para>
 /// </summary>
-internal sealed class DigRoamService : IDigTest
+internal sealed unsafe class DigRoamService : IDigTest
 {
     private enum Phase { Off, Running, Done }
 
@@ -167,12 +169,46 @@ internal sealed class DigRoamService : IDigTest
     /// </summary>
     private bool TryPlace(Vector3 from, List<Vector3> taken, out Vector3 spot)
     {
-        float min = MathF.Max(5f, DigTuning.RoamMinRange);
-        float max = MathF.Max(min + 5f, DigTuning.RoamMaxRange);
+        spot = default;
+
+        float min = MathF.Max(0f, DigTuning.RoamMinRange);
+        float cap = MathF.Max(0f, DigTuning.RoamMaxRange);
+
+        // THE WHOLE MAP IS ELIGIBLE. Spots are drawn from the map's own world rectangle rather than
+        // from a ring around the player, so anywhere the drawn map covers can hold one. The old ring
+        // made "how far did you walk before starting" decide what the trail could contain.
+        bool haveBounds = DigLandmarks.TryWorldBounds(out var lo, out var hi);
 
         for (int attempt = 0; attempt < PlacementAttempts; attempt++)
         {
-            if (!DigGround.TryPointNear(from, min, max, _rng, out spot, attempts: 12)) continue;
+            if (haveBounds)
+            {
+                float x = lo.X + (float)_rng.NextDouble() * (hi.X - lo.X);
+                float z = lo.Y + (float)_rng.NextDouble() * (hi.Y - lo.Y);
+
+                // No player-relative rise gate: across a whole zone it would reject every hill and
+                // basement for being far from where the player happens to stand. The roof question
+                // is asked below instead, by something local enough to stay true anywhere.
+                if (!DigGround.TryGroundAt(from, x, z, 0f, out spot)) continue;
+            }
+            else if (!DigGround.TryPointNear(from, MathF.Max(5f, min),
+                                             MathF.Max(min + 5f, cap > 0f ? cap : 220f),
+                                             _rng, out spot, attempts: 12))
+            {
+                continue;
+            }
+
+            float fromPlayer = DigGround.Flat(from, spot);
+
+            // Not under the player's feet, and inside the optional cap. Cap 0 means no cap, which
+            // is the default and the whole point.
+            if (fromPlayer < min) continue;
+            if (cap > 0f && fromPlayer > cap) continue;
+
+            // A roof, a balcony, the top of a wall — anywhere with open space underneath. This is
+            // what keeps spots off places that need flying, now that distance from the player no
+            // longer stands in for it.
+            if (DigGround.IsElevated(spot, DigTuning.RoamMaxRise)) continue;
 
             // Far enough from the others that no single dig can turn up two, and so the trail is a
             // route rather than a huddle.
@@ -198,6 +234,33 @@ internal sealed class DigRoamService : IDigTest
     }
 
     private const int PlacementAttempts = 120;
+
+    /// <summary>
+    /// Places <paramref name="count"/> spots WITHOUT starting a run, for the map debug view.
+    ///
+    /// <para><b>It goes through the same <see cref="TryPlace"/> a real run uses, deliberately.</b> A
+    /// separate sampler written for the debug view would be testing itself rather than the thing
+    /// that actually buries spots — and the whole point of plotting them is to find out whether the
+    /// real placement can put one somewhere impossible.</para>
+    ///
+    /// <para>Spacing is honoured between samples, so the picture is a plausible dense run rather
+    /// than a cloud of points that would never coexist.</para>
+    /// </summary>
+    public List<Vector3> SampleCandidates(int count)
+    {
+        var found = new List<Vector3>();
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return found;
+
+        for (int i = 0; i < count; i++)
+        {
+            if (!TryPlace(player.Position, found, out var spot)) break;
+            found.Add(spot);
+        }
+
+        return found;
+    }
 
     public string Dig()
     {
@@ -259,6 +322,68 @@ internal sealed class DigRoamService : IDigTest
 
     public string Recall() =>
         _phase != Phase.Running ? "no wild trail is running." : Current?.Clue ?? "no clue.";
+
+    /// <summary>
+    /// Gives the current spot away: the truth about where it is, and a flag on the map.
+    ///
+    /// <para><b>This is a debugging tool and it exists because a generated clue can be wrong in two
+    /// completely different ways that look identical from inside the game.</b> The clue may be
+    /// unhelpful — an anchor that is an area label rather than a point, say — or the whole
+    /// marker-to-world conversion may be off, in which case the clue is describing a position the
+    /// spot is not at. From the player's side both are just "I cannot find it".</para>
+    ///
+    /// <para>The readout separates them. It prints where the spot really is, where the clue's anchor
+    /// really is, and the true bearing and distance between them. If the bearing matches the clue's
+    /// wording, the conversion is sound and the clue is merely hard; if it does not, the conversion
+    /// is the bug and no amount of clue tuning will help.</para>
+    /// </summary>
+    public string Reveal()
+    {
+        if (_phase != Phase.Running) return "no wild trail is running.";
+
+        var current = Current;
+        if (current == null) return "no spot.";
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return "no character loaded.";
+
+        var spot = current.Position;
+
+        string line = $"spot {_index + 1}/{_stops.Count}: "
+                    + $"{DigGround.Flat(player.Position, spot):0.0}y {DigGround.Compass(player.Position, spot)} of you";
+
+        if (DigLandmarks.TryMapCoords(spot, out float mx, out float my))
+            line += $"   map ({mx:0.0}, {my:0.0})";
+
+        line += $"   world ({spot.X:0.0}, {spot.Y:0.0}, {spot.Z:0.0})";
+
+        // The anchor the clue was written from, and the TRUE relationship to the spot. A clue that
+        // says WEST while this says EAST is a conversion bug, not a hard clue.
+        if (DigLandmarks.Nearest(spot) is { } near)
+            line += $"\n[Challenges] clue anchor \"{near.Name}\" is at world "
+                  + $"({near.World.X:0.0}, {near.World.Z:0.0}), "
+                  + $"{DigGround.Flat(near.World, spot):0.0}y away — spot is truly "
+                  + $"{DigGround.Compass(near.World, spot)} of it";
+
+        try
+        {
+            unsafe
+            {
+                var agent = AgentMap.Instance();
+                if (agent != null)
+                {
+                    // The Vector3 overload takes WORLD coordinates and converts internally — see
+                    // CLAUDE.md's map-pin rules. Handing it map coordinates would put the flag in
+                    // the wrong place and make this diagnostic lie.
+                    agent->SetFlagMapMarker((uint)_territory, DigLandmarks.CurrentMapId(), spot);
+                    agent->OpenMap(DigLandmarks.CurrentMapId(), (uint)_territory, null, MapType.FlagMarker);
+                }
+            }
+        }
+        catch (Exception ex) { Diag.Error($"[Roam] reveal flag failed: {ex.Message}"); }
+
+        return line;
+    }
 
     public void DrawWorld() { /* drawing the stops would replace the clue with an answer */ }
 

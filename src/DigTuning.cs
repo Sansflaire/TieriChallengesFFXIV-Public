@@ -169,8 +169,26 @@ internal static class DigTuning
     /// of starting, so the whole trail fits in one walkable neighbourhood. Chaining each from the
     /// last would let a run wander off the map's edge one hop at a time.</para>
     /// </summary>
-    public static float RoamMinRange = 30f;
-    public static float RoamMaxRange = 220f;
+    /// <summary>
+    /// Nearest a spot may be to the player, and an OPTIONAL cap on how far.
+    ///
+    /// <para><b>The cap defaults to 0, meaning none — the whole map is eligible.</b> Spots are drawn
+    /// from the map's own world rectangle, so anywhere the drawn map covers can hold one. An earlier
+    /// version sampled a ring around the player, which let "how far did you walk before pressing
+    /// Start" decide what the trail was allowed to contain.</para>
+    /// </summary>
+    public static float RoamMinRange = 15f;
+    public static float RoamMaxRange = 0f;
+
+    /// <summary>
+    /// How much open space under a candidate makes it a roof rather than ground.
+    ///
+    /// <para>This replaces the player-relative height gate, which could not survive whole-map
+    /// sampling: across a zone it rejects every hill and basement merely for being far from where
+    /// the player stands. Asking "is there more ground a long way below this" is local, so it stays
+    /// true anywhere on the map.</para>
+    /// </summary>
+    public static float RoamMaxRise = 3.5f;
 
     /// <summary>How close a dig must be to a wild spot, and where its radar appears.</summary>
     public static float RoamDig   = 4f;
@@ -525,6 +543,7 @@ internal static class DigTuning
         public float RoamSpacing { get; set; }
         public float RoamMinRange { get; set; }
         public float RoamMaxRange { get; set; }
+        public float RoamMaxRise { get; set; }
         public float RoamDig { get; set; }
         public float RoamRadar { get; set; }
         public float RoamDifficulty { get; set; }
@@ -619,7 +638,8 @@ internal static class DigTuning
 
     public static void ResetRoam()
     {
-        RoamStops = 5; RoamSpacing = 25f; RoamMinRange = 30f; RoamMaxRange = 220f;
+        RoamStops = 5; RoamSpacing = 25f; RoamMinRange = 15f; RoamMaxRange = 0f;
+        RoamMaxRise = 3.5f;
         RoamDig = 4f; RoamRadar = 30f; RoamDifficulty = 0.35f;
     }
 
@@ -719,8 +739,11 @@ internal static class DigTuning
             {
                 RoamStops      = d.RoamStops > 0 ? Math.Clamp(d.RoamStops, 1, 20) : 5;
                 RoamSpacing    = Pos(d.RoamSpacing,   25f);
-                RoamMinRange   = Pos(d.RoamMinRange,  30f);
-                RoamMaxRange   = Pos(d.RoamMaxRange, 220f);
+                // NOT Pos-guarded: 0 is meaningful for both — "no minimum" and, for the cap,
+                // "no cap, use the whole map", which is the default.
+                RoamMinRange   = Clamp(d.RoamMinRange, 0f, 400f,  15f);
+                RoamMaxRange   = Clamp(d.RoamMaxRange, 0f, 2000f,  0f);
+                RoamMaxRise    = Clamp(d.RoamMaxRise,  0f,   40f, 3.5f);
                 RoamDig        = Pos(d.RoamDig,        4f);
                 RoamRadar      = Pos(d.RoamRadar,     30f);
                 RoamDifficulty = Clamp(d.RoamDifficulty, 0f, 1f, 0.35f);
@@ -887,6 +910,7 @@ internal static class DigTuning
                 RoamSaved = true,
                 RoamStops = RoamStops, RoamSpacing = RoamSpacing,
                 RoamMinRange = RoamMinRange, RoamMaxRange = RoamMaxRange,
+                RoamMaxRise = RoamMaxRise,
                 RoamDig = RoamDig, RoamRadar = RoamRadar, RoamDifficulty = RoamDifficulty,
                 HudDropPx = HudDropPx, HudClueGapPx = HudClueGapPx,
                 ClueStyleSaved = true,
