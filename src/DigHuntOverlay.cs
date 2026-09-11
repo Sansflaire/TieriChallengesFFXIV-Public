@@ -143,6 +143,22 @@ internal sealed class DigHuntOverlay : IDisposable
     /// </summary>
     private float _digWordAlpha;
 
+    /// <summary>
+    /// A gate on the CLUE! word, not a fade of its own — it is still multiplied by the clue line's
+    /// opacity, so CLUE! can never outlast the clue it labels.
+    ///
+    /// <para><b>It drops to zero INSTANTLY and returns on a ramp, and the asymmetry is the whole
+    /// point.</b> The two words occupy the same place on screen, so any moment where both are
+    /// partly visible is a double exposure — one word printed through the other. Crossfading them
+    /// looked correct written down and is unreadable in practice. DIG! therefore takes the slot the
+    /// instant it is wanted and CLUE! is simply gone that frame.</para>
+    ///
+    /// <para>Coming back is ramped because there is nothing to collide with: DIG! is already fully
+    /// faded by then, so CLUE! is appearing over empty space and a hard cut would just look like a
+    /// glitch.</para>
+    /// </summary>
+    private float _clueWordAlpha;
+
     private const float WordFadeIn  = 0.28f;
     private const float WordFadeOut = 0.45f;
 
@@ -332,11 +348,12 @@ internal sealed class DigHuntOverlay : IDisposable
     private const string TrailStartFile = "TrailStart!_digIcon.png";
     private const string TrailEndFile   = "TrailEnd!_digIcon.png";
 
-    private const float BannerAspect        = 1774f / 887f;
-    private const float BannerWidthFraction = 0.46f;
-
-    /// <summary>Where the banner's TOP sits, as a fraction of viewport height.</summary>
-    private const float BannerTopFraction = 0.34f;
+    /// <summary>
+    /// The artwork's shape. Position and size are live tuning values — see
+    /// <see cref="DigTuning.BannerY"/> — but the aspect is a property of the PNG and is never a
+    /// setting: stretching a banner is not something anyone wants a slider for.
+    /// </summary>
+    private const float BannerAspect = 1774f / 887f;
 
     /// <summary>
     /// More bands than the dial gets. The banner is several times taller on screen, and banding is a
@@ -853,7 +870,7 @@ internal sealed class DigHuntOverlay : IDisposable
 
         var viewport = ImGui.GetMainViewport();
 
-        int w = (int)MathF.Round(viewport.Size.X * BannerWidthFraction);
+        int w = (int)MathF.Round(viewport.Size.X * Math.Clamp(DigTuning.BannerWidth, 0.10f, 1f));
         int h = (int)MathF.Round(w / BannerAspect);
         if (w <= 0 || h <= 0) return;
 
@@ -881,14 +898,18 @@ internal sealed class DigHuntOverlay : IDisposable
             return;
         }
 
-        float top = viewport.Pos.Y + viewport.Size.Y * BannerTopFraction;
+        float top = viewport.Pos.Y + viewport.Size.Y * Math.Clamp(DigTuning.BannerY, 0f, 0.90f);
 
         if (!BeginHud("##tc_dig_banner", new Vector2(viewport.Pos.X, top - pad),
                       (int)viewport.Size.X, h + pad * 2)) return;
 
         var drawList = ImGui.GetWindowDrawList();
 
-        float x = viewport.Pos.X + (viewport.Size.X - w) * 0.5f + slide * viewport.Size.X;
+        // The slide and the placement offset are both fractions of the viewport's width, so they
+        // add in the same units and the banner still travels the same PROPORTION of the screen
+        // wherever it has been placed.
+        float x = viewport.Pos.X + (viewport.Size.X - w) * 0.5f
+                + (slide + Math.Clamp(DigTuning.BannerX, -0.5f, 0.5f)) * viewport.Size.X;
 
         var min  = new Vector2(MathF.Round(x), MathF.Round(top));
         var size = new Vector2(w, h);
@@ -1048,6 +1069,7 @@ internal sealed class DigHuntOverlay : IDisposable
             _reminderUntil = 0;
             _reminderText  = string.Empty;
             _digWordAlpha  = 0f;
+            _clueWordAlpha = 0f;
             _hiddenForDig  = false;
             return;
         }
@@ -1112,6 +1134,14 @@ internal sealed class DigHuntOverlay : IDisposable
 
         if      (_digWordAlpha < wordTarget) _digWordAlpha = MathF.Min(wordTarget, _digWordAlpha + wordStep);
         else if (_digWordAlpha > wordTarget) _digWordAlpha = MathF.Max(wordTarget, _digWordAlpha - wordStep);
+
+        // CLUE! yields the slot to DIG! the frame it is wanted — instantly, because the two words
+        // sit in the same place and anything gradual prints one through the other. It returns on a
+        // ramp, which is safe: by then DIG! is fully gone and there is nothing to collide with.
+        if (_digWordAlpha > 0.002f)
+            _clueWordAlpha = 0f;
+        else
+            _clueWordAlpha = MathF.Min(1f, _clueWordAlpha + ImGui.GetIO().DeltaTime / WordFadeIn);
 
         if (_radarFade <= 0.002f)
         {
@@ -1599,19 +1629,22 @@ internal sealed class DigHuntOverlay : IDisposable
     /// </summary>
     private void DrawDialLabel(float uiScale, float closeness, float fade)
     {
-        // TWO INDEPENDENT LAYERS, not one word chosen by the current state.
+        // TWO LAYERS, never both visible at once.
         //
-        // Picking `solid ? DIG! : CLUE!` was the bug: `solid` flips the instant the player crosses
-        // the dig radius, so walking out SWAPPED the artwork rather than fading it, and DIG!'s
-        // envelope — ramping down correctly the whole time — was never the one being drawn. Drawing
-        // both and letting each carry its own opacity means leaving the spot crossfades out of DIG!
-        // and into CLUE! if there is a clue to show, and digging fades DIG! out over nothing.
+        // Picking `solid ? DIG! : CLUE!` was the original bug: `solid` flips the instant the player
+        // crosses the dig radius, so walking out SWAPPED the artwork rather than fading it, and
+        // DIG!'s envelope — ramping down correctly the whole time — was never the one being drawn.
         //
-        // CLUE! borrows the clue line's opacity outright, so it is only ever up while there is a
-        // clue beneath it to label. DIG! has its own envelope, because it marks a state the player
-        // is standing in rather than a message that was shown. Both are bounded by the dial's fade,
-        // so neither outlives what it sits on.
-        float clueAlpha = _reminderAlpha * fade;
+        // Drawing both and crossfading fixed the fade and introduced a worse problem: the two words
+        // sit in the SAME place, so any frame where both are partly opaque prints one through the
+        // other. _clueWordAlpha is what settles it — DIG! takes the slot the instant it is wanted
+        // and CLUE! is gone that frame, with no overlap at any point.
+        //
+        // CLUE! is still multiplied by the clue line's own opacity, so it can only ever be up while
+        // there is a clue beneath it to label. DIG! has its own envelope, because it marks a state
+        // the player is standing in rather than a message that was shown. Both are bounded by the
+        // dial's fade, so neither outlives what it sits on.
+        float clueAlpha = _reminderAlpha * _clueWordAlpha * fade;
         float digAlpha  = _digWordAlpha  * fade;
 
         if (clueAlpha <= 0.002f && digAlpha <= 0.002f) return;

@@ -215,6 +215,21 @@ internal sealed class DigTestsWindow
           + "bottom a darker copy of the top, and rules out the warm-to-deep shifts real title\n"
           + "art uses. The gradient runs across the whole banner, not per letter.");
 
+        ImGui.TextColored(Rule,
+            "Placement is in FRACTIONS of the viewport, not pixels, so a banner lands in the same\n"
+          + "place on a 1080p monitor as on a 1440p one. Width is a fraction too; the height\n"
+          + "follows from the artwork's 2:1 shape and is never set separately.");
+
+        ImGui.SliderFloat("Banner Y", ref DigTuning.BannerY, 0f, 0.90f, "%.3f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Banner X", ref DigTuning.BannerX, -0.5f, 0.5f, "%.3f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Banner width", ref DigTuning.BannerWidth, 0.10f, 1f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.Spacing();
         ImGui.ColorEdit3("Banner top", ref DigTuning.BannerTopColor);
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 

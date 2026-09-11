@@ -355,6 +355,21 @@ internal static class DigTuning
     public static float BannerEchoStep    = 0.045f;
     public static float BannerEchoFalloff = 0.60f;
 
+    /// <summary>
+    /// Where a trail banner sits and how big it is drawn.
+    ///
+    /// <para>Y is a FRACTION of the viewport's height, and X a fraction of its width, deliberately —
+    /// a banner is a screen-scale announcement, so it should land in the same place on a 1080p
+    /// monitor as on a 1440p one. Pixels would put it a third of the way down one and a quarter of
+    /// the way down the other.</para>
+    ///
+    /// <para>Width is also a fraction, so the banner keeps the same presence on screen at any
+    /// resolution; the height follows from the artwork's 2:1 shape and is never set separately.</para>
+    /// </summary>
+    public static float BannerY     = 0.28f;
+    public static float BannerX     = 0f;
+    public static float BannerWidth = 0.46f;
+
     public static readonly Vector3 DefaultBannerTop    = new(1.00f, 0.847f, 0.302f);
     public static readonly Vector3 DefaultBannerBottom = new(0.70f, 0.593f, 0.211f);
 
@@ -538,6 +553,9 @@ internal static class DigTuning
         public int   BannerEchoCount { get; set; }
         public float BannerEchoStep { get; set; }
         public float BannerEchoFalloff { get; set; }
+        public float BannerY { get; set; }
+        public float BannerX { get; set; }
+        public float BannerWidth { get; set; }
     }
 
     private static string Path =>
@@ -592,6 +610,7 @@ internal static class DigTuning
         IconOutline = true; IconOutlineWidth = 1.0f; IconOutlineAlpha = 0.85f;
         BannerEcho = true; BannerEchoCount = 6;
         BannerEchoStep = 0.045f; BannerEchoFalloff = 0.60f;
+        BannerY = 0.28f; BannerX = 0f; BannerWidth = 0.46f;
     }
 
     public static void ResetAll()
@@ -707,6 +726,10 @@ internal static class DigTuning
                 BannerEchoCount   = d.BannerEchoCount > 0 ? Math.Clamp(d.BannerEchoCount, 1, 16) : 6;
                 BannerEchoStep    = Clamp(d.BannerEchoStep,    0.005f, 0.30f, 0.045f);
                 BannerEchoFalloff = Clamp(d.BannerEchoFalloff, 0.05f,  0.95f, 0.60f);
+
+                BannerY     = Clamp(d.BannerY,     0f,   0.90f, 0.28f);
+                BannerX     = Clamp(d.BannerX,    -0.5f, 0.5f,  0f);
+                BannerWidth = Clamp(d.BannerWidth, 0.10f, 1.00f, 0.46f);
             }
             else ResetRays();
 
@@ -832,6 +855,7 @@ internal static class DigTuning
                 IconOutlineAlpha = IconOutlineAlpha,
                 BannerEcho = BannerEcho, BannerEchoCount = BannerEchoCount,
                 BannerEchoStep = BannerEchoStep, BannerEchoFalloff = BannerEchoFalloff,
+                BannerY = BannerY, BannerX = BannerX, BannerWidth = BannerWidth,
             };
 
             // Temp-then-replace, like the completion stores: a half-written tuning file read on the
