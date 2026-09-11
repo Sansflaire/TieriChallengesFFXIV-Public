@@ -174,21 +174,21 @@ internal static class DigLandmarks
     /// </summary>
     public static string Quadrant(Vector3 world)
     {
-        if (!TryMapCoords(world, out float mx, out float my)) return "somewhere on this map";
-
-        ContentBounds(out var lo, out var hi);
+        if (!WalkableBox(out var lo, out var hi)) return "somewhere on this map";
 
         float cx = (lo.X + hi.X) * 0.5f;
-        float cy = (lo.Y + hi.Y) * 0.5f;
+        float cz = (lo.Y + hi.Y) * 0.5f;
 
-        // Inside this fraction from the centre counts as neither side. Measured against the CONTENT
-        // extent per axis, because a map's content is rarely square.
+        // Inside this fraction from the centre counts as neither side. Measured per axis, because a
+        // zone's walkable area is rarely square.
         const float Middle = 0.14f;
-        float bandX = MathF.Max(0.5f, (hi.X - lo.X) * Middle);
-        float bandY = MathF.Max(0.5f, (hi.Y - lo.Y) * Middle);
+        float bandX = MathF.Max(1f, (hi.X - lo.X) * Middle);
+        float bandZ = MathF.Max(1f, (hi.Y - lo.Y) * Middle);
 
-        string ns = my < cy - bandY ? "NORTH" : my > cy + bandY ? "SOUTH" : string.Empty;
-        string ew = mx > cx + bandX ? "EAST"  : mx < cx - bandX ? "WEST"  : string.Empty;
+        // WORLD axes: +X is east, +Z is south. Same convention as DigGround.Compass, and the reason
+        // this no longer converts to map coordinates at all — see WalkableBox.
+        string ns = world.Z < cz - bandZ ? "NORTH" : world.Z > cz + bandZ ? "SOUTH" : string.Empty;
+        string ew = world.X > cx + bandX ? "EAST"  : world.X < cx - bandX ? "WEST"  : string.Empty;
 
         if (ns.Length == 0 && ew.Length == 0) return "the middle of the map";
         if (ns.Length == 0) return $"the {ew} side of the map";
@@ -213,6 +213,67 @@ internal static class DigLandmarks
     /// named markers to bound anything — better a known-crude answer than one computed from three
     /// points that happen to be in one corner.</para>
     /// </summary>
+    /// <summary>
+    /// The walkable extent of this zone in <b>WORLD</b> coordinates as (x, z) pairs — the square
+    /// every direction word is measured against.
+    ///
+    /// <para><b>World, not map, and that is the whole point.</b> A quadrant was reported as "very
+    /// centre" for a spot sitting three-quarters of the way east, and the arithmetic was correct for
+    /// the numbers it had: the spot converted to map x 14.1 against a box centre of 13.2. The flag
+    /// the GAME placed from the same world position landed far further east, so the two conversions
+    /// disagreed — and ours is the one this repo has always marked spot-checked-never-proven.</para>
+    ///
+    /// <para>So the conversion is gone from this path. The navmesh box is already world-space, the
+    /// spot is world-space, and <c>+X is east, +Z is south</c> is the same convention
+    /// <see cref="DigGround.Compass"/> uses and states its evidence for. Nothing has to be
+    /// transformed to answer "is this east of the middle", so nothing is — which removes an entire
+    /// class of error rather than correcting one instance of it.</para>
+    ///
+    /// <para>Falls back to the landmark spread, then the map rectangle, when the navmesh cannot
+    /// bound the zone.</para>
+    /// </summary>
+    public static bool WalkableBox(out Vector2 lo, out Vector2 hi)
+    {
+        lo = hi = default;
+
+        // FIRST: the navmesh. It is the walkable area by definition, and it is the same surface
+        // placement uses — so the square directions are measured in is the square spots land in.
+        if (TryWorldBounds(out var searchLo, out var searchHi) &&
+            DigNavmesh.TryWalkableBounds(searchLo, searchHi, out lo, out hi))
+            return true;
+
+        // SECOND: the spread of the map's own labels, in world space.
+        var marks = ForCurrentMap();
+
+        if (marks.Count >= 4)
+        {
+            float minX = float.MaxValue, minZ = float.MaxValue;
+            float maxX = float.MinValue, maxZ = float.MinValue;
+
+            foreach (var m in marks)
+            {
+                if (m.World.X < minX) minX = m.World.X;
+                if (m.World.X > maxX) maxX = m.World.X;
+                if (m.World.Z < minZ) minZ = m.World.Z;
+                if (m.World.Z > maxZ) maxZ = m.World.Z;
+            }
+
+            if (maxX - minX > 5f && maxZ - minZ > 5f)
+            {
+                float padX = (maxX - minX) * 0.10f;
+                float padZ = (maxZ - minZ) * 0.10f;
+
+                lo = new Vector2(minX - padX, minZ - padZ);
+                hi = new Vector2(maxX + padX, maxZ + padZ);
+                return true;
+            }
+        }
+
+        // LAST: the map rectangle. Known crude — it is mostly empty square for a small zone — but
+        // it is never wrong about orientation, only about where the middle is.
+        return TryWorldBounds(out lo, out hi);
+    }
+
     public static void ContentBounds(out Vector2 lo, out Vector2 hi)
     {
         float span = MathF.Max(1f, MapSpan);

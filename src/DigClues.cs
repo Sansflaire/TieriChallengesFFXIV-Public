@@ -309,23 +309,20 @@ internal sealed class DigClueWriter
     /// </summary>
     private string FromQuadrant(Vector3 spot, float hard)
     {
-        if (!DigLandmarks.TryMapCoords(spot, out float mx, out float my)) return string.Empty;
+        // WORLD space throughout, matching Quadrant. Working in map coordinates here while the
+        // quadrant worked in world coordinates would let the two clauses of one clue disagree.
+        if (!DigLandmarks.WalkableBox(out var lo, out var hi)) return string.Empty;
 
         string quad = DigLandmarks.Quadrant(spot);
 
         // EASY — which cell of a 3x3 grid over the map, which is a genuinely small box.
         if (hard < 0.34f)
         {
-            // Same content bounds the quadrant uses. Computing the grid off the raw coordinate
-            // range instead was what put "very centre" on a spot sitting visibly north-east: the
-            // midpoint of the coordinate square is not the midpoint of the map's content.
-            DigLandmarks.ContentBounds(out var lo, out var hi);
-
             float w = MathF.Max(0.01f, hi.X - lo.X);
-            float h = MathF.Max(0.01f, hi.Y - lo.Y);
+            float d = MathF.Max(0.01f, hi.Y - lo.Y);
 
-            int col = Math.Clamp((int)((mx - lo.X) / w * 3f), 0, 2);
-            int row = Math.Clamp((int)((my - lo.Y) / h * 3f), 0, 2);
+            int col = Math.Clamp((int)((spot.X - lo.X) / w * 3f), 0, 2);
+            int row = Math.Clamp((int)((spot.Z - lo.Y) / d * 3f), 0, 2);
 
             // The quadrant is NOT prepended. It is the same fact at lower resolution, and pairing
             // them produced "In the middle of the map - the middle middle of the map", which says
@@ -337,15 +334,13 @@ internal sealed class DigClueWriter
         if (hard < 0.67f) return $"Somewhere in {quad}.";
 
         // HARD — a half rather than a quadrant, which is half the map.
-        DigLandmarks.ContentBounds(out var half0, out var half1);
-
         bool  vertical = _rng.Next(2) == 0;
-        float cx       = (half0.X + half1.X) * 0.5f;
-        float cy       = (half0.Y + half1.Y) * 0.5f;
+        float cx       = (lo.X + hi.X) * 0.5f;
+        float cz       = (lo.Y + hi.Y) * 0.5f;
 
         return vertical
-            ? $"In the {(my < cy ? "NORTHERN" : "SOUTHERN")} half of the map. That is all anyone will say."
-            : $"In the {(mx > cx ? "EASTERN" : "WESTERN")} half of the map. That is all anyone will say.";
+            ? $"In the {(spot.Z < cz ? "NORTHERN" : "SOUTHERN")} half of the map. That is all anyone will say."
+            : $"In the {(spot.X > cx ? "EASTERN" : "WESTERN")} half of the map. That is all anyone will say.";
     }
 
     /// <summary>
@@ -373,18 +368,15 @@ internal sealed class DigClueWriter
     /// </summary>
     private string FromClock(Vector3 spot, float hard)
     {
-        if (!DigLandmarks.TryMapCoords(spot, out float mx, out float my)) return string.Empty;
+        if (!DigLandmarks.WalkableBox(out var lo, out var hi)) return string.Empty;
 
-        // Content bounds again, for the same reason as the quadrant and the grid: a bearing taken
-        // from the middle of the coordinate square points from somewhere the map may not even draw.
-        DigLandmarks.ContentBounds(out var lo, out var hi);
-
+        // World space, same box as the quadrant and the grid.
         float cx   = (lo.X + hi.X) * 0.5f;
-        float cy   = (lo.Y + hi.Y) * 0.5f;
+        float cz   = (lo.Y + hi.Y) * 0.5f;
         float span = MathF.Max(1f, MathF.Max(hi.X - lo.X, hi.Y - lo.Y));
 
-        float east  = mx - cx;
-        float north = cy - my;              // map Y increases downward, so north is the negative side
+        float east  = spot.X - cx;
+        float north = cz - spot.Z;          // +Z is south, so north is the negative side
 
         float radius = MathF.Sqrt(east * east + north * north);
 

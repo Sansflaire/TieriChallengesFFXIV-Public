@@ -171,6 +171,62 @@ internal sealed class DigMapWindow
             drawList.AddText(at + new Vector2(6f, -7f), cyan, l.Name);
         }
 
+        // THE WALKABLE BOX AND ITS QUADRANT LINES, drawn over the real map image.
+        //
+        // This exists because "dead centre" was reported for a spot three-quarters of the way east
+        // and there was no way to see WHY without it. The box is what every direction word is
+        // measured against, so drawing it turns an argument about a clue into a look at a rectangle:
+        // if the box does not sit over the ward, the box is the bug; if it does, the wording is.
+        if (DigLandmarks.WalkableBox(out var boxLo, out var boxHi))
+        {
+            bool okA = Plot(new Vector3(boxLo.X, 0f, boxLo.Y), out var cornerA);
+            bool okB = Plot(new Vector3(boxHi.X, 0f, boxHi.Y), out var cornerB);
+
+            if (okA && okB)
+            {
+                var lo2 = new Vector2(MathF.Min(cornerA.X, cornerB.X), MathF.Min(cornerA.Y, cornerB.Y));
+                var hi2 = new Vector2(MathF.Max(cornerA.X, cornerB.X), MathF.Max(cornerA.Y, cornerB.Y));
+
+                uint lime = ImGui.GetColorU32(new Vector4(0.45f, 1f, 0.35f, 0.90f));
+                uint dim  = ImGui.GetColorU32(new Vector4(0.45f, 1f, 0.35f, 0.35f));
+
+                drawList.AddRect(lo2, hi2, lime, 0f, ImDrawFlags.None, 2f);
+
+                // The QUADRANT boundaries: the centre cross plus the dead-band either side of it,
+                // which is the band Quadrant() treats as "neither east nor west". Drawn because a
+                // spot inside that band reads as "the middle" and looks off-centre on the map — the
+                // exact thing that made this look broken when it was working.
+                float cx = (lo2.X + hi2.X) * 0.5f, cy = (lo2.Y + hi2.Y) * 0.5f;
+                float bx = (hi2.X - lo2.X) * 0.14f, by = (hi2.Y - lo2.Y) * 0.14f;
+
+                drawList.AddLine(new Vector2(cx, lo2.Y), new Vector2(cx, hi2.Y), lime, 1.5f);
+                drawList.AddLine(new Vector2(lo2.X, cy), new Vector2(hi2.X, cy), lime, 1.5f);
+
+                foreach (float o in new[] { -1f, 1f })
+                {
+                    drawList.AddLine(new Vector2(cx + bx * o, lo2.Y), new Vector2(cx + bx * o, hi2.Y), dim);
+                    drawList.AddLine(new Vector2(lo2.X, cy + by * o), new Vector2(hi2.X, cy + by * o), dim);
+                }
+
+                // Thirds, matching the EASY grid clue's nine cells.
+                uint faint = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.22f));
+
+                for (int i = 1; i < 3; i++)
+                {
+                    float tx = lo2.X + (hi2.X - lo2.X) * i / 3f;
+                    float ty = lo2.Y + (hi2.Y - lo2.Y) * i / 3f;
+
+                    drawList.AddLine(new Vector2(tx, lo2.Y), new Vector2(tx, hi2.Y), faint);
+                    drawList.AddLine(new Vector2(lo2.X, ty), new Vector2(hi2.X, ty), faint);
+                }
+
+                drawList.AddText(lo2 + new Vector2(4f, 4f), lime,
+                    DigNavmesh.WalkableSampleCount > 0
+                        ? $"walkable box — navmesh, {DigNavmesh.WalkableSampleCount} samples"
+                        : "walkable box — FALLBACK (navmesh could not bound this zone)");
+            }
+        }
+
         uint red = ImGui.GetColorU32(new Vector4(1f, 0.25f, 0.25f, 0.95f));
         int outside = 0;
 
