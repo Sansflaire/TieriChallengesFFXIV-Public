@@ -342,30 +342,13 @@ internal sealed class DigHuntOverlay : IDisposable
     private int _seenStarts   = -1;
     private int _seenFinishes = -1;
 
-    /// <summary>
-    /// How far the word is lifted above its authored position, in logical pixels.
-    ///
-    /// <para>The artwork is drawn at the dial's own rect, which is where it was composed — this is a
-    /// deliberate nudge off that, so the lettering clears the rim rather than sitting into it. Kept
-    /// as its own number rather than folded into the draw so it stays obvious that the label is
-    /// offset from the canvas on purpose.</para>
-    /// </summary>
-    private const float LabelLiftPx = 26f;
-
-    /// <summary>
-    /// Empty space reserved ABOVE the dial inside its window, so the lifted label has somewhere to
-    /// be drawn.
-    ///
-    /// <para><b>Without this the lift is a clip, not a move.</b> The window was exactly the dial's
-    /// size, so every pixel the label rose above the dial's own rect fell outside the window and
-    /// ImGui cut it off — raising the lift further only removed more of the word. The window is now
-    /// taller by this much and shifted up by the same, so the dial stays exactly where it was on
-    /// screen and the space appears above it rather than pushing anything down.</para>
-    ///
-    /// <para>Must exceed <see cref="LabelLiftPx"/> plus the outline and shadow reach, or the top of
-    /// the lettering clips again.</para>
-    /// </summary>
-    private const float LabelHeadroomPx = 38f;
+    // The word's lift and the headroom reserved for it inside the dial's window are GONE. Both were
+    // workarounds for the word being drawn in a window sized to the dial, where any movement past a
+    // few pixels was a CLIP rather than a move — raising the lift only removed more of the word.
+    //
+    // It has its own window now (DrawDialLabel), sized to wherever it has been put, so there is
+    // nothing to reserve space against and nothing to keep the two numbers in step with. Position
+    // and scale are live tuning values: DigTuning.LabelOffsetX / LabelOffsetY / LabelScale.
 
     /// <summary>
     /// Builds the dial textures at <b>exactly</b> the size they will be drawn, by reducing the
@@ -839,7 +822,9 @@ internal sealed class DigHuntOverlay : IDisposable
                           min + size + new Vector2(shadow, shadow),
                           Vector2.Zero, Vector2.One, Tint(Ink, 0.45f * alpha));
 
-        DrawEmblem(drawList, art, min, size, Rgb(DigCol), alpha, outline, BannerGradientBands);
+        DrawEmblem(drawList, art, min, size,
+                   DigTuning.BannerTopColor, DigTuning.BannerBottomColor,
+                   alpha, outline, BannerGradientBands);
 
         EndHud();
     }
@@ -1250,25 +1235,19 @@ internal sealed class DigHuntOverlay : IDisposable
         float uiScale = UiScale.Factor;
         int   phys    = (int)(RadarSize * uiScale);
 
-        int headroom = (int)MathF.Round(LabelHeadroomPx * uiScale);
-
         var viewport = ImGui.GetMainViewport();
 
-        // The window starts ABOVE the dial by exactly the headroom and is that much taller, so the
-        // dial itself still lands on TopFraction. The reminder below adds the SAME drop, so the two
-        // move as one and the gap between them is decided only by ReminderGapPx.
+        // The reminder below adds the SAME drop, so the two move as one and the gap between them is
+        // decided only by ReminderGapPx.
         var pos = new Vector2(
             viewport.Pos.X + (viewport.Size.X - phys) * 0.5f,
-            viewport.Pos.Y + viewport.Size.Y * TopFraction + DropPx * uiScale - headroom);
+            viewport.Pos.Y + viewport.Size.Y * TopFraction + DropPx * uiScale);
 
-        // The one HUD window that takes input — it is a button. Kept small and only present while
-        // the dial is visible, so the amount of screen that can swallow a click is one small circle
-        // for the few seconds it is up.
-        if (!BeginHud("##tc_dig_radar", pos, phys, phys + headroom, acceptInput: true)) return;
-
-        // Step past the reserved space, so everything below draws from the dial's top-left exactly
-        // as it did before the headroom existed — including the hit rect.
-        ImGui.SetCursorPosY(ImGui.GetCursorPosY() + headroom);
+        // The one HUD window that takes input — it is a button. Sized to the dial and nothing more,
+        // so the amount of screen that can swallow a click is one small circle for the few seconds
+        // it is up. The word used to be drawn in here too and needed headroom reserved above; it has
+        // its own window now, so this is back to exactly the artwork's size.
+        if (!BeginHud("##tc_dig_radar", pos, phys, phys, acceptInput: true)) return;
 
         EnsureDialArt(phys);
 
@@ -1383,19 +1362,8 @@ internal sealed class DigHuntOverlay : IDisposable
             float centreAlpha = fill * fade;
             DrawEmblem(drawList, dialCentre, origin, size, accentRgb, centreAlpha, outline, GradientBands);
 
-            // 5. The word, over the top. Same rect as the dial — the lettering was authored into
-            //    the top of the same canvas, so this is where it curves over the rim by design.
-            //    DIG when a dig would land, CLUE while still looking.
-            var label = solid ? _labelDig : _labelClue;
-            if (label != null)
-            {
-                // Lifted clear of the rim. Rides the press with everything else, so the word sinks
-                // with the dial instead of hovering while the button moves under it.
-                var labelOrigin = origin - new Vector2(0f, LabelLiftPx * uiScale);
-
-                DrawEmblem(drawList, label, labelOrigin, size, accentRgb, ringAlpha, outline,
-                           GradientBands);
-            }
+            // The word is NOT drawn here. It moves and scales freely now, so it lives in its own
+            // window drawn after this one — see DrawDialLabel.
 
             // Claims the same rectangle for hit-testing, since AddImage draws without laying
             // anything out.
@@ -1456,6 +1424,58 @@ internal sealed class DigHuntOverlay : IDisposable
 
             _onDig?.Invoke();
         }
+
+        EndHud();
+
+        // AFTER the dial's window closes, so it is begun later and therefore drawn over it. The
+        // word overlaps the rim by design, and a background-list draw would put it underneath.
+        //
+        // The anchor is derived from the window's own position rather than read back from the
+        // cursor, because the cursor only exists inside the window. They agree exactly: HUD windows
+        // are drawn with zero padding, so content starts at the window's top-left.
+        DrawDialLabel(new Vector2(MathF.Round(pos.X), MathF.Round(pos.Y)),
+                      phys, accentRgb, (_radarHovered ? 1f : 0.95f) * fade, solid, uiScale, press);
+    }
+
+    /// <summary>
+    /// The CLUE! / DIG! word, in a window of its own.
+    ///
+    /// <para><b>It is separate because it is now freely placed and scaled.</b> It used to be drawn
+    /// inside the dial's window at the dial's own rect, which meant any lift past a few pixels was
+    /// CLIPPED rather than moved — the window was exactly the artwork's size. That was patched once
+    /// by reserving headroom above the dial, which works only while the offset is a small upward
+    /// nudge and falls apart the moment the word can also move sideways or grow.</para>
+    ///
+    /// <para>Growing the dial's own window instead would have been worse: that window accepts input
+    /// because it is the dig button, so a bigger one swallows game clicks over a bigger patch of
+    /// screen. This one takes no input at all.</para>
+    /// </summary>
+    private void DrawDialLabel(Vector2 dialOrigin, float phys, Vector3 rgb, float alpha,
+                               bool solid, float uiScale, float press)
+    {
+        var art = solid ? _labelDig : _labelClue;
+        if (art == null || alpha <= 0.002f) return;
+
+        float scale = Math.Clamp(DigTuning.LabelScale, 0.2f, 3f);
+        float side  = phys * scale;
+
+        // Scaled about the dial's CENTRE, then offset. Centring first is what keeps the offsets
+        // meaning the same thing at every scale — grow it about the top-left instead and every
+        // size change would also walk the word sideways.
+        float sink = press * PressOffsetPx * uiScale;
+
+        var min = new Vector2(
+            MathF.Round(dialOrigin.X + (phys - side) * 0.5f + DigTuning.LabelOffsetX * uiScale + sink),
+            MathF.Round(dialOrigin.Y + (phys - side) * 0.5f + DigTuning.LabelOffsetY * uiScale + sink));
+
+        // Room for the outline and shadow to reach past the artwork without being cut off again.
+        float pad  = (OutlinePx + ShadowPx) * uiScale + 2f;
+        int   span = (int)MathF.Ceiling(side + pad * 2f);
+
+        if (!BeginHud("##tc_dig_label", min - new Vector2(pad, pad), span, span)) return;
+
+        DrawEmblem(ImGui.GetWindowDrawList(), art, min, new Vector2(side, side),
+                   rgb, alpha, OutlinePx * uiScale, GradientBands);
 
         EndHud();
     }
@@ -1772,12 +1792,19 @@ internal sealed class DigHuntOverlay : IDisposable
     private static void DrawEmblem(ImDrawListPtr drawList, IDalamudTextureWrap tex,
                                    Vector2 origin, Vector2 size, Vector3 rgb, float alpha,
                                    float outline, int bands)
+        // One colour plus the shared falloff. The two-colour form below is what the trail banners
+        // use, since their top and bottom are picked independently.
+        => DrawEmblem(drawList, tex, origin, size, rgb, rgb * IconDrop, alpha, outline, bands);
+
+    private static void DrawEmblem(ImDrawListPtr drawList, IDalamudTextureWrap tex,
+                                   Vector2 origin, Vector2 size, Vector3 top, Vector3 bottom,
+                                   float alpha, float outline, int bands)
     {
         if (alpha <= 0.002f) return;
 
         Stamp(drawList, tex, origin, size, outline, Tint(Ink, 0.85f * alpha));
 
-        GradientImage(drawList, tex.Handle, origin, origin + size, rgb, alpha, bands, IconDrop);
+        GradientImage(drawList, tex.Handle, origin, origin + size, top, bottom, alpha, bands);
     }
 
     /// <summary>A PanacheUI colour as an ImGui tint, with an extra opacity applied.</summary>

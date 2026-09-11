@@ -67,19 +67,62 @@ internal sealed class DigTestsWindow
           + "behind #if DEV_BUILD. A player cannot reach any of it.");
 
         ImGui.Separator();
+
+        // LIVE stays open and outside the collapsing set. It is the one part that answers "what is
+        // happening right now", and a running test whose readout is folded away behind a header is
+        // a readout nobody sees — which defeats the point of having it in a lab at all.
         DrawStatus();
 
-        ImGui.Separator();
-        DrawShared();
+        // Everything else collapses, and starts collapsed. This window had grown to five sections
+        // and something like forty controls, so the thing being looked for was always past three
+        // screens of something else. ImGui remembers each header's state in its own ini, so a
+        // section opened once stays open across sessions.
+        Section("Placement — where a spot may be buried", DrawMaxRise);
+        Section("HUD placement — dial and clue",          DrawHudPlacement);
+        Section("CLUE! / DIG! word",                      DrawWord);
+        Section("Clue text",                              DrawClueText);
+        Section("Trail banners",                          DrawBanners);
+        Section("Dig artwork gradient",                   DrawArtwork);
+        Section("Light burst",                            DrawLightBurst);
+        Section("Dig animation length",                   DrawDigLength);
+        Section("Dig animation speed",                    DrawDigSpeed);
 
-        ImGui.Separator();
-        DrawHunt();
+        Section("Test 1 — Sense Hunt",        DrawHunt);
+        Section("Test 2 — Area Surveillance", DrawSite);
+        Section("Test 3 — Clue Trail",        DrawTrail);
 
+        // Outside the headers on purpose. These are the two things reached for while fiddling with
+        // whichever section happens to be open, and hunting for them inside a collapsed one would
+        // be the exact friction the headers are here to remove.
         ImGui.Separator();
-        DrawSite();
 
-        ImGui.Separator();
-        DrawTrail();
+        if (ImGui.Button("Test dig now")) Say(Plugin.Props.Dig());
+        ImGui.SameLine();
+        if (ImGui.Button("Stop dig")) Say(Plugin.Props.Stop());
+        ImGui.SameLine();
+        if (ImGui.Button("Reset ALL tuning")) { DigTuning.ResetAll(); DigTuning.Save(); }
+
+        ImGui.TextDisabled("saved to dig-tuning.json — delete it for defaults");
+    }
+
+    /// <summary>
+    /// One collapsible block. Closed by default — <see cref="ImGuiTreeNodeFlags.None"/> rather than
+    /// <c>DefaultOpen</c> — because with every section open the window opens on a wall of sliders.
+    /// </summary>
+    private static void Section(string title, Action body)
+    {
+        if (!ImGui.CollapsingHeader(title)) return;
+
+        ImGui.Indent();
+
+        // Guarded individually rather than relying on DrawBody's catch: one section throwing must
+        // not take the rest of the lab down with it, and an Unindent that never ran would shift
+        // every window drawn afterwards.
+        try { body(); }
+        catch (Exception ex) { Diag.Error($"[Dig] lab section '{title}' failed: {ex.Message}"); }
+
+        ImGui.Unindent();
+        ImGui.Spacing();
     }
 
     // ── live status ──────────────────────────────────────────────────────────
@@ -114,17 +157,17 @@ internal sealed class DigTestsWindow
         if (ImGui.Button("Dig##live")) Say(_tests.Dig());
     }
 
-    private void DrawShared()
+    private void DrawMaxRise()
     {
-        ImGui.TextColored(Head, "SHARED SETTINGS");
         ImGui.TextColored(Rule,
             "Max rise is how far above or below you a buried spot may sit. It is the whole\n"
           + "\"could you actually walk there\" heuristic — it rejects clifftops and ravine floors.");
 
         Slider("Max rise (yalms)", ref DigTuning.MaxRise, 2f, 80f);
+    }
 
-        ImGui.Spacing();
-        ImGui.TextColored(Head, "DIG HUD PLACEMENT");
+    private void DrawHudPlacement()
+    {
         ImGui.TextColored(Rule,
             "Where the dig dial and the clue line sit, in logical pixels before UI scale.\n"
           + "Drop moves the PAIR down together, so it never changes the gap between them.\n"
@@ -141,9 +184,46 @@ internal sealed class DigTestsWindow
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
         if (ImGui.Button("Reset HUD placement")) { DigTuning.ResetHud(); DigTuning.Save(); }
+    }
 
-        ImGui.Spacing();
-        ImGui.TextColored(Head, "CLUE TEXT");
+    private void DrawWord()
+    {
+        ImGui.TextColored(Rule,
+            "The CLUE! / DIG! word that arcs over the dial. It is authored into the TOP of the\n"
+          + "same canvas as the dial, so drawing it at the dial's own rect is where the artist\n"
+          + "put it — these three are the deliberate nudge off that, and the default Y lift is\n"
+          + "the one adjustment it always needed to clear the rim.\n"
+          + "Scale grows it about the dial's CENTRE, so the offsets keep meaning the same thing\n"
+          + "at every size. It has its own window now, so it can move or grow as far as you like\n"
+          + "without being clipped — and that window takes no input, unlike the dial's.");
+
+        ImGui.SliderFloat("Word X", ref DigTuning.LabelOffsetX, -200f, 200f, "%.0f px");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Word Y", ref DigTuning.LabelOffsetY, -200f, 200f, "%.0f px");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Word scale", ref DigTuning.LabelScale, 0.2f, 3f, "%.2fx");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+    }
+
+    private void DrawBanners()
+    {
+        ImGui.TextColored(Rule,
+            "The TRAIL START! / TRAIL END! artwork's vertical gradient, picked at BOTH ends\n"
+          + "rather than derived from one colour and a falloff — which can only ever make the\n"
+          + "bottom a darker copy of the top, and rules out the warm-to-deep shifts real title\n"
+          + "art uses. The gradient runs across the whole banner, not per letter.");
+
+        ImGui.ColorEdit3("Banner top", ref DigTuning.BannerTopColor);
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.ColorEdit3("Banner bottom", ref DigTuning.BannerBottomColor);
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+    }
+
+    private void DrawClueText()
+    {
         ImGui.TextColored(Rule,
             "How the clue line under the dial is painted.\n"
           + "The OUTLINE's job is to separate the face from the ground, so a dark one is almost\n"
@@ -186,9 +266,10 @@ internal sealed class DigTestsWindow
         }
 
         if (ImGui.Button("Reset clue text")) { DigTuning.ResetClueStyle(); DigTuning.Save(); }
+    }
 
-        ImGui.Spacing();
-        ImGui.TextColored(Head, "DIG ARTWORK");
+    private void DrawArtwork()
+    {
         ImGui.TextColored(Rule,
             "How dark the BOTTOM of the dial, the CLUE!/DIG! word and the trail banners go, as a\n"
           + "multiplier on their colour. 1 is flat; lower is a stronger top-to-bottom fall.\n"
@@ -200,9 +281,10 @@ internal sealed class DigTestsWindow
 
         ImGui.SliderFloat("Artwork gradient", ref DigTuning.IconGradientDrop, 0.2f, 1f, "%.2f");
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+    }
 
-        ImGui.Spacing();
-        ImGui.TextColored(Head, "LIGHT BURST (behind the dial, in dig range only)");
+    private void DrawLightBurst()
+    {
         ImGui.TextColored(Rule,
             "Rays of light behind the dial once a dig would land. Each ray breathes on its own\n"
           + "clock, so the burst expands and contracts unevenly instead of pumping as one.\n"
@@ -264,9 +346,10 @@ internal sealed class DigTestsWindow
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
         if (ImGui.Button("Reset light burst")) { DigTuning.ResetRays(); DigTuning.Save(); }
+    }
 
-        ImGui.Spacing();
-        ImGui.TextColored(Head, "DIG ANIMATION LENGTH");
+    private void DrawDigLength()
+    {
         ImGui.TextColored(Rule,
             $"How long the dig plays before it ends itself and the shovel comes off.\n"
           + $"SHIPPED DEFAULT: {PropService.DefaultHoldMilliseconds / 1000f:0.##}s — found by testing, and what\n"
@@ -300,9 +383,10 @@ internal sealed class DigTestsWindow
             DigTuning.DigHoldSeconds = PropService.LongDigMilliseconds / 1000f;
             DigTuning.Apply(); DigTuning.Save();
         }
+    }
 
-        ImGui.Spacing();
-        ImGui.TextColored(Head, "DIG ANIMATION SPEED");
+    private void DrawDigSpeed()
+    {
         ImGui.TextColored(Rule,
             "Playback multiplier for the dig. 1 = untouched, 2 = twice as fast.\n"
           + "Driven by ActionTimelineSequencer.SetSlotSpeed on the base slot. The speed in force\n"
@@ -339,23 +423,12 @@ internal sealed class DigTestsWindow
           + "outside, which is why all three are shown. The write is repeated every frame.");
 
         if (ImGui.Button("Reset speed to 1.0")) Say(Plugin.Props.ResetPlaybackSpeed());
-
-        ImGui.Spacing();
-        if (ImGui.Button("Test dig now")) Say(Plugin.Props.Dig());
-        ImGui.SameLine();
-        if (ImGui.Button("Stop dig")) Say(Plugin.Props.Stop());
-
-        ImGui.Spacing();
-        if (ImGui.Button("Reset ALL tuning")) { DigTuning.ResetAll(); DigTuning.Save(); }
-        ImGui.SameLine();
-        ImGui.TextDisabled("saved to dig-tuning.json — delete it for defaults");
     }
 
     // ── Test 1 ───────────────────────────────────────────────────────────────
 
     private void DrawHunt()
     {
-        ImGui.TextColored(Head, "TEST 1 — SENSE HUNT");
 
         ImGui.TextColored(Rule,
             "RULES\n"
@@ -402,7 +475,6 @@ internal sealed class DigTestsWindow
 
     private void DrawSite()
     {
-        ImGui.TextColored(Head, "TEST 2 — AREA SURVEILLANCE");
 
         ImGui.TextColored(Rule,
             "RULES\n"
@@ -502,7 +574,6 @@ internal sealed class DigTestsWindow
 
     private void DrawTrail()
     {
-        ImGui.TextColored(Head, "TEST 3 — CLUE TRAIL");
 
         ImGui.TextColored(Rule,
             "RULES\n"

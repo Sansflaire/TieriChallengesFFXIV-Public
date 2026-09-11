@@ -289,6 +289,36 @@ internal static class DigTuning
     /// </summary>
     public static float IconGradientDrop = 0.70f;
 
+    /// <summary>
+    /// Where the CLUE! / DIG! word sits relative to the dial, and how big it is drawn.
+    ///
+    /// <para>The word is authored into the top of the SAME canvas as the dial, so drawing it at the
+    /// dial's own rect is where the artist put it. These three are the deliberate nudge off that —
+    /// the default Y lifts it clear of the rim, which is the one adjustment it always needed.</para>
+    ///
+    /// <para>Scale is applied about the dial's CENTRE, so growing the word does not also walk it
+    /// sideways and leave the offsets meaning something different at every size.</para>
+    /// </summary>
+    public static float LabelOffsetX = 0f;
+    public static float LabelOffsetY = -26f;
+    public static float LabelScale   = 1f;
+
+    /// <summary>
+    /// The TRAIL START! / TRAIL END! banners' vertical gradient, picked at both ends rather than
+    /// derived from one colour and a falloff.
+    ///
+    /// <para>Two pickers because a banner is the largest thing this HUD ever draws and the one most
+    /// worth colouring deliberately — the derived form can only ever make the bottom a darker copy
+    /// of the top, which rules out the warm-to-deep shifts real title art uses. The defaults are the
+    /// gold the artwork was drawn against and that same gold at the shared falloff, so this starts
+    /// exactly where it was.</para>
+    /// </summary>
+    public static Vector3 BannerTopColor    = DefaultBannerTop;
+    public static Vector3 BannerBottomColor = DefaultBannerBottom;
+
+    public static readonly Vector3 DefaultBannerTop    = new(1.00f, 0.847f, 0.302f);
+    public static readonly Vector3 DefaultBannerBottom = new(0.70f, 0.593f, 0.211f);
+
     public static readonly Vector3 DefaultRayColor = new(1f, 1f, 1f);
 
     // ── shared ───────────────────────────────────────────────────────────────
@@ -453,6 +483,15 @@ internal static class DigTuning
         public float RayFalloff { get; set; }
         public float RayEdgeFade { get; set; }
         public float IconGradientDrop { get; set; }
+        public float LabelOffsetX { get; set; }
+        public float LabelOffsetY { get; set; }
+        public float LabelScale { get; set; }
+        public float BannerTopR { get; set; }
+        public float BannerTopG { get; set; }
+        public float BannerTopB { get; set; }
+        public float BannerBottomR { get; set; }
+        public float BannerBottomG { get; set; }
+        public float BannerBottomB { get; set; }
     }
 
     private static string Path =>
@@ -502,6 +541,8 @@ internal static class DigTuning
         RayWidthVariance = 1.0f; RaySpeedVariance = 0.55f; RayReachVariance = 0.45f;
         RayMinLength = 0.35f; RayFalloff = 1.6f; RayEdgeFade = 0.75f;
         IconGradientDrop = 0.70f;
+        LabelOffsetX = 0f; LabelOffsetY = -26f; LabelScale = 1f;
+        BannerTopColor = DefaultBannerTop; BannerBottomColor = DefaultBannerBottom;
     }
 
     public static void ResetAll()
@@ -602,6 +643,12 @@ internal static class DigTuning
                 RayFalloff       = Clamp(d.RayFalloff,     0.2f, 5f, 1.6f);
                 RayEdgeFade      = Clamp(d.RayEdgeFade,      0f, 1f, 0.75f);
                 IconGradientDrop = Clamp(d.IconGradientDrop, 0.2f, 1f, 0.70f);
+                LabelOffsetX     = Clamp(d.LabelOffsetX, -300f, 300f,   0f);
+                LabelOffsetY     = Clamp(d.LabelOffsetY, -300f, 300f, -26f);
+                LabelScale       = Clamp(d.LabelScale,    0.2f,   3f,   1f);
+
+                BannerTopColor    = Rgb(d.BannerTopR,    d.BannerTopG,    d.BannerTopB);
+                BannerBottomColor = Rgb(d.BannerBottomR, d.BannerBottomG, d.BannerBottomB);
             }
             else ResetRays();
 
@@ -718,6 +765,11 @@ internal static class DigTuning
                 RayReachVariance = RayReachVariance, RayMinLength = RayMinLength,
                 RayFalloff = RayFalloff, RayEdgeFade = RayEdgeFade,
                 IconGradientDrop = IconGradientDrop,
+                LabelOffsetX = LabelOffsetX, LabelOffsetY = LabelOffsetY, LabelScale = LabelScale,
+                BannerTopR = BannerTopColor.X, BannerTopG = BannerTopColor.Y,
+                BannerTopB = BannerTopColor.Z,
+                BannerBottomR = BannerBottomColor.X, BannerBottomG = BannerBottomColor.Y,
+                BannerBottomB = BannerBottomColor.Z,
             };
 
             // Temp-then-replace, like the completion stores: a half-written tuning file read on the
