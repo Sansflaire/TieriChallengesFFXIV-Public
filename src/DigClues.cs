@@ -204,7 +204,8 @@ internal sealed class DigClueWriter
         var near = PickAnchor(anchors, spot, hard, out float dist, exclude: null);
         if (near is not { } a) return string.Empty;
 
-        string quad = DigLandmarks.Quadrant(spot);
+        string quad         = DigLandmarks.Quadrant(spot);
+        float  awkwardRoll  = (float)_rng.NextDouble();
 
         // HARD — two anchors and no bearing at all.
         if (hard >= 0.67f && anchors.Count > 1)
@@ -216,6 +217,17 @@ internal sealed class DigClueWriter
                     ? $"Between {a.Name} and {b.Name}, nearer the first. Somewhere in {quad}."
                     : $"Between {a.Name} and {b.Name}, nearer the second. Somewhere in {quad}.";
         }
+
+        // FAR-FROM: a negative constraint rather than a bearing. Sansflaire's shape — "far away from X"
+        // is a legitimate clue, and a deliberately annoying one, because it rules out a circle
+        // instead of pointing at a line.
+        //
+        // NEVER on its own: everywhere is far from something, so alone it says nothing at all. It is
+        // always paired with the quadrant, which is what makes the pair solvable — one clause
+        // narrows the map, the other carves a hole out of what is left. Only offered when the anchor
+        // really is distant, or it would be a plain falsehood.
+        if (dist >= 90f && awkwardRoll < Math.Clamp(DigTuning.RoamAwkwardness, 0f, 1f) * 0.45f)
+            return $"A long way from {a.Name} — look in {quad}.";
 
         string bearing = $"{Intensity(dist)}{DigGround.Compass(a.World, spot)} of {a.Name}";
 
@@ -820,8 +832,57 @@ internal static class DigClueSources
     /// will have wandered off or been killed by the time the player arrives, but wharf rats in
     /// general will still be roughly where wharf rats live.</para>
     /// </summary>
-    public static IReadOnlyList<Anchor> NearbyEnemies(Vector3 spot) =>
-        NearbyOfKind(spot, ObjectKind.BattleNpc);
+    public static IReadOnlyList<Anchor> NearbyEnemies(Vector3 spot) => EnemyGroups(spot);
+
+    /// <summary>
+    /// Hostile creatures near a position, collapsed into ONE anchor per species at the CENTRE of
+    /// where that species is standing.
+    ///
+    /// <para><b>A group location is the right granularity, and an individual is the wrong one.</b>
+    /// Sansflaire's call: "near the Specific-Named Wolf enemies" is a fine clue. The particular wolf that
+    /// happened to be there when the trail was generated will have wandered off or been killed by
+    /// the time the player arrives — but wolves in general will still be roughly where wolves live,
+    /// so the centroid of the pack is both more stable and more useful than any one of them.</para>
+    ///
+    /// <para>It also means mob spawn POINTS are not needed for this category at all, which is the
+    /// question the LGB probe was asked to settle. An area is enough.</para>
+    /// </summary>
+    private static IReadOnlyList<Anchor> EnemyGroups(Vector3 spot)
+    {
+        var sums   = new Dictionary<string, (Vector3 Sum, int Count)>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            foreach (var obj in Plugin.ObjectTable)
+            {
+                if (obj == null || obj.ObjectKind != ObjectKind.BattleNpc) continue;
+
+                string name = obj.Name.TextValue;
+                if (name.Length == 0) continue;
+                if (DigGround.Flat(obj.Position, spot) > NearRadius) continue;
+
+                var prev = sums.TryGetValue(name, out var p) ? p : (Vector3.Zero, 0);
+                sums[name] = (prev.Item1 + obj.Position, prev.Item2 + 1);
+            }
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Clue] enemy scan failed: {ex.Message}");
+        }
+
+        var list = new List<Anchor>();
+
+        foreach (var kv in sums)
+        {
+            var centre = kv.Value.Sum / kv.Value.Count;
+
+            // Plural only when there genuinely is a group. "near the Ixali Windtalkers" reads as a
+            // place; "near the Ixali Windtalkers" for one lone mob reads as a lie.
+            list.Add(new Anchor(kv.Value.Count > 1 ? $"the {kv.Key}s" : $"the {kv.Key}", centre));
+        }
+
+        return list;
+    }
 
     /// <summary>How far from a spot a loaded object may be and still be called "there".</summary>
     private const float NearRadius = 55f;
@@ -856,6 +917,74 @@ internal static class DigClueSources
         }
 
         return list;
+    }
+
+    /// <summary>
+    /// Counts what the current zone's LGB layer files actually contain, so the question "can we get
+    /// mob spawn areas from client data" is answered by measurement instead of by argument.
+    ///
+    /// <para><b>This is a probe, not a source.</b> Mob spawn TABLES are server-side — settled as Q11,
+    /// and why <c>monsters.json</c> ships <c>mapLocation: ???</c> for all 14,560 entries. But spawn
+    /// POINTS are a different thing from spawn tables: the level geometry files carry placement
+    /// objects, and Lumina can parse them (<c>LayerEntryType.BattleNPC</c> and
+    /// <c>PopRangeInstanceObject</c> both exist). Whether retail LGB actually holds usable BattleNPC
+    /// entries for overworld zones, with ids that resolve to names, is <b>unverified</b> — so this
+    /// counts them in one click rather than committing to a parser that might find nothing.</para>
+    ///
+    /// <para>If the counts come back healthy across a few zones, an Enemy source covering the whole
+    /// map is worth building. If they come back at zero, the Enemy category stays live-only and that
+    /// is the end of it — which is a result, not a failure.</para>
+    /// </summary>
+    public static string ProbeZoneLayers()
+    {
+        try
+        {
+            var territories = Plugin.DataManager.GetExcelSheet<LSheets.TerritoryType>();
+
+            if (territories?.GetRowOrDefault(Plugin.ClientState.TerritoryType) is not { } t)
+                return "no TerritoryType row for this zone.";
+
+            string bg = t.Bg.ExtractText();
+            if (bg.Length == 0) return "this territory has no Bg path.";
+
+            var lines = new List<string> { $"Bg = {bg}" };
+
+            // The four layer files a territory normally carries. Named individually because which
+            // one holds placements varies by zone age, and "not found" for one is not an error.
+            foreach (var which in new[] { "planevent", "planlive", "planmap", "bg" })
+            {
+                string path = $"bg/{bg}/level/{which}.lgb";
+
+                var file = Plugin.DataManager.GetFile<Lumina.Data.Files.LgbFile>(path);
+                if (file == null) { lines.Add($"  {which}.lgb: absent"); continue; }
+
+                int battle = 0, evt = 0, pop = 0, total = 0;
+
+                foreach (var layer in file.Layers)
+                {
+                    foreach (var obj in layer.InstanceObjects)
+                    {
+                        total++;
+
+                        switch (obj.AssetType)
+                        {
+                            case Lumina.Data.Parsing.Layer.LayerEntryType.BattleNPC: battle++; break;
+                            case Lumina.Data.Parsing.Layer.LayerEntryType.EventNPC:  evt++;    break;
+                            case Lumina.Data.Parsing.Layer.LayerEntryType.PopRange:  pop++;    break;
+                        }
+                    }
+                }
+
+                lines.Add($"  {which}.lgb: {file.Layers.Length} layer(s), {total} object(s) — "
+                        + $"BattleNPC {battle}, EventNPC {evt}, PopRange {pop}");
+            }
+
+            return string.Join("\n[Challenges] ", lines);
+        }
+        catch (Exception ex)
+        {
+            return $"LGB probe failed: {ex.Message}";
+        }
     }
 
     /// <summary>Drops the per-territory caches, so a zone change re-reads rather than remembering.</summary>

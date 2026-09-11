@@ -467,6 +467,18 @@ internal sealed class DigTestsWindow
             DigClueSources.Invalidate();
             foreach (var line in DigClueSources.AetheryteReport.Split('\n')) Say(line);
         }
+
+        ImGui.SameLine();
+        if (ImGui.Button("Probe zone LGB##try")) Say(DigClueSources.ProbeZoneLayers());
+
+        ImGui.TextColored(Rule,
+            "Probe zone LGB counts the placement objects in this zone's level geometry files.\n"
+          + "It answers whether mob SPAWN POINTS can come from client data, which is a different\n"
+          + "question from spawn TABLES — those are server-side and settled (Q11), which is why\n"
+          + "monsters.json has mapLocation ??? for all 14,560 entries. Lumina can parse LGB and\n"
+          + "LayerEntryType.BattleNPC exists, but whether retail zones actually carry usable\n"
+          + "BattleNPC entries is UNVERIFIED. Healthy counts across a few zones means a whole-map\n"
+          + "Enemy source is worth building; zeros mean Enemy stays live-only and that is settled.");
     }
 
     private void DumpLandmarks()
