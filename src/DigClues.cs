@@ -177,7 +177,7 @@ internal sealed class DigClueWriter
     private string Compose(ClueCategory cat, Vector3 spot, float hard) => cat switch
     {
         ClueCategory.Landmark  => FromAnchors(DigClueSources.Landmarks(), spot, hard, "named place"),
-        ClueCategory.Aetheryte => FromAnchors(DigClueSources.Aetherytes(), spot, hard, "aetheryte"),
+        ClueCategory.Aetheryte => FromAnchors(DigClueSources.AetherytesNear(spot), spot, hard, "aetheryte"),
         ClueCategory.Section   => FromAnchors(DigClueSources.Sections(),   spot, hard, "map section"),
         ClueCategory.Npc       => FromAnchors(DigClueSources.NearbyNpcs(spot),    spot, hard, "npc"),
         ClueCategory.Enemy     => FromAnchors(DigClueSources.NearbyEnemies(spot), spot, hard, "enemy"),
@@ -422,6 +422,104 @@ internal static class DigClueSources
         return _aetherytes;
     }
 
+    /// <summary>
+    /// Aetheryte anchors from the sheet PLUS the aethernet shards the client has loaded right now.
+    ///
+    /// <para><b>A housing subdivision's shard is in NO sheet this can reach.</b> Empyreum's shards
+    /// are <c>EventObj</c> entries in the object table named "Aethernet Shard" — not <c>EventNpc</c>,
+    /// not <c>BattleNpc</c>, and with no <c>Aetheryte</c> row bound to the territory. So every source
+    /// here was blind to the single most obvious landmark in the zone, while the character stood next
+    /// to one. Only looking at what the game actually had loaded found it.</para>
+    ///
+    /// <para><b>The live half is cached per call site, not per territory</b>, because object loading
+    /// changes as the player moves — unlike the sheet half, which cannot.</para>
+    /// </summary>
+    public static IReadOnlyList<Anchor> AetherytesNear(Vector3 spot)
+    {
+        var list = new List<Anchor>(Aetherytes());
+
+        foreach (var shard in LiveShards(spot))
+        {
+            // Sheet first: if the sheet already names this place, its name is the better one and the
+            // generic "Aethernet Shard" would just be a duplicate anchor under a worse label.
+            bool duplicate = false;
+
+            foreach (var a in list)
+            {
+                if (DigGround.Flat(a.World, shard.World) > 12f) continue;
+                duplicate = true;
+                break;
+            }
+
+            if (!duplicate) list.Add(shard);
+        }
+
+        return list;
+    }
+
+    /// <summary>
+    /// Aethernet shards and aetherytes standing in the world near a position, named usefully.
+    ///
+    /// <para><b>The object's own name is generic</b> — every one of them is just "Aethernet Shard",
+    /// which is a fine clue in a subdivision that has one and a useless one in a city that has eight.
+    /// So it is qualified with the nearest named map SECTION when there is one close enough, giving
+    /// "the Aethernet Shard in The Halberd's Head Subdivision" — which is how a person would say it.</para>
+    /// </summary>
+    private static IReadOnlyList<Anchor> LiveShards(Vector3 spot)
+    {
+        var list = new List<Anchor>();
+
+        try
+        {
+            foreach (var obj in Plugin.ObjectTable)
+            {
+                if (obj == null) continue;
+                if (obj.ObjectKind != ObjectKind.EventObj) continue;
+
+                string name = obj.Name.TextValue;
+                if (name.Length == 0) continue;
+
+                bool isShard = name.IndexOf("Aethernet", StringComparison.OrdinalIgnoreCase) >= 0
+                            || name.IndexOf("Aetheryte", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                if (!isShard) continue;
+                if (DigGround.Flat(obj.Position, spot) > ShardRadius) continue;
+
+                list.Add(new Anchor(Qualify(name, obj.Position), obj.Position));
+            }
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Clue] shard scan failed: {ex.Message}");
+        }
+
+        return list;
+    }
+
+    /// <summary>
+    /// A shard can anchor a clue from further away than an NPC can, because unlike an NPC it does not
+    /// wander off and is a genuine navigation landmark.
+    /// </summary>
+    private const float ShardRadius = 150f;
+
+    /// <summary>Attaches the nearest named map section to a generic object name, when one is near.</summary>
+    private static string Qualify(string name, Vector3 where)
+    {
+        string? best = null;
+        float   bestD = 90f;
+
+        foreach (var s in Sections())
+        {
+            float d = DigGround.Flat(s.World, where);
+            if (d >= bestD) continue;
+
+            bestD = d;
+            best  = s.Name;
+        }
+
+        return best == null ? $"the {name}" : $"the {name} in {best}";
+    }
+
     private static uint          _aetheryteTerritory = uint.MaxValue;
     private static List<Anchor>? _aetherytes;
     private static string        _aetheryteReport = "not read yet.";
@@ -623,9 +721,39 @@ internal static class DigClueSources
     /// </summary>
     public static string Census(Vector3 around)
     {
-        return $"landmarks {Landmarks().Count}   aetherytes+shards {Aetherytes().Count}   "
-             + $"sections {Sections().Count}   npcs near you {NearbyNpcs(around).Count}   "
-             + $"enemies near you {NearbyEnemies(around).Count}";
+        // The raw object-table tally alongside the filtered one. A category reporting zero while the
+        // game plainly has that thing standing there is our filter, not the world — and printing
+        // only the filtered number is what made an Aethernet Shard three yalms away read as "this
+        // zone has no aetherytes". Twice in one session, so the raw counts stay visible.
+        int npcs = 0, enemies = 0, objs = 0, shardObjs = 0;
+
+        try
+        {
+            foreach (var o in Plugin.ObjectTable)
+            {
+                if (o == null) continue;
+
+                switch (o.ObjectKind)
+                {
+                    case ObjectKind.EventNpc:  npcs++;    break;
+                    case ObjectKind.BattleNpc: enemies++; break;
+                    case ObjectKind.EventObj:
+                        objs++;
+                        if (o.Name.TextValue.IndexOf("Aethe", StringComparison.OrdinalIgnoreCase) >= 0)
+                            shardObjs++;
+                        break;
+                }
+            }
+        }
+        catch (Exception ex) { Diag.Error($"[Clue] census failed: {ex.Message}"); }
+
+        return $"USABLE ANCHORS — landmarks {Landmarks().Count}   "
+             + $"aetherytes+shards {AetherytesNear(around).Count} "
+             + $"(sheet {Aetherytes().Count})   sections {Sections().Count}   "
+             + $"npcs {NearbyNpcs(around).Count}   enemies {NearbyEnemies(around).Count}\n"
+             + $"[Challenges] OBJECT TABLE RAW — EventNpc {npcs}   BattleNpc {enemies}   "
+             + $"EventObj {objs} (aethe-named {shardObjs}). "
+             + "A usable count far below its raw count means our own filter, not the game.";
     }
 }
 #endif
