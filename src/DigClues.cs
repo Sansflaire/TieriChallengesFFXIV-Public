@@ -438,6 +438,9 @@ internal static class DigClueSources
     {
         var list = new List<Anchor>(Aetherytes());
 
+        // The housing shards, which are a different sheet entirely — see HousingShards.
+        foreach (var h in HousingShards()) list.Add(h);
+
         foreach (var shard in LiveShards(spot))
         {
             // Sheet first: if the sheet already names this place, its name is the better one and the
@@ -456,6 +459,61 @@ internal static class DigClueSources
 
         return list;
     }
+
+    /// <summary>
+    /// The aethernet shards of a housing district, from the <c>HousingAethernet</c> sheet.
+    ///
+    /// <para><b>They are not in the <c>Aetheryte</c> sheet and never were.</b> Two versions were
+    /// spent loosening filters over that sheet — both fixed real defects, neither touched this,
+    /// because a housing district's shards live in their own table. Empyreum has nine and the
+    /// <c>Aetheryte</c> query found zero; that was not a filter being strict, it was the wrong
+    /// table.</para>
+    ///
+    /// <para><b>This is the source that covers the whole map</b>, which the object table cannot: the
+    /// client only streams in objects near the player, so exactly one of Empyreum's nine shards was
+    /// visible as an <c>EventObj</c> at any time. A sheet has all nine regardless of where the player
+    /// stands, which is what a clue about the far side of the map needs.</para>
+    /// </summary>
+    public static IReadOnlyList<Anchor> HousingShards()
+    {
+        if (_housingTerritory == Plugin.ClientState.TerritoryType && _housing != null) return _housing;
+
+        var list = new List<Anchor>();
+
+        try
+        {
+            uint territory = Plugin.ClientState.TerritoryType;
+            var  sheet     = Plugin.DataManager.GetExcelSheet<LSheets.HousingAethernet>();
+
+            if (sheet != null)
+            {
+                foreach (var h in sheet)
+                {
+                    if (h.TerritoryType.RowId != territory) continue;
+
+                    string name = h.PlaceName.ValueNullable?.Name.ExtractText() ?? string.Empty;
+                    if (name.Length == 0) continue;
+
+                    if (h.Level.ValueNullable is not { } lvl) continue;
+                    if (lvl.X == 0f && lvl.Y == 0f && lvl.Z == 0f) continue;
+
+                    list.Add(new Anchor($"the {name} aethernet shard",
+                                        new Vector3(lvl.X, lvl.Y, lvl.Z)));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Clue] housing aethernet read failed: {ex.Message}");
+        }
+
+        _housingTerritory = Plugin.ClientState.TerritoryType;
+        _housing          = list;
+        return list;
+    }
+
+    private static uint          _housingTerritory = uint.MaxValue;
+    private static List<Anchor>? _housing;
 
     /// <summary>
     /// Aethernet shards and aetherytes standing in the world near a position, named usefully.
@@ -656,8 +714,102 @@ internal static class DigClueSources
     /// would cover the whole map but needs its <c>Type</c> enum confirmed before its rows can be
     /// trusted to be NPCs; that is a research item, not a guess to make here.</para>
     /// </summary>
-    public static IReadOnlyList<Anchor> NearbyNpcs(Vector3 spot) =>
-        NearbyOfKind(spot, ObjectKind.EventNpc);
+    public static IReadOnlyList<Anchor> NearbyNpcs(Vector3 spot)
+    {
+        // Whole-map placements first, then whatever is loaded but has no placement row. The live
+        // table is the SUPPLEMENT now, not the source: it only ever holds what the client has
+        // streamed in around the player, which in Empyreum meant one shard out of nine and a
+        // handful of NPCs out of a zone full of them.
+        var list = new List<Anchor>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var a in MapNpcs())
+        {
+            if (DigGround.Flat(a.World, spot) > NpcRadius) continue;
+            if (!seen.Add(a.Name)) continue;
+            list.Add(a);
+        }
+
+        foreach (var a in NearbyOfKind(spot, ObjectKind.EventNpc))
+        {
+            if (!seen.Add(a.Name)) continue;
+            list.Add(a);
+        }
+
+        return list;
+    }
+
+    /// <summary>
+    /// How far from a spot a placed NPC may be and still anchor a clue. Wider than the live radius
+    /// because a placement is a fixed, findable thing rather than something that may have wandered.
+    /// </summary>
+    private const float NpcRadius = 120f;
+
+    /// <summary>
+    /// Every named NPC PLACED in the current territory, from the <c>Level</c> sheet — the whole map,
+    /// not merely what the client has loaded.
+    ///
+    /// <para><b>The discriminator is <c>Level.Object.RowId >= 1000000</c>, and it is not a guess.</b>
+    /// It is lifted verbatim from this repo's own dataset generator
+    /// (<c>scripts/gen-datasets/Program.cs</c>), where it produces all 30,878 entries of
+    /// <c>data/npcs.json</c>. That threshold is what identifies an <c>ENpcResident</c> placement, and
+    /// it is why no <c>Level.Type</c> enum value has to be assumed here — an earlier attempt stalled
+    /// on exactly that, because guessing an enum is the kind of thing that compiles and is
+    /// silently wrong.</para>
+    ///
+    /// <para><b>Read live rather than from npcs.json.</b> The dataset is the same data and is 14 MB;
+    /// parsing it at runtime would cost a visible hitch and ship a file that can go stale against the
+    /// game. The sheet is already in memory and is current by construction. The dataset's value is
+    /// that it PROVED this path works, which is a different job from being the path.</para>
+    ///
+    /// <para><b>Enemies get no equivalent and cannot.</b> Monster spawns are not <c>Level</c> rows —
+    /// <c>monsters.json</c> ships with <c>mapLocation: ???</c> for every one of its 14,560 entries
+    /// because spawn tables are server-side. So the Enemy category stays live-only, and abstains for
+    /// a spot the client has not streamed in. That is a real limit, not a gap to fill later.</para>
+    /// </summary>
+    public static IReadOnlyList<Anchor> MapNpcs()
+    {
+        if (_npcTerritory == Plugin.ClientState.TerritoryType && _npcs != null) return _npcs;
+
+        var list = new List<Anchor>();
+
+        try
+        {
+            uint territory = Plugin.ClientState.TerritoryType;
+
+            var levels = Plugin.DataManager.GetExcelSheet<LSheets.Level>();
+            var npcs   = Plugin.DataManager.GetExcelSheet<LSheets.ENpcResident>();
+
+            if (levels != null && npcs != null)
+            {
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var l in levels)
+                {
+                    if (l.Territory.RowId != territory) continue;
+                    if (l.Object.RowId < 1000000) continue;
+
+                    string name = npcs.GetRowOrDefault(l.Object.RowId)?.Singular.ExtractText()
+                                  ?? string.Empty;
+
+                    if (name.Length == 0 || !seen.Add(name)) continue;
+
+                    list.Add(new Anchor(name, new Vector3(l.X, l.Y, l.Z)));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Clue] npc placement read failed: {ex.Message}");
+        }
+
+        _npcTerritory = Plugin.ClientState.TerritoryType;
+        _npcs         = list;
+        return list;
+    }
+
+    private static uint          _npcTerritory = uint.MaxValue;
+    private static List<Anchor>? _npcs;
 
     /// <summary>
     /// Named hostile creatures the client currently has loaded near a position. Same streaming
@@ -712,6 +864,10 @@ internal static class DigClueSources
         _aetheryteTerritory = uint.MaxValue;
         _aetherytes         = null;
         _aetheryteReport    = "not read yet.";
+        _housingTerritory   = uint.MaxValue;
+        _housing            = null;
+        _npcTerritory       = uint.MaxValue;
+        _npcs               = null;
     }
 
     /// <summary>
@@ -749,8 +905,10 @@ internal static class DigClueSources
 
         return $"USABLE ANCHORS — landmarks {Landmarks().Count}   "
              + $"aetherytes+shards {AetherytesNear(around).Count} "
-             + $"(sheet {Aetherytes().Count})   sections {Sections().Count}   "
-             + $"npcs {NearbyNpcs(around).Count}   enemies {NearbyEnemies(around).Count}\n"
+             + $"(Aetheryte sheet {Aetherytes().Count}, HousingAethernet {HousingShards().Count})   "
+             + $"sections {Sections().Count}   "
+             + $"npcs {NearbyNpcs(around).Count} (placed in zone {MapNpcs().Count})   "
+             + $"enemies {NearbyEnemies(around).Count}\n"
              + $"[Challenges] OBJECT TABLE RAW — EventNpc {npcs}   BattleNpc {enemies}   "
              + $"EventObj {objs} (aethe-named {shardObjs}). "
              + "A usable count far below its raw count means our own filter, not the game.";
