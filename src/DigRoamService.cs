@@ -311,7 +311,12 @@ internal sealed unsafe class DigRoamService : IDigTest
             // This is the gate that does not need to be clever. Every automatic attempt to work out
             // which ground is off-limits has failed in a different way; a rectangle somebody drew
             // over the lake cannot be wrong about the lake.
-            if (DigTuning.InNullZone(_territory, spot.X, spot.Z)) { _rejNull++; continue; }
+            // THE LIVE TERRITORY, NOT THE FIELD. _territory is only assigned when a RUN starts, and
+            // the debug sampler never starts a run — so it read 0, matched no zones, and the gate
+            // silently did nothing while rectangles sat plainly on the map. Reading the zone the
+            // player is actually in cannot be stale and cannot be unset.
+            if (DigTuning.InNullZone(Plugin.ClientState.TerritoryType, spot.X, spot.Z))
+            { _rejNull++; continue; }
 
             // NEAR SOMETHING THE MAP NAMES — the containment that follows the zone's SHAPE.
             //
@@ -532,6 +537,12 @@ internal sealed unsafe class DigRoamService : IDigTest
         if (player == null) return found;
 
         ResetRejections();
+
+        // Kept in step with the live zone as well, so anything else in TryPlace that reads the
+        // field behaves the same for a sample as it does for a real run. The sampler exists to
+        // exercise the REAL placement path; a field only one of its two callers assigns is a
+        // difference between them that nothing declares.
+        _territory = Plugin.ClientState.TerritoryType;
 
         // KEEPS GOING PAST A FAILURE, unlike a real run.
         //
