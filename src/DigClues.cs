@@ -765,7 +765,21 @@ internal sealed class DigClueWriter
         float east  = spot.X - cx;
         float north = cz - spot.Z;              // +Z is south, so north is the negative side
 
-        if (MathF.Sqrt(east * east + north * north) < 1f) return "right around the middle";
+        // NO BEARING NEAR THE CENTRE, and the threshold must SCALE WITH THE BOX.
+        //
+        // This was 6% of the span and the refactor replaced it with a flat 1 yalm — which meant a
+        // spot two yalms from the middle got a confident hour, and a spot two yalms the other way
+        // got an hour six hours different. A bearing taken from almost no displacement is noise
+        // wearing the clothes of a fact, and it is the worst kind of wrong clue: precise, confident
+        // and meaningless.
+        //
+        // Observed: a spot 1.2 yalms from the centre of a hand-drawn box was reported as "around 1
+        // o'clock" when it was very slightly WEST of north, i.e. 11 o'clock — the hour was decided
+        // entirely by rounding noise.
+        float span   = MathF.Max(1f, MathF.Max(hi.X - lo.X, hi.Y - lo.Y));
+        float radius = MathF.Sqrt(east * east + north * north);
+
+        if (radius < span * 0.06f) return "right around the middle of the map";
 
         float bearing = MathF.Atan2(east, north) * 180f / MathF.PI;
         if (bearing < 0f) bearing += 360f;

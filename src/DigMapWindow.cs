@@ -297,6 +297,8 @@ internal sealed class DigMapWindow
             }
         }
 
+        if (_showClock) DrawClockCones(drawList, Plot);
+
         uint red = ImGui.GetColorU32(new Vector4(1f, 0.25f, 0.25f, 0.95f));
         int outside = 0;
 
@@ -603,6 +605,90 @@ internal sealed class DigMapWindow
         }
     }
 
+    /// <summary>
+    /// The twelve clock cones, drawn from the centre of the walkable box out to its edge.
+    ///
+    /// <para><b>This is not a new model — it is the existing one made visible.</b> The clue writer
+    /// already assigns an hour with <c>round(bearing / 30)</c>, which gives each hour a 30-degree
+    /// sector centred on its own direction: 12 o'clock spans 345 to 15, 1 o'clock spans 15 to 45,
+    /// and so on. Drawing the boundaries turns "why is that 1 o'clock" from an argument into a look
+    /// at the map.</para>
+    ///
+    /// <para><b>Cones are clipped to the box, not drawn as a circle.</b> The search area is a
+    /// rectangle, so a circular dial would claim area outside it and stop short inside it — each
+    /// boundary is walked out to where it actually leaves the box. The centre dot is drawn because
+    /// a bearing taken near it is meaningless, and seeing how close a spot is to the middle is the
+    /// fastest way to know an hour is noise.</para>
+    /// </summary>
+    private static void DrawClockCones(ImDrawListPtr drawList, PlotFn plot)
+    {
+        if (!DigLandmarks.WalkableBox(out var lo, out var hi)) return;
+
+        float cx = (lo.X + hi.X) * 0.5f;
+        float cz = (lo.Y + hi.Y) * 0.5f;
+
+        var centre = new Vector3(cx, 0f, cz);
+        if (!plot(centre, out var centreAt)) return;
+
+        uint line  = ImGui.GetColorU32(new Vector4(0.55f, 0.80f, 1f, 0.55f));
+        uint label = ImGui.GetColorU32(new Vector4(0.75f, 0.90f, 1f, 0.95f));
+
+        // The dead zone the writer refuses to give a bearing inside — 6% of the span. Drawn so a
+        // spot sitting in it is obviously in it.
+        float span = MathF.Max(1f, MathF.Max(hi.X - lo.X, hi.Y - lo.Y));
+
+        if (plot(new Vector3(cx + span * 0.06f, 0f, cz), out var edgeAt))
+            drawList.AddCircle(centreAt, Vector2.Distance(centreAt, edgeAt), line, 32, 1.5f);
+
+        for (int k = 0; k < 12; k++)
+        {
+            // BOUNDARIES sit on the half-hour offsets; the hour itself is the middle of its cone.
+            DrawRay(k * 30f + 15f, line);
+
+            // The label goes at the cone's centre line, partway out so it does not pile up at the
+            // middle where all twelve converge.
+            int hour = k == 0 ? 12 : k;
+
+            if (TryEdge(k * 30f, out var mid) &&
+                plot(Vector3.Lerp(centre, mid, 0.62f), out var at))
+                drawList.AddText(at - new Vector2(6f, 7f), label, hour.ToString());
+        }
+
+        void DrawRay(float bearing, uint colour)
+        {
+            if (!TryEdge(bearing, out var edge)) return;
+            if (!plot(edge, out var to)) return;
+
+            drawList.AddLine(centreAt, to, colour, 1.5f);
+        }
+
+        // Where a bearing from the centre leaves the box. Ray-versus-rectangle, taking the nearest
+        // positive crossing on each axis — the smaller one is the side it actually exits through.
+        bool TryEdge(float bearing, out Vector3 edge)
+        {
+            edge = centre;
+
+            float rad = bearing * MathF.PI / 180f;
+
+            // +X is east, north is -Z, matching DigGround.Compass and the clue writer.
+            float dx = MathF.Sin(rad);
+            float dz = -MathF.Cos(rad);
+
+            float t = float.MaxValue;
+
+            if (MathF.Abs(dx) > 0.0001f)
+                t = MathF.Min(t, ((dx > 0f ? hi.X : lo.X) - cx) / dx);
+
+            if (MathF.Abs(dz) > 0.0001f)
+                t = MathF.Min(t, ((dz > 0f ? hi.Y : lo.Y) - cz) / dz);
+
+            if (t <= 0f || t == float.MaxValue) return false;
+
+            edge = new Vector3(cx + dx * t, 0f, cz + dz * t);
+            return true;
+        }
+    }
+
     /// <summary>Screen point to world position — the inverse of Plot, sharing its zoom and pan.</summary>
     private static bool TryWorldAt(Vector2 screen, Vector2 origin, float side, out Vector3 world)
     {
@@ -797,6 +883,7 @@ internal sealed class DigMapWindow
     private static bool _showSpots      = true;
     private static bool _showPlayer     = true;
     private static bool _showRejects;
+    private static bool _showClock;
 
     /// <summary>One colour per rejecting gate, and the legend is generated from the same table.</summary>
     private static readonly (string Reason, Vector4 Colour)[] ReasonLegend =
@@ -913,6 +1000,7 @@ internal sealed class DigMapWindow
         ImGui.SameLine(); ImGui.Checkbox("You", ref _showPlayer);
         ImGui.SameLine(); ImGui.Checkbox("Clue anchors", ref _showClueAnchors);
         ImGui.SameLine(); ImGui.Checkbox("Rejected", ref _showRejects);
+        ImGui.SameLine(); ImGui.Checkbox("Clock cones", ref _showClock);
 
         if (_showRejects)
         {

@@ -730,11 +730,31 @@ internal sealed unsafe class DigRoamService : IDigTest
             // The numbers the quadrant, the 3x3 cell and the clock bearing are all derived from.
             // Printed because "dead centre" on a spot that is visibly north-east is unanswerable
             // without them — and the cause was the CENTRE being wrong, not the spot.
-            DigLandmarks.ContentBounds(out var lo, out var hi);
+            // WalkableBox, NOT ContentBounds — they are different functions with different
+            // precedence, and the diagnostic was printing the one the CLUE does not use.
+            //
+            // WalkableBox checks the hand-drawn box first; ContentBounds never looked at it. So with
+            // a manual box set, the clue measured its bearings from the hand-drawn centre while this
+            // readout confidently printed the navmesh-derived one — and the two disagreed by enough
+            // to make a correct clue look wrong. A diagnostic that reads a different source from the
+            // thing it is diagnosing is worse than no diagnostic.
+            DigLandmarks.WalkableBox(out var worldLo, out var worldHi);
 
-            string source = DigNavmesh.WalkableSampleCount > 0
-                ? $"navmesh ({DigNavmesh.WalkableSampleCount} samples)"
-                : "map labels / coordinate range (navmesh could not bound it)";
+            // Converted for display only, since the readout above it is in map coordinates.
+            DigLandmarks.TryMapCoords(new Vector3(worldLo.X, 0f, worldLo.Y), out float blx, out float bly);
+            DigLandmarks.TryMapCoords(new Vector3(worldHi.X, 0f, worldHi.Y), out float bhx, out float bhy);
+
+            var lo = new Vector2(MathF.Min(blx, bhx), MathF.Min(bly, bhy));
+            var hi = new Vector2(MathF.Max(blx, bhx), MathF.Max(bly, bhy));
+
+            // Names the source WalkableBox actually used, in its own precedence order, so the line
+            // cannot claim "navmesh" while a hand-drawn box is quietly overriding it.
+            string source =
+                DigTuning.TryManualBox(_territory, out _, out _, out _, out _) ? "HAND-DRAWN box"
+                : DigLandmarks.ForCurrentMap().Count >= 4                      ? "map labels"
+                : DigNavmesh.WalkableSampleCount > 0
+                    ? $"navmesh ({DigNavmesh.WalkableSampleCount} samples)"
+                    : "the map's coordinate range (nothing better available)";
 
             line += $"\n[Challenges] walkable box spans x {lo.X:0.0}-{hi.X:0.0}, y {lo.Y:0.0}-{hi.Y:0.0}"
                   + $"   centre ({(lo.X + hi.X) * 0.5f:0.0}, {(lo.Y + hi.Y) * 0.5f:0.0})"

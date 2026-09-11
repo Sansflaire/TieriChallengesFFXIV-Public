@@ -304,55 +304,17 @@ internal static class DigLandmarks
         return TryWorldBounds(out lo, out hi);
     }
 
-    public static void ContentBounds(out Vector2 lo, out Vector2 hi)
-    {
-        float span = MathF.Max(1f, MapSpan);
-
-        lo = new Vector2(1f, 1f);
-        hi = new Vector2(1f + span, 1f + span);
-
-        // FIRST CHOICE: the navmesh. It is the walkable area by definition, so its extent is the
-        // extent of anywhere the player can be — which is exactly what a quadrant should divide.
-        // Sansflaire's call, and it is better than both fallbacks: the coordinate range is a mostly-empty
-        // square, and landmarks describe where the game puts LABELS, which cluster on features and
-        // miss open ground.
-        if (TryWorldBounds(out var worldLo, out var worldHi) &&
-            DigNavmesh.TryWalkableBounds(worldLo, worldHi, out var walkLo, out var walkHi) &&
-            TryMapCoords(new Vector3(walkLo.X, 0f, walkLo.Y), out float ax, out float ay) &&
-            TryMapCoords(new Vector3(walkHi.X, 0f, walkHi.Y), out float bx, out float by))
-        {
-            lo = new Vector2(MathF.Min(ax, bx), MathF.Min(ay, by));
-            hi = new Vector2(MathF.Max(ax, bx), MathF.Max(ay, by));
-            return;
-        }
-
-        // SECOND CHOICE: the map's own labels. Crude — they sit on features rather than spanning
-        // the walkable area — but far better than the raw coordinate square.
-        var marks = ForCurrentMap();
-        if (marks.Count < 4) return;
-
-        float minX = float.MaxValue, minY = float.MaxValue;
-        float maxX = float.MinValue, maxY = float.MinValue;
-
-        foreach (var m in marks)
-        {
-            if (m.MapX < minX) minX = m.MapX;
-            if (m.MapX > maxX) maxX = m.MapX;
-            if (m.MapY < minY) minY = m.MapY;
-            if (m.MapY > maxY) maxY = m.MapY;
-        }
-
-        // A degenerate spread means the markers are clustered and bound nothing useful.
-        if (maxX - minX < 2f || maxY - minY < 2f) return;
-
-        // Padded outward a little: markers sit ON features, so the walkable area extends past the
-        // outermost of them. Without this the edge cells would start inside the content.
-        float padX = (maxX - minX) * 0.10f;
-        float padY = (maxY - minY) * 0.10f;
-
-        lo = new Vector2(minX - padX, minY - padY);
-        hi = new Vector2(maxX + padX, maxY + padY);
-    }
+    // ContentBounds was DELETED here, and must not come back.
+    //
+    // It was a second "where is the walkable area" function, in map coordinates, with its own
+    // precedence order — navmesh, then labels, then the coordinate range. WalkableBox has a
+    // DIFFERENT order, because it checks the hand-drawn box first. So with a manual box set, clues
+    // measured their bearings from the hand-drawn centre while the Reveal diagnostic printed the
+    // navmesh one, and the two disagreed by enough to make a correct clue look broken.
+    //
+    // Two functions answering one question is the bug; which of them was "right" is beside the
+    // point. Anything needing map coordinates converts WalkableBox's world corners at the point of
+    // use — see DigRoamService.Reveal.
 
     /// <summary>
     /// The inverse of <see cref="TryMapCoords"/> — a world position from map coordinates.
