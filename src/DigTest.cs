@@ -331,22 +331,62 @@ internal static class DigGround
     /// </summary>
     public static bool SegmentClear(Vector3 a, Vector3 b, float height = 1.0f)
     {
-        var from = new Vector3(a.X, a.Y + height, a.Z);
-        var to   = new Vector3(b.X, b.Y + height, b.Z);
-
-        var delta = to - from;
-        float len = delta.Length();
-
+        float len = Flat(a, b);
         if (len < 0.05f) return true;
 
-        // Stop just short of the destination: a ray aimed at a point standing ON the ground will
-        // otherwise clip the ground itself at the far end and report every segment blocked.
-        const float Margin = 0.35f;
+        // A SINGLE STRAIGHT RAY AT FIXED HEIGHT WAS WRONG, and wrong in the direction that matters:
+        // it reported 46 of 57 spots blocked, including ones on open paving. A ray from A to B holds
+        // its altitude while the ground does not, so every slope, stair and gentle rise between two
+        // points intercepts it. It could not tell a hill from a wall, which is the only distinction
+        // being asked for.
+        //
+        // So walk the line instead, sampling the GROUND at each step. A slope moves the ground a
+        // little per step; a wall moves it a lot, or removes it entirely. That is the same reasoning
+        // HasStep already uses radially, applied along a line — and it is the reasoning that
+        // distinguishes terrain from obstruction.
+        int steps = Math.Clamp((int)MathF.Ceiling(len / StepLength), 2, MaxWalkSamples);
 
-        return !BGCollisionModule.RaycastMaterialFilter(from, delta / len, out var hit,
-                                                        MathF.Max(0.05f, len - Margin))
-            || (hit.Point - from).Length() >= len - Margin;
+        // Start from the real ground under A rather than from A itself: a waypoint can sit slightly
+        // above or below the floor, and inheriting that error biases the first comparison.
+        if (!TryGroundBelow(a, 2f, 8f, out var cursor)) cursor = a;
+
+        for (int k = 1; k <= steps; k++)
+        {
+            float t = (float)k / steps;
+
+            float x = a.X + (b.X - a.X) * t;
+            float z = a.Z + (b.Z - a.Z) * t;
+
+            // Probed from just above the PREVIOUS ground height, so the ray tracks the surface as it
+            // rises and falls. Probing from a fixed altitude would find rooftops on the way past.
+            var probe = new Vector3(x, cursor.Y, z);
+
+            if (!TryGroundBelow(probe, WalkProbeUp, WalkProbeDown, out var ground))
+                return false;   // nothing under this step at all — a gap, a ledge or a wall face
+
+            if (MathF.Abs(ground.Y - cursor.Y) > MathF.Max(0.05f, DigTuning.WalkMaxStep))
+                return false;   // too abrupt to walk
+
+            cursor = ground;
+        }
+
+        return true;
     }
+
+    /// <summary>Spacing of the walk samples, and the ceiling on how many a long segment may take.</summary>
+    private const float StepLength     = 1.2f;
+    private const int   MaxWalkSamples = 96;
+
+    /// <summary>
+    /// How far up and down each step looks for ground. Up is generous enough to clear a normal stair
+    /// riser; down is bounded so a step out over a drop reads as a gap rather than finding the
+    /// courtyard below and calling it continuous.
+    /// </summary>
+    private const float WalkProbeUp   = 1.6f;
+    private const float WalkProbeDown = 4.0f;
+
+    // The stride height lives in DigTuning.WalkMaxStep — it decides over- versus under-rejection,
+    // and that is a feel found by trying it rather than a fact derivable from here.
 
     /// <summary>
     /// Whether every segment of a proposed route is clear of solid geometry. A navmesh path whose

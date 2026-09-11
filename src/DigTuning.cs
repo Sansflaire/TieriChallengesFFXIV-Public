@@ -272,6 +272,19 @@ internal static class DigTuning
     public static float RoamMaxAnchorDistance = 40f;
 
     /// <summary>
+    /// The height change one stride may absorb when walking a line to test it. Above this the step
+    /// is a wall rather than a slope.
+    ///
+    /// <para><b>A knob because it decides over- versus under-rejection, and that failure has already
+    /// happened.</b> The first version of the walk test used a single straight ray at fixed height
+    /// and reported 46 of 57 spots blocked including ones on open paving. Too small a value here
+    /// reproduces that by treating every kerb as a wall; too large lets the test walk up the side of
+    /// a building. The right number is a property of FFXIV's movement, which is findable by trying
+    /// it and not by reasoning about it.</para>
+    /// </summary>
+    public static float WalkMaxStep = 1.1f;
+
+    /// <summary>
     /// A HAND-SET walkable box in WORLD coordinates, and the territory it belongs to.
     ///
     /// <para><b>This outranks every derived box, and it exists because all three derivations were
@@ -732,6 +745,7 @@ internal static class DigTuning
         public float? RoamRepeatPenalty { get; set; }
         public float? RoamAwkwardness { get; set; }
         public float? RoamMaxAnchorDistance { get; set; }
+        public float? WalkMaxStep { get; set; }
 
         /// <summary>The hand-set walkable box. Absent on any file written before it existed.</summary>
         public uint?  BoxTerritory { get; set; }
@@ -835,7 +849,7 @@ internal static class DigTuning
         RoamMaxRise = 3.5f; RoamNavTolerance = 2f;
         RoamDig = 4f; RoamRadar = 30f; RoamDifficulty = 0.35f;
         RoamClueCategories = 127; RoamRepeatPenalty = 0.85f; RoamAwkwardness = 0.5f;
-        RoamMaxAnchorDistance = 40f;
+        RoamMaxAnchorDistance = 40f; WalkMaxStep = 1.1f;
     }
 
     public static void ResetHud()
@@ -957,6 +971,8 @@ internal static class DigTuning
 
                 RoamMaxAnchorDistance = d.RoamMaxAnchorDistance is { } ma && float.IsFinite(ma)
                                             ? Math.Clamp(ma, 0f, 2000f) : 40f;
+                WalkMaxStep = d.WalkMaxStep is { } ws && float.IsFinite(ws)
+                                  ? Math.Clamp(ws, 0.2f, 4f) : 1.1f;
 
                 // Read OUTSIDE any default-on-absent guard: a file with no box must leave BoxSet
                 // false rather than inventing a zero-sized one at the world origin, which would
@@ -1134,7 +1150,7 @@ internal static class DigTuning
                 RoamDig = RoamDig, RoamRadar = RoamRadar, RoamDifficulty = RoamDifficulty,
                 RoamClueCategories = RoamClueCategories,
                 RoamRepeatPenalty = RoamRepeatPenalty, RoamAwkwardness = RoamAwkwardness,
-                RoamMaxAnchorDistance = RoamMaxAnchorDistance,
+                RoamMaxAnchorDistance = RoamMaxAnchorDistance, WalkMaxStep = WalkMaxStep,
                 BoxSet = BoxSet, BoxTerritory = BoxTerritory,
                 BoxMinX = BoxMinX, BoxMinZ = BoxMinZ, BoxMaxX = BoxMaxX, BoxMaxZ = BoxMaxZ,
                 HudDropPx = HudDropPx, HudClueGapPx = HudClueGapPx,

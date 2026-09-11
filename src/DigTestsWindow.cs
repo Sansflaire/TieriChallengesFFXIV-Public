@@ -466,6 +466,18 @@ internal sealed class DigTestsWindow
                           DigTuning.RoamMaxAnchorDistance <= 0f ? "off" : "%.0f y");
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
+        ImGui.TextColored(Rule,
+            "STRIDE HEIGHT decides whether the walk test calls a rise a slope or a wall. It walks\n"
+          + "the line to the nearest marker sampling the GROUND each step, because a single ray at\n"
+          + "fixed height cannot tell a hill from a wall — that version rejected 46 of 57 spots,\n"
+          + "including ones on open paving.\n"
+          + "Too SMALL and every kerb reads as a wall and almost nothing places. Too LARGE and the\n"
+          + "test happily walks up the side of a building. It is a property of FFXIV's movement, so\n"
+          + "find it by trying it: sample, look at the WALLED OFF count, adjust.");
+
+        ImGui.SliderFloat("Stride height (yalms)", ref DigTuning.WalkMaxStep, 0.2f, 4f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
         Slider("Min gap between spots", ref DigTuning.RoamSpacing,  5f, 120f);
         // (clue-category controls are drawn above, next to Difficulty)
         Slider("Dig radius",            ref DigTuning.RoamDig,      1f, 30f);
