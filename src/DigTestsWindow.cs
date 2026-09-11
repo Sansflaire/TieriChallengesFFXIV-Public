@@ -457,6 +457,16 @@ internal sealed class DigTestsWindow
             var p = Plugin.ObjectTable.LocalPlayer;
             Say(p == null ? "no character loaded." : DigClueSources.Census(p.Position));
         }
+
+        ImGui.SameLine();
+        if (ImGui.Button("Why no aetherytes?##try"))
+        {
+            // "This zone has no aetherytes" and "every row was rejected by a filter" produce the
+            // identical count of zero, which is how a housing ward full of aethernet shards came
+            // back empty and looked like game data rather than our own gate.
+            DigClueSources.Invalidate();
+            foreach (var line in DigClueSources.AetheryteReport.Split('\n')) Say(line);
+        }
     }
 
     private void DumpLandmarks()

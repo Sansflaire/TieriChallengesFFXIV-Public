@@ -404,16 +404,41 @@ internal static class DigClueSources
     /// aetheryte" is actionable in a way that "north of some carved rock" is not. Keeping it its own
     /// category is what lets the weighted draw guarantee some of the trail is easy.</para>
     ///
-    /// <para>Filtered to real aetherytes rather than aethernet shards: a shard's name is a district
-    /// name that usually also appears as a map label, so including them would double the same place
-    /// under two categories and defeat the anti-repeat.</para>
+    /// <para><b>Aethernet shards count, and excluding them was wrong (0.84.44.2).</b> The first cut
+    /// filtered on <c>IsAetheryte</c>, reasoning that a shard's name duplicates a district label that
+    /// is already a landmark. In a city that is arguable; <b>in a housing ward it is backwards</b> —
+    /// the subdivision shards are the only teleport anchors there, so filtering them left Empyreum
+    /// reporting zero aetherytes while standing next to several. A shard is exactly what this
+    /// category is for: a named point a player can teleport to and navigate from.</para>
     /// </summary>
     public static IReadOnlyList<Anchor> Aetherytes()
     {
         if (_aetheryteTerritory == Plugin.ClientState.TerritoryType && _aetherytes != null)
             return _aetherytes;
 
-        var list = new List<Anchor>();
+        _aetherytes         = Load(out _aetheryteReport);
+        _aetheryteTerritory = Plugin.ClientState.TerritoryType;
+
+        return _aetherytes;
+    }
+
+    private static uint          _aetheryteTerritory = uint.MaxValue;
+    private static List<Anchor>? _aetherytes;
+    private static string        _aetheryteReport = "not read yet.";
+
+    /// <summary>
+    /// Why the aetheryte list came out the size it did — every candidate row and what happened to
+    /// it. Purely diagnostic, and it exists because "this zone has no aetherytes" and "every row was
+    /// rejected by a filter" produce the identical count of zero.
+    /// </summary>
+    public static string AetheryteReport { get { Aetherytes(); return _aetheryteReport; } }
+
+    private static List<Anchor> Load(out string report)
+    {
+        var list  = new List<Anchor>();
+        var lines = new List<string>();
+
+        int seen = 0, noName = 0, noLevel = 0;
 
         try
         {
@@ -425,37 +450,67 @@ internal static class DigClueSources
                 foreach (var a in sheet)
                 {
                     if (a.Territory.RowId != territory) continue;
-                    if (!a.IsAetheryte) continue;
 
-                    string name = a.PlaceName.ValueNullable?.Name.ExtractText() ?? string.Empty;
-                    if (name.Length == 0) continue;
+                    seen++;
 
-                    // The Level row carries the real world position. An aetheryte with no level row
-                    // is skipped rather than placed at the origin, which would anchor a clue to the
+                    string place = a.PlaceName.ValueNullable?.Name.ExtractText() ?? string.Empty;
+                    string shard = a.AethernetName.ValueNullable?.Name.ExtractText() ?? string.Empty;
+
+                    // A shard's own name is the useful one — "Halberd's Head Subdivision" rather
+                    // than the ward it hangs off. Falls back to the place name when it has none,
+                    // which is what a full aetheryte carries.
+                    string name = a.IsAetheryte || shard.Length == 0 ? place : shard;
+
+                    if (name.Length == 0) { noName++; lines.Add($"  row {a.RowId}: no name"); continue; }
+
+                    // The Level row carries the real world position. One with no level row is
+                    // skipped rather than placed at the origin, which would anchor a clue to the
                     // middle of nowhere with complete confidence.
+                    //
+                    // NOTE: the level's own Territory is deliberately NOT re-checked. The Aetheryte
+                    // row is already filtered by territory, so its levels are in it by construction,
+                    // and demanding the match twice rejected every row whose Level.Territory is
+                    // unset — which is how this list came back empty in a housing ward.
+                    Vector3? found = null;
+
                     foreach (var lvlRef in a.Level)
                     {
                         if (lvlRef.ValueNullable is not { } lvl) continue;
-                        if (lvl.Territory.RowId != territory) continue;
+                        if (lvl.X == 0f && lvl.Y == 0f && lvl.Z == 0f) continue;
 
-                        list.Add(new Anchor($"the {name} aetheryte", new Vector3(lvl.X, lvl.Y, lvl.Z)));
+                        found = new Vector3(lvl.X, lvl.Y, lvl.Z);
                         break;
                     }
+
+                    if (found is not { } pos)
+                    {
+                        noLevel++;
+                        lines.Add($"  row {a.RowId} \"{name}\": no usable Level row");
+                        continue;
+                    }
+
+                    string label = a.IsAetheryte
+                        ? $"the {name} aetheryte"
+                        : $"the {name} aethernet shard";
+
+                    list.Add(new Anchor(label, pos));
+                    lines.Add($"  row {a.RowId} {(a.IsAetheryte ? "AETHERYTE" : "shard")} "
+                            + $"\"{name}\" at ({pos.X:0.0}, {pos.Z:0.0})");
                 }
             }
         }
         catch (Exception ex)
         {
             Diag.Error($"[Clue] aetheryte read failed: {ex.Message}");
+            lines.Add($"  read failed: {ex.Message}");
         }
 
-        _aetheryteTerritory = Plugin.ClientState.TerritoryType;
-        _aetherytes         = list;
+        report = $"Aetheryte sheet rows for this territory: {seen}. "
+               + $"Usable {list.Count}, no name {noName}, no position {noLevel}.\n"
+               + string.Join("\n", lines);
+
         return list;
     }
-
-    private static uint          _aetheryteTerritory = uint.MaxValue;
-    private static List<Anchor>? _aetherytes;
 
     /// <summary>
     /// The map labels that name a SECTION of the map rather than a point in it — subdivisions, wards,
@@ -558,6 +613,7 @@ internal static class DigClueSources
     {
         _aetheryteTerritory = uint.MaxValue;
         _aetherytes         = null;
+        _aetheryteReport    = "not read yet.";
     }
 
     /// <summary>
@@ -567,7 +623,7 @@ internal static class DigClueSources
     /// </summary>
     public static string Census(Vector3 around)
     {
-        return $"landmarks {Landmarks().Count}   aetherytes {Aetherytes().Count}   "
+        return $"landmarks {Landmarks().Count}   aetherytes+shards {Aetherytes().Count}   "
              + $"sections {Sections().Count}   npcs near you {NearbyNpcs(around).Count}   "
              + $"enemies near you {NearbyEnemies(around).Count}";
     }
