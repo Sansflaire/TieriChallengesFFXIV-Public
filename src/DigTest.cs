@@ -476,6 +476,27 @@ internal static class DigGround
         return Points[(int)MathF.Round(bearing / 45f) % 8];
     }
 
+    /// <summary>
+    /// FOUR-point bearing — the coarse version, for the hard end of a difficulty band.
+    ///
+    /// <para>A quarter of the compass instead of an eighth. "EAST" covering 90 degrees rather than
+    /// 45 is genuinely less information while still being true, which is what degrading a fact
+    /// means: the same kind of statement, said less precisely. Saying something vaguer is not the
+    /// same as saying something woollier, and this is the former.</para>
+    /// </summary>
+    public static string Compass4(Vector3 from, Vector3 to)
+    {
+        float east  = to.X - from.X;
+        float north = from.Z - to.Z;
+
+        float bearing = MathF.Atan2(east, north) * 180f / MathF.PI;
+        if (bearing < 0f) bearing += 360f;
+
+        return Quarters[(int)MathF.Round(bearing / 90f) % 4];
+    }
+
+    private static readonly string[] Quarters = { "NORTH", "EAST", "SOUTH", "WEST" };
+
     private static readonly string[] Points =
         { "NORTH", "NORTH-EAST", "EAST", "SOUTH-EAST", "SOUTH", "SOUTH-WEST", "WEST", "NORTH-WEST" };
 

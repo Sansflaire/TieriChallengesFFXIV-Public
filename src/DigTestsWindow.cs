@@ -469,15 +469,19 @@ internal sealed class DigTestsWindow
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
         ImGui.TextColored(Rule,
-            "DIFFICULTY is how much a clue WITHHOLDS, not how vague its words are.\n"
-          + "  0.00–0.33  EASY   — a landmark, a direction from it, and a sense of distance.\n"
-          + "                      \"EAST of Blue Badger Gate, close by.\"\n"
-          + "  0.34–0.66  MEDIUM — the landmark and the direction, but no distance: you pick\n"
-          + "                      which way to set off and decide when you have overshot.\n"
-          + "  0.67–1.00  HARD   — two landmarks and NO bearing, plus a map quadrant. The spot is\n"
-          + "                      the intersection of \"near this\" and \"near that\", which is read\n"
-          + "                      off the map rather than walked in a straight line.\n"
-          + "No setting ever gives coordinates. A coordinate is not a clue, it is the answer.");
+            "DIFFICULTY IS TWO DIALS IN ONE SLIDER.\n"
+          + "  HOW MANY FACTS — steps at the band boundaries:\n"
+          + "    0.00–0.33  EASY    3 facts\n"
+          + "    0.34–0.66  MEDIUM  2 facts\n"
+          + "    0.67–1.00  HARD    1 fact\n"
+          + "  HOW SHARP EACH FACT IS — varies WITHIN a band, using the rest of the travel. At 0.00\n"
+          + "  you get a bearing to one of eight points and a distance in yalms; at 0.33 you get the\n"
+          + "  same three facts as one of four quarters and a woolly distance word. Fewer facts and\n"
+          + "  vaguer facts are different levers and the slider drives both.\n"
+          + "Facts are dropped from the LEAST useful end, so a HARD clue is the single most\n"
+          + "actionable thing that could have been said, not an arbitrary survivor.\n"
+          + "No setting ever gives coordinates. A coordinate is not a clue, it is the answer.\n"
+          + "Press \"Clue vocabulary…\" for every phrase and exactly what it means.");
 
         ImGui.SliderFloat("Difficulty", ref DigTuning.RoamDifficulty, 0f, 1f, "%.2f");
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();

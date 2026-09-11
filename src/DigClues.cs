@@ -153,6 +153,18 @@ internal sealed class DigClueWriter
     {
         var lines = new List<string>();
 
+        lines.Add("HOW DIFFICULTY WORKS — two dials in one slider.");
+        lines.Add("  COUNT steps at the band boundaries. A clue states exactly this many facts:");
+        lines.Add("    EASY   (0.00-0.33)   3 facts");
+        lines.Add("    MEDIUM (0.34-0.66)   2 facts");
+        lines.Add("    HARD   (0.67-1.00)   1 fact");
+        lines.Add("  PRECISION varies WITHIN each band, using the rest of the slider's travel. An");
+        lines.Add("  easy-easy clue gives a bearing to one of eight points and a distance in yalms;");
+        lines.Add("  a hard-easy clue gives the same three facts as one of four quarters and a");
+        lines.Add("  woolly distance word. Fewer facts and vaguer facts are different levers.");
+        lines.Add("  Facts are always dropped from the LEAST useful end, so a HARD clue is the single");
+        lines.Add("  most actionable thing that could have been said - never an arbitrary leftover.");
+        lines.Add("");
         lines.Add("DIRECTION — world axes, NOT relative to your facing. +X is east, +Z is south.");
         lines.Add("  Eight points, each covering 45 degrees, so \"NORTH\" means within 22.5 of due north:");
 
@@ -285,6 +297,101 @@ internal sealed class DigClueWriter
     };
 
     /// <summary>
+    /// How many separate facts a clue may state, and how sharply each one is allowed to be put.
+    ///
+    /// <para><b>Difficulty is two dials in one slider, and they do different jobs.</b> Sansflaire's model:
+    /// EASY gives three pieces of information, MEDIUM two, HARD one — that is the COUNT, and it
+    /// steps at the band boundaries. Within a band the slider still has a third of its travel to
+    /// spend, and it spends it on PRECISION: an easy-easy clue names a bearing to one of eight
+    /// points and a distance in yalms, while a hard-easy clue gives the same three facts as one of
+    /// four quarters and a woolly distance word.</para>
+    ///
+    /// <para><b>Fewer facts and vaguer facts are not the same lever</b>, and conflating them is what
+    /// the old code did: every category invented its own shape, so "hard" meant two landmarks in one
+    /// place, no distance in another, and a coarser region in a third. A clue could get harder in a
+    /// way that made it longer. Counting facts makes the difficulty of a clue legible from the clue
+    /// itself — you can see three things, or one.</para>
+    ///
+    /// <para>Returns the count, and <c>sharp</c> as 0 at the easy end of the band through 1 at its
+    /// hard end.</para>
+    /// </summary>
+    private static (int Count, float Sharp) Budget(float hard)
+    {
+        hard = Math.Clamp(hard, 0f, 1f);
+
+        if (hard < 0.34f) return (3, hard / 0.34f);
+        if (hard < 0.67f) return (2, (hard - 0.34f) / 0.33f);
+
+        return (1, Math.Clamp((hard - 0.67f) / 0.33f, 0f, 1f));
+    }
+
+    /// <summary>
+    /// One fact: a direction from an anchor, put more or less precisely.
+    /// </summary>
+    private static string DirectionFact(DigClueSources.Anchor a, Vector3 spot, float dist, float sharp)
+    {
+        // Eight points at the easy end, four at the hard end. Same statement, half the resolution.
+        string bearing = sharp < 0.6f
+            ? DigGround.Compass(a.World, spot)
+            : DigGround.Compass4(a.World, spot);
+
+        return $"{Intensity(dist)}{bearing} of {a.Name}";
+    }
+
+    /// <summary>One fact: how far, in yalms when sharp, as a word when not.</summary>
+    private static string DistanceFact(float dist, float sharp)
+    {
+        // A number is a much stronger fact than a word, so it belongs at the easy end only. Rounded
+        // to ten yalms because a clue is not a coordinate — "about 40 yalms" is a search radius,
+        // "41.7 yalms" is the answer.
+        if (sharp < 0.4f) return $"about {MathF.Round(dist / 10f) * 10f:0} yalms away";
+
+        return DigGround.Vagueness(dist);
+    }
+
+    /// <summary>One fact: which part of the map, at one of three resolutions.</summary>
+    private string RegionFact(Vector3 spot, float sharp)
+    {
+        if (!DigLandmarks.WalkableBox(out var lo, out var hi))
+            return DigLandmarks.Quadrant(spot);
+
+        // Sharpest: the ninth, with its size. Middle: the quadrant. Coarsest: a half, which is half
+        // the map and barely narrows anything — correct for the hard end of a band.
+        if (sharp < 0.34f)
+        {
+            float w = MathF.Max(0.01f, hi.X - lo.X);
+            float d = MathF.Max(0.01f, hi.Y - lo.Y);
+
+            int col = Math.Clamp((int)((spot.X - lo.X) / w * 3f), 0, 2);
+            int row = Math.Clamp((int)((spot.Z - lo.Y) / d * 3f), 0, 2);
+
+            float across = MathF.Round((w / 3f + d / 3f) * 0.5f / 5f) * 5f;
+
+            return $"in {Cells[row * 3 + col]} (about {across:0} yalms across)";
+        }
+
+        if (sharp < 0.67f) return $"in {DigLandmarks.Quadrant(spot)}";
+
+        float cx = (lo.X + hi.X) * 0.5f;
+        float cz = (lo.Y + hi.Y) * 0.5f;
+
+        return _rng.Next(2) == 0
+            ? $"in the {(spot.Z < cz ? "NORTHERN" : "SOUTHERN")} half of the map"
+            : $"in the {(spot.X > cx ? "EASTERN" : "WESTERN")} half of the map";
+    }
+
+    /// <summary>Assembles the chosen facts into one sentence.</summary>
+    private static string Sentence(List<string> facts, int count)
+    {
+        if (facts.Count == 0) return string.Empty;
+
+        var kept = facts.GetRange(0, Math.Min(count, facts.Count));
+
+        string joined = string.Join(", ", kept);
+        return char.ToUpperInvariant(joined[0]) + joined.Substring(1) + ".";
+    }
+
+    /// <summary>
     /// A clue of the form "&lt;direction&gt; of &lt;anchor&gt;", with how much else is given away
     /// decided by difficulty.
     ///
@@ -302,38 +409,44 @@ internal sealed class DigClueWriter
         var near = PickAnchor(anchors, spot, hard, out float dist, exclude: null);
         if (near is not { } a) return string.Empty;
 
-        string quad         = DigLandmarks.Quadrant(spot);
-        float  awkwardRoll  = (float)_rng.NextDouble();
+        var (count, sharp) = Budget(hard);
 
-        // HARD — two anchors and no bearing at all.
-        if (hard >= 0.67f && anchors.Count > 1)
+        // Built in DESCENDING usefulness, then truncated to the budget. That ordering is the whole
+        // design: dropping facts from the end removes the least useful ones first, so a HARD clue is
+        // the single most actionable thing that could have been said rather than an arbitrary
+        // survivor. The old code chose a different SHAPE per band, which meant harder clues
+        // sometimes contained more words and occasionally more information.
+        var facts = new List<string>();
+
+        // FAR-FROM replaces the direction fact rather than adding to it: it is a statement about the
+        // same anchor, so having both would spend two facts on one relationship. Only when the
+        // anchor really is distant, or it would simply be false.
+        bool awkward = dist >= 90f
+                    && (float)_rng.NextDouble() < Math.Clamp(DigTuning.RoamAwkwardness, 0f, 1f) * 0.45f;
+
+        facts.Add(awkward ? $"a long way from {a.Name}" : DirectionFact(a, spot, dist, sharp));
+
+        // A negative constraint alone says nothing — everywhere is far from something — so when it
+        // is used, the region comes next and is the fact that makes the pair solvable.
+        if (awkward) facts.Add(RegionFact(spot, sharp));
+        else         facts.Add(DistanceFact(dist, sharp));
+
+        // The second anchor, when there is one. An intersection is a genuinely different fact from a
+        // bearing, which is why it is offered rather than the region here.
+        if (!awkward && anchors.Count > 1 && count >= 3)
         {
             var second = PickAnchor(anchors, spot, hard, out float secondDist, exclude: a.Name);
 
-            if (second is { } b)
-                return secondDist > dist
-                    ? $"Between {a.Name} and {b.Name}, nearer the first. Somewhere in {quad}."
-                    : $"Between {a.Name} and {b.Name}, nearer the second. Somewhere in {quad}.";
+            facts.Add(second is { } b
+                ? $"{DigGround.Compass(b.World, spot)} of {b.Name} as well"
+                : RegionFact(spot, sharp));
+        }
+        else if (!awkward)
+        {
+            facts.Add(RegionFact(spot, sharp));
         }
 
-        // FAR-FROM: a negative constraint rather than a bearing. Sansflaire's shape — "far away from X"
-        // is a legitimate clue, and a deliberately annoying one, because it rules out a circle
-        // instead of pointing at a line.
-        //
-        // NEVER on its own: everywhere is far from something, so alone it says nothing at all. It is
-        // always paired with the quadrant, which is what makes the pair solvable — one clause
-        // narrows the map, the other carves a hole out of what is left. Only offered when the anchor
-        // really is distant, or it would be a plain falsehood.
-        if (dist >= 90f && awkwardRoll < Math.Clamp(DigTuning.RoamAwkwardness, 0f, 1f) * 0.45f)
-            return $"A long way from {a.Name} — look in {quad}.";
-
-        string bearing = $"{Intensity(dist)}{DigGround.Compass(a.World, spot)} of {a.Name}";
-
-        // MEDIUM — bearing plus the quadrant, but no sense of how far to go.
-        if (hard >= 0.34f) return $"{bearing}, in {quad}.";
-
-        // EASY — bearing plus a distance word. Three of the four things needed.
-        return $"{bearing}, {DigGround.Vagueness(dist)}.";
+        return Sentence(facts, count);
     }
 
     /// <summary>
@@ -411,43 +524,61 @@ internal sealed class DigClueWriter
         // quadrant worked in world coordinates would let the two clauses of one clue disagree.
         if (!DigLandmarks.WalkableBox(out var lo, out var hi)) return string.Empty;
 
-        string quad = DigLandmarks.Quadrant(spot);
+        var (count, sharp) = Budget(hard);
 
-        // EASY — which cell of a 3x3 grid over the map, which is a genuinely small box.
-        if (hard < 0.34f)
+        // This category has no anchor, so its facts are all positional. Descending usefulness: the
+        // region first, then a bearing from the centre, then how far out.
+        var facts = new List<string>
         {
-            float w = MathF.Max(0.01f, hi.X - lo.X);
-            float d = MathF.Max(0.01f, hi.Y - lo.Y);
+            RegionFact(spot, sharp),
+            ClockFact(spot, lo, hi, sharp),
+            ReachFact(spot, lo, hi),
+        };
 
-            int col = Math.Clamp((int)((spot.X - lo.X) / w * 3f), 0, 2);
-            int row = Math.Clamp((int)((spot.Z - lo.Y) / d * 3f), 0, 2);
+        return Sentence(facts, count);
+    }
 
-            // The quadrant is NOT prepended. It is the same fact at lower resolution, and pairing
-            // them produced "In the middle of the map - the middle middle of the map", which says
-            // one thing twice and says it badly.
-            //
-            // THE SIZE IS STATED. A ninth of a ward is a different thing from a ninth of Thanalan,
-            // and "the middle ninth" without a scale is still asking the player to guess how much
-            // ground that is. Naming it turns a vague region into a search area — which is what an
-            // EASY clue is supposed to hand over.
-            float acrossX = MathF.Max(1f, hi.X - lo.X) / 3f;
-            float acrossZ = MathF.Max(1f, hi.Y - lo.Y) / 3f;
-            float across  = MathF.Round((acrossX + acrossZ) * 0.5f / 5f) * 5f;
+    /// <summary>One fact: a clock bearing from the middle of the walkable box, 12 being north.</summary>
+    private static string ClockFact(Vector3 spot, Vector2 lo, Vector2 hi, float sharp)
+    {
+        float cx = (lo.X + hi.X) * 0.5f;
+        float cz = (lo.Y + hi.Y) * 0.5f;
 
-            return $"In {Cells[row * 3 + col]} — an area roughly {across:0} yalms across.";
-        }
+        float east  = spot.X - cx;
+        float north = cz - spot.Z;              // +Z is south, so north is the negative side
 
-        // MEDIUM — the quadrant alone.
-        if (hard < 0.67f) return $"Somewhere in {quad}.";
+        if (MathF.Sqrt(east * east + north * north) < 1f) return "right around the middle";
 
-        // HARD — a half rather than a quadrant, which is half the map.
-        bool  vertical = _rng.Next(2) == 0;
-        float cx       = (lo.X + hi.X) * 0.5f;
-        float cz       = (lo.Y + hi.Y) * 0.5f;
+        float bearing = MathF.Atan2(east, north) * 180f / MathF.PI;
+        if (bearing < 0f) bearing += 360f;
 
-        return vertical
-            ? $"In the {(spot.Z < cz ? "NORTHERN" : "SOUTHERN")} half of the map. That is all anyone will say."
-            : $"In the {(spot.X > cx ? "EASTERN" : "WESTERN")} half of the map. That is all anyone will say.";
+        // Twelve hours at the easy end, quarters at the hard end — the same degradation the compass
+        // fact uses, so the two read as the same kind of statement at the same difficulty.
+        if (sharp >= 0.6f)
+            return $"{DigGround.Compass4(new Vector3(cx, 0f, cz), spot)} of the map's middle";
+
+        int hour = (int)MathF.Round(bearing / 30f) % 12;
+        if (hour == 0) hour = 12;
+
+        return $"{hour} o'clock from the middle of the map";
+    }
+
+    /// <summary>One fact: how far out from the centre, as a fraction of the way to the rim.</summary>
+    private static string ReachFact(Vector3 spot, Vector2 lo, Vector2 hi)
+    {
+        float cx   = (lo.X + hi.X) * 0.5f;
+        float cz   = (lo.Y + hi.Y) * 0.5f;
+        float span = MathF.Max(1f, MathF.Max(hi.X - lo.X, hi.Y - lo.Y));
+
+        float dx = spot.X - cx, dz = spot.Z - cz;
+        float reach = Math.Clamp(MathF.Sqrt(dx * dx + dz * dz) / (span * 0.5f), 0f, 1.5f);
+
+        return reach switch
+        {
+            >= 0.78f => "right out toward the edge",
+            >= 0.45f => "about two-thirds of the way out",
+            _        => "not far out from the middle",
+        };
     }
 
     /// <summary>
@@ -496,47 +627,18 @@ internal sealed class DigClueWriter
     {
         if (!DigLandmarks.WalkableBox(out var lo, out var hi)) return string.Empty;
 
-        // World space, same box as the quadrant and the grid.
-        float cx   = (lo.X + hi.X) * 0.5f;
-        float cz   = (lo.Y + hi.Y) * 0.5f;
-        float span = MathF.Max(1f, MathF.Max(hi.X - lo.X, hi.Y - lo.Y));
+        var (count, sharp) = Budget(hard);
 
-        float east  = spot.X - cx;
-        float north = cz - spot.Z;          // +Z is south, so north is the negative side
-
-        float radius = MathF.Sqrt(east * east + north * north);
-
-        // Dead centre has no bearing to give. Saying "12 o'clock" for a spot two yalms from the
-        // middle would send the player confidently to the wrong end of the map.
-        // Not "right at the heart", which reads as the exact middle. 6% of the span is still tens of
-        // yalms on a real map, so the phrase names a region and says how big it is.
-        if (radius < span * 0.06f)
-            return $"Near the middle of the map — within about {span * 0.06f:0} yalms of dead centre.";
-
-        float bearing = MathF.Atan2(east, north) * 180f / MathF.PI;
-        if (bearing < 0f) bearing += 360f;
-
-        int hour = (int)MathF.Round(bearing / 30f) % 12;
-        if (hour == 0) hour = 12;
-
-        // How far out, as a fraction of the distance from the middle to the corner.
-        float reach = Math.Clamp(radius / (span * 0.5f), 0f, 1.5f);
-
-        string howFar = reach switch
+        // Same three facts as the quadrant category, reordered: the bearing leads here because it is
+        // what makes this category distinct, and the region is the backstop.
+        var facts = new List<string>
         {
-            >= 0.78f => "right out at the edge",
-            >= 0.45f => "about two-thirds of the way out",
-            _        => "not far from the middle",
+            ClockFact(spot, lo, hi, sharp),
+            ReachFact(spot, lo, hi),
+            RegionFact(spot, sharp),
         };
 
-        // HARD — the bearing alone, which is a line from the centre and not a point.
-        if (hard >= 0.67f) return $"{hour} o'clock from the middle of the map. Follow the line.";
-
-        // MEDIUM — bearing and reach.
-        if (hard >= 0.34f) return $"{hour} o'clock from the middle of the map, {howFar}.";
-
-        // EASY — bearing, reach and the quadrant to confirm it.
-        return $"{hour} o'clock from the middle of the map, {howFar} — {DigLandmarks.Quadrant(spot)}.";
+        return Sentence(facts, count);
     }
 }
 
