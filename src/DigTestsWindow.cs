@@ -450,6 +450,22 @@ internal sealed class DigTestsWindow
         ImGui.SliderFloat("Roof clearance (yalms)", ref DigTuning.RoamMaxRise, 0f, 40f, "%.1f");
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
+        ImGui.TextColored(Rule,
+            "MUST BE NEAR SOMETHING THE MAP NAMES. This is the containment that follows the zone's\n"
+          + "SHAPE, which a bounding box cannot: a ward is not a rectangle, so a box round Empyreum\n"
+          + "has corners outside the walls and spots landed in them. Markers — plot numbers,\n"
+          + "subdivision labels, shops — blanket the walkable area and stop at its edge, so \"is a\n"
+          + "marker near\" traces the outline for free.\n"
+          + "A PROXY, NOT A PROOF: an open field legitimately has no marker in the middle of it, so\n"
+          + "on a sparse map this rejects most of the zone. Lower it on dense maps, raise it or set\n"
+          + "0 to disable on open ones. Turn the map debug's Plot numbers layer on to see how dense\n"
+          + "the markers actually are before choosing.");
+
+        ImGui.SliderFloat("Max distance to a named marker (0 = off)",
+                          ref DigTuning.RoamMaxAnchorDistance, 0f, 300f,
+                          DigTuning.RoamMaxAnchorDistance <= 0f ? "off" : "%.0f y");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
         Slider("Min gap between spots", ref DigTuning.RoamSpacing,  5f, 120f);
         // (clue-category controls are drawn above, next to Difficulty)
         Slider("Dig radius",            ref DigTuning.RoamDig,      1f, 30f);

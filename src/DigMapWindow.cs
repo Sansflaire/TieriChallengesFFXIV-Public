@@ -339,19 +339,30 @@ internal sealed class DigMapWindow
                              active ? fill : edge, 2f);
         }
 
-        var mouse   = ImGui.GetMousePos();
-        bool inside = ImGui.IsWindowHovered() && !ImGui.IsAnyItemHovered();
+        // REAL ImGui ITEMS, not a hit test against the mouse position.
+        //
+        // Drawn handles are draw-list graphics: ImGui never knows they were clicked, so it saw a
+        // drag on empty window background and moved the WINDOW instead — the corner could not be
+        // grabbed at all. An InvisibleButton makes the click an item interaction, which both
+        // suppresses the window move and gives correct press/hold/release semantics for free.
+        //
+        // The cursor is saved and restored around them: these are placed by absolute screen
+        // position over an image drawn with the draw list, and leaving the layout cursor parked on
+        // the last handle would push everything after it to the wrong place.
+        var saveCursor = ImGui.GetCursorScreenPos();
 
-        if (inside && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        foreach (var (at, id) in new[] { (nw, 1), (se, 2) })
         {
-            // Nearest handle wins, and only within the grab box — a click elsewhere on the map must
-            // not silently start dragging the closer of two distant corners.
-            float dn = Vector2.Distance(mouse, nw);
-            float ds = Vector2.Distance(mouse, se);
+            ImGui.SetCursorScreenPos(at - new Vector2(Grab + 3f));
+            ImGui.InvisibleButton($"##boxcorner{id}", new Vector2((Grab + 3f) * 2f));
 
-            if (dn <= Grab * 2f && dn <= ds)      _dragCorner = 1;
-            else if (ds <= Grab * 2f)             _dragCorner = 2;
+            if (ImGui.IsItemActive())  _dragCorner = id;
+            if (ImGui.IsItemHovered()) ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeAll);
         }
+
+        ImGui.SetCursorScreenPos(saveCursor);
+
+        var mouse = ImGui.GetMousePos();
 
         if (_dragCorner != 0 && ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {

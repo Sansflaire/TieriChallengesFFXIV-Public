@@ -255,6 +255,23 @@ internal static class DigTuning
     public static float RoamAwkwardness = 0.5f;
 
     /// <summary>
+    /// Reject a candidate whose nearest map marker is further than this, in yalms. 0 disables it.
+    ///
+    /// <para><b>This is the containment that follows the zone's SHAPE, which a box cannot.</b> A
+    /// housing ward is not a rectangle: a box drawn round Empyreum has corners well outside the
+    /// walls, and spots kept landing in them. The markers, though — plot numbers, subdivision
+    /// labels, shops — blanket the walkable area densely and stop dead at its edge. So "how far is
+    /// the nearest marker" is a cheap proxy for "am I still inside the place", and it traces the
+    /// outline for free.</para>
+    ///
+    /// <para><b>It is a proxy and not a proof.</b> A large open field legitimately has no marker
+    /// near its middle, which is why this is tunable and why 0 turns it off — on a sparse map it
+    /// would reject most of the zone. It earns its keep on dense maps, which is exactly where the
+    /// box fails worst.</para>
+    /// </summary>
+    public static float RoamMaxAnchorDistance = 40f;
+
+    /// <summary>
     /// A HAND-SET walkable box in WORLD coordinates, and the territory it belongs to.
     ///
     /// <para><b>This outranks every derived box, and it exists because all three derivations were
@@ -714,6 +731,7 @@ internal static class DigTuning
         public int?   RoamClueCategories { get; set; }
         public float? RoamRepeatPenalty { get; set; }
         public float? RoamAwkwardness { get; set; }
+        public float? RoamMaxAnchorDistance { get; set; }
 
         /// <summary>The hand-set walkable box. Absent on any file written before it existed.</summary>
         public uint?  BoxTerritory { get; set; }
@@ -817,6 +835,7 @@ internal static class DigTuning
         RoamMaxRise = 3.5f; RoamNavTolerance = 2f;
         RoamDig = 4f; RoamRadar = 30f; RoamDifficulty = 0.35f;
         RoamClueCategories = 127; RoamRepeatPenalty = 0.85f; RoamAwkwardness = 0.5f;
+        RoamMaxAnchorDistance = 40f;
     }
 
     public static void ResetHud()
@@ -935,6 +954,9 @@ internal static class DigTuning
                                          ? Math.Clamp(rp, 0f, 0.99f) : 0.85f;
                 RoamAwkwardness    = d.RoamAwkwardness is { } aw && float.IsFinite(aw)
                                          ? Math.Clamp(aw, 0f, 1f) : 0.5f;
+
+                RoamMaxAnchorDistance = d.RoamMaxAnchorDistance is { } ma && float.IsFinite(ma)
+                                            ? Math.Clamp(ma, 0f, 2000f) : 40f;
 
                 // Read OUTSIDE any default-on-absent guard: a file with no box must leave BoxSet
                 // false rather than inventing a zero-sized one at the world origin, which would
@@ -1112,6 +1134,7 @@ internal static class DigTuning
                 RoamDig = RoamDig, RoamRadar = RoamRadar, RoamDifficulty = RoamDifficulty,
                 RoamClueCategories = RoamClueCategories,
                 RoamRepeatPenalty = RoamRepeatPenalty, RoamAwkwardness = RoamAwkwardness,
+                RoamMaxAnchorDistance = RoamMaxAnchorDistance,
                 BoxSet = BoxSet, BoxTerritory = BoxTerritory,
                 BoxMinX = BoxMinX, BoxMinZ = BoxMinZ, BoxMaxX = BoxMaxX, BoxMaxZ = BoxMaxZ,
                 HudDropPx = HudDropPx, HudClueGapPx = HudClueGapPx,

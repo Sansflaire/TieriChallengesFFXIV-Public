@@ -262,6 +262,25 @@ internal sealed unsafe class DigRoamService : IDigTest
                 (spot.X < boxLo.X || spot.X > boxHi.X || spot.Z < boxLo.Y || spot.Z > boxHi.Y))
                 continue;
 
+            // NEAR SOMETHING THE MAP NAMES — the containment that follows the zone's SHAPE.
+            //
+            // A box cannot. Empyreum's ward is not a rectangle, so a box drawn round it has corners
+            // well outside the walls and spots kept landing in them. The markers do follow the
+            // outline: plot numbers, subdivision labels and shops blanket the walkable area and
+            // stop dead at its edge, so "is a marker near" traces the ward for free.
+            //
+            // This is the gate doing the work the navmesh filter was wrongly trusted to do. It is a
+            // proxy rather than a proof — an open field legitimately has no marker in the middle of
+            // it, which is why it is tunable and why 0 disables it.
+            if (DigTuning.RoamMaxAnchorDistance > 0f)
+            {
+                var near = DigLandmarks.Nearest(spot);
+
+                if (near is not { } anchor ||
+                    DigGround.Flat(anchor.World, spot) > DigTuning.RoamMaxAnchorDistance)
+                    continue;
+            }
+
             // Asks for REACHABLE mesh, which is a different question from "is there mesh here" and
             // is the one that was being got wrong. Unreachable polygons are flagged by a flood fill
             // at mesh build time, so an island cut off from the walkable body of the zone — the sand
