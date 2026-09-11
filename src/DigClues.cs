@@ -134,6 +134,97 @@ internal sealed class DigClueWriter
     public string WriteAs(ClueCategory only, Vector3 spot, float hard) =>
         Compose(only, spot, Math.Clamp(hard, 0f, 1f));
 
+    /// <summary>
+    /// Every phrase a generated clue can contain, and precisely what each one means.
+    ///
+    /// <para><b>Derived by CALLING the real helpers, not by transcribing them.</b> The compass
+    /// points come from <see cref="DigGround.Compass"/> fed synthetic offsets, the distance words
+    /// from <see cref="DigGround.Vagueness"/> fed representative distances, the intensity prefixes
+    /// from <see cref="Intensity"/>, and the grid cells from the same <see cref="Cells"/> array the
+    /// writer indexes. A glossary that restated these would be wrong the first time a threshold
+    /// moved, and wrong silently — which is the failure mode this whole file has spent the day
+    /// on.</para>
+    ///
+    /// <para>The numeric boundaries are the one part that IS written down, because they live inside
+    /// switch arms rather than in named constants. They are stated next to the phrase they produce
+    /// so a mismatch is visible rather than buried.</para>
+    /// </summary>
+    public static string[] Vocabulary()
+    {
+        var lines = new List<string>();
+
+        lines.Add("DIRECTION — world axes, NOT relative to your facing. +X is east, +Z is south.");
+        lines.Add("  Eight points, each covering 45 degrees, so \"NORTH\" means within 22.5 of due north:");
+
+        // Fed real offsets so the words are the writer's own, whatever they are.
+        var probes = new (float X, float Z, string Where)[]
+        {
+            (0, -1, "due north"), (1, -1, "north-east"), (1, 0, "due east"),  (1, 1, "south-east"),
+            (0,  1, "due south"), (-1, 1, "south-west"), (-1, 0, "due west"), (-1, -1, "north-west"),
+        };
+
+        foreach (var (x, z, where) in probes)
+            lines.Add($"    {DigGround.Compass(Vector3.Zero, new Vector3(x, 0f, z)),-12} = {where}");
+
+        lines.Add("");
+        lines.Add("HOW FAR — appended on EASY clues only. Straight-line, not walking distance:");
+
+        foreach (float d in new[] { 20f, 60f, 130f, 250f })
+            lines.Add($"    \"{DigGround.Vagueness(d)}\"".PadRight(26) + $"~{d:0} yalms");
+
+        lines.Add("");
+        lines.Add("INTENSITY — prefixes the direction when the anchor is far from the spot.");
+        lines.Add("  It describes the ANCHOR's distance, not how far you must walk:");
+
+        foreach (float d in new[] { 40f, 90f, 180f, 300f })
+        {
+            string p = Intensity(d);
+            lines.Add($"    \"{(p.Length == 0 ? "(none)" : p.Trim())}\"".PadRight(26) + $"anchor ~{d:0} yalms away");
+        }
+
+        lines.Add("");
+        lines.Add("MAP REGION — measured against the WALKABLE BOX, not the map image.");
+        lines.Add("  A central band of 14% per axis counts as neither side, so \"the middle of the");
+        lines.Add("  map\" is a real answer and not a rounding artefact:");
+        lines.Add("    \"the NORTH of the map\"        north band, neither east nor west");
+        lines.Add("    \"the EAST side of the map\"    east band, neither north nor south");
+        lines.Add("    \"the NORTH-EAST of the map\"   both, i.e. a corner quarter");
+        lines.Add("    \"the middle of the map\"       inside the central band on BOTH axes");
+        lines.Add("");
+        lines.Add("GRID CELL — EASY quadrant clues only. The walkable box cut into nine:");
+
+        foreach (string c in Cells) lines.Add($"    \"{c}\"");
+
+        lines.Add("");
+        lines.Add("CLOCK — bearing from the CENTRE of the walkable box. 12 is north.");
+        lines.Add("    \"N o'clock from the middle of the map\"   a line out from the centre");
+        lines.Add("    \"right out at the edge\"                  >78% of the way to the rim");
+        lines.Add("    \"about two-thirds of the way out\"        45-78%");
+        lines.Add("    \"not far from the middle\"                <45%");
+        lines.Add("    \"Right at the heart of the map\"          within 6% of centre, no bearing given");
+        lines.Add("");
+        lines.Add("NEGATIVE — rules out a circle rather than pointing along a line.");
+        lines.Add("    \"A long way from X - look in Q\"   X is 90+ yalms away. NEVER issued alone:");
+        lines.Add("                                      everywhere is far from something, so it is");
+        lines.Add("                                      always paired with a region.");
+        lines.Add("");
+        lines.Add("INTERSECTION — HARD clues. No bearing at all:");
+        lines.Add("    \"Between A and B, nearer the first\"   you work it out on the map");
+        lines.Add("");
+        lines.Add("ANCHOR NAMING — how each source phrases itself:");
+        lines.Add("    \"the X aetheryte\"                 a full aetheryte, from the Aetheryte sheet");
+        lines.Add("    \"the X aethernet shard\"           a shard, incl. housing subdivisions");
+        lines.Add("    \"the Aethernet Shard in Y\"        a LIVE shard object, qualified by section");
+        lines.Add("    \"the Xs\" (plural)                 an enemy GROUP centroid, 2 or more");
+        lines.Add("    \"the X\"  (singular)               one enemy, or a live world object");
+        lines.Add("    bare name                          a map marker, an NPC placement, a section");
+        lines.Add("");
+        lines.Add("WHAT A CLUE NEVER CONTAINS: coordinates. A coordinate is not a clue, it is the");
+        lines.Add("answer. Difficulty changes how much is WITHHELD, never how vague the words are.");
+
+        return lines.ToArray();
+    }
+
     /// <summary>Weighted draw over the categories that produced something.</summary>
     private (ClueCategory Cat, string Text) Draw(List<(ClueCategory Cat, string Text)> candidates)
     {
