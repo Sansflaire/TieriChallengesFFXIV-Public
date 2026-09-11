@@ -746,6 +746,19 @@ internal sealed unsafe class DigRoamService : IDigTest
 
         // The anchor the clue was written from, and the TRUE relationship to the spot. A clue that
         // says WEST while this says EAST is a conversion bug, not a hard clue.
+        // WHICH SOURCE EACH CANDIDATE ANCHOR CAME FROM. "NORTH of Retainer" was unanswerable without
+        // this: the name alone does not say whether it came from the map markers, the Aetheryte
+        // sheet, the ENpcResident placements or the live object table, and those have completely
+        // different fixes. Answering it took a brain query against the running game; it should have
+        // taken a glance.
+        var here = Plugin.ObjectTable.LocalPlayer?.Position ?? spot;
+
+        line += $"\n[Challenges] anchor sources near the spot — "
+              + $"markers {DigClueSources.Landmarks().Count}, "
+              + $"aetherytes {DigClueSources.AetherytesNear(spot).Count}, "
+              + $"npc placements {DigClueSources.MapNpcs().Count}, "
+              + $"live enemies {DigClueSources.NearbyEnemies(here).Count}";
+
         if (DigLandmarks.Nearest(spot) is { } near)
             line += $"\n[Challenges] clue anchor \"{near.Name}\" is at world "
                   + $"({near.World.X:0.0}, {near.World.Z:0.0}), "

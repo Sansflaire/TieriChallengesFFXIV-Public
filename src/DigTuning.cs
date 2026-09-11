@@ -311,7 +311,21 @@ internal static class DigTuning
     /// with legitimate names, and each one only reveals itself by turning up in a bad clue. A
     /// setting means the next one costs a keystroke instead of a release.</para>
     /// </summary>
-    public static string AnchorBans = "Striking Dummy,Mannequin,Orchestrion,Retainer Bell,Summoning Bell";
+    /// <summary>
+    /// <b>"Retainer" on its own, not "Retainer Bell".</b> The first version listed the specific
+    /// names and a clue came back reading "NORTH of Retainer" — because the anchor's name in the
+    /// data is exactly <c>Retainer</c>, and a substring ban only fires when the BAN TERM is inside
+    /// the NAME, never the other way round. Listing the longer, more precise string matched nothing.
+    /// Ban the shortest form that identifies the thing; it covers every longer one for free.
+    /// </summary>
+    public static string AnchorBans = DefaultAnchorBans;
+
+    internal const string DefaultAnchorBans =
+        "Striking Dummy,Mannequin,Orchestrion,Retainer,Summoning Bell,Market Board,Mender,Crafting";
+
+    /// <summary>The shipped list before "Retainer" was shortened, for the one-time migration.</summary>
+    private const string LegacyAnchorBans =
+        "Striking Dummy,Mannequin,Orchestrion,Retainer Bell,Summoning Bell";
 
     /// <summary>
     /// A HAND-SET walkable box in WORLD coordinates, and the territory it belongs to.
@@ -1178,7 +1192,15 @@ internal static class DigTuning
 
                 // Absent means never saved, so take the shipped list. An EMPTY string is a real
                 // choice — somebody clearing the field wants no bans — and must survive a reload.
-                if (d.AnchorBans != null) AnchorBans = d.AnchorBans;
+                //
+                // The one exception is a stored list that is EXACTLY the previous shipped default:
+                // that is a value nobody chose, saved automatically, and it contains the
+                // "Retainer Bell" term that failed to match a name of "Retainer". Same narrow
+                // migration idiom as the marker radius — overrule only the untouched old default.
+                if (d.AnchorBans != null)
+                    AnchorBans = string.Equals(d.AnchorBans, LegacyAnchorBans, StringComparison.Ordinal)
+                        ? DefaultAnchorBans
+                        : d.AnchorBans;
 
                 // Read OUTSIDE any default-on-absent guard: a file with no box must leave BoxSet
                 // false rather than inventing a zero-sized one at the world origin, which would
