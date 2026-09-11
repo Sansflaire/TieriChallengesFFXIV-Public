@@ -230,10 +230,23 @@ internal sealed unsafe class DigRoamService : IDigTest
         // THE WHOLE MAP IS ELIGIBLE. Spots are drawn from the map's own world rectangle rather than
         // from a ring around the player, so anywhere the drawn map covers can hold one. The old ring
         // made "how far did you walk before starting" decide what the trail could contain.
-        // Declared up front rather than as out-vars: short-circuiting the && leaves them untouched,
-        // and the compiler cannot know haveBounds implies they were written.
+        // SAMPLE FROM THE WALKABLE BOX, NOT THE MAP RECTANGLE.
+        //
+        // This is why only ~19 of 200 were ever placed. The map rectangle is the whole theoretical
+        // coordinate square and a housing ward occupies perhaps a tenth of it; the rest is void with
+        // no collision at all. So roughly 95% of throws died on "no ground" before any other gate
+        // saw them — 1863 of them in one run — and the attempt budget was exhausted long before the
+        // sampler had found enough real candidates.
+        //
+        // The box already describes where the ward is. Throwing darts at it instead of at the
+        // surrounding emptiness costs nothing and raises the hit rate by an order of magnitude.
+        // Nothing about which spots are ACCEPTABLE changes — the box gate below already rejected
+        // everything outside it, so this only stops wasting throws on ground that was never
+        // eligible.
         Vector2 lo = default, hi = default;
-        bool haveBounds = nearOnly <= 0f && DigLandmarks.TryWorldBounds(out lo, out hi);
+        bool haveBounds = nearOnly <= 0f
+                       && (DigLandmarks.WalkableBox(out lo, out hi)
+                           || DigLandmarks.TryWorldBounds(out lo, out hi));
 
         for (int attempt = 0; attempt < PlacementAttempts; attempt++)
         {
@@ -370,7 +383,14 @@ internal sealed unsafe class DigRoamService : IDigTest
         return false;
     }
 
-    private const int PlacementAttempts = 120;
+    /// <summary>
+    /// Throws per spot before giving up. Raised from 120 once sampling moved inside the walkable
+    /// box: the gates that now do the rejecting — marker proximity and the walk test — are the
+    /// expensive ones, but they only run on candidates that already found ground, which is a far
+    /// smaller set than before. A higher budget therefore costs less than it used to and buys the
+    /// dense placements the old one could not reach.
+    /// </summary>
+    private const int PlacementAttempts = 400;
 
     /// <summary>How close a single-category test spot is buried. Walkable in well under a minute.</summary>
     public const float TestSpotRange = 45f;
@@ -497,9 +517,12 @@ internal sealed unsafe class DigRoamService : IDigTest
         // sampler must not: breaking made "0 of 200" mean "the FIRST attempt failed", which reads as
         // "nothing can be placed anywhere" and is a far stronger claim than the evidence. Three
         // consecutive failures is the real stop, so a genuinely impossible zone still terminates.
+        // Six in a row, not three. Placement is a random dart throw against a spacing rule, so as
+        // the map fills up a run of misses becomes ordinary rather than diagnostic — and stopping
+        // at three made a half-full map look like an exhausted one.
         int consecutiveFailures = 0;
 
-        for (int i = 0; i < count && consecutiveFailures < 3; i++)
+        for (int i = 0; i < count && consecutiveFailures < 6; i++)
         {
             if (TryPlace(player.Position, found, out var spot))
             {
