@@ -247,22 +247,28 @@ internal sealed class DigMapWindow
                 $"ui/map/{id}/{flat}.tex",
             };
 
+            // ASKED FOR, not pre-screened. An earlier version only tried a candidate that
+            // DataManager.FileExists confirmed, and no image ever appeared — so either the probe
+            // disagrees with the texture loader about what exists, or the loader can produce a
+            // texture the index check rejects. Either way the check was filtering out the answer.
+            // Asking the loader directly is the shorter question, and it is the one that matters.
             foreach (var c in candidates)
             {
-                bool exists;
-                try   { exists = Plugin.DataManager.FileExists(c); }
-                catch { exists = false; }
+                Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? wrap = null;
 
-                if (!exists) continue;
+                try   { wrap = Plugin.TextureProvider.GetFromGame(c).GetWrapOrDefault(); }
+                catch { /* not this one */ }
+
+                if (wrap == null) continue;
 
                 path = c;
-
-                // Null here means "still decoding", not "absent" — the texture arrives on a later
-                // frame and this runs every frame, so it resolves itself.
-                return Plugin.TextureProvider.GetFromGame(c).GetWrapOrDefault();
+                return wrap;
             }
 
-            path = $"none of {candidates.Length} candidates exist for map id \"{id}\"";
+            // Named so a wrong guess is reportable rather than just a blank square. A texture that
+            // is merely still decoding also lands here for a frame or two and then resolves.
+            path = $"map id \"{id}\" — none of {candidates.Length} candidate paths loaded "
+                 + $"(first tried {candidates[0]})";
             return null;
         }
         catch { return null; }

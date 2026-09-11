@@ -184,6 +184,21 @@ internal sealed class DigTestsWindow
           + "  Leaving the zone ABANDONS the run, unlike Test 3 — every spot was placed against\n"
           + "  this map's geometry and every clue names this map's landmarks.");
 
+        if (DigNavmesh.Available && !DigNavmesh.Ready)
+        {
+            // Front and centre: this is a wait, not a failure, and without a number it is
+            // indistinguishable from one.
+            ImGui.TextColored(Warn, DigNavmesh.StatusLine());
+
+            float p = DigNavmesh.BuildProgress;
+            if (p >= 0f) ImGui.ProgressBar(Math.Clamp(p, 0f, 1f), new Vector2(-1f, 0f));
+
+            ImGui.TextColored(Rule,
+                "A run will not start until this finishes. Placement can query a partial mesh\n"
+              + "quite happily, but every spot it could place would sit in whichever corner of the\n"
+              + "zone was meshed first — a lopsided trail you would have no way of noticing.");
+        }
+
         if (DigNavmesh.Available)
         {
             ImGui.TextColored(Ok,
@@ -204,6 +219,14 @@ internal sealed class DigTestsWindow
               + "This message exists because a silent fallback looks exactly like a working gate\n"
               + "that has gone wrong.");
         }
+
+        if (ImGui.Checkbox("Require navmesh (refuse to place without it)",
+                           ref DigTuning.RoamRequireNavmesh))
+            DigTuning.Save();
+
+        ImGui.TextColored(Rule,
+            "ON by default. Placing nothing is a visible failure somebody fixes; placing\n"
+          + "something unreachable is an invisible one you waste ten minutes walking into.");
 
         if (ImGui.Button("Start##roam")) Say(_tests.Start(_tests.Roam));
         ImGui.SameLine();

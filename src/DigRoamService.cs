@@ -115,10 +115,20 @@ internal sealed unsafe class DigRoamService : IDigTest
 
     public string Start()
     {
-        if (!PropService.CanPerform(out string why)) return "cannot start — " + why;
-
+        // NO CanPerform GATE. Starting buries spots and writes clues; it does not touch game code
+        // or play an animation, so refusing it because the player is mounted was refusing something
+        // that was never at risk. The check belongs on the DIG, which is the part that performs.
         var player = Plugin.ObjectTable.LocalPlayer;
         if (player == null) return "no character loaded.";
+
+        // Refuse to start on a half-built mesh rather than quietly placing what fits.
+        //
+        // Placement itself is happy to query a partial mesh — the parts already built answer
+        // correctly. A RUN is not, because the spots it could place would all sit in whichever
+        // corner of the zone happened to be meshed first, and the player would never know the trail
+        // had been biased. Waiting is cheap; a silently lopsided trail is not.
+        if (DigTuning.RoamRequireNavmesh && DigNavmesh.Available && !DigNavmesh.Ready)
+            return DigNavmesh.StatusLine() + " — wait for it to finish, then start again.";
 
         // Re-read every time: the map's landmarks are what the clues are made of, and a cached set
         // from the previous zone would write clues about places that are not here.
@@ -127,7 +137,8 @@ internal sealed unsafe class DigRoamService : IDigTest
         var landmarks = DigLandmarks.ForCurrentMap();
 
         _stops.Clear();
-        _territory = Plugin.ClientState.TerritoryType;
+        _territory   = Plugin.ClientState.TerritoryType;
+        _navRefusals = 0;
 
         int want = Math.Clamp(DigTuning.RoamStops, 1, 20);
 
@@ -142,7 +153,11 @@ internal sealed unsafe class DigRoamService : IDigTest
         }
 
         if (_stops.Count == 0)
-            return "found nowhere to bury anything here — try somewhere more open.";
+            return _navRefusals > 0
+                ? "refused to bury anything: vnavmesh is not answering, so nothing here can be "
+                + "confirmed walkable. Install/enable vnavmesh, or turn off \"Require navmesh\" in "
+                + "the lab to fall back to the old guesswork."
+                : "found nowhere to bury anything here — try somewhere more open.";
 
         // Clues are written AFTER every spot is placed, so a clue may refer to another stop's
         // surroundings without the writing order deciding what it is allowed to know.
@@ -167,6 +182,9 @@ internal sealed unsafe class DigRoamService : IDigTest
     /// <para>Rejection sampling rather than anything cleverer, because "valid ground" is only
     /// answerable by asking the geometry — there is no list of standable points to draw from.</para>
     /// </summary>
+    /// <summary>Candidates thrown away purely because the navmesh could not be consulted.</summary>
+    private int _navRefusals;
+
     private bool TryPlace(Vector3 from, List<Vector3> taken, out Vector3 spot)
     {
         spot = default;
@@ -217,12 +235,19 @@ internal sealed unsafe class DigRoamService : IDigTest
 
             if (walkable == false) continue;
 
-            // Null means vnavmesh could not answer — not installed, not loaded, or still building
-            // this zone. Fall through to the raycast heuristics, which are weaker but are what
-            // existed before. The lab reports which of the two is in force, because a silent
-            // fallback looks exactly like a working gate that has gone wrong.
-            if (walkable == null
-                && DigGround.IsElevated(spot, DigTuning.RoamMaxRise)) continue;
+            // Null means vnavmesh could not answer at all — genuinely not installed.
+            //
+            // THE DEFAULT IS TO REFUSE, and that is a deliberate reversal. It used to fall back to
+            // the raycast heuristics, which meant the single most important property of a spot —
+            // that the player can reach it — was quietly downgraded to a guess whenever the one
+            // component that knows the answer was missing. Placing nothing is a visible failure
+            // somebody fixes; placing something unreachable is an invisible one they waste ten
+            // minutes walking into.
+            if (walkable == null)
+            {
+                if (DigTuning.RoamRequireNavmesh) { _navRefusals++; continue; }
+                if (DigGround.IsElevated(spot, DigTuning.RoamMaxRise)) continue;
+            }
 
             // Far enough from the others that no single dig can turn up two, and so the trail is a
             // route rather than a huddle.

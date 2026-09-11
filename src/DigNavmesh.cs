@@ -33,8 +33,52 @@ internal static class DigNavmesh
     /// vnavmesh's surface — not inferred from the name.</para>
     /// </summary>
     private static ICallGateSubscriber<Vector3, float, float, Vector3?>? _nearest;
-    private static ICallGateSubscriber<bool>?                            _isReady;
+    private static ICallGateSubscriber<bool>?  _isReady;
+    private static ICallGateSubscriber<float>? _progress;
     private static bool _resolved;
+
+    /// <summary>
+    /// Whether vnavmesh has a FINISHED mesh for the current zone, and how far along it is if not.
+    ///
+    /// <para><b>Separate from <see cref="Available"/> on purpose.</b> Available answers "is the
+    /// provider there"; these answer "has it finished thinking". A query during the build still
+    /// returns useful answers for the parts already meshed, which is why placement does not gate on
+    /// readiness — but a RUN should not start half-built, because the spots it could place would be
+    /// biased toward whichever corner of the zone happened to be meshed first.</para>
+    /// </summary>
+    public static bool Ready
+    {
+        get
+        {
+            Resolve();
+            try   { return _isReady?.InvokeFunc() == true; }
+            catch { return false; }
+        }
+    }
+
+    /// <summary>Build progress 0..1, or -1 when it cannot be read.</summary>
+    public static float BuildProgress
+    {
+        get
+        {
+            Resolve();
+            try   { return _progress?.InvokeFunc() ?? -1f; }
+            catch { return -1f; }
+        }
+    }
+
+    /// <summary>A line fit to show a person: ready, building with a percentage, or missing.</summary>
+    public static string StatusLine()
+    {
+        if (!Available) return "vnavmesh is not installed or not loaded.";
+        if (Ready)      return "navmesh ready.";
+
+        float p = BuildProgress;
+
+        return p >= 0f
+            ? $"Building NavMesh… {p * 100f:0}%"
+            : "Building NavMesh… (no progress reported yet)";
+    }
 
     private static void Resolve()
     {
@@ -47,6 +91,7 @@ internal static class DigNavmesh
             _isReady = Plugin.PluginInterface.GetIpcSubscriber<bool>("vnavmesh.Nav.IsReady");
             _nearest = Plugin.PluginInterface
                              .GetIpcSubscriber<Vector3, float, float, Vector3?>("vnavmesh.Query.Mesh.NearestPoint");
+            _progress = Plugin.PluginInterface.GetIpcSubscriber<float>("vnavmesh.Nav.BuildProgress");
         }
         catch (Exception ex)
         {
@@ -61,8 +106,13 @@ internal static class DigNavmesh
         {
             Resolve();
 
-            try   { return _isReady?.InvokeFunc() == true && _nearest != null; }
-            catch { return false; }   // provider absent — the only way InvokeFunc fails
+            if (_nearest == null) return false;
+
+            // Probes the QUERY, not Nav.IsReady. A mesh that is still building answers this
+            // perfectly well, and reporting "unavailable" during the build is what let unwalkable
+            // spots through in the first place.
+            try   { _nearest.InvokeFunc(Vector3.Zero, 1f, 1f); return true; }
+            catch { return false; }
         }
     }
 
@@ -88,9 +138,14 @@ internal static class DigNavmesh
 
         try
         {
-            if (_isReady?.InvokeFunc() != true) return null;
-
+            // NOT gated on Nav.IsReady, and that was a real bug. IsReady is false while the zone's
+            // mesh is still building, which turned every query during that window into "cannot
+            // answer" — and the caller's fallback accepted the spot. So the one moment the gate was
+            // most needed, just after zoning in, was the moment it was switched off. Querying
+            // anyway either works or throws, and both are answers.
             var snapped = _nearest.InvokeFunc(point, tolerance, tolerance);
+
+            // A query that ran and found nothing is a real NO, not an absence of information.
             if (snapped is not { } s) return false;
 
             return DigGround.Flat(point, s) <= tolerance
@@ -98,7 +153,8 @@ internal static class DigNavmesh
         }
         catch
         {
-            // vnavmesh not loaded. Not an error worth logging every placement attempt.
+            // Provider genuinely absent — the only way InvokeFunc throws. Not worth logging on
+            // every placement attempt.
             return null;
         }
     }

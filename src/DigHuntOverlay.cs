@@ -1753,9 +1753,14 @@ internal sealed class DigHuntOverlay : IDisposable
         // Each word takes the colour its OWN state implies, not the dial's current one — a DIG!
         // fading out as the player walks away should keep the dig yellow while it goes rather than
         // sliding back down the proximity ramp with the dial behind it.
+        // Grey when the dial is grey. The word takes the SAME colour the dial beneath it is using,
+        // which out of range means the idle grey and not the cold end of the proximity ramp — that
+        // ramp starts at deep blue, so a CLUE! over a grey dial was reading blue and the two looked
+        // like unrelated elements. The rule is that the word belongs to the dial.
         if (clueAlpha > 0.002f && _labelClue != null)
             DrawEmblem(drawList, _labelClue, min, size,
-                       PressedAccent(Ramp(closeness), press), clueAlpha, outline, GradientBands);
+                       PressedAccent(_inRange ? Ramp(closeness) : Rgb(IdleGrey), press),
+                       clueAlpha, outline, GradientBands);
 
         if (digAlpha > 0.002f && _labelDig != null)
             DrawEmblem(drawList, _labelDig, min, size,

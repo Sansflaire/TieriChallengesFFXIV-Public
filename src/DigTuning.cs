@@ -200,6 +200,13 @@ internal static class DigTuning
     /// </summary>
     public static float RoamNavTolerance = 2f;
 
+    /// <summary>
+    /// Refuse to bury anything at all when the navmesh cannot be consulted.
+    /// <b>Defaults to ON, and that is deliberate.</b> Placing nothing is a visible failure somebody
+    /// fixes; placing something unreachable is an invisible one they waste ten minutes walking into.
+    /// </summary>
+    public static bool RoamRequireNavmesh = true;
+
     /// <summary>How close a dig must be to a wild spot, and where its radar appears.</summary>
     public static float RoamDig   = 4f;
     public static float RoamRadar = 30f;
@@ -555,6 +562,7 @@ internal static class DigTuning
         public float RoamMaxRange { get; set; }
         public float RoamMaxRise { get; set; }
         public float RoamNavTolerance { get; set; }
+        public bool  RoamRequireNavmesh { get; set; }
         public float RoamDig { get; set; }
         public float RoamRadar { get; set; }
         public float RoamDifficulty { get; set; }
@@ -650,7 +658,7 @@ internal static class DigTuning
     public static void ResetRoam()
     {
         RoamStops = 5; RoamSpacing = 25f; RoamMinRange = 15f; RoamMaxRange = 0f;
-        RoamMaxRise = 3.5f; RoamNavTolerance = 2f;
+        RoamMaxRise = 3.5f; RoamNavTolerance = 2f; RoamRequireNavmesh = true;
         RoamDig = 4f; RoamRadar = 30f; RoamDifficulty = 0.35f;
     }
 
@@ -755,7 +763,8 @@ internal static class DigTuning
                 RoamMinRange   = Clamp(d.RoamMinRange, 0f, 400f,  15f);
                 RoamMaxRange   = Clamp(d.RoamMaxRange, 0f, 2000f,  0f);
                 RoamMaxRise      = Clamp(d.RoamMaxRise,      0f, 40f, 3.5f);
-                RoamNavTolerance = Clamp(d.RoamNavTolerance, 0.1f, 20f, 2f);
+                RoamNavTolerance   = Clamp(d.RoamNavTolerance, 0.1f, 20f, 2f);
+                RoamRequireNavmesh = d.RoamRequireNavmesh;
                 RoamDig        = Pos(d.RoamDig,        4f);
                 RoamRadar      = Pos(d.RoamRadar,     30f);
                 RoamDifficulty = Clamp(d.RoamDifficulty, 0f, 1f, 0.35f);
@@ -923,6 +932,7 @@ internal static class DigTuning
                 RoamStops = RoamStops, RoamSpacing = RoamSpacing,
                 RoamMinRange = RoamMinRange, RoamMaxRange = RoamMaxRange,
                 RoamMaxRise = RoamMaxRise, RoamNavTolerance = RoamNavTolerance,
+                RoamRequireNavmesh = RoamRequireNavmesh,
                 RoamDig = RoamDig, RoamRadar = RoamRadar, RoamDifficulty = RoamDifficulty,
                 HudDropPx = HudDropPx, HudClueGapPx = HudClueGapPx,
                 ClueStyleSaved = true,
