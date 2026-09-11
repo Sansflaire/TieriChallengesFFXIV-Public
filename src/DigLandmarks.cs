@@ -190,7 +190,10 @@ internal static class DigLandmarks
         string ns = world.Z < cz - bandZ ? "NORTH" : world.Z > cz + bandZ ? "SOUTH" : string.Empty;
         string ew = world.X > cx + bandX ? "EAST"  : world.X < cx - bandX ? "WEST"  : string.Empty;
 
-        if (ns.Length == 0 && ew.Length == 0) return "the middle of the map";
+        // "the middle BAND", not "the middle". This phrase is a 28%-wide strip on both axes — a
+        // large region — and calling it "the middle of the map" reads as a point. Same defect as
+        // the grid cells named "very centre": the words promised precision the clue cannot have.
+        if (ns.Length == 0 && ew.Length == 0) return "the middle band of the map";
         if (ns.Length == 0) return $"the {ew} side of the map";
         if (ew.Length == 0) return $"the {ns} of the map";
 

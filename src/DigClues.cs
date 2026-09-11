@@ -186,10 +186,16 @@ internal sealed class DigClueWriter
         lines.Add("MAP REGION — measured against the WALKABLE BOX, not the map image.");
         lines.Add("  A central band of 14% per axis counts as neither side, so \"the middle of the");
         lines.Add("  map\" is a real answer and not a rounding artefact:");
-        lines.Add("    \"the NORTH of the map\"        north band, neither east nor west");
-        lines.Add("    \"the EAST side of the map\"    east band, neither north nor south");
-        lines.Add("    \"the NORTH-EAST of the map\"   both, i.e. a corner quarter");
-        lines.Add("    \"the middle of the map\"       inside the central band on BOTH axes");
+        lines.Add("    \"the NORTH of the map\"          north band, neither east nor west");
+        lines.Add("    \"the EAST side of the map\"      east band, neither north nor south");
+        lines.Add("    \"the NORTH-EAST of the map\"     both, i.e. a corner quarter");
+        lines.Add("    \"the middle band of the map\"    inside the central band on BOTH axes");
+        lines.Add("");
+        lines.Add("EVERY REGION PHRASE NAMES AN AREA, NEVER A POINT.");
+        lines.Add("  \"Dead in the very centre\" used to be said for a region over a hundred yalms");
+        lines.Add("  across. A player who walks to the exact middle and digs finds nothing and");
+        lines.Add("  concludes the clue lied — so the words now say \"ninth\", \"third\" or \"band\",");
+        lines.Add("  and the EASY grid clue states the region's size in yalms outright.");
         lines.Add("");
         lines.Add("GRID CELL — EASY quadrant clues only. The walkable box cut into nine:");
 
@@ -201,7 +207,8 @@ internal sealed class DigClueWriter
         lines.Add("    \"right out at the edge\"                  >78% of the way to the rim");
         lines.Add("    \"about two-thirds of the way out\"        45-78%");
         lines.Add("    \"not far from the middle\"                <45%");
-        lines.Add("    \"Right at the heart of the map\"          within 6% of centre, no bearing given");
+        lines.Add("    \"Near the middle of the map — within\"    within 6% of the centre; the yalm");
+        lines.Add("    \"about N yalms of dead centre\"           figure is stated, no bearing given");
         lines.Add("");
         lines.Add("NEGATIVE — rules out a circle rather than pointing along a line.");
         lines.Add("    \"A long way from X - look in Q\"   X is 90+ yalms away. NEVER issued alone:");
@@ -418,7 +425,16 @@ internal sealed class DigClueWriter
             // The quadrant is NOT prepended. It is the same fact at lower resolution, and pairing
             // them produced "In the middle of the map - the middle middle of the map", which says
             // one thing twice and says it badly.
-            return $"Dead in the {Cells[row * 3 + col]} of the map.";
+            //
+            // THE SIZE IS STATED. A ninth of a ward is a different thing from a ninth of Thanalan,
+            // and "the middle ninth" without a scale is still asking the player to guess how much
+            // ground that is. Naming it turns a vague region into a search area — which is what an
+            // EASY clue is supposed to hand over.
+            float acrossX = MathF.Max(1f, hi.X - lo.X) / 3f;
+            float acrossZ = MathF.Max(1f, hi.Y - lo.Y) / 3f;
+            float across  = MathF.Round((acrossX + acrossZ) * 0.5f / 5f) * 5f;
+
+            return $"In {Cells[row * 3 + col]} — an area roughly {across:0} yalms across.";
         }
 
         // MEDIUM — the quadrant alone.
@@ -444,11 +460,30 @@ internal sealed class DigClueWriter
     /// is written the way a person would actually say it rather than assembled from parts that only
     /// read well on the diagonal.</para>
     /// </summary>
+    /// <summary>
+    /// <b>Every one of these names a REGION, and none of them names a point.</b>
+    ///
+    /// <para>The previous set said "very centre", and the clue read "Dead in the very centre of the
+    /// map" — which to anyone reading it means the exact middle, to the yalm. A cell is one ninth of
+    /// the walkable box and can be over a hundred yalms across, so the phrase promised a precision
+    /// the clue does not have and cannot have. A player who walks to the exact centre and digs finds
+    /// nothing, and correctly concludes the clue lied.</para>
+    ///
+    /// <para>"Ninth" is the honest word: it is accurate — a three-by-three grid really does make
+    /// ninths — and it cannot be mistaken for a point. The centre cell is the one that most needed
+    /// it and is now the most explicit of the nine.</para>
+    /// </summary>
     private static readonly string[] Cells =
     {
-        "north-west corner",  "northern strip, centre", "north-east corner",
-        "western edge, midway down", "very centre", "eastern edge, midway down",
-        "south-west corner",  "southern strip, centre", "south-east corner",
+        "the north-west ninth of the map",
+        "the northern third of the map, midway between east and west",
+        "the north-east ninth of the map",
+        "the western third of the map, midway between north and south",
+        "the middle ninth of the map — the central third both ways, not the exact centre",
+        "the eastern third of the map, midway between north and south",
+        "the south-west ninth of the map",
+        "the southern third of the map, midway between east and west",
+        "the south-east ninth of the map",
     };
 
     /// <summary>
@@ -473,7 +508,10 @@ internal sealed class DigClueWriter
 
         // Dead centre has no bearing to give. Saying "12 o'clock" for a spot two yalms from the
         // middle would send the player confidently to the wrong end of the map.
-        if (radius < span * 0.06f) return "Right at the heart of the map.";
+        // Not "right at the heart", which reads as the exact middle. 6% of the span is still tens of
+        // yalms on a real map, so the phrase names a region and says how big it is.
+        if (radius < span * 0.06f)
+            return $"Near the middle of the map — within about {span * 0.06f:0} yalms of dead centre.";
 
         float bearing = MathF.Atan2(east, north) * 180f / MathF.PI;
         if (bearing < 0f) bearing += 360f;
