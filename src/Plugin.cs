@@ -365,6 +365,12 @@ public sealed class Plugin : IDalamudPlugin
                 TextureProvider,
                 () => ChatGui.Print("[Challenges] " + _digTests.Dig()));
 
+        // The lab's banner preview. Wired here rather than handed to the window's constructor,
+        // because the overlay is built after it and does not exist at all when Panache is missing —
+        // an unwired action simply does nothing, which is the right outcome for a preview of
+        // something that cannot be drawn.
+        _digTestsWindow.OnPreviewBanner = end => _digOverlay?.PreviewBanner(end);
+
         if (PanacheAvailability.IsAvailable)
             _soundTestWindow = new SoundTestWindow(TextureProvider);
 

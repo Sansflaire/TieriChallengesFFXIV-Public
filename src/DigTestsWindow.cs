@@ -39,6 +39,12 @@ internal sealed class DigTestsWindow
     private static readonly Vector4 Cmd     = new(0.55f, 0.75f, 0.95f, 1f);
     private static readonly Vector4 Warn    = new(0.95f, 0.62f, 0.35f, 1f);
 
+    /// <summary>
+    /// Plays a banner without a trail. Supplied by the plugin rather than reached for here, so this
+    /// window keeps knowing nothing about the HUD — same arrangement as the dial's dig click.
+    /// </summary>
+    public Action<bool>? OnPreviewBanner;
+
     public DigTestsWindow(DigTests tests) => _tests = tests;
 
     public void Draw()
@@ -215,6 +221,16 @@ internal sealed class DigTestsWindow
           + "bottom a darker copy of the top, and rules out the warm-to-deep shifts real title\n"
           + "art uses. The gradient runs across the whole banner, not per letter.");
 
+        // Right at the top of the section, because every setting below is judged by watching one
+        // play. Firing it from the real trigger means scrolling to the bottom of this window,
+        // starting a trail, and getting back up here before a two-second animation ends.
+        if (ImGui.Button("Play TRAIL START!")) OnPreviewBanner?.Invoke(false);
+        ImGui.SameLine();
+        if (ImGui.Button("Play TRAIL END!")) OnPreviewBanner?.Invoke(true);
+        ImGui.SameLine();
+        ImGui.TextDisabled("preview — no trail needed");
+
+        ImGui.Spacing();
         ImGui.TextColored(Rule,
             "Placement is in FRACTIONS of the viewport, not pixels, so a banner lands in the same\n"
           + "place on a 1080p monitor as on a 1440p one. Width is a fraction too; the height\n"

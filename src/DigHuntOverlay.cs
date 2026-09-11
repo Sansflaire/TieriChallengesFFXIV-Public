@@ -1138,7 +1138,17 @@ internal sealed class DigHuntOverlay : IDisposable
         // CLUE! yields the slot to DIG! the frame it is wanted — instantly, because the two words
         // sit in the same place and anything gradual prints one through the other. It returns on a
         // ramp, which is safe: by then DIG! is fully gone and there is nothing to collide with.
-        if (_digWordAlpha > 0.002f)
+        //
+        // The second condition is what stops it flashing back after a dig. Digging retires the clue
+        // and fades DIG! out, but those two run at DIFFERENT rates — DIG! is gone in 0.45s while the
+        // clue takes a full second to leave. Gating only on DIG! therefore let CLUE! pop back over
+        // a clue that was already halfway out of the door, purely because the faster envelope
+        // finished first. Keying on whether the clue is still WANTED rather than on whether it
+        // still has opacity means a clue on its way out never brings its heading back with it.
+        bool clueWanted = _digWordAlpha <= 0.002f
+                          && Environment.TickCount64 < _reminderUntil;
+
+        if (!clueWanted)
             _clueWordAlpha = 0f;
         else
             _clueWordAlpha = MathF.Min(1f, _clueWordAlpha + ImGui.GetIO().DeltaTime / WordFadeIn);
@@ -1211,6 +1221,19 @@ internal sealed class DigHuntOverlay : IDisposable
         _banner   = kind;
         _bannerAt = Environment.TickCount64;
     }
+
+    /// <summary>
+    /// Plays a banner on demand, with no trail involved. The lab's preview buttons.
+    ///
+    /// <para>It exists because the real trigger is unusable for judging the animation: starting a
+    /// trail means scrolling to the bottom of the lab, clicking Start, and then getting back up to
+    /// the banner settings before a two-second animation has finished. Every tweak was a race
+    /// against the thing being tweaked.</para>
+    ///
+    /// <para>Safe with nothing running — the banner is drawn ahead of the no-active-test early-out,
+    /// because an End banner already has to outlive the trail that threw it.</para>
+    /// </summary>
+    public void PreviewBanner(bool end) => Show(end ? Banner.TrailEnd : Banner.TrailStart);
 
     // ── the clue reminder ────────────────────────────────────────────────────
 
