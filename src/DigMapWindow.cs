@@ -443,19 +443,35 @@ internal sealed class DigMapWindow
 
         if (!_nullMode) { _nullDragging = false; return; }
 
-        // The drag. Started only over the map, and finished wherever it ends up — the same latch
-        // the pan uses, for the same reason: a rectangle you are dragging out often ends past the
-        // edge of the frame.
-        bool hovered = ImGui.IsWindowHovered() && !ImGui.IsAnyItemHovered();
-        var  mouse   = ImGui.GetMousePos();
+        // A REAL ImGui ITEM COVERING THE MAP, not a raw mouse test.
+        //
+        // Without one ImGui sees a drag on empty window background and moves the WINDOW, which is
+        // exactly what happened — and is exactly the bug already fixed for the box corner handles
+        // two versions ago. The fix was known and simply not carried across to the second thing
+        // that drags on the same pixels.
+        //
+        // Covering the whole map is safe because null-zone mode disables the corner handles, so
+        // nothing else wants these clicks while this button exists.
+        var saveCursor = ImGui.GetCursorScreenPos();
 
-        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.InvisibleButton("##nulldraw", rect);
+
+        bool activated   = ImGui.IsItemActivated();
+        bool active      = ImGui.IsItemActive();
+        bool deactivated = ImGui.IsItemDeactivated();
+
+        ImGui.SetCursorScreenPos(saveCursor);
+
+        var mouse = ImGui.GetMousePos();
+
+        if (activated)
         {
             _nullDragging = true;
             _nullStart    = mouse;
         }
 
-        if (_nullDragging)
+        if (_nullDragging && active)
         {
             var clamped = Vector2.Clamp(mouse, origin, origin + rect);
 
@@ -463,7 +479,7 @@ internal sealed class DigMapWindow
             drawList.AddRect(_nullStart, clamped, edge, 0f, ImDrawFlags.None, 2f);
         }
 
-        if (_nullDragging && ImGui.IsMouseReleased(ImGuiMouseButton.Left))
+        if (_nullDragging && deactivated)
         {
             _nullDragging = false;
 
