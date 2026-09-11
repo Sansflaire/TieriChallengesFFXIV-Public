@@ -85,8 +85,15 @@ internal sealed class DigMapWindow
             _spotsForMap = mapId;
             _status      = $"{_spots.Count} of {_sampleCount} placed.";
             _rejections  = _tests.Roam.RejectionReport;
+
+            // ALL FOUR, together. Every one of these is keyed by index into _spots, so a re-sample
+            // that leaves any of them behind silently re-points old data at new spots — which is
+            // why hovering a southern dot drew a route heading north. They are cleared as a group
+            // because they are one thing: the verification of the PREVIOUS sample set.
             _reachable.Clear();
             _pending.Clear();
+            _routes.Clear();
+            _blockedAt.Clear();
         }
 
         ImGui.SameLine();
@@ -209,13 +216,17 @@ internal sealed class DigMapWindow
 
         if (_showClueAnchors) DrawClueAnchors(drawList, Plot);
 
+        DrawNullZones(drawList, origin, rect, side, Plot);
+
         // THE WALKABLE BOX AND ITS QUADRANT LINES, drawn over the real map image.
         //
         // This exists because "dead centre" was reported for a spot three-quarters of the way east
         // and there was no way to see WHY without it. The box is what every direction word is
         // measured against, so drawing it turns an argument about a clue into a look at a rectangle:
         // if the box does not sit over the ward, the box is the bug; if it does, the wording is.
-        if (_showBox && DigLandmarks.WalkableBox(out var boxLo, out var boxHi))
+        // Corner handles are suppressed while drawing null zones — both want a left-drag over the
+        // same pixels, and a gesture that sometimes grabs a corner is worse than either alone.
+        if (_showBox && !_nullMode && DigLandmarks.WalkableBox(out var boxLo, out var boxHi))
         {
             bool okA = Plot(new Vector3(boxLo.X, 0f, boxLo.Y), out var cornerA);
             bool okB = Plot(new Vector3(boxHi.X, 0f, boxHi.Y), out var cornerB);
@@ -395,6 +406,89 @@ internal sealed class DigMapWindow
     /// </summary>
     /// <summary>Which corner is being dragged: 0 none, 1 north-west, 2 south-east.</summary>
     private static int _dragCorner;
+
+    /// <summary>Null-zone drawing mode, and the drag in progress.</summary>
+    private static bool     _nullMode;
+    private static bool     _nullDragging;
+    private static Vector2  _nullStart;
+
+    /// <summary>
+    /// Draws the hand-made exclusions, and lets a new one be dragged out when the mode is on.
+    ///
+    /// <para><b>Drawing mode is a toggle rather than a modifier key</b> because it disables the box
+    /// corner handles while it is on. Both want a left-drag over the same pixels, and a gesture that
+    /// sometimes grabs a corner and sometimes starts a rectangle would be worse than either.</para>
+    /// </summary>
+    private static void DrawNullZones(ImDrawListPtr drawList, Vector2 origin, Vector2 rect,
+                                      float side, PlotFn plot)
+    {
+        uint fill = ImGui.GetColorU32(new Vector4(1f, 0.20f, 0.25f, 0.20f));
+        uint edge = ImGui.GetColorU32(new Vector4(1f, 0.35f, 0.40f, 0.90f));
+
+        uint territory = Plugin.ClientState.TerritoryType;
+
+        foreach (var n in DigTuning.NullZones)
+        {
+            if (n.Territory != territory) continue;
+
+            if (!plot(new Vector3(n.MinX, 0f, n.MinZ), out var a)) continue;
+            if (!plot(new Vector3(n.MaxX, 0f, n.MaxZ), out var b)) continue;
+
+            var lo = new Vector2(MathF.Min(a.X, b.X), MathF.Min(a.Y, b.Y));
+            var hi = new Vector2(MathF.Max(a.X, b.X), MathF.Max(a.Y, b.Y));
+
+            drawList.AddRectFilled(lo, hi, fill);
+            drawList.AddRect(lo, hi, edge, 0f, ImDrawFlags.None, 2f);
+        }
+
+        if (!_nullMode) { _nullDragging = false; return; }
+
+        // The drag. Started only over the map, and finished wherever it ends up — the same latch
+        // the pan uses, for the same reason: a rectangle you are dragging out often ends past the
+        // edge of the frame.
+        bool hovered = ImGui.IsWindowHovered() && !ImGui.IsAnyItemHovered();
+        var  mouse   = ImGui.GetMousePos();
+
+        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            _nullDragging = true;
+            _nullStart    = mouse;
+        }
+
+        if (_nullDragging)
+        {
+            var clamped = Vector2.Clamp(mouse, origin, origin + rect);
+
+            drawList.AddRectFilled(_nullStart, clamped, fill);
+            drawList.AddRect(_nullStart, clamped, edge, 0f, ImDrawFlags.None, 2f);
+        }
+
+        if (_nullDragging && ImGui.IsMouseReleased(ImGuiMouseButton.Left))
+        {
+            _nullDragging = false;
+
+            var endAt = Vector2.Clamp(mouse, origin, origin + rect);
+
+            if (TryWorldAt(_nullStart, origin, side, out var w0) &&
+                TryWorldAt(endAt,      origin, side, out var w1))
+                DigTuning.AddNullZone(territory, w0.X, w0.Z, w1.X, w1.Z);
+        }
+    }
+
+    /// <summary>Screen point to world position — the inverse of Plot, sharing its zoom and pan.</summary>
+    private static bool TryWorldAt(Vector2 screen, Vector2 origin, float side, out Vector3 world)
+    {
+        world = default;
+
+        float span = MathF.Max(1f, DigLandmarks.MapSpan);
+
+        var local = (screen - origin - _pan * _zoom) / _zoom;
+
+        float mx = local.X / side * span + 1f;
+        float my = local.Y / side * span + 1f;
+
+        return DigLandmarks.TryWorldFromMap(mx, my, out world);
+    }
 
     private static float   _zoom = 1f;
     private static Vector2 _pan  = Vector2.Zero;
@@ -671,6 +765,40 @@ internal sealed class DigMapWindow
 
         ImGui.TextDisabled("Plot numbers are off by default — on a housing map they outnumber the "
                          + "real landmarks several to one.");
+
+        uint territory = Plugin.ClientState.TerritoryType;
+
+        int zoneCount = 0;
+        DigTuning.NullZone? lastHere = null;
+
+        foreach (var n in DigTuning.NullZones)
+        {
+            if (n.Territory != territory) continue;
+            zoneCount++;
+            lastHere = n;
+        }
+
+        if (ImGui.Checkbox("Draw NULL ZONES (left-drag on the map)", ref _nullMode))
+            _nullDragging = false;
+
+        ImGui.SameLine();
+        ImGui.TextDisabled($"{zoneCount} here");
+
+        if (zoneCount > 0)
+        {
+            ImGui.SameLine();
+            if (ImGui.Button("Clear null zones")) DigTuning.ClearNullZones(territory);
+
+            ImGui.SameLine();
+            if (ImGui.Button("Undo last") && lastHere != null)
+                DigTuning.RemoveNullZone(lastHere);
+        }
+
+        ImGui.TextDisabled(_nullMode
+            ? "Drag rectangles over anywhere a spot must NEVER go — lakes, rooftops, sealed "
+            + "courtyards. Box corner handles are disabled while this is on."
+            : "Null zones are the exclusions placement obeys absolutely. Every automatic attempt at "
+            + "this has failed differently; a rectangle you drew cannot be wrong about what it says.");
 
         if (ImGui.Button("Verify reachable (pathfind from you)")) StartVerify();
         ImGui.SameLine();

@@ -202,15 +202,16 @@ internal sealed unsafe class DigRoamService : IDigTest
     /// what this session has repeatedly got wrong, so they are counted instead.
     /// </summary>
     private int _rejGround, _rejRange, _rejBox, _rejAnchor, _rejNav, _rejCrowd, _rejStep, _rejRoof,
-                _rejWall;
+                _rejWall, _rejNull;
 
     private void ResetRejections() =>
         _rejGround = _rejRange = _rejBox = _rejAnchor = _rejNav = _rejCrowd = _rejStep =
-        _rejRoof = _rejWall = 0;
+        _rejRoof = _rejWall = _rejNull = 0;
 
     /// <summary>A human-readable tally of the last placement run's rejections.</summary>
     public string RejectionReport =>
         $"no ground {_rejGround}   out of range {_rejRange}   outside box {_rejBox}   "
+      + $"in a null zone {_rejNull}   "
       + $"no marker within {DigTuning.RoamMaxAnchorDistance:0}y {_rejAnchor}   "
       + $"not on reachable navmesh {_rejNav}   ON A ROOF {_rejRoof}   WALLED OFF {_rejWall}   "
       + $"too close to another {_rejCrowd}   step/ledge {_rejStep}";
@@ -303,6 +304,14 @@ internal sealed unsafe class DigRoamService : IDigTest
             if (DigLandmarks.WalkableBox(out var boxLo, out var boxHi) &&
                 (spot.X < boxLo.X || spot.X > boxHi.X || spot.Z < boxLo.Y || spot.Z > boxHi.Y))
             { _rejBox++; continue; }
+
+            // HAND-DRAWN EXCLUSIONS. Checked right after the box because together they are the
+            // authored answer to "where may a spot go", and both are cheap.
+            //
+            // This is the gate that does not need to be clever. Every automatic attempt to work out
+            // which ground is off-limits has failed in a different way; a rectangle somebody drew
+            // over the lake cannot be wrong about the lake.
+            if (DigTuning.InNullZone(_territory, spot.X, spot.Z)) { _rejNull++; continue; }
 
             // NEAR SOMETHING THE MAP NAMES — the containment that follows the zone's SHAPE.
             //

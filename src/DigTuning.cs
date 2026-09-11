@@ -1,5 +1,6 @@
 #if DEV_BUILD
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using System.Text.Json;
@@ -269,7 +270,19 @@ internal static class DigTuning
     /// would reject most of the zone. It earns its keep on dense maps, which is exactly where the
     /// box fails worst.</para>
     /// </summary>
-    public static float RoamMaxAnchorDistance = 40f;
+    /// <summary>
+    /// <b>Defaults to 0 — OFF — since null zones arrived.</b> At 40 it rejected 2628 of 10000
+    /// candidates and its partner wall test another 2647, and the two together carved the open
+    /// middle out of every plaza: both are anchored to map MARKERS, so placements cluster in a halo
+    /// around markers and the spaces between them go empty. That is marker density showing through,
+    /// not walkability.
+    ///
+    /// <para>They were proxies for "where can a player stand", built because nothing else could
+    /// answer. A hand-drawn box plus hand-drawn null zones answers it directly, so the proxy's cost
+    /// is no longer worth paying. Kept, because on a map nobody has hand-authored it is still better
+    /// than nothing.</para>
+    /// </summary>
+    public static float RoamMaxAnchorDistance;
 
     /// <summary>
     /// The height change one stride may absorb when walking a line to test it. Above this the step
@@ -301,6 +314,71 @@ internal static class DigTuning
     public static uint  BoxTerritory;
     public static bool  BoxSet;
     public static float BoxMinX, BoxMinZ, BoxMaxX, BoxMaxZ;
+
+    /// <summary>
+    /// A rectangle, in WORLD coordinates, that placement must never put a spot inside.
+    ///
+    /// <para><b>The complement of the walkable box, and the piece that makes hand-authoring
+    /// workable.</b> A box says where the zone is; it cannot say that the lake in the middle of it,
+    /// or the roof of the building on its east side, are not places to bury anything. Every
+    /// automatic attempt at that distinction has failed — the navmesh filter, marker proximity, the
+    /// wall tests — and each failure cost a version. Drawing the exclusions by hand takes a minute
+    /// and cannot be wrong about what it was told.</para>
+    /// </summary>
+    public sealed class NullZone
+    {
+        public uint  Territory { get; set; }
+        public float MinX { get; set; }
+        public float MinZ { get; set; }
+        public float MaxX { get; set; }
+        public float MaxZ { get; set; }
+    }
+
+    /// <summary>Hand-drawn exclusions, across all territories. Filtered by territory on use.</summary>
+    public static List<NullZone> NullZones = new();
+
+    /// <summary>Whether a world position falls inside any exclusion for this territory.</summary>
+    public static bool InNullZone(uint territory, float x, float z)
+    {
+        foreach (var n in NullZones)
+        {
+            if (n.Territory != territory) continue;
+            if (x < n.MinX || x > n.MaxX || z < n.MinZ || z > n.MaxZ) continue;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Adds an exclusion, normalising the corners so min really is min.</summary>
+    public static void AddNullZone(uint territory, float x0, float z0, float x1, float z1)
+    {
+        // A stray click would otherwise store a zero-area rectangle that excludes nothing and
+        // clutters the list forever.
+        if (MathF.Abs(x1 - x0) < 0.5f || MathF.Abs(z1 - z0) < 0.5f) return;
+
+        NullZones.Add(new NullZone
+        {
+            Territory = territory,
+            MinX = MathF.Min(x0, x1), MaxX = MathF.Max(x0, x1),
+            MinZ = MathF.Min(z0, z1), MaxZ = MathF.Max(z0, z1),
+        });
+
+        Save();
+    }
+
+    public static void RemoveNullZone(NullZone zone)
+    {
+        NullZones.Remove(zone);
+        Save();
+    }
+
+    /// <summary>Drops every exclusion for one territory, leaving other zones' work alone.</summary>
+    public static void ClearNullZones(uint territory)
+    {
+        NullZones.RemoveAll(n => n.Territory == territory);
+        Save();
+    }
 
     /// <summary>Records one corner from a world position, normalising so min really is min.</summary>
     public static void SetBoxCorner(bool first, uint territory, float x, float z)
@@ -755,6 +833,9 @@ internal static class DigTuning
         public float? BoxMaxX { get; set; }
         public float? BoxMaxZ { get; set; }
 
+        /// <summary>Hand-drawn exclusions. Absent on any file written before they existed.</summary>
+        public List<NullZone>? NullZones { get; set; }
+
         public float? HudDropPx { get; set; }
         public float? HudClueGapPx { get; set; }
 
@@ -849,7 +930,7 @@ internal static class DigTuning
         RoamMaxRise = 3.5f; RoamNavTolerance = 2f;
         RoamDig = 4f; RoamRadar = 30f; RoamDifficulty = 0.35f;
         RoamClueCategories = 127; RoamRepeatPenalty = 0.85f; RoamAwkwardness = 0.5f;
-        RoamMaxAnchorDistance = 40f; WalkMaxStep = 1.1f;
+        RoamMaxAnchorDistance = 0f; WalkMaxStep = 1.1f;
     }
 
     public static void ResetHud()
@@ -983,6 +1064,10 @@ internal static class DigTuning
                 BoxMinZ      = d.BoxMinZ ?? 0f;
                 BoxMaxX      = d.BoxMaxX ?? 0f;
                 BoxMaxZ      = d.BoxMaxZ ?? 0f;
+
+                // Hand-drawn work: never defaulted, never invented. An absent list means none were
+                // drawn, which is not the same as drawing none and is treated identically anyway.
+                NullZones = d.NullZones ?? new List<NullZone>();
             }
             else ResetRoam();
 
@@ -1153,6 +1238,7 @@ internal static class DigTuning
                 RoamMaxAnchorDistance = RoamMaxAnchorDistance, WalkMaxStep = WalkMaxStep,
                 BoxSet = BoxSet, BoxTerritory = BoxTerritory,
                 BoxMinX = BoxMinX, BoxMinZ = BoxMinZ, BoxMaxX = BoxMaxX, BoxMaxZ = BoxMaxZ,
+                NullZones = NullZones,
                 HudDropPx = HudDropPx, HudClueGapPx = HudClueGapPx,
                 ClueStyleSaved = true,
                 ClueFaceR = ClueFaceColor.X, ClueFaceG = ClueFaceColor.Y, ClueFaceB = ClueFaceColor.Z,
