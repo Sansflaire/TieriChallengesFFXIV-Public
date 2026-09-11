@@ -1081,6 +1081,32 @@ internal sealed class DigHuntOverlay : IDisposable
                    tests.Trail.FinishCount + tests.Roam.FinishCount);
         DrawBanner();
 
+        // THE START BANNER OWNS THE SCREEN WHILE IT RUNS.
+        //
+        // The dial, the CLUE!/DIG! word and the clue line all sit in the middle of the screen, which
+        // is exactly where TRAIL START slides to — so the banner arrived and was buried under the
+        // very thing it was announcing. Holding the HUD back until it has gone is the whole point of
+        // having an announcement.
+        //
+        // Only the START banner. TRAIL END fires as a run finishes, so by then there is nothing left
+        // to suppress; gating on it too would blank a HUD that is already going away and read as a
+        // flicker.
+        if (_banner == Banner.TrailStart)
+        {
+            // The clue's display window is pushed along with it. Without this the clue spends its
+            // lifetime hidden behind the banner and is already half expired when it appears.
+            _reminderUntil = Math.Max(_reminderUntil,
+                                      Environment.TickCount64 + (long)(ReminderHold * 1000f));
+
+            // Held at zero rather than left to decay, so nothing fades IN behind the banner and then
+            // has to fade out again when it lands.
+            _reminderAlpha = 0f;
+            _digWordAlpha  = 0f;
+            _clueWordAlpha = 0f;
+            _radarFade     = 0f;
+            return;
+        }
+
         var active = tests.Active;
 
         if (active == null)
