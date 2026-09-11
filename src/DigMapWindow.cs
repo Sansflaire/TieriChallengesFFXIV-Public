@@ -139,6 +139,12 @@ internal sealed class DigMapWindow
         // from the map under it.
         HandleZoomPan(origin, rect, side);
 
+        // EVERYTHING BELOW IS CLIPPED TO THE MAP FRAME. Zoomed in, the image is several times the
+        // frame and was painting straight over the game — the window's own clip rect does not bound
+        // it because the frame is smaller than the window. Every dot, label and box line takes the
+        // same clip, so nothing can appear outside the square it belongs to.
+        drawList.PushClipRect(origin, origin + rect, true);
+
         if (tex != null)
         {
             drawList.AddImage(tex.Handle,
@@ -307,6 +313,10 @@ internal sealed class DigMapWindow
             drawList.AddCircle(me, 8f, green, 14, 1.5f);
         }
 
+        // Paired with the PushClipRect above. Popped BEFORE the Dummy and the status lines, or
+        // every widget after this would inherit the map's clip and the text below would vanish.
+        drawList.PopClipRect();
+
         ImGui.Dummy(rect);
 
         if (outside > 0)
@@ -344,9 +354,12 @@ internal sealed class DigMapWindow
     /// </summary>
     private static void HandleZoomPan(Vector2 origin, Vector2 rect, float side)
     {
-        if (!ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows)) return;
+        // A drag ALREADY UNDER WAY keeps going regardless of hover — see the latch below. Only
+        // STARTING one requires the pointer to be over the map.
+        bool hovered = ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows);
+        if (!hovered && !_panning) return;
 
-        float wheel = ImGui.GetIO().MouseWheel;
+        float wheel = hovered ? ImGui.GetIO().MouseWheel : 0f;
 
         if (MathF.Abs(wheel) > 0.001f)
         {
@@ -357,16 +370,30 @@ internal sealed class DigMapWindow
             _pan = AnchorPan(_pan, ImGui.GetMousePos() - origin, before, _zoom);
         }
 
-        if (ImGui.IsMouseDragging(ImGuiMouseButton.Right))
-        {
-            _pan += ImGui.GetIO().MouseDelta / _zoom;
-            ImGui.ResetMouseDragDelta(ImGuiMouseButton.Right);
-        }
+        // PANNING IS A LATCH, not a per-frame hover test.
+        //
+        // The first version asked IsMouseDragging every frame from inside a hover guard, so a drag
+        // died the instant the cursor crossed the window edge — which, when zoomed in, is exactly
+        // where you are dragging TO. Latching on press and releasing on release means the gesture
+        // survives leaving the window, which is how every map in existence behaves.
+        //
+        // Right OR middle. Right is what a person reaches for; middle is the fallback for when the
+        // game or another overlay has eaten the right button.
+        if (hovered && (ImGui.IsMouseClicked(ImGuiMouseButton.Right)
+                     || ImGui.IsMouseClicked(ImGuiMouseButton.Middle)))
+            _panning = true;
+
+        if (_panning) _pan += ImGui.GetIO().MouseDelta / _zoom;
+
+        if (ImGui.IsMouseReleased(ImGuiMouseButton.Right) || ImGui.IsMouseReleased(ImGuiMouseButton.Middle))
+            _panning = false;
 
         // Never let the map be panned entirely off its own frame.
         float limit = side * 1.5f;
         _pan = Vector2.Clamp(_pan, new Vector2(-limit), new Vector2(limit));
     }
+
+    private static bool _panning;
 
     /// <summary>
     /// The pan that keeps the image point under <paramref name="cursor"/> in the same screen place
@@ -567,7 +594,7 @@ internal sealed class DigMapWindow
         ImGui.SameLine();
         if (ImGui.Button("Reset zoom")) { _zoom = 1f; _pan = Vector2.Zero; }
         ImGui.SameLine();
-        ImGui.TextDisabled($"zoom {_zoom:0.0}x — wheel to zoom, right-drag to pan");
+        ImGui.TextDisabled($"zoom {_zoom:0.0}x — wheel to zoom, right- or middle-drag to pan");
 
         if (_pending.Count > 0)
         {
