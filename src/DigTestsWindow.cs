@@ -199,34 +199,49 @@ internal sealed class DigTestsWindow
               + "zone was meshed first — a lopsided trail you would have no way of noticing.");
         }
 
-        if (DigNavmesh.Available)
+        ImGui.TextColored(Head, "VNAVMESH IS REQUIRED");
+        ImGui.TextColored(Rule,
+            "Not a preference and no longer a toggle. The old \"Require navmesh\" checkbox had an\n"
+          + "off position that fell back to raycast heuristics, and those cannot answer\n"
+          + "reachability even in principle: a ray finds the first solid surface under a point, and\n"
+          + "the sand outside a housing ward's walls is solid, meshes, and is unreachable. So \"off\"\n"
+          + "did not trade accuracy for availability — it produced spots nobody could walk to while\n"
+          + "looking like a setting somebody might reasonably pick.\n"
+          + "REACHABLE is not the same as ON THE MESH, and that distinction is the whole fix.\n"
+          + "vnavmesh flags disconnected islands with FLAG_UNREACHABLE during a flood fill at build\n"
+          + "time. Query.Mesh.NearestPoint ignores that flag; NearestPointReachable respects it.\n"
+          + "We were asking the first one, getting correct answers, and still placing spots outside\n"
+          + "the walls — because those spots genuinely ARE on the navmesh, just on an island you\n"
+          + "cannot get to. No amount of tolerance tightening was ever going to fix that.");
+
+        if (!DigNavmesh.Available)
+        {
+            ImGui.TextColored(Warn,
+                "vnavmesh is NOT answering — not installed or not loaded. Test 4 will refuse to\n"
+              + "start rather than place spots it cannot vouch for.");
+        }
+        else if (!DigNavmesh.HasReachableQuery)
+        {
+            ImGui.TextColored(Warn,
+                "vnavmesh is answering but does NOT publish Query.Mesh.NearestPointReachable, so\n"
+              + "the gate would only be able to ask \"is it on the mesh\" — which accepts\n"
+              + "disconnected islands. Test 4 refuses. Update vnavmesh.");
+        }
+        else
         {
             ImGui.TextColored(Ok,
-                "REACHABILITY: vnavmesh is answering. Every spot is checked against the navmesh —\n"
-              + "the actual set of places a character can walk — so terrain outside the walkable\n"
-              + "area is rejected outright rather than merely being unlikely.");
+                "vnavmesh is answering and is reachability-aware. Every spot is snapped onto\n"
+              + "reachable navmesh and then re-grounded, so it sits where a character actually\n"
+              + "stands rather than up to a tolerance away from it.");
 
             ImGui.SliderFloat("Navmesh tolerance", ref DigTuning.RoamNavTolerance, 0.1f, 20f, "%.1f y");
             if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
         }
-        else
-        {
-            ImGui.TextColored(Warn,
-                "REACHABILITY: vnavmesh is NOT answering — not installed, not loaded, or still\n"
-              + "building this zone. Placement has fallen back to raycast heuristics, which are\n"
-              + "weaker: a raycast finds ground, and the sand outside a housing ward is perfectly\n"
-              + "solid ground. Spots CAN land where you cannot walk while this says so.\n"
-              + "This message exists because a silent fallback looks exactly like a working gate\n"
-              + "that has gone wrong.");
-        }
-
-        if (ImGui.Checkbox("Require navmesh (refuse to place without it)",
-                           ref DigTuning.RoamRequireNavmesh))
-            DigTuning.Save();
 
         ImGui.TextColored(Rule,
-            "ON by default. Placing nothing is a visible failure somebody fixes; placing\n"
-          + "something unreachable is an invisible one you waste ten minutes walking into.");
+            "WHEN THIS TEST GOES PUBLIC, vnavmesh becomes a PUBLIC requirement. Un-gating it means\n"
+          + "saying so in README.md and docs/HELP.md, and refusing at runtime with a line a player\n"
+          + "can act on — not silently doing nothing.");
 
         if (ImGui.Button("Start##roam")) Say(_tests.Start(_tests.Roam));
 

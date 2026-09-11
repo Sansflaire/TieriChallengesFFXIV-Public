@@ -26,14 +26,53 @@ namespace TieriChallengesFFXIV;
 internal static class DigNavmesh
 {
     /// <summary>
-    /// <c>vnavmesh.Query.Mesh.NearestPoint</c> — <c>(position, halfExtentXZ, halfExtentY)</c>
-    /// returning the nearest point ON the navmesh, or null when there is none within the extents.
+    /// <c>vnavmesh.Query.Mesh.NearestPointReachable</c> — <c>(position, halfExtentXZ, halfExtentY)</c>
+    /// returning the nearest point on the <b>reachable</b> navmesh, or null when there is none.
     ///
-    /// <para>Signature taken from JumpSolver's IPC table, which is this machine's verified record of
-    /// vnavmesh's surface — not inferred from the name.</para>
+    /// <para><b>THIS IS THE ONE THAT ANSWERS THE QUESTION, and <c>NearestPoint</c> is not.</b> Read
+    /// from vnavmesh 1.2.3.14's own source rather than inferred:</para>
+    /// <code>
+    ///   RegisterFunc("Query.Mesh.NearestPoint",
+    ///       (p, xz, y) => Query?.FindNearestPointOnMesh(p, xz, y));            // default filter
+    ///   RegisterFunc("Query.Mesh.NearestPointReachable",
+    ///       (p, xz, y) => Query?.FindNearestPointOnMesh(p, xz, y, false));     // allowUnreachable: false
+    /// </code>
+    /// <para>With <c>allowUnreachable: false</c> the query swaps its polygon filter for a
+    /// <c>FloodFillAwareFilter</c>, which rejects any polygon carrying <c>Navmesh.FLAG_UNREACHABLE</c>
+    /// — a flag a flood fill sets at mesh build time on islands that are disconnected from the
+    /// walkable body of the zone.</para>
+    ///
+    /// <para><b>That flag is the entire bug.</b> The sand outside a housing ward's walls IS navmesh:
+    /// it is real ground, it meshes, and <c>NearestPoint</c> returns it happily because the point
+    /// genuinely is on the mesh. It is simply on an island no character can reach. So the gate was
+    /// working exactly as written and still let spots land somewhere unreachable, which is why
+    /// tightening the tolerance never helped and never could have.</para>
+    /// </summary>
+    private static ICallGateSubscriber<Vector3, float, float, Vector3?>? _reachable;
+
+    /// <summary>
+    /// <c>vnavmesh.Query.Mesh.NearestPoint</c> — the unfiltered version. Kept ONLY as a fallback for
+    /// a vnavmesh too old to publish the reachable variant, and the lab says so when it is in use:
+    /// it is a strictly weaker gate and must never be mistaken for the real one.
     /// </summary>
     private static ICallGateSubscriber<Vector3, float, float, Vector3?>? _nearest;
+
+    /// <summary>
+    /// <c>vnavmesh.Query.Mesh.IsPointOnMesh</c> — <c>(position, halfExtentY, allowUnreachable)</c>.
+    /// <b>Note the parameter order: the float is the Y extent and there is no XZ extent at all</b>,
+    /// which is not what the sibling queries take. Read from the source; guessing it as
+    /// <c>(p, xz, y)</c> would have compiled and silently searched the wrong shaped box.
+    /// </summary>
+    private static ICallGateSubscriber<Vector3, float, bool, bool>? _onMesh;
+
     private static ICallGateSubscriber<bool>?  _isReady;
+
+    /// <summary>
+    /// <c>vnavmesh.Nav.BuildProgress</c>. <b>A float, verified</b> — <c>public float
+    /// LoadTaskProgress</c>. It is 0..1 while a mesh is building and <b>negative when no build is
+    /// running at all</b>, which includes both "finished" and "never started". Treating negative as
+    /// a percentage would print "-100%" at the one moment a person is staring at it.
+    /// </summary>
     private static ICallGateSubscriber<float>? _progress;
     private static bool _resolved;
 
@@ -71,13 +110,21 @@ internal static class DigNavmesh
     public static string StatusLine()
     {
         if (!Available) return "vnavmesh is not installed or not loaded.";
-        if (Ready)      return "navmesh ready.";
+
+        if (Ready)
+            return HasReachableQuery
+                ? "navmesh ready (reachability-aware)."
+                : "navmesh ready, but this vnavmesh has no NearestPointReachable — the gate only "
+                + "checks \"is it on the mesh\", which ACCEPTS disconnected islands. Update vnavmesh.";
 
         float p = BuildProgress;
 
+        // 0..1 is a live build. NEGATIVE means no build task is running at all, which here can only
+        // mean this zone has no mesh and nothing is making one — a different problem with a
+        // different fix, and printing it as "-100%" would hide that behind a number.
         return p >= 0f
             ? $"Building NavMesh… {p * 100f:0}%"
-            : "Building NavMesh… (no progress reported yet)";
+            : "No navmesh for this zone and nothing is building one — use vnavmesh's Rebuild.";
     }
 
     private static void Resolve()
@@ -89,8 +136,14 @@ internal static class DigNavmesh
         {
             // GetIpcSubscriber never throws even when the provider is absent; only InvokeFunc does.
             _isReady = Plugin.PluginInterface.GetIpcSubscriber<bool>("vnavmesh.Nav.IsReady");
+
+            _reachable = Plugin.PluginInterface
+                .GetIpcSubscriber<Vector3, float, float, Vector3?>("vnavmesh.Query.Mesh.NearestPointReachable");
             _nearest = Plugin.PluginInterface
-                             .GetIpcSubscriber<Vector3, float, float, Vector3?>("vnavmesh.Query.Mesh.NearestPoint");
+                .GetIpcSubscriber<Vector3, float, float, Vector3?>("vnavmesh.Query.Mesh.NearestPoint");
+            _onMesh = Plugin.PluginInterface
+                .GetIpcSubscriber<Vector3, float, bool, bool>("vnavmesh.Query.Mesh.IsPointOnMesh");
+
             _progress = Plugin.PluginInterface.GetIpcSubscriber<float>("vnavmesh.Nav.BuildProgress");
         }
         catch (Exception ex)
@@ -106,12 +159,13 @@ internal static class DigNavmesh
         {
             Resolve();
 
-            if (_nearest == null) return false;
+            var query = _reachable ?? _nearest;
+            if (query == null) return false;
 
             // Probes the QUERY, not Nav.IsReady. A mesh that is still building answers this
             // perfectly well, and reporting "unavailable" during the build is what let unwalkable
             // spots through in the first place.
-            try   { _nearest.InvokeFunc(Vector3.Zero, 1f, 1f); return true; }
+            try   { query.InvokeFunc(Vector3.Zero, 1f, 1f); return true; }
             catch { return false; }
         }
     }
@@ -132,9 +186,36 @@ internal static class DigNavmesh
     /// </summary>
     public static bool? IsWalkable(Vector3 point, float tolerance)
     {
+        var r = TrySnapToReachable(point, tolerance, out _);
+        return r;
+    }
+
+    /// <summary>
+    /// Whether a character can REACH <paramref name="point"/>, and where exactly the reachable mesh
+    /// sits if so.
+    ///
+    /// <para><b>Snapping and testing are one call because they are one question.</b> The query has to
+    /// find the nearest reachable mesh point in order to answer at all, so throwing that point away
+    /// and keeping only the yes/no discards the most useful half of the answer. Burying the spot at
+    /// the snapped position puts it on ground the navmesh agrees is walkable, rather than up to a
+    /// tolerance away from it — which is the difference between a dig radius centred on a path and
+    /// one centred on the kerb beside it.</para>
+    ///
+    /// <para><b>Returns null when it cannot answer</b> rather than guessing either way. A caller that
+    /// treats "unknown" as "yes" gets the old raycast behaviour; one that treats it as "no" refuses
+    /// to place anything without vnavmesh. Both are legitimate and the distinction has to survive as
+    /// far as the caller, which is what <c>RoamRequireNavmesh</c> decides.</para>
+    /// </summary>
+    public static bool? TrySnapToReachable(Vector3 point, float tolerance, out Vector3 snapped)
+    {
+        snapped = point;
+
         Resolve();
 
-        if (_nearest == null) return null;
+        // The reachable query is preferred absolutely. NearestPoint is a weaker test that accepts
+        // disconnected islands, so it is a fallback for an old vnavmesh and never a co-equal.
+        var query = _reachable ?? _nearest;
+        if (query == null) return null;
 
         try
         {
@@ -143,13 +224,16 @@ internal static class DigNavmesh
             // answer" — and the caller's fallback accepted the spot. So the one moment the gate was
             // most needed, just after zoning in, was the moment it was switched off. Querying
             // anyway either works or throws, and both are answers.
-            var snapped = _nearest.InvokeFunc(point, tolerance, tolerance);
+            var hit = query.InvokeFunc(point, tolerance, tolerance);
 
             // A query that ran and found nothing is a real NO, not an absence of information.
-            if (snapped is not { } s) return false;
+            if (hit is not { } s) return false;
 
-            return DigGround.Flat(point, s) <= tolerance
-                && MathF.Abs(point.Y - s.Y) <= tolerance;
+            if (DigGround.Flat(point, s) > tolerance ||
+                MathF.Abs(point.Y - s.Y) > tolerance) return false;
+
+            snapped = s;
+            return true;
         }
         catch
         {
@@ -157,6 +241,18 @@ internal static class DigNavmesh
             // every placement attempt.
             return null;
         }
+    }
+
+    /// <summary>
+    /// Whether the reachable-aware query is the one actually in use. False means an older vnavmesh
+    /// is installed and the gate has silently degraded to "is it on the mesh at all", which accepts
+    /// disconnected islands — the exact failure the reachable query exists to stop. The lab prints
+    /// this, because a weaker gate that still says "navmesh ready" is indistinguishable from a
+    /// working one right up until a spot lands somewhere you cannot walk.
+    /// </summary>
+    public static bool HasReachableQuery
+    {
+        get { Resolve(); return _reachable != null && Available; }
     }
 }
 #endif

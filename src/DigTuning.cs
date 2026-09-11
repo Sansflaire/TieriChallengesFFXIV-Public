@@ -200,12 +200,17 @@ internal static class DigTuning
     /// </summary>
     public static float RoamNavTolerance = 2f;
 
-    /// <summary>
-    /// Refuse to bury anything at all when the navmesh cannot be consulted.
-    /// <b>Defaults to ON, and that is deliberate.</b> Placing nothing is a visible failure somebody
-    /// fixes; placing something unreachable is an invisible one they waste ten minutes walking into.
-    /// </summary>
-    public static bool RoamRequireNavmesh = true;
+    // RoamRequireNavmesh was REMOVED at 0.84.44.1 and must not come back as a setting.
+    //
+    // Its off position fell back to raycast heuristics, and those cannot answer reachability even in
+    // principle: a ray finds the first solid surface under a position, and the sand outside a housing
+    // ward's walls is solid, meshes, and is unreachable. So "off" did not trade accuracy for
+    // availability — it produced spots nobody could walk to, while looking like a choice somebody
+    // might reasonably make. vnavmesh is now a hard requirement of Test 4; see
+    // DigRoamService.RefuseWithoutNavmesh.
+    //
+    // Old dig-tuning.json files still carry the key. It is simply not read, which is the correct
+    // outcome: Newtonsoft ignores a property the DTO no longer has.
 
     /// <summary>How close a dig must be to a wild spot, and where its radar appears.</summary>
     public static float RoamDig   = 4f;
@@ -594,7 +599,8 @@ internal static class DigTuning
         public float RoamMaxRange { get; set; }
         public float RoamMaxRise { get; set; }
         public float RoamNavTolerance { get; set; }
-        public bool  RoamRequireNavmesh { get; set; }
+        // RoamRequireNavmesh removed at 0.84.44.1 — see the note beside the fields. A stale key in an
+        // existing dig-tuning.json is ignored on load, which is the behaviour we want.
         public float RoamDig { get; set; }
         public float RoamRadar { get; set; }
         public float RoamDifficulty { get; set; }
@@ -700,7 +706,7 @@ internal static class DigTuning
     public static void ResetRoam()
     {
         RoamStops = 5; RoamSpacing = 25f; RoamMinRange = 15f; RoamMaxRange = 0f;
-        RoamMaxRise = 3.5f; RoamNavTolerance = 2f; RoamRequireNavmesh = true;
+        RoamMaxRise = 3.5f; RoamNavTolerance = 2f;
         RoamDig = 4f; RoamRadar = 30f; RoamDifficulty = 0.35f;
         RoamClueCategories = 127; RoamRepeatPenalty = 0.85f; RoamAwkwardness = 0.5f;
     }
@@ -807,7 +813,6 @@ internal static class DigTuning
                 RoamMaxRange   = Clamp(d.RoamMaxRange, 0f, 2000f,  0f);
                 RoamMaxRise      = Clamp(d.RoamMaxRise,      0f, 40f, 3.5f);
                 RoamNavTolerance   = Clamp(d.RoamNavTolerance, 0.1f, 20f, 2f);
-                RoamRequireNavmesh = d.RoamRequireNavmesh;
                 RoamDig        = Pos(d.RoamDig,        4f);
                 RoamRadar      = Pos(d.RoamRadar,     30f);
                 RoamDifficulty = Clamp(d.RoamDifficulty, 0f, 1f, 0.35f);
@@ -986,7 +991,6 @@ internal static class DigTuning
                 RoamStops = RoamStops, RoamSpacing = RoamSpacing,
                 RoamMinRange = RoamMinRange, RoamMaxRange = RoamMaxRange,
                 RoamMaxRise = RoamMaxRise, RoamNavTolerance = RoamNavTolerance,
-                RoamRequireNavmesh = RoamRequireNavmesh,
                 RoamDig = RoamDig, RoamRadar = RoamRadar, RoamDifficulty = RoamDifficulty,
                 RoamClueCategories = RoamClueCategories,
                 RoamRepeatPenalty = RoamRepeatPenalty, RoamAwkwardness = RoamAwkwardness,

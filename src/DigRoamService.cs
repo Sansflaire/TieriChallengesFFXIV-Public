@@ -128,8 +128,7 @@ internal sealed unsafe class DigRoamService : IDigTest
         // correctly. A RUN is not, because the spots it could place would all sit in whichever
         // corner of the zone happened to be meshed first, and the player would never know the trail
         // had been biased. Waiting is cheap; a silently lopsided trail is not.
-        if (DigTuning.RoamRequireNavmesh && DigNavmesh.Available && !DigNavmesh.Ready)
-            return DigNavmesh.StatusLine() + " — wait for it to finish, then start again.";
+        if (RefuseWithoutNavmesh() is { } refusal) return refusal;
 
         // Re-read every time: the map's landmarks are what the clues are made of, and a cached set
         // from the previous zone would write clues about places that are not here.
@@ -156,9 +155,9 @@ internal sealed unsafe class DigRoamService : IDigTest
 
         if (_stops.Count == 0)
             return _navRefusals > 0
-                ? "refused to bury anything: vnavmesh is not answering, so nothing here can be "
-                + "confirmed walkable. Install/enable vnavmesh, or turn off \"Require navmesh\" in "
-                + "the lab to fall back to the old guesswork."
+                ? $"refused to bury anything — every one of {PlacementAttempts} candidates was "
+                + "rejected as unreachable. That is the gate working, not failing: this map's "
+                + "reachable area may be small, or vnavmesh stopped answering mid-run."
                 : "found nowhere to bury anything here — try somewhere more open.";
 
         // Clues are written AFTER every spot is placed, so a clue may refer to another stop's
@@ -251,23 +250,28 @@ internal sealed unsafe class DigRoamService : IDigTest
             // being described with a straight face, because every other test here narrows the
             // problem without knowing what "reachable" means. A navmesh IS the set of places a
             // character can walk, so it does know.
-            bool? walkable = DigNavmesh.IsWalkable(spot, DigTuning.RoamNavTolerance);
+            // Asks for REACHABLE mesh, which is a different question from "is there mesh here" and
+            // is the one that was being got wrong. Unreachable polygons are flagged by a flood fill
+            // at mesh build time, so an island cut off from the walkable body of the zone — the sand
+            // outside the walls — is rejected even though it is unambiguously real ground.
+            bool? walkable = DigNavmesh.TrySnapToReachable(spot, DigTuning.RoamNavTolerance,
+                                                           out var onMesh);
 
-            if (walkable == false) continue;
+            // Null means vnavmesh could not answer at all. It is a hard requirement of this test and
+            // Start refused before we got here, so reaching this is a mid-run disappearance — treat
+            // it exactly like a no.
+            if (walkable != true) { _navRefusals++; continue; }
 
-            // Null means vnavmesh could not answer at all — genuinely not installed.
+            // SNAP TO THE MESH, then re-ground. The query already had to find the nearest reachable
+            // point to answer at all, so keeping only its yes/no would throw away the better half:
+            // the spot now sits where the navmesh says a character stands rather than up to a
+            // tolerance away, which is the difference between a dig radius centred on the path and
+            // one centred on the kerb beside it.
             //
-            // THE DEFAULT IS TO REFUSE, and that is a deliberate reversal. It used to fall back to
-            // the raycast heuristics, which meant the single most important property of a spot —
-            // that the player can reach it — was quietly downgraded to a guess whenever the one
-            // component that knows the answer was missing. Placing nothing is a visible failure
-            // somebody fixes; placing something unreachable is an invisible one they waste ten
-            // minutes walking into.
-            if (walkable == null)
-            {
-                if (DigTuning.RoamRequireNavmesh) { _navRefusals++; continue; }
-                if (DigGround.IsElevated(spot, DigTuning.RoamMaxRise)) continue;
-            }
+            // Re-grounded because the navmesh surface is a simplification that sits a little above
+            // or below the visual floor, and the spot's height is what the in-world drawing uses.
+            if (DigGround.TryGroundAt(spot, onMesh.X, onMesh.Z, 0f, out var settled)) spot = settled;
+            else                                                                      spot = onMesh;
 
             // Far enough from the others that no single dig can turn up two, and so the trail is a
             // route rather than a huddle.
@@ -298,6 +302,40 @@ internal sealed unsafe class DigRoamService : IDigTest
     public const float TestSpotRange = 45f;
 
     /// <summary>
+    /// The reason this test will not run right now, or null when it may.
+    ///
+    /// <para><b>vnavmesh is a hard requirement of this test, not a preference.</b> There used to be a
+    /// "Require navmesh" toggle whose off position fell back to raycast heuristics — and the whole
+    /// finding of this session is that those heuristics CANNOT answer reachability even in principle.
+    /// A ray finds the first solid surface under a position; the sand outside a housing ward's walls
+    /// is solid, it meshes, and it is unreachable. So the toggle's off position did not trade
+    /// accuracy for availability, it just produced spots nobody could walk to while looking like a
+    /// setting somebody might reasonably pick. Requiring the one component that knows the answer is
+    /// simpler to explain and impossible to get wrong.</para>
+    ///
+    /// <para><b>Scoped to this test, NOT to the plugin.</b> The public build contains none of this —
+    /// the entire dig tree is <c>#if DEV_BUILD</c> — so declaring a plugin-wide dependency would make
+    /// every player install vnavmesh for a feature they cannot reach.</para>
+    /// </summary>
+    private static string? RefuseWithoutNavmesh()
+    {
+        if (!DigNavmesh.Available)
+            return "this test REQUIRES vnavmesh and it is not answering. It is the only thing that "
+                 + "knows which ground a character can actually reach — a raycast cannot, which is "
+                 + "why spots used to land outside the walls. Install or enable vnavmesh.";
+
+        if (!DigNavmesh.Ready)
+            return DigNavmesh.StatusLine() + " — wait for it to finish, then try again.";
+
+        if (!DigNavmesh.HasReachableQuery)
+            return "this vnavmesh does not publish Query.Mesh.NearestPointReachable, so the gate "
+                 + "could only check \"is it on the mesh\" — which accepts disconnected islands and "
+                 + "is exactly the hole being closed. Update vnavmesh.";
+
+        return null;
+    }
+
+    /// <summary>
     /// Buries ONE spot near the player with a clue pinned to <paramref name="category"/> at
     /// <paramref name="hard"/>, so a single clue category can be judged on its own.
     ///
@@ -316,8 +354,7 @@ internal sealed unsafe class DigRoamService : IDigTest
         var player = Plugin.ObjectTable.LocalPlayer;
         if (player == null) return "no character loaded.";
 
-        if (DigTuning.RoamRequireNavmesh && DigNavmesh.Available && !DigNavmesh.Ready)
-            return DigNavmesh.StatusLine() + " — wait for it to finish, then try again.";
+        if (RefuseWithoutNavmesh() is { } refusal) return refusal;
 
         DigLandmarks.Invalidate();
         DigClueSources.Invalidate();
