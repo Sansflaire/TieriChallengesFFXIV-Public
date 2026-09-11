@@ -526,8 +526,13 @@ internal sealed unsafe class DigRoamService : IDigTest
             // without them — and the cause was the CENTRE being wrong, not the spot.
             DigLandmarks.ContentBounds(out var lo, out var hi);
 
-            line += $"\n[Challenges] map content spans x {lo.X:0.0}-{hi.X:0.0}, y {lo.Y:0.0}-{hi.Y:0.0}"
+            string source = DigNavmesh.WalkableSampleCount > 0
+                ? $"navmesh ({DigNavmesh.WalkableSampleCount} samples)"
+                : "map labels / coordinate range (navmesh could not bound it)";
+
+            line += $"\n[Challenges] walkable box spans x {lo.X:0.0}-{hi.X:0.0}, y {lo.Y:0.0}-{hi.Y:0.0}"
                   + $"   centre ({(lo.X + hi.X) * 0.5f:0.0}, {(lo.Y + hi.Y) * 0.5f:0.0})"
+                  + $"   from {source}"
                   + $"   -> {DigLandmarks.Quadrant(spot)}";
         }
 

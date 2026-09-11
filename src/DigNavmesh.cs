@@ -244,6 +244,128 @@ internal static class DigNavmesh
     }
 
     /// <summary>
+    /// The bounding box, in WORLD coordinates, of everywhere in this zone a character can actually
+    /// walk — measured by sampling the navmesh.
+    ///
+    /// <para><b>This is the right square for "north" and "east" to be measured against, and the
+    /// alternatives are not.</b> The map's coordinate range is the whole theoretical image square,
+    /// most of which a subdivision does not occupy. Landmark positions are better but describe where
+    /// the game puts LABELS, which cluster around features and miss open ground entirely. The
+    /// navmesh is the walkable area by definition, so its extent is the extent of anywhere the
+    /// player can be — which is what a quadrant is supposed to divide.</para>
+    ///
+    /// <para><b>Sampled rather than asked for, because vnavmesh publishes no bounds query.</b> Its
+    /// IPC surface has the mesh queries and the bitmap builders, none of which returns an extent. So
+    /// this throws a grid at the zone and keeps the reachable hits — using the SAME reachable filter
+    /// placement uses, so the box is the box spots can actually land in. Around 900 queries, once
+    /// per territory, cached; each is a Detour nearest-poly lookup, which is the same call placement
+    /// already makes a hundred times per run.</para>
+    ///
+    /// <para>Returns false when too few samples land, which means either no mesh or a zone so
+    /// enclosed that a grid this coarse misses it. The caller then falls back rather than trusting a
+    /// box built from four hits in one corner.</para>
+    /// </summary>
+    public static bool TryWalkableBounds(Vector2 searchLo, Vector2 searchHi,
+                                         out Vector2 lo, out Vector2 hi)
+    {
+        lo = hi = default;
+
+        if (_boundsTerritory == Plugin.ClientState.TerritoryType && _boundsValid)
+        {
+            lo = _boundsLo;
+            hi = _boundsHi;
+            return true;
+        }
+
+        _boundsTerritory = Plugin.ClientState.TerritoryType;
+        _boundsValid     = false;
+
+        if (!Available) return false;
+
+        const int Steps = 30;
+
+        float stepX = (searchHi.X - searchLo.X) / Steps;
+        float stepZ = (searchHi.Y - searchLo.Y) / Steps;
+
+        if (stepX <= 0f || stepZ <= 0f) return false;
+
+        // Generous enough that a sample landing between walkable polygons still finds the mesh.
+        // Too tight and a coarse grid reports holes that are really just gaps between probes.
+        float tolerance = MathF.Max(5f, MathF.Max(stepX, stepZ) * 0.6f);
+
+        float minX = float.MaxValue, minZ = float.MaxValue;
+        float maxX = float.MinValue, maxZ = float.MinValue;
+        int   hits = 0;
+
+        // Y is swept as well as X and Z: a flat probe at one height misses a zone whose walkable
+        // surface is far above or below the sampling plane, and "no hits" would then read as "no
+        // mesh". Three heights spanning the map's vertical guess is enough to catch that.
+        float baseY = Plugin.ObjectTable.LocalPlayer?.Position.Y ?? 0f;
+
+        for (int ix = 0; ix <= Steps; ix++)
+        {
+            for (int iz = 0; iz <= Steps; iz++)
+            {
+                float x = searchLo.X + stepX * ix;
+                float z = searchLo.Y + stepZ * iz;
+
+                bool found = false;
+                Vector3 snapped = default;
+
+                foreach (float dy in YSweep)
+                {
+                    if (TrySnapToReachable(new Vector3(x, baseY + dy, z), tolerance, out snapped) != true)
+                        continue;
+
+                    found = true;
+                    break;
+                }
+
+                if (!found) continue;
+
+                hits++;
+                if (snapped.X < minX) minX = snapped.X;
+                if (snapped.X > maxX) maxX = snapped.X;
+                if (snapped.Z < minZ) minZ = snapped.Z;
+                if (snapped.Z > maxZ) maxZ = snapped.Z;
+            }
+        }
+
+        if (hits < 12 || maxX - minX < 1f || maxZ - minZ < 1f) return false;
+
+        _boundsLo    = new Vector2(minX, minZ);
+        _boundsHi    = new Vector2(maxX, maxZ);
+        _boundsValid = true;
+        _boundsHits  = hits;
+
+        Diag.Info($"[Dig] walkable bounds from {hits} navmesh samples: "
+                + $"x {minX:0} to {maxX:0}, z {minZ:0} to {maxZ:0}");
+
+        lo = _boundsLo;
+        hi = _boundsHi;
+        return true;
+    }
+
+    /// <summary>Heights probed at each grid point, relative to the player. See the sweep note.</summary>
+    private static readonly float[] YSweep = { 0f, 60f, -60f, 200f, -200f };
+
+    private static uint    _boundsTerritory = uint.MaxValue;
+    private static bool    _boundsValid;
+    private static Vector2 _boundsLo, _boundsHi;
+    private static int     _boundsHits;
+
+    /// <summary>How many grid samples produced the cached box, for the lab readout.</summary>
+    public static int WalkableSampleCount => _boundsHits;
+
+    /// <summary>Forces the next bounds request to re-sample. Called on a zone change.</summary>
+    public static void InvalidateBounds()
+    {
+        _boundsTerritory = uint.MaxValue;
+        _boundsValid     = false;
+        _boundsHits      = 0;
+    }
+
+    /// <summary>
     /// Whether the reachable-aware query is the one actually in use. False means an older vnavmesh
     /// is installed and the gate has silently degraded to "is it on the mesh at all", which accepts
     /// disconnected islands — the exact failure the reachable query exists to stop. The lab prints

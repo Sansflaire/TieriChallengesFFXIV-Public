@@ -220,6 +220,23 @@ internal static class DigLandmarks
         lo = new Vector2(1f, 1f);
         hi = new Vector2(1f + span, 1f + span);
 
+        // FIRST CHOICE: the navmesh. It is the walkable area by definition, so its extent is the
+        // extent of anywhere the player can be — which is exactly what a quadrant should divide.
+        // Sansflaire's call, and it is better than both fallbacks: the coordinate range is a mostly-empty
+        // square, and landmarks describe where the game puts LABELS, which cluster on features and
+        // miss open ground.
+        if (TryWorldBounds(out var worldLo, out var worldHi) &&
+            DigNavmesh.TryWalkableBounds(worldLo, worldHi, out var walkLo, out var walkHi) &&
+            TryMapCoords(new Vector3(walkLo.X, 0f, walkLo.Y), out float ax, out float ay) &&
+            TryMapCoords(new Vector3(walkHi.X, 0f, walkHi.Y), out float bx, out float by))
+        {
+            lo = new Vector2(MathF.Min(ax, bx), MathF.Min(ay, by));
+            hi = new Vector2(MathF.Max(ax, bx), MathF.Max(ay, by));
+            return;
+        }
+
+        // SECOND CHOICE: the map's own labels. Crude — they sit on features rather than spanning
+        // the walkable area — but far better than the raw coordinate square.
         var marks = ForCurrentMap();
         if (marks.Count < 4) return;
 
@@ -293,6 +310,13 @@ internal static class DigLandmarks
     }
 
     /// <summary>Drops the cache, so a map edited or re-entered is re-read rather than remembered.</summary>
-    public static void Invalidate() => _cachedMap = 0;
+    public static void Invalidate()
+    {
+        _cachedMap = 0;
+
+        // The walkable box is per-territory and is the primary source for ContentBounds, so a stale
+        // one would keep quadrants pointing at the previous zone's geometry.
+        DigNavmesh.InvalidateBounds();
+    }
 }
 #endif

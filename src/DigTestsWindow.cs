@@ -136,6 +136,34 @@ internal sealed class DigTestsWindow
         ImGui.Spacing();
     }
 
+    /// <summary>
+    /// A collapsible block INSIDE a <see cref="Section"/>, so a long test's settings do not all
+    /// arrive at once just because the test was opened.
+    ///
+    /// <para><b>A tree node rather than another CollapsingHeader.</b> A header nested in a header
+    /// renders as a second full-width bar and the two levels become impossible to tell apart at a
+    /// glance; a tree node indents and carries an arrow, which is what says "this belongs to the
+    /// thing above".</para>
+    ///
+    /// <para><b>The id is scoped by the parent's title, not by this one.</b> Several tests have a
+    /// "Rules" or a "Ranges" block, and ImGui keys open/closed state by label — so without the
+    /// scope, opening Test 3's Rules would open Test 1's too, and the state would be shared for as
+    /// long as both existed.</para>
+    /// </summary>
+    private static void SubSection(string owner, string title, Action body)
+    {
+        if (!ImGui.TreeNodeEx($"{title}##{owner}-{title}", ImGuiTreeNodeFlags.SpanAvailWidth))
+            return;
+
+        // Same reasoning as Section: guarded individually, because a TreePop that never ran leaves
+        // every window drawn afterwards inside this node's indent level.
+        try { body(); }
+        catch (Exception ex) { Diag.Error($"[Dig] lab block '{owner}/{title}' failed: {ex.Message}"); }
+
+        ImGui.TreePop();
+        ImGui.Spacing();
+    }
+
     // ── live status ──────────────────────────────────────────────────────────
 
     private void DrawStatus()
@@ -168,7 +196,35 @@ internal sealed class DigTestsWindow
         if (ImGui.Button("Dig##live")) Say(_tests.Dig());
     }
 
+    /// <summary>
+    /// Test 4's lab block. Broken into sub-sections because it is by far the longest — rules,
+    /// navmesh state, controls, clue categories, the per-category bench, placement and diagnostics
+    /// are seven separate concerns, and opening the test used to deliver all seven at once.
+    ///
+    /// <para>The controls come FIRST and stay outside a sub-section. Start / Stop / Repeat clue are
+    /// what the section is opened for; putting them behind their own arrow would mean two clicks to
+    /// reach the thing everything else is in aid of.</para>
+    /// </summary>
     private void DrawRoam()
+    {
+        if (ImGui.Button("Start##roam")) Say(_tests.Start(_tests.Roam));
+        ImGui.SameLine();
+        if (ImGui.Button("Stop##roam")) Say(_tests.Roam.Stop());
+        ImGui.SameLine();
+        if (ImGui.Button("Repeat clue##roam")) Say(_tests.Roam.Recall());
+
+        // Navmesh state is not in a sub-section either: when it is building or missing, that is the
+        // answer to "why did Start do nothing", and it would be behind the one arrow nobody thinks
+        // to open while wondering.
+        DrawRoamNavmesh();
+
+        SubSection("roam", "Rules",                     DrawRoamRules);
+        SubSection("roam", "Clue categories",           DrawClueCategories);
+        SubSection("roam", "Placement — where spots go", DrawRoamPlacement);
+        SubSection("roam", "Diagnostics",               DrawRoamDiagnostics);
+    }
+
+    private void DrawRoamRules()
     {
         ImGui.TextColored(Rule,
             "RULES\n"
@@ -183,7 +239,10 @@ internal sealed class DigTestsWindow
           + "  dig radius, so none sits on a roof, a ledge or astride a wall.\n"
           + "  Leaving the zone ABANDONS the run, unlike Test 3 — every spot was placed against\n"
           + "  this map's geometry and every clue names this map's landmarks.");
+    }
 
+    private void DrawRoamNavmesh()
+    {
         if (DigNavmesh.Available && !DigNavmesh.Ready)
         {
             // Front and centre: this is a wait, not a failure, and without a number it is
@@ -242,15 +301,10 @@ internal sealed class DigTestsWindow
             "WHEN THIS TEST GOES PUBLIC, vnavmesh becomes a PUBLIC requirement. Un-gating it means\n"
           + "saying so in README.md and docs/HELP.md, and refusing at runtime with a line a player\n"
           + "can act on — not silently doing nothing.");
+    }
 
-        if (ImGui.Button("Start##roam")) Say(_tests.Start(_tests.Roam));
-
-        ImGui.SameLine();
-        if (ImGui.Button("Stop##roam")) Say(_tests.Roam.Stop());
-        ImGui.SameLine();
-        if (ImGui.Button("Repeat clue##roam")) Say(_tests.Roam.Recall());
-
-        ImGui.Spacing();
+    private void DrawRoamDiagnostics()
+    {
         ImGui.TextColored(Head, "GIVE IT AWAY");
         ImGui.TextColored(Rule,
             "Prints where the spot REALLY is and flags it on your map.\n"
@@ -277,8 +331,10 @@ internal sealed class DigTestsWindow
 
         ImGui.Spacing();
         ImGui.TextColored(Cmd, "/tchal roam try <category> [easy|medium|hard]");
+    }
 
-        ImGui.Spacing();
+    private void DrawRoamPlacement()
+    {
         ImGui.SliderInt("Spots", ref DigTuning.RoamStops, 1, 20);
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
