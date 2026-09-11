@@ -582,6 +582,9 @@ internal sealed class DigMapWindow
 
     /// <summary>The actual route to each verified spot, so the verdict can be inspected not trusted.</summary>
     private static readonly Dictionary<int, List<Vector3>> _routes = new();
+
+    /// <summary>Which waypoint a route first hit solid geometry on, when it did.</summary>
+    private static readonly Dictionary<int, int> _blockedAt = new();
     private static readonly List<(int Index, System.Threading.Tasks.Task<List<Vector3>> Task)> _pending = new();
 
     /// <summary>
@@ -635,8 +638,22 @@ internal sealed class DigMapWindow
 
             var route = task.Result;
 
-            _reachable[index] = route is { Count: > 0 };
-            if (route is { Count: > 0 }) _routes[index] = route;
+            if (route is not { Count: > 0 }) { _reachable[index] = false; continue; }
+
+            _routes[index] = route;
+
+            // THE ROUTE IS CHECKED AGAINST REAL COLLISION, not taken on faith.
+            //
+            // In a housing ward the navmesh does not contain the houses — they are player-placed
+            // objects on top of the static terrain it was built from — so it returns confident
+            // three-waypoint routes straight through stone walls. Every segment of a navmesh path is
+            // supposed to be a straight walkable run, so a segment that hits geometry means the path
+            // is fiction. That is the difference between "vnavmesh says yes" and "you can walk it".
+            var player = Plugin.ObjectTable.LocalPlayer;
+            var start  = player?.Position ?? route[0];
+
+            _reachable[index] = DigGround.RouteClear(start, route, out int blocked);
+            if (blocked >= 0) _blockedAt[index] = blocked;
         }
     }
 
@@ -680,8 +697,9 @@ internal sealed class DigMapWindow
             var colour = no > 0 ? new Vector4(1f, 0.45f, 0.45f, 1f) : new Vector4(0.45f, 1f, 0.5f, 1f);
 
             ImGui.TextColored(colour,
-                $"REACHABLE {yes}   UNREACHABLE {no}   could not say {unknown}   "
-              + "— green ring = a route exists, red X = no route.");
+                $"WALKABLE {yes}   BLOCKED {no}   could not say {unknown}   "
+              + "— the navmesh's route is re-checked against real collision, because it has been "
+              + "seen routing through solid static geometry.");
         }
     }
 

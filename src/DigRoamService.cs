@@ -201,16 +201,18 @@ internal sealed unsafe class DigRoamService : IDigTest
     /// buried spot, and "0 placed" says nothing about which one did it.</b> Guessing between them is
     /// what this session has repeatedly got wrong, so they are counted instead.
     /// </summary>
-    private int _rejGround, _rejRange, _rejBox, _rejAnchor, _rejNav, _rejCrowd, _rejStep, _rejRoof;
+    private int _rejGround, _rejRange, _rejBox, _rejAnchor, _rejNav, _rejCrowd, _rejStep, _rejRoof,
+                _rejWall;
 
     private void ResetRejections() =>
-        _rejGround = _rejRange = _rejBox = _rejAnchor = _rejNav = _rejCrowd = _rejStep = _rejRoof = 0;
+        _rejGround = _rejRange = _rejBox = _rejAnchor = _rejNav = _rejCrowd = _rejStep =
+        _rejRoof = _rejWall = 0;
 
     /// <summary>A human-readable tally of the last placement run's rejections.</summary>
     public string RejectionReport =>
         $"no ground {_rejGround}   out of range {_rejRange}   outside box {_rejBox}   "
       + $"no marker within {DigTuning.RoamMaxAnchorDistance:0}y {_rejAnchor}   "
-      + $"not on reachable navmesh {_rejNav}   ON A ROOF {_rejRoof}   "
+      + $"not on reachable navmesh {_rejNav}   ON A ROOF {_rejRoof}   WALLED OFF {_rejWall}   "
       + $"too close to another {_rejCrowd}   step/ledge {_rejStep}";
 
     private bool TryPlace(Vector3 from, List<Vector3> taken, out Vector3 spot, float nearOnly = 0f)
@@ -328,6 +330,21 @@ internal sealed unsafe class DigRoamService : IDigTest
             // navmesh started answering, the one check specifically designed to reject rooftops
             // stopped running at all. It belongs here, unconditionally, on the final position.
             if (DigGround.IsElevated(spot, DigTuning.RoamMaxRise)) { _rejRoof++; continue; }
+
+            // WALLED OFF FROM THE NEAREST NAMED PLACE — the collision check, using the system that
+            // actually stops the character rather than the one that models where it may walk.
+            //
+            // vnavmesh has been observed returning routes straight through static zone geometry, so
+            // its verdict alone is not sufficient however it is filtered. A marker sits on open
+            // ground by construction, so a clear line from the spot to the nearest one means the
+            // spot is at least on the same side of the walls as somewhere real.
+            //
+            // It rejects legitimate spots round a corner, which is why it is tied to the same
+            // distance knob rather than being unconditional: 0 turns both off together.
+            if (DigTuning.RoamMaxAnchorDistance > 0f &&
+                DigLandmarks.Nearest(spot) is { } marker &&
+                !DigGround.SegmentClear(spot, marker.World))
+            { _rejWall++; continue; }
 
             // Far enough from the others that no single dig can turn up two, and so the trail is a
             // route rather than a huddle.

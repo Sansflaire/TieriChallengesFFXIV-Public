@@ -1,5 +1,6 @@
 #if DEV_BUILD
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 using FFXIVClientStructs.FFXIV.Common.Component.BGCollision;
@@ -303,6 +304,67 @@ internal static class DigGround
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Whether a straight walk from <paramref name="a"/> to <paramref name="b"/> is blocked by solid
+    /// geometry at body height.
+    ///
+    /// <para><b>This exists because vnavmesh returns routes through solid walls and I do not know
+    /// why.</b> Observed: standing in a sealed alcove of the Empyreum apartment building — STATIC
+    /// zone geometry, not a player-placed object — <c>Nav.Pathfind</c> returned a three-waypoint,
+    /// 21-yalm route at 1.2x the straight-line distance, straight through the stone. Two
+    /// explanations were offered for this class of failure before it was understood and both were
+    /// wrong, so no third one is offered here.</para>
+    ///
+    /// <para><b>The point is that this check does not need the explanation.</b> The collision system
+    /// is what actually stops the character — it knows about the wall, because the wall is what the
+    /// player is standing against. Whatever the navmesh believes, a segment that hits collision is
+    /// not walkable, and that holds whether the cause is a stale mesh, an unbuilt tile, geometry
+    /// vnavmesh excludes, or something not yet guessed at.</para>
+    ///
+    /// <para><b>It is a line-of-walk test, not a reachability proof.</b> A spot round a corner is
+    /// perfectly reachable and fails this; a spot behind a wall is unreachable and also fails it.
+    /// So it is only sound as a NEGATIVE check on a route the navmesh already proposed — each
+    /// segment of a navmesh path is meant to be a straight walkable run, so a segment that hits a
+    /// wall means that path is fiction.</para>
+    /// </summary>
+    public static bool SegmentClear(Vector3 a, Vector3 b, float height = 1.0f)
+    {
+        var from = new Vector3(a.X, a.Y + height, a.Z);
+        var to   = new Vector3(b.X, b.Y + height, b.Z);
+
+        var delta = to - from;
+        float len = delta.Length();
+
+        if (len < 0.05f) return true;
+
+        // Stop just short of the destination: a ray aimed at a point standing ON the ground will
+        // otherwise clip the ground itself at the far end and report every segment blocked.
+        const float Margin = 0.35f;
+
+        return !BGCollisionModule.RaycastMaterialFilter(from, delta / len, out var hit,
+                                                        MathF.Max(0.05f, len - Margin))
+            || (hit.Point - from).Length() >= len - Margin;
+    }
+
+    /// <summary>
+    /// Whether every segment of a proposed route is clear of solid geometry. A navmesh path whose
+    /// segments cut through walls is not a route, however confidently it was returned.
+    /// </summary>
+    public static bool RouteClear(Vector3 start, IReadOnlyList<Vector3> waypoints, out int blockedAt)
+    {
+        blockedAt = -1;
+
+        var prev = start;
+
+        for (int i = 0; i < waypoints.Count; i++)
+        {
+            if (!SegmentClear(prev, waypoints[i])) { blockedAt = i; return false; }
+            prev = waypoints[i];
+        }
+
+        return true;
     }
 
     /// <summary>Distance on the XZ plane. Height is bounded at placement, so it never matters here.</summary>
