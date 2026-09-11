@@ -1077,7 +1077,8 @@ internal sealed class DigHuntOverlay : IDisposable
         // Before the early-out: a banner outlives the thing that triggered it. The End banner in
         // particular is thrown by a trail that is on its way to stopping, so gating this on there
         // being an active test would cut it off partway through.
-        WatchTrail(tests.Trail);
+        WatchTrail(tests.Trail.StartCount  + tests.Roam.StartCount,
+                   tests.Trail.FinishCount + tests.Roam.FinishCount);
         DrawBanner();
 
         var active = tests.Active;
@@ -1225,15 +1226,20 @@ internal sealed class DigHuntOverlay : IDisposable
     /// stop — which flips active back to false and then true on the next run — could be read as a
     /// fresh start.</para>
     /// </summary>
-    private void WatchTrail(DigTrailService trail)
+    private void WatchTrail(int starts, int finishes)
     {
         // Compare COUNTS, never levels. The previous version watched IsActive/IsFinished for a
         // change of level and dropped the start banner whenever a trail was restarted during the
         // fifteen seconds the last one's result was still up — active-and-done to active-and-running
         // is not an edge, so nothing fired. Restarting quickly is how a trail gets tested, so that
         // was most starts. See DigTrailService.StartCount.
-        int starts    = trail.StartCount;
-        int finishes  = trail.FinishCount;
+        //
+        // The counts now arrive SUMMED ACROSS EVERY TRAIL rather than read off one service. This
+        // took DigTrailService by concrete type, which was right while Test 3 was the only trail and
+        // silently wrong the moment Test 4 existed: finishing a Wild Trail produced no banner at
+        // all, because the thing being watched had not moved. A banner belongs to "a trail ended",
+        // not to "that particular class ended", and summing monotonic counters keeps that true for
+        // however many trails there turn out to be.
 
         if (starts != _seenStarts)
         {

@@ -577,6 +577,27 @@ internal sealed class DigTestsWindow
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
         ImGui.Spacing();
+        ImGui.TextColored(Rule,
+            "BANNED ANCHOR NAMES, comma-separated, matched anywhere in the name.\n"
+          + "A clue anchor has to be a place somebody could FIND. A Striking Dummy is housing\n"
+          + "furniture — wherever a player put it, gone when they remove it — so \"north-east of the\n"
+          + "Striking Dummy\" is unfollowable by anyone who has not already seen it. The name is real\n"
+          + "game data and the object is genuinely standing there, which is why no automatic rule\n"
+          + "catches it: nothing in the sheets separates a landmark from a furnishing.\n"
+          + "RETAINERS are excluded structurally rather than by name, because their names are chosen\n"
+          + "by players — no list could enumerate them, and one that tried would be banning\n"
+          + "arbitrary words. Same for companions, mounts and housing objects.\n"
+          + "Expect to add to this: every placeable prop with a legitimate name only reveals itself\n"
+          + "by turning up in a bad clue.");
+
+        var bans = DigTuning.AnchorBans ?? string.Empty;
+
+        if (ImGui.InputText("Banned names", ref bans, 512))
+            DigTuning.AnchorBans = bans;
+
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.Spacing();
         ImGui.TextColored(Head, "TRY ONE CATEGORY");
         ImGui.TextColored(Rule,
             "Buries a SINGLE spot within " + (int)DigRoamService.TestSpotRange + "y of you with the\n"

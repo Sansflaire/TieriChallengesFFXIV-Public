@@ -61,6 +61,22 @@ internal sealed unsafe class DigRoamService : IDigTest
     public bool IsActive   => _phase != Phase.Off;
     public bool IsFinished => _phase == Phase.Done;
 
+    /// <summary>
+    /// Monotonic counters the HUD edge-detects to fire the TRAIL START / TRAIL END banners.
+    ///
+    /// <para><b>Test 4 had neither, so it never showed a banner at all.</b> The overlay watched
+    /// <c>DigTrailService</c> by concrete type — correct when Test 3 was the only trail, and quietly
+    /// wrong the moment a second trail existed. The banners are a property of "a trail started" and
+    /// not of "Test 3 started", so both now expose the same counters and the overlay watches their
+    /// sum.</para>
+    ///
+    /// <para>Counters rather than state levels, for the reason recorded on the same pair in
+    /// <c>DigTrailService</c>: a finished trail lingers before it stops, so a poller watching for a
+    /// change of level misses a restart inside that window.</para>
+    /// </summary>
+    public int StartCount  { get; private set; }
+    public int FinishCount { get; private set; }
+
     public int   StopTotal     => _stops.Count;
     public int   StopIndex     => _index;
     public int   Digs          => _digs;
@@ -179,6 +195,10 @@ internal sealed unsafe class DigRoamService : IDigTest
         _distance    = float.MaxValue;
         _startedAtMs = Environment.TickCount64;
         _phase       = Phase.Running;
+
+        // Bumped only once the start has actually succeeded — every refusal above returns before
+        // here, so the banner cannot announce a trail that never began.
+        StartCount++;
 
         string shortfall = _stops.Count < want
             ? $" (wanted {want}, the ground only allowed {_stops.Count})"
@@ -535,6 +555,7 @@ internal sealed unsafe class DigRoamService : IDigTest
         _distance    = float.MaxValue;
         _startedAtMs = Environment.TickCount64;
         _phase       = Phase.Running;
+        StartCount++;
 
         return $"[{category} / {BandName(hard)}] {clue}";
     }
@@ -650,6 +671,7 @@ internal sealed unsafe class DigRoamService : IDigTest
 
         _endedAtMs = Environment.TickCount64;
         _phase     = Phase.Done;
+        FinishCount++;
 
         try { Plugin.Sound.Play(SoundService.Cue.ChallengeComplete); }
         catch (Exception ex) { Diag.Error($"[Roam] end cue failed: {ex.Message}"); }

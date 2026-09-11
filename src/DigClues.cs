@@ -829,7 +829,7 @@ internal static class DigClueSources
                     string name = npcs.GetRowOrDefault(l.Object.RowId)?.Singular.ExtractText()
                                   ?? string.Empty;
 
-                    if (name.Length == 0 || !seen.Add(name)) continue;
+                    if (IsBannedAnchor(name) || !seen.Add(name)) continue;
 
                     list.Add(new Anchor(name, new Vector3(l.X, l.Y, l.Z)));
                 }
@@ -883,7 +883,10 @@ internal static class DigClueSources
                 if (obj == null || obj.ObjectKind != ObjectKind.BattleNpc) continue;
 
                 string name = obj.Name.TextValue;
-                if (name.Length == 0) continue;
+
+                // A Striking Dummy is a BattleNpc and is housing furniture, which is precisely the
+                // case this list exists for.
+                if (IsBannedAnchor(name)) continue;
                 if (DigGround.Flat(obj.Position, spot) > NearRadius) continue;
 
                 var prev = sums.TryGetValue(name, out var p) ? p : (Vector3.Zero, 0);
@@ -912,6 +915,46 @@ internal static class DigClueSources
     /// <summary>How far from a spot a loaded object may be and still be called "there".</summary>
     private const float NearRadius = 55f;
 
+    /// <summary>
+    /// Whether a name is banned as a clue anchor.
+    ///
+    /// <para><b>A clue anchor must be a place somebody could find on a map.</b> A Striking Dummy is
+    /// housing furniture — wherever a player put it, gone when they remove it — so "north-east of
+    /// the Striking Dummy" is unfollowable by anyone who has not already seen it. The name is real
+    /// game data and the object is genuinely standing there, which is exactly why no automatic rule
+    /// catches it: nothing in the sheets distinguishes a landmark from a furnishing.</para>
+    /// </summary>
+    public static bool IsBannedAnchor(string name)
+    {
+        if (name.Length == 0) return true;
+
+        string bans = DigTuning.AnchorBans;
+        if (string.IsNullOrWhiteSpace(bans)) return false;
+
+        foreach (var raw in bans.Split(','))
+        {
+            var term = raw.Trim();
+            if (term.Length == 0) continue;
+            if (name.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Object kinds that can never anchor a clue, whatever they are called.
+    ///
+    /// <para><b>Retainers are excluded STRUCTURALLY and not by name, because their names are chosen
+    /// by players.</b> No ban list could ever enumerate them, and one that tried would be banning
+    /// arbitrary words. The kind is the durable fact: a retainer is somebody's summoned NPC standing
+    /// wherever they left it, which disqualifies it regardless of what it is called. Same reasoning
+    /// for companions, mounts and housing objects.</para>
+    /// </summary>
+    private static bool IsBannedKind(ObjectKind kind) => kind
+        is ObjectKind.Retainer
+        or ObjectKind.Companion
+        or ObjectKind.Ornament;
+
     private static IReadOnlyList<Anchor> NearbyOfKind(Vector3 spot, ObjectKind kind)
     {
         var list = new List<Anchor>();
@@ -923,9 +966,10 @@ internal static class DigClueSources
             foreach (var obj in Plugin.ObjectTable)
             {
                 if (obj == null || obj.ObjectKind != kind) continue;
+                if (IsBannedKind(obj.ObjectKind)) continue;
 
                 string name = obj.Name.TextValue;
-                if (name.Length == 0) continue;
+                if (IsBannedAnchor(name)) continue;
 
                 if (DigGround.Flat(obj.Position, spot) > NearRadius) continue;
 

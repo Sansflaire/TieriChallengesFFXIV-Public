@@ -298,6 +298,22 @@ internal static class DigTuning
     public static float WalkMaxStep = 1.1f;
 
     /// <summary>
+    /// Names a clue anchor may never be, comma-separated, matched case-insensitively as substrings.
+    ///
+    /// <para><b>A clue anchor has to be a place somebody could find on a map.</b> A Striking Dummy is
+    /// housing furniture: it is wherever a player put it, it is gone when they remove it, and
+    /// "north-east of the Striking Dummy" is unfollowable by anyone who has not already seen it.
+    /// The name is real game data and the object is genuinely there, which is exactly why no
+    /// automatic rule catches it — nothing about the sheet distinguishes a landmark from a
+    /// furnishing.</para>
+    ///
+    /// <para><b>Editable because this list will grow.</b> Housing wards are full of placeable props
+    /// with legitimate names, and each one only reveals itself by turning up in a bad clue. A
+    /// setting means the next one costs a keystroke instead of a release.</para>
+    /// </summary>
+    public static string AnchorBans = "Striking Dummy,Mannequin,Orchestrion,Retainer Bell,Summoning Bell";
+
+    /// <summary>
     /// A HAND-SET walkable box in WORLD coordinates, and the territory it belongs to.
     ///
     /// <para><b>This outranks every derived box, and it exists because all three derivations were
@@ -920,7 +936,8 @@ internal static class DigTuning
         public float? RoamRepeatPenalty { get; set; }
         public float? RoamAwkwardness { get; set; }
         public float? RoamMaxAnchorDistance { get; set; }
-        public float? WalkMaxStep { get; set; }
+        public float?  WalkMaxStep { get; set; }
+        public string? AnchorBans { get; set; }
 
         /// <summary>The hand-set walkable box. Absent on any file written before it existed.</summary>
         public uint?  BoxTerritory { get; set; }
@@ -1159,6 +1176,10 @@ internal static class DigTuning
                 WalkMaxStep = d.WalkMaxStep is { } ws && float.IsFinite(ws)
                                   ? Math.Clamp(ws, 0.2f, 4f) : 1.1f;
 
+                // Absent means never saved, so take the shipped list. An EMPTY string is a real
+                // choice — somebody clearing the field wants no bans — and must survive a reload.
+                if (d.AnchorBans != null) AnchorBans = d.AnchorBans;
+
                 // Read OUTSIDE any default-on-absent guard: a file with no box must leave BoxSet
                 // false rather than inventing a zero-sized one at the world origin, which would
                 // override every derived box with a degenerate rectangle in the middle of nowhere.
@@ -1340,6 +1361,7 @@ internal static class DigTuning
                 RoamClueCategories = RoamClueCategories,
                 RoamRepeatPenalty = RoamRepeatPenalty, RoamAwkwardness = RoamAwkwardness,
                 RoamMaxAnchorDistance = RoamMaxAnchorDistance, WalkMaxStep = WalkMaxStep,
+                AnchorBans = AnchorBans,
                 BoxSet = BoxSet, BoxTerritory = BoxTerritory,
                 BoxMinX = BoxMinX, BoxMinZ = BoxMinZ, BoxMaxX = BoxMaxX, BoxMaxZ = BoxMaxZ,
                 NullZones = NullZones,
