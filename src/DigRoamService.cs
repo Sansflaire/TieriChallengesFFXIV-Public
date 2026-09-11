@@ -518,7 +518,18 @@ internal sealed unsafe class DigRoamService : IDigTest
                     + $"{DigGround.Flat(player.Position, spot):0.0}y {DigGround.Compass(player.Position, spot)} of you";
 
         if (DigLandmarks.TryMapCoords(spot, out float mx, out float my))
+        {
             line += $"   map ({mx:0.0}, {my:0.0})";
+
+            // The numbers the quadrant, the 3x3 cell and the clock bearing are all derived from.
+            // Printed because "dead centre" on a spot that is visibly north-east is unanswerable
+            // without them — and the cause was the CENTRE being wrong, not the spot.
+            DigLandmarks.ContentBounds(out var lo, out var hi);
+
+            line += $"\n[Challenges] map content spans x {lo.X:0.0}-{hi.X:0.0}, y {lo.Y:0.0}-{hi.Y:0.0}"
+                  + $"   centre ({(lo.X + hi.X) * 0.5f:0.0}, {(lo.Y + hi.Y) * 0.5f:0.0})"
+                  + $"   -> {DigLandmarks.Quadrant(spot)}";
+        }
 
         line += $"   world ({spot.X:0.0}, {spot.Y:0.0}, {spot.Z:0.0})";
 

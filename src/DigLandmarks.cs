@@ -176,21 +176,74 @@ internal static class DigLandmarks
     {
         if (!TryMapCoords(world, out float mx, out float my)) return "somewhere on this map";
 
-        float span   = MathF.Max(1f, MapSpan);
-        float centre = 1f + span * 0.5f;
+        ContentBounds(out var lo, out var hi);
 
-        // Inside this fraction of the span from the centre line counts as neither side.
+        float cx = (lo.X + hi.X) * 0.5f;
+        float cy = (lo.Y + hi.Y) * 0.5f;
+
+        // Inside this fraction from the centre counts as neither side. Measured against the CONTENT
+        // extent per axis, because a map's content is rarely square.
         const float Middle = 0.14f;
-        float band = span * Middle;
+        float bandX = MathF.Max(0.5f, (hi.X - lo.X) * Middle);
+        float bandY = MathF.Max(0.5f, (hi.Y - lo.Y) * Middle);
 
-        string ns = my < centre - band ? "NORTH" : my > centre + band ? "SOUTH" : string.Empty;
-        string ew = mx > centre + band ? "EAST"  : mx < centre - band ? "WEST"  : string.Empty;
+        string ns = my < cy - bandY ? "NORTH" : my > cy + bandY ? "SOUTH" : string.Empty;
+        string ew = mx > cx + bandX ? "EAST"  : mx < cx - bandX ? "WEST"  : string.Empty;
 
         if (ns.Length == 0 && ew.Length == 0) return "the middle of the map";
         if (ns.Length == 0) return $"the {ew} side of the map";
         if (ew.Length == 0) return $"the {ns} of the map";
 
         return $"the {ns}-{ew} of the map";
+    }
+
+    /// <summary>
+    /// The extent of the map's actual CONTENT in map coordinates, not the extent of its coordinate
+    /// system.
+    ///
+    /// <para><b>These are different and treating them as the same put "dead centre" on a spot that
+    /// was visibly north-east.</b> Map coordinates run 1..1+41/c, which corresponds to raw 0..2048 —
+    /// the whole square the map image could theoretically cover. A real map's geometry occupies only
+    /// part of that square, and a housing subdivision occupies a small, off-centre part of it. So the
+    /// midpoint of the coordinate range is the middle of a mostly-empty rectangle, not the middle of
+    /// anywhere a player would recognise.</para>
+    ///
+    /// <para>Derived instead from the landmarks the game itself draws on the map, which by
+    /// construction sit on the content. Falls back to the coordinate range when a map has too few
+    /// named markers to bound anything — better a known-crude answer than one computed from three
+    /// points that happen to be in one corner.</para>
+    /// </summary>
+    public static void ContentBounds(out Vector2 lo, out Vector2 hi)
+    {
+        float span = MathF.Max(1f, MapSpan);
+
+        lo = new Vector2(1f, 1f);
+        hi = new Vector2(1f + span, 1f + span);
+
+        var marks = ForCurrentMap();
+        if (marks.Count < 4) return;
+
+        float minX = float.MaxValue, minY = float.MaxValue;
+        float maxX = float.MinValue, maxY = float.MinValue;
+
+        foreach (var m in marks)
+        {
+            if (m.MapX < minX) minX = m.MapX;
+            if (m.MapX > maxX) maxX = m.MapX;
+            if (m.MapY < minY) minY = m.MapY;
+            if (m.MapY > maxY) maxY = m.MapY;
+        }
+
+        // A degenerate spread means the markers are clustered and bound nothing useful.
+        if (maxX - minX < 2f || maxY - minY < 2f) return;
+
+        // Padded outward a little: markers sit ON features, so the walkable area extends past the
+        // outermost of them. Without this the edge cells would start inside the content.
+        float padX = (maxX - minX) * 0.10f;
+        float padY = (maxY - minY) * 0.10f;
+
+        lo = new Vector2(minX - padX, minY - padY);
+        hi = new Vector2(maxX + padX, maxY + padY);
     }
 
     /// <summary>Map coordinates for a world position — the numbers in the game's own readout.</summary>

@@ -313,29 +313,57 @@ internal sealed class DigClueWriter
 
         string quad = DigLandmarks.Quadrant(spot);
 
-        // EASY — the quadrant plus which third of it, which is a genuinely small box.
+        // EASY — which cell of a 3x3 grid over the map, which is a genuinely small box.
         if (hard < 0.34f)
         {
-            float span = MathF.Max(1f, DigLandmarks.MapSpan);
-            int   col  = Math.Clamp((int)((mx - 1f) / span * 3f), 0, 2);
-            int   row  = Math.Clamp((int)((my - 1f) / span * 3f), 0, 2);
+            // Same content bounds the quadrant uses. Computing the grid off the raw coordinate
+            // range instead was what put "very centre" on a spot sitting visibly north-east: the
+            // midpoint of the coordinate square is not the midpoint of the map's content.
+            DigLandmarks.ContentBounds(out var lo, out var hi);
 
-            return $"In {quad} — the {Thirds[row]} {Thirds[col]} of the map, by the grid.";
+            float w = MathF.Max(0.01f, hi.X - lo.X);
+            float h = MathF.Max(0.01f, hi.Y - lo.Y);
+
+            int col = Math.Clamp((int)((mx - lo.X) / w * 3f), 0, 2);
+            int row = Math.Clamp((int)((my - lo.Y) / h * 3f), 0, 2);
+
+            // The quadrant is NOT prepended. It is the same fact at lower resolution, and pairing
+            // them produced "In the middle of the map - the middle middle of the map", which says
+            // one thing twice and says it badly.
+            return $"Dead in the {Cells[row * 3 + col]} of the map.";
         }
 
         // MEDIUM — the quadrant alone.
         if (hard < 0.67f) return $"Somewhere in {quad}.";
 
         // HARD — a half rather than a quadrant, which is half the map.
-        bool vertical = _rng.Next(2) == 0;
-        float centre  = 1f + MathF.Max(1f, DigLandmarks.MapSpan) * 0.5f;
+        DigLandmarks.ContentBounds(out var half0, out var half1);
+
+        bool  vertical = _rng.Next(2) == 0;
+        float cx       = (half0.X + half1.X) * 0.5f;
+        float cy       = (half0.Y + half1.Y) * 0.5f;
 
         return vertical
-            ? $"In the {(my < centre ? "NORTHERN" : "SOUTHERN")} half of the map. That is all anyone will say."
-            : $"In the {(mx > centre ? "EASTERN" : "WESTERN")} half of the map. That is all anyone will say.";
+            ? $"In the {(my < cy ? "NORTHERN" : "SOUTHERN")} half of the map. That is all anyone will say."
+            : $"In the {(mx > cx ? "EASTERN" : "WESTERN")} half of the map. That is all anyone will say.";
     }
 
-    private static readonly string[] Thirds = { "upper", "middle", "lower" };
+    /// <summary>
+    /// The nine cells of a 3x3 grid over the map, row-major from the north-west.
+    ///
+    /// <para><b>A flat table of nine, not two word lists indexed by row and column.</b> The composed
+    /// version shipped "the middle middle of the map", because the vertical vocabulary
+    /// ("upper/middle/lower") was indexed by the horizontal axis too — a mistake that is invisible
+    /// in the code and obvious in the output. Nine strings cannot be composed wrongly, and each one
+    /// is written the way a person would actually say it rather than assembled from parts that only
+    /// read well on the diagonal.</para>
+    /// </summary>
+    private static readonly string[] Cells =
+    {
+        "north-west corner",  "northern strip, centre", "north-east corner",
+        "western edge, midway down", "very centre", "eastern edge, midway down",
+        "south-west corner",  "southern strip, centre", "south-east corner",
+    };
 
     /// <summary>
     /// The spot as a clock bearing from the middle of the map, plus how far out it sits.
@@ -347,11 +375,16 @@ internal sealed class DigClueWriter
     {
         if (!DigLandmarks.TryMapCoords(spot, out float mx, out float my)) return string.Empty;
 
-        float span   = MathF.Max(1f, DigLandmarks.MapSpan);
-        float centre = 1f + span * 0.5f;
+        // Content bounds again, for the same reason as the quadrant and the grid: a bearing taken
+        // from the middle of the coordinate square points from somewhere the map may not even draw.
+        DigLandmarks.ContentBounds(out var lo, out var hi);
 
-        float east  = mx - centre;
-        float north = centre - my;          // map Y increases downward, so north is the negative side
+        float cx   = (lo.X + hi.X) * 0.5f;
+        float cy   = (lo.Y + hi.Y) * 0.5f;
+        float span = MathF.Max(1f, MathF.Max(hi.X - lo.X, hi.Y - lo.Y));
+
+        float east  = mx - cx;
+        float north = cy - my;              // map Y increases downward, so north is the negative side
 
         float radius = MathF.Sqrt(east * east + north * north);
 
