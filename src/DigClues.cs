@@ -153,17 +153,27 @@ internal sealed class DigClueWriter
     {
         var lines = new List<string>();
 
-        lines.Add("HOW DIFFICULTY WORKS — two dials in one slider.");
-        lines.Add("  COUNT steps at the band boundaries. A clue states exactly this many facts:");
+        lines.Add("HOW DIFFICULTY WORKS — a point budget over facts and vagueness.");
+        lines.Add("  HOW MANY FACTS, by band:");
         lines.Add("    EASY   (0.00-0.33)   3 facts");
         lines.Add("    MEDIUM (0.34-0.66)   2 facts");
         lines.Add("    HARD   (0.67-1.00)   1 fact");
-        lines.Add("  PRECISION varies WITHIN each band, using the rest of the slider's travel. An");
-        lines.Add("  easy-easy clue gives a bearing to one of eight points and a distance in yalms;");
-        lines.Add("  a hard-easy clue gives the same three facts as one of four quarters and a");
-        lines.Add("  woolly distance word. Fewer facts and vaguer facts are different levers.");
-        lines.Add("  Facts are always dropped from the LEAST useful end, so a HARD clue is the single");
-        lines.Add("  most actionable thing that could have been said - never an arbitrary leftover.");
+        lines.Add("  EVERY FACT HAS FOUR TIERS OF VAGUENESS (1-4) plus the plain phrasing at 0.");
+        lines.Add("  Each tier is one difficulty point, and vagueness is spread over randomly chosen");
+        lines.Add("  facts so one may be woolly beside two sharp ones.");
+        lines.Add("");
+        lines.Add("  MANDATORY VAGUENESS — more facts is inherently easier, so more facts must each");
+        lines.Add("  be put less sharply before any difficulty is charged:");
+        lines.Add("    3 facts   floors 1, 1, 2   (the third is the one that tips it to generous)");
+        lines.Add("    2 facts   floors 1, 1");
+        lines.Add("    1 fact    no floor");
+        lines.Add("  Those floors are ZEROED: two facts at vagueness 1 apiece is difficulty ZERO, so");
+        lines.Add("  every band's easiest setting is equally easy however many facts it hands over.");
+        lines.Add("  Difficulty is only what is spent ABOVE the floor, which is why the reachable");
+        lines.Add("  ceilings differ: 8 for three facts (3+3+2), 6 for two, 4 for one.");
+        lines.Add("");
+        lines.Add("  Facts are dropped from the LEAST useful end, so a HARD clue is the single most");
+        lines.Add("  actionable thing that could have been said - never an arbitrary leftover.");
         lines.Add("");
         lines.Add("DIRECTION — world axes, NOT relative to your facing. +X is east, +Z is south.");
         lines.Add("  Eight points, each covering 45 degrees, so \"NORTH\" means within 22.5 of due north:");
@@ -315,69 +325,178 @@ internal sealed class DigClueWriter
     /// <para>Returns the count, and <c>sharp</c> as 0 at the easy end of the band through 1 at its
     /// hard end.</para>
     /// </summary>
-    private static (int Count, float Sharp) Budget(float hard)
+    private (int Count, int[] Vague) Budget(float hard)
     {
         hard = Math.Clamp(hard, 0f, 1f);
 
-        if (hard < 0.34f) return (3, hard / 0.34f);
-        if (hard < 0.67f) return (2, (hard - 0.34f) / 0.33f);
+        int count = hard < 0.34f ? 3 : hard < 0.67f ? 2 : 1;
 
-        return (1, Math.Clamp((hard - 0.67f) / 0.33f, 0f, 1f));
+        // MANDATORY VAGUENESS, rising with the number of facts. Sansflaire's rule, and its logic is that
+        // more clues is inherently easier — so a clue that gives three facts must give each of them
+        // less sharply to be worth the same as one that gives two.
+        int[] floor = Floors(count);
+
+        // ZEROED OUT. The mandatory levels are the baseline configuration and cost nothing: two
+        // facts at vagueness 1 apiece is difficulty ZERO, not 5, even though the raw sum is 5. So
+        // difficulty is what is spent ABOVE the floor, and every band's easiest setting is equally
+        // easy regardless of how many facts it hands over.
+        int ceiling = 0;
+        foreach (int f in floor) ceiling += MaxVagueness - f;
+
+        // Scaled WITHIN the band so every part of the slider does something. The ceilings differ by
+        // count — 8 for three facts, 6 for two, 4 for one — so a single global mapping would leave
+        // the top of the HARD band inert.
+        float within = count == 3 ? hard / 0.34f
+                     : count == 2 ? (hard - 0.34f) / 0.33f
+                     :              (hard - 0.67f) / 0.33f;
+
+        int remaining = (int)MathF.Round(Math.Clamp(within, 0f, 1f) * ceiling);
+
+        var vague = (int[])floor.Clone();
+
+        // Spread one level at a time over randomly chosen facts rather than filling the first to
+        // maximum. Sansflaire's wording: "1, 2 or all 3 of the clues will be bumped up a level or two" —
+        // an uneven spread is the intent, and one very woolly fact beside two sharp ones is a
+        // different puzzle from three evenly mushy ones.
+        int guard = 0;
+
+        while (remaining > 0 && guard++ < 128)
+        {
+            int i = _rng.Next(count);
+            if (vague[i] >= MaxVagueness) continue;
+
+            vague[i]++;
+            remaining--;
+        }
+
+        return (count, vague);
     }
+
+    /// <summary>
+    /// The vagueness each fact must carry before any difficulty is charged, by fact count.
+    ///
+    /// <para>Three facts: 1, 1, 2. Two facts: 1, 1. One fact: nothing. The third fact of a
+    /// three-fact clue carries the extra level because it is the one that tips the clue from
+    /// "workable" to "generous".</para>
+    /// </summary>
+    private static int[] Floors(int count) => count switch
+    {
+        3 => new[] { 1, 1, 2 },
+        2 => new[] { 1, 1 },
+        _ => new[] { 0 },
+    };
+
+    /// <summary>
+    /// The vaguest a fact may be put. <b>FOUR TIERS of vagueness — 1, 2, 3, 4 — plus the plain
+    /// phrasing at 0, which is not a tier of vagueness but the absence of one.</b>
+    ///
+    /// <para>Settled by the arithmetic rather than by counting switch arms: "bumping all three to 4
+    /// vagueness" requires level 4 to exist, so a fact has five phrasings of which four are vague.
+    /// That reading also makes every worked example come out right.</para>
+    ///
+    /// <para><b>One consequence worth knowing.</b> With the floors zeroed, the reachable maximum
+    /// differs by fact count — 8 for three facts (3+3+2 above their floors), 6 for two, 4 for one.
+    /// So the hardest clue this can produce is three maximally-vague facts, not one. That follows
+    /// directly from the stated model and is flagged rather than quietly "corrected", since which
+    /// end should be hardest is a design call and not a bug to fix unilaterally.</para>
+    /// </summary>
+    private const int MaxVagueness = 4;
 
     /// <summary>
     /// One fact: a direction from an anchor, put more or less precisely.
     /// </summary>
-    private static string DirectionFact(DigClueSources.Anchor a, Vector3 spot, float dist, float sharp)
+    private string DirectionFact(DigClueSources.Anchor a, Vector3 spot, float dist, int vague)
     {
-        // Eight points at the easy end, four at the hard end. Same statement, half the resolution.
-        string bearing = sharp < 0.6f
-            ? DigGround.Compass(a.World, spot)
-            : DigGround.Compass4(a.World, spot);
+        // THE ANCHOR ITSELF GETS VAGUER, not just the bearing — that is the mechanism Sansflaire
+        // described: "Far South from Gate A" to "Somewhere South of Gate A" to "Somewhere below a
+        // western gate" to "Below one of the gates". Degrading only the compass keeps handing over
+        // the anchor's exact name, which is the strongest part of the fact.
+        string eight = DigGround.Compass(a.World, spot);
+        string four  = DigGround.Compass4(a.World, spot);
 
-        return $"{Intensity(dist)}{bearing} of {a.Name}";
-    }
-
-    /// <summary>One fact: how far, in yalms when sharp, as a word when not.</summary>
-    private static string DistanceFact(float dist, float sharp)
-    {
-        // A number is a much stronger fact than a word, so it belongs at the easy end only. Rounded
-        // to ten yalms because a clue is not a coordinate — "about 40 yalms" is a search radius,
-        // "41.7 yalms" is the answer.
-        if (sharp < 0.4f) return $"about {MathF.Round(dist / 10f) * 10f:0} yalms away";
-
-        return DigGround.Vagueness(dist);
-    }
-
-    /// <summary>One fact: which part of the map, at one of three resolutions.</summary>
-    private string RegionFact(Vector3 spot, float sharp)
-    {
-        if (!DigLandmarks.WalkableBox(out var lo, out var hi))
-            return DigLandmarks.Quadrant(spot);
-
-        // Sharpest: the ninth, with its size. Middle: the quadrant. Coarsest: a half, which is half
-        // the map and barely narrows anything — correct for the hard end of a band.
-        if (sharp < 0.34f)
+        return vague switch
         {
-            float w = MathF.Max(0.01f, hi.X - lo.X);
-            float d = MathF.Max(0.01f, hi.Y - lo.Y);
+            0 => $"{Intensity(dist)}{eight} of {a.Name}",
+            1 => $"somewhere {eight.ToLowerInvariant()} of {a.Name}",
+            2 => $"somewhere {four.ToLowerInvariant()} of {SideOf(a.World)} {AnchorKind(a.Name)}",
+            3 => $"{four.ToLowerInvariant()} of one of the {AnchorKind(a.Name)}s",
+            _ => $"not far from one of the {AnchorKind(a.Name)}s",
+        };
+    }
 
-            int col = Math.Clamp((int)((spot.X - lo.X) / w * 3f), 0, 2);
-            int row = Math.Clamp((int)((spot.Z - lo.Y) / d * 3f), 0, 2);
+    /// <summary>
+    /// The category-word for an anchor — its last word, which is what makes "Blue Badger Gate"
+    /// generalise to "gate" and "the Ingleside aethernet shard" to "shard".
+    ///
+    /// <para>A single-word name has no category to fall back on, so it becomes "place": "one of the
+    /// Odilies" would be nonsense, and inventing a taxonomy for NPC names is exactly the kind of
+    /// table this file has repeatedly refused to invent.</para>
+    /// </summary>
+    private static string AnchorKind(string name)
+    {
+        var parts = name.Trim().Split(' ');
+        if (parts.Length < 2) return "place";
 
-            float across = MathF.Round((w / 3f + d / 3f) * 0.5f / 5f) * 5f;
+        string last = parts[parts.Length - 1].ToLowerInvariant();
+        return last.Length < 3 ? "place" : last;
+    }
 
-            return $"in {Cells[row * 3 + col]} (about {across:0} yalms across)";
-        }
-
-        if (sharp < 0.67f) return $"in {DigLandmarks.Quadrant(spot)}";
+    /// <summary>Which side of the map something is on — for "a WESTERN gate".</summary>
+    private static string SideOf(Vector3 world)
+    {
+        if (!DigLandmarks.WalkableBox(out var lo, out var hi)) return "a";
 
         float cx = (lo.X + hi.X) * 0.5f;
         float cz = (lo.Y + hi.Y) * 0.5f;
 
-        return _rng.Next(2) == 0
-            ? $"in the {(spot.Z < cz ? "NORTHERN" : "SOUTHERN")} half of the map"
-            : $"in the {(spot.X > cx ? "EASTERN" : "WESTERN")} half of the map";
+        // The dominant axis, so the word says the thing that is most true rather than both.
+        return MathF.Abs(world.X - cx) >= MathF.Abs(world.Z - cz)
+            ? (world.X > cx ? "an eastern" : "a western")
+            : (world.Z < cz ? "a northern" : "a southern");
+    }
+
+    /// <summary>One fact: how far, from a number down to almost nothing.</summary>
+    private static string DistanceFact(float dist, int vague)
+    {
+        return vague switch
+        {
+            // A number is the strongest form, rounded to ten because a clue is a search radius and
+            // not a coordinate.
+            0 => $"about {MathF.Round(dist / 10f) * 10f:0} yalms away",
+            1 => DigGround.Vagueness(dist),
+            2 => dist >= 100f ? "a fair way off" : "not far off",
+            3 => dist >= 100f ? "well away from it" : "somewhere near it",
+            _ => "no telling how far",
+        };
+    }
+
+    /// <summary>One fact: which part of the map, from a sized ninth down to nothing much.</summary>
+    private string RegionFact(Vector3 spot, int vague)
+    {
+        if (!DigLandmarks.WalkableBox(out var lo, out var hi))
+            return $"in {DigLandmarks.Quadrant(spot)}";
+
+        float w = MathF.Max(0.01f, hi.X - lo.X);
+        float d = MathF.Max(0.01f, hi.Y - lo.Y);
+
+        int col = Math.Clamp((int)((spot.X - lo.X) / w * 3f), 0, 2);
+        int row = Math.Clamp((int)((spot.Z - lo.Y) / d * 3f), 0, 2);
+
+        float across = MathF.Round((w / 3f + d / 3f) * 0.5f / 5f) * 5f;
+
+        float cx = (lo.X + hi.X) * 0.5f;
+        float cz = (lo.Y + hi.Y) * 0.5f;
+
+        return vague switch
+        {
+            0 => $"in {Cells[row * 3 + col]} (about {across:0} yalms across)",
+            1 => $"in {Cells[row * 3 + col]}",
+            2 => $"in {DigLandmarks.Quadrant(spot)}",
+            3 => _rng.Next(2) == 0
+                    ? $"in the {(spot.Z < cz ? "NORTHERN" : "SOUTHERN")} half of the map"
+                    : $"in the {(spot.X > cx ? "EASTERN" : "WESTERN")} half of the map",
+            _ => "somewhere on this map",
+        };
     }
 
     /// <summary>Assembles the chosen facts into one sentence.</summary>
@@ -409,13 +528,13 @@ internal sealed class DigClueWriter
         var near = PickAnchor(anchors, spot, hard, out float dist, exclude: null);
         if (near is not { } a) return string.Empty;
 
-        var (count, sharp) = Budget(hard);
+        var (count, vague) = Budget(hard);
 
-        // Built in DESCENDING usefulness, then truncated to the budget. That ordering is the whole
-        // design: dropping facts from the end removes the least useful ones first, so a HARD clue is
-        // the single most actionable thing that could have been said rather than an arbitrary
-        // survivor. The old code chose a different SHAPE per band, which meant harder clues
-        // sometimes contained more words and occasionally more information.
+        // Built in DESCENDING usefulness and only as many as the budget allows. That ordering is the
+        // whole design: the facts that survive are the most actionable ones, so a HARD clue is the
+        // single best thing that could have been said rather than an arbitrary survivor. Each fact
+        // takes its OWN vagueness from the budget, which is what makes "1, 2 or all 3 bumped up a
+        // level" expressible at all.
         var facts = new List<string>();
 
         // FAR-FROM replaces the direction fact rather than adding to it: it is a statement about the
@@ -424,26 +543,52 @@ internal sealed class DigClueWriter
         bool awkward = dist >= 90f
                     && (float)_rng.NextDouble() < Math.Clamp(DigTuning.RoamAwkwardness, 0f, 1f) * 0.45f;
 
-        facts.Add(awkward ? $"a long way from {a.Name}" : DirectionFact(a, spot, dist, sharp));
+        facts.Add(awkward
+            ? $"a long way from {(vague[0] >= 2 ? "one of the " + AnchorKind(a.Name) + "s" : a.Name)}"
+            : DirectionFact(a, spot, dist, vague[0]));
 
-        // A negative constraint alone says nothing — everywhere is far from something — so when it
-        // is used, the region comes next and is the fact that makes the pair solvable.
-        if (awkward) facts.Add(RegionFact(spot, sharp));
-        else         facts.Add(DistanceFact(dist, sharp));
-
-        // The second anchor, when there is one. An intersection is a genuinely different fact from a
-        // bearing, which is why it is offered rather than the region here.
-        if (!awkward && anchors.Count > 1 && count >= 3)
+        if (count >= 2)
         {
-            var second = PickAnchor(anchors, spot, hard, out float secondDist, exclude: a.Name);
-
-            facts.Add(second is { } b
-                ? $"{DigGround.Compass(b.World, spot)} of {b.Name} as well"
-                : RegionFact(spot, sharp));
+            // A negative constraint alone says nothing — everywhere is far from something — so when
+            // it is used, the region comes next and is what makes the pair solvable.
+            facts.Add(awkward ? RegionFact(spot, vague[1]) : DistanceFact(dist, vague[1]));
         }
-        else if (!awkward)
+
+        if (count >= 3)
         {
-            facts.Add(RegionFact(spot, sharp));
+            // The second anchor, when there is one AND it actually says something new.
+            //
+            // A SECOND ANCHOR MUST TRIANGULATE, OR IT IS NOT A SECOND FACT. This shipped:
+            //   "Somewhere north of Empyreum South Subdivision, some way off,
+            //    somewhere north of a southern subdivision as well."
+            // Excluding by NAME was not enough. The second anchor was a different marker, but once
+            // vagued to its category it read as "a southern subdivision" — which, with only one
+            // subdivision south of the spot, is the FIRST anchor said again. Two facts, one
+            // relationship, and the budget's whole promise broken.
+            //
+            // Two independent guards, because each catches a case the other misses:
+            //   1. A different BEARING. Two anchors on the same side of the spot narrow it to the
+            //      same half-plane; the intersection of "north of A" and "north of B" is just
+            //      "north of whichever is further". Only a different direction triangulates.
+            //   2. A different RENDERED PHRASE. Vagueness can collapse two genuinely distinct
+            //      anchors onto identical words, and what matters is what the player reads, not
+            //      what the generator knows.
+            string firstBearing = DigGround.Compass(a.World, spot);
+            string secondFact   = string.Empty;
+
+            if (!awkward && anchors.Count > 1 &&
+                PickAnchor(anchors, spot, hard, out _, exclude: a.Name) is { } b &&
+                !string.Equals(DigGround.Compass(b.World, spot), firstBearing, StringComparison.Ordinal))
+            {
+                string candidate = DirectionFact(b, spot, DigGround.Flat(b.World, spot), vague[2]);
+
+                if (!string.Equals(candidate, facts[0], StringComparison.OrdinalIgnoreCase))
+                    secondFact = candidate + " as well";
+            }
+
+            // The region is the fallback, and a good one: it is a different KIND of fact, so it
+            // cannot be redundant with an anchor bearing however either is phrased.
+            facts.Add(secondFact.Length > 0 ? secondFact : RegionFact(spot, vague[2]));
         }
 
         return Sentence(facts, count);
@@ -524,22 +669,20 @@ internal sealed class DigClueWriter
         // quadrant worked in world coordinates would let the two clauses of one clue disagree.
         if (!DigLandmarks.WalkableBox(out var lo, out var hi)) return string.Empty;
 
-        var (count, sharp) = Budget(hard);
+        var (count, vague) = Budget(hard);
 
         // This category has no anchor, so its facts are all positional. Descending usefulness: the
         // region first, then a bearing from the centre, then how far out.
-        var facts = new List<string>
-        {
-            RegionFact(spot, sharp),
-            ClockFact(spot, lo, hi, sharp),
-            ReachFact(spot, lo, hi),
-        };
+        var facts = new List<string> { RegionFact(spot, vague[0]) };
+
+        if (count >= 2) facts.Add(ClockFact(spot, lo, hi, vague[1]));
+        if (count >= 3) facts.Add(ReachFact(spot, lo, hi, vague[2]));
 
         return Sentence(facts, count);
     }
 
     /// <summary>One fact: a clock bearing from the middle of the walkable box, 12 being north.</summary>
-    private static string ClockFact(Vector3 spot, Vector2 lo, Vector2 hi, float sharp)
+    private static string ClockFact(Vector3 spot, Vector2 lo, Vector2 hi, int vague)
     {
         float cx = (lo.X + hi.X) * 0.5f;
         float cz = (lo.Y + hi.Y) * 0.5f;
@@ -552,19 +695,25 @@ internal sealed class DigClueWriter
         float bearing = MathF.Atan2(east, north) * 180f / MathF.PI;
         if (bearing < 0f) bearing += 360f;
 
-        // Twelve hours at the easy end, quarters at the hard end — the same degradation the compass
-        // fact uses, so the two read as the same kind of statement at the same difficulty.
-        if (sharp >= 0.6f)
-            return $"{DigGround.Compass4(new Vector3(cx, 0f, cz), spot)} of the map's middle";
-
         int hour = (int)MathF.Round(bearing / 30f) % 12;
         if (hour == 0) hour = 12;
 
-        return $"{hour} o'clock from the middle of the map";
+        // Twelve hours, then a rough half of the clock, then a quarter of the compass, then almost
+        // nothing — the same four-tier shape every other fact uses.
+        var centre = new Vector3(cx, 0f, cz);
+
+        return vague switch
+        {
+            0 => $"{hour} o'clock from the middle of the map",
+            1 => $"around {hour} o'clock from the middle of the map",
+            2 => $"{DigGround.Compass4(centre, spot).ToLowerInvariant()} of the map's middle",
+            3 => $"off the {DigGround.Compass4(centre, spot).ToLowerInvariant()} side of the middle",
+            _ => "out from the middle of the map",
+        };
     }
 
     /// <summary>One fact: how far out from the centre, as a fraction of the way to the rim.</summary>
-    private static string ReachFact(Vector3 spot, Vector2 lo, Vector2 hi)
+    private static string ReachFact(Vector3 spot, Vector2 lo, Vector2 hi, int vague)
     {
         float cx   = (lo.X + hi.X) * 0.5f;
         float cz   = (lo.Y + hi.Y) * 0.5f;
@@ -573,11 +722,19 @@ internal sealed class DigClueWriter
         float dx = spot.X - cx, dz = spot.Z - cz;
         float reach = Math.Clamp(MathF.Sqrt(dx * dx + dz * dz) / (span * 0.5f), 0f, 1.5f);
 
-        return reach switch
+        string sharpWord = reach switch
         {
             >= 0.78f => "right out toward the edge",
             >= 0.45f => "about two-thirds of the way out",
             _        => "not far out from the middle",
+        };
+
+        return vague switch
+        {
+            0 => sharpWord,
+            1 => reach >= 0.6f ? "well out from the middle" : "fairly central",
+            2 => reach >= 0.6f ? "out toward the edges" : "somewhere inward",
+            _ => "at no particular remove",
         };
     }
 
@@ -627,16 +784,14 @@ internal sealed class DigClueWriter
     {
         if (!DigLandmarks.WalkableBox(out var lo, out var hi)) return string.Empty;
 
-        var (count, sharp) = Budget(hard);
+        var (count, vague) = Budget(hard);
 
         // Same three facts as the quadrant category, reordered: the bearing leads here because it is
         // what makes this category distinct, and the region is the backstop.
-        var facts = new List<string>
-        {
-            ClockFact(spot, lo, hi, sharp),
-            ReachFact(spot, lo, hi),
-            RegionFact(spot, sharp),
-        };
+        var facts = new List<string> { ClockFact(spot, lo, hi, vague[0]) };
+
+        if (count >= 2) facts.Add(ReachFact(spot, lo, hi, vague[1]));
+        if (count >= 3) facts.Add(RegionFact(spot, vague[2]));
 
         return Sentence(facts, count);
     }
