@@ -215,7 +215,17 @@ internal sealed unsafe class DigRoamService : IDigTest
       + $"not on reachable navmesh {_rejNav}   ON A ROOF {_rejRoof}   WALLED OFF {_rejWall}   "
       + $"too close to another {_rejCrowd}   step/ledge {_rejStep}";
 
-    private bool TryPlace(Vector3 from, List<Vector3> taken, out Vector3 spot, float nearOnly = 0f)
+    /// <param name="spacing">
+    /// Whether the minimum gap between spots applies. <b>True for a real trail and false for the
+    /// debug sampler</b>, which is the whole difference between the two callers: a trail's stops
+    /// must be far enough apart that one dig cannot turn up two clues, while a sample is an
+    /// independent answer to "could a spot land here" and has no relationship to the other samples.
+    /// Applying the trail rule to the sampler is why it plateaued around 20 of 200 — every
+    /// additional sample made the next one harder to place, in a ward barely wider than a few
+    /// spacings.
+    /// </param>
+    private bool TryPlace(Vector3 from, List<Vector3> taken, out Vector3 spot, float nearOnly = 0f,
+                          bool spacing = true)
     {
         spot = default;
 
@@ -361,15 +371,18 @@ internal sealed unsafe class DigRoamService : IDigTest
 
             // Far enough from the others that no single dig can turn up two, and so the trail is a
             // route rather than a huddle.
-            bool crowded = false;
-            foreach (var t in taken)
+            if (spacing)
             {
-                if (DigGround.Flat(t, spot) >= DigTuning.RoamSpacing) continue;
-                crowded = true;
-                break;
-            }
+                bool crowded = false;
+                foreach (var t in taken)
+                {
+                    if (DigGround.Flat(t, spot) >= DigTuning.RoamSpacing) continue;
+                    crowded = true;
+                    break;
+                }
 
-            if (crowded) { _rejCrowd++; continue; }
+                if (crowded) { _rejCrowd++; continue; }
+            }
 
             // The wall-versus-hill test. Without it a spot can sit astride a kerb, where half its
             // dig radius is somewhere the player cannot stand.
@@ -517,19 +530,19 @@ internal sealed unsafe class DigRoamService : IDigTest
         // sampler must not: breaking made "0 of 200" mean "the FIRST attempt failed", which reads as
         // "nothing can be placed anywhere" and is a far stronger claim than the evidence. Three
         // consecutive failures is the real stop, so a genuinely impossible zone still terminates.
-        // Six in a row, not three. Placement is a random dart throw against a spacing rule, so as
-        // the map fills up a run of misses becomes ordinary rather than diagnostic — and stopping
-        // at three made a half-full map look like an exhausted one.
-        int consecutiveFailures = 0;
-
-        for (int i = 0; i < count && consecutiveFailures < 6; i++)
+        // NO SPACING RULE HERE. Each sample answers "could a spot land at this point", which is
+        // independent of every other sample — so samples may sit on top of one another, and the
+        // picture is a map of where placement CAN go rather than one plausible trail. Enforcing the
+        // trail's minimum gap is what capped this at roughly 20 of 200: every sample placed made the
+        // next one harder, in a ward only a few spacings across.
+        //
+        // With samples independent there is also nothing to exhaust, so a failure says something
+        // about that throw and nothing about the next one. The early-out goes with it: the only
+        // limit now is the count asked for.
+        for (int i = 0; i < count; i++)
         {
-            if (TryPlace(player.Position, found, out var spot))
-            {
+            if (TryPlace(player.Position, found, out var spot, spacing: false))
                 found.Add(spot);
-                consecutiveFailures = 0;
-            }
-            else consecutiveFailures++;
         }
 
         return found;
