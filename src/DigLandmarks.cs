@@ -351,6 +351,35 @@ internal static class DigLandmarks
         hi = new Vector2(maxX + padX, maxY + padY);
     }
 
+    /// <summary>
+    /// The inverse of <see cref="TryMapCoords"/> — a world position from map coordinates.
+    ///
+    /// <para>Algebra, not a second formula. <c>mapX = 41/c * (((wx + offX) * c + 1024) / 2048) + 1</c>
+    /// rearranges to <c>wx = (((mapX - 1) * c / 41) * 2048 - 1024) / c - offX</c>. If the forward
+    /// conversion is right this is right, and if it is wrong they are wrong together — which is the
+    /// property that matters for dragging a box on the map: the corner lands where it was dropped
+    /// relative to everything else drawn through the same transform.</para>
+    /// </summary>
+    public static bool TryWorldFromMap(float mapX, float mapY, out Vector3 world)
+    {
+        world = default;
+
+        try
+        {
+            var maps = Plugin.DataManager.GetExcelSheet<LSheets.Map>();
+            if (maps?.GetRowOrDefault(CurrentMapId()) is not { } map) return false;
+
+            float c = MathF.Max(0.01f, map.SizeFactor / 100f);
+
+            float wx = (((mapX - 1f) * c / 41f) * 2048f - 1024f) / c - map.OffsetX;
+            float wz = (((mapY - 1f) * c / 41f) * 2048f - 1024f) / c - map.OffsetY;
+
+            world = new Vector3(wx, 0f, wz);
+            return true;
+        }
+        catch { return false; }
+    }
+
     /// <summary>Map coordinates for a world position — the numbers in the game's own readout.</summary>
     public static bool TryMapCoords(Vector3 world, out float mapX, out float mapY)
     {

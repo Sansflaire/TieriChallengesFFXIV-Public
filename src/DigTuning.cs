@@ -294,6 +294,46 @@ internal static class DigTuning
         Save();
     }
 
+    /// <summary>
+    /// Writes one corner during a DRAG, without normalising and without saving.
+    ///
+    /// <para><b>Both omissions are deliberate.</b> Normalising mid-drag swaps min and max the moment
+    /// the pointer crosses the opposite corner, so the handle being held jumps to the other side of
+    /// the box and the drag inverts under the cursor. Saving on every frame of a drag writes the
+    /// JSON file sixty times a second. <see cref="FinishBoxDrag"/> does both, once, on release.</para>
+    /// </summary>
+    public static void DragBoxCorner(bool first, uint territory, float x, float z)
+    {
+        if (!BoxSet || BoxTerritory != territory)
+        {
+            BoxTerritory = territory;
+            BoxMinX = BoxMaxX = x;
+            BoxMinZ = BoxMaxZ = z;
+            BoxSet  = true;
+        }
+
+        if (first) { BoxMinX = x; BoxMinZ = z; }
+        else       { BoxMaxX = x; BoxMaxZ = z; }
+    }
+
+    /// <summary>Normalises and persists after a drag ends.</summary>
+    public static void FinishBoxDrag()
+    {
+        if (BoxMinX > BoxMaxX) (BoxMinX, BoxMaxX) = (BoxMaxX, BoxMinX);
+        if (BoxMinZ > BoxMaxZ) (BoxMinZ, BoxMaxZ) = (BoxMaxZ, BoxMinZ);
+        Save();
+    }
+
+    /// <summary>Seeds the manual box from a derived one, so there is something to drag.</summary>
+    public static void SeedBox(uint territory, float minX, float minZ, float maxX, float maxZ)
+    {
+        BoxTerritory = territory;
+        BoxMinX = minX; BoxMinZ = minZ;
+        BoxMaxX = maxX; BoxMaxZ = maxZ;
+        BoxSet  = true;
+        Save();
+    }
+
     public static void ClearBox()
     {
         BoxSet = false;

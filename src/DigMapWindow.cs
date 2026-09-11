@@ -236,10 +236,16 @@ internal sealed class DigMapWindow
                     drawList.AddLine(new Vector2(lo2.X, ty), new Vector2(hi2.X, ty), faint);
                 }
 
-                drawList.AddText(lo2 + new Vector2(4f, 4f), lime,
-                    DigNavmesh.WalkableSampleCount > 0
-                        ? $"walkable box — navmesh, {DigNavmesh.WalkableSampleCount} samples"
-                        : "walkable box — FALLBACK (navmesh could not bound this zone)");
+                uint tag = ImGui.GetColorU32(new Vector4(0.45f, 1f, 0.35f, 0.95f));
+
+                drawList.AddText(lo2 + new Vector2(4f, 4f), tag,
+                    DigTuning.TryManualBox(Plugin.ClientState.TerritoryType, out _, out _, out _, out _)
+                        ? "walkable box — SET BY HAND (drag the corners)"
+                        : DigNavmesh.WalkableSampleCount > 0
+                            ? $"walkable box — navmesh, {DigNavmesh.WalkableSampleCount} samples"
+                            : "walkable box — derived (drag a corner to take it over by hand)");
+
+                DragHandles(drawList, origin, rect, lo2, hi2, boxLo, boxHi, side);
             }
         }
 
@@ -292,6 +298,91 @@ internal sealed class DigMapWindow
     /// prints the path it tried</b> rather than failing silently — the dots are the point, and the
     /// image is context.</para>
     /// </summary>
+    /// <summary>Which corner is being dragged: 0 none, 1 north-west, 2 south-east.</summary>
+    private static int _dragCorner;
+
+    /// <summary>
+    /// Grab handles on the box's two corners, so the bounds can be set by dragging on the map.
+    ///
+    /// <para><b>This replaces walking to the corners, which was not actually possible.</b> A box's
+    /// corner is frequently inside a building, on the far side of a wall, or outside the ward
+    /// entirely — the very places a bounding box has to reach and a character cannot. Asking someone
+    /// to stand at one was asking for the one thing the box exists to describe and the player cannot
+    /// visit.</para>
+    ///
+    /// <para><b>It does go through the map-coordinate conversion, unlike the walk-there buttons</b>
+    /// (which are kept for exactly that reason). That is acceptable here because it is
+    /// self-consistent: the corner lands where it was dropped relative to the landmarks and the
+    /// image, all of which are drawn through the same transform. If that transform is off, the
+    /// dots will visibly not sit on their labels — which is the thing this window was built to
+    /// show.</para>
+    /// </summary>
+    private static void DragHandles(ImDrawListPtr drawList, Vector2 origin, Vector2 rect,
+                                    Vector2 lo2, Vector2 hi2,
+                                    Vector2 boxLo, Vector2 boxHi, float side)
+    {
+        uint fill = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.90f));
+        uint edge = ImGui.GetColorU32(new Vector4(0.10f, 0.35f, 0.10f, 1f));
+
+        const float Grab = 7f;
+
+        var nw = lo2;
+        var se = hi2;
+
+        foreach (var (at, id) in new[] { (nw, 1), (se, 2) })
+        {
+            bool active = _dragCorner == id;
+
+            drawList.AddRectFilled(at - new Vector2(Grab), at + new Vector2(Grab),
+                                   active ? edge : fill, 2f);
+            drawList.AddRect(at - new Vector2(Grab), at + new Vector2(Grab),
+                             active ? fill : edge, 2f);
+        }
+
+        var mouse   = ImGui.GetMousePos();
+        bool inside = ImGui.IsWindowHovered() && !ImGui.IsAnyItemHovered();
+
+        if (inside && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            // Nearest handle wins, and only within the grab box — a click elsewhere on the map must
+            // not silently start dragging the closer of two distant corners.
+            float dn = Vector2.Distance(mouse, nw);
+            float ds = Vector2.Distance(mouse, se);
+
+            if (dn <= Grab * 2f && dn <= ds)      _dragCorner = 1;
+            else if (ds <= Grab * 2f)             _dragCorner = 2;
+        }
+
+        if (_dragCorner != 0 && ImGui.IsMouseDown(ImGuiMouseButton.Left))
+        {
+            // Screen -> map -> world, the exact inverse of how everything here is plotted.
+            var clamped = Vector2.Clamp(mouse, origin, origin + rect);
+
+            float span = MathF.Max(1f, DigLandmarks.MapSpan);
+            float mx   = (clamped.X - origin.X) / side * span + 1f;
+            float my   = (clamped.Y - origin.Y) / side * span + 1f;
+
+            if (DigLandmarks.TryWorldFromMap(mx, my, out var world))
+            {
+                // Seed from the DERIVED box the first time, so taking it over by hand starts from
+                // something sensible instead of collapsing to a point at the dragged corner.
+                if (!DigTuning.BoxSet || DigTuning.BoxTerritory != Plugin.ClientState.TerritoryType)
+                    DigTuning.SeedBox(Plugin.ClientState.TerritoryType,
+                                      boxLo.X, boxLo.Y, boxHi.X, boxHi.Y);
+
+                DigTuning.DragBoxCorner(_dragCorner == 1, Plugin.ClientState.TerritoryType,
+                                        world.X, world.Z);
+            }
+        }
+
+        if (_dragCorner != 0 && ImGui.IsMouseReleased(ImGuiMouseButton.Left))
+        {
+            _dragCorner = 0;
+            DigTuning.FinishBoxDrag();
+            DigLandmarks.Invalidate();
+        }
+    }
+
     // ── what the view draws ──────────────────────────────────────────────────
     //
     // Session state rather than persisted settings. These are "what am I looking at right now"

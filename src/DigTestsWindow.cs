@@ -231,7 +231,12 @@ internal sealed class DigTestsWindow
     private void DrawManualBox()
     {
         ImGui.TextColored(Rule,
-            "THE BOX EVERY DIRECTION IS MEASURED AGAINST, set by walking rather than by guessing.\n"
+            "THE BOX EVERY DIRECTION IS MEASURED AGAINST.\n"
+          + "EASIEST WAY: open Debug map locations and DRAG THE TWO CORNER HANDLES. Walking to a\n"
+          + "corner is often impossible — a bounding box's corners are routinely inside a building,\n"
+          + "past a wall, or outside the ward, which are exactly the places a box must reach and a\n"
+          + "character cannot stand. The buttons below remain for when you CAN stand on a limit,\n"
+          + "because they involve no coordinate conversion at all, where dragging does.\n"
           + "Every derived box has been wrong here. The map rectangle is a mostly-empty square. The\n"
           + "navmesh box swallowed terrain nobody can stand on. The landmark spread is the best of\n"
           + "the three and still only covers where the game puts LABELS.\n"
