@@ -120,6 +120,9 @@ internal sealed class DigMapWindow
     /// </summary>
     private void DrawCanvas(uint mapId)
     {
+        DrawToggles();
+        ImGui.Separator();
+
         var avail = ImGui.GetContentRegionAvail();
         float side = MathF.Max(64f, MathF.Min(avail.X, avail.Y));
 
@@ -162,14 +165,27 @@ internal sealed class DigMapWindow
 
         // Landmarks first, so a red spot sitting on one is still visible.
         uint cyan = ImGui.GetColorU32(new Vector4(0.30f, 0.85f, 0.95f, 0.95f));
+        uint grey = ImGui.GetColorU32(new Vector4(0.62f, 0.66f, 0.72f, 0.85f));
 
         foreach (var l in DigLandmarks.ForCurrentMap())
         {
+            // A HOUSING PLOT NUMBER IS NOT A LANDMARK, and on a ward map they outnumber the real
+            // ones several to one — which is why this view was unreadable and why a clue once
+            // anchored itself to "60". Split by whether the whole name is digits: that is exactly
+            // what a plot marker is, and it needs no lookup table to decide.
+            bool numbered = IsAllDigits(l.Name);
+
+            if (numbered ? !_showPlots : !_showLandmarks) continue;
             if (!Plot(l.World, out var at)) continue;
 
-            drawList.AddCircleFilled(at, 4f, cyan, 12);
-            drawList.AddText(at + new Vector2(6f, -7f), cyan, l.Name);
+            uint tint = numbered ? grey : cyan;
+
+            drawList.AddCircleFilled(at, numbered ? 3f : 4f, tint, 12);
+
+            if (_showLabels) drawList.AddText(at + new Vector2(6f, -7f), tint, l.Name);
         }
+
+        if (_showClueAnchors) DrawClueAnchors(drawList, Plot);
 
         // THE WALKABLE BOX AND ITS QUADRANT LINES, drawn over the real map image.
         //
@@ -177,7 +193,7 @@ internal sealed class DigMapWindow
         // and there was no way to see WHY without it. The box is what every direction word is
         // measured against, so drawing it turns an argument about a clue into a look at a rectangle:
         // if the box does not sit over the ward, the box is the bug; if it does, the wording is.
-        if (DigLandmarks.WalkableBox(out var boxLo, out var boxHi))
+        if (_showBox && DigLandmarks.WalkableBox(out var boxLo, out var boxHi))
         {
             bool okA = Plot(new Vector3(boxLo.X, 0f, boxLo.Y), out var cornerA);
             bool okB = Plot(new Vector3(boxHi.X, 0f, boxHi.Y), out var cornerB);
@@ -230,7 +246,7 @@ internal sealed class DigMapWindow
         uint red = ImGui.GetColorU32(new Vector4(1f, 0.25f, 0.25f, 0.95f));
         int outside = 0;
 
-        foreach (var s in _spots)
+        foreach (var s in _showSpots ? _spots : System.Linq.Enumerable.Empty<Vector3>())
         {
             if (!Plot(s, out var at)) continue;
 
@@ -250,7 +266,8 @@ internal sealed class DigMapWindow
             drawList.AddCircleFilled(at, 3f, red, 10);
         }
 
-        if (Plugin.ObjectTable.LocalPlayer is { } player && Plot(player.Position, out var me))
+        if (_showPlayer && Plugin.ObjectTable.LocalPlayer is { } player
+                        && Plot(player.Position, out var me))
         {
             uint green = ImGui.GetColorU32(new Vector4(0.35f, 1f, 0.45f, 1f));
             drawList.AddCircleFilled(me, 5f, green, 14);
@@ -275,6 +292,79 @@ internal sealed class DigMapWindow
     /// prints the path it tried</b> rather than failing silently — the dots are the point, and the
     /// image is context.</para>
     /// </summary>
+    // ── what the view draws ──────────────────────────────────────────────────
+    //
+    // Session state rather than persisted settings. These are "what am I looking at right now"
+    // switches flicked while chasing one question, not preferences — and putting them in
+    // dig-tuning.json would add six fields, six migrations and a reset path for something whose
+    // right value changes three times in a minute.
+    private static bool _showLandmarks  = true;
+    private static bool _showPlots;                 // OFF by default: they outnumber everything
+    private static bool _showLabels     = true;
+    private static bool _showClueAnchors;
+    private static bool _showBox        = true;
+    private static bool _showSpots      = true;
+    private static bool _showPlayer     = true;
+
+    /// <summary>The display toggles. Drawn above the map, because they change what it means.</summary>
+    private static void DrawToggles()
+    {
+        ImGui.Checkbox("Landmarks", ref _showLandmarks);
+        ImGui.SameLine(); ImGui.Checkbox("Plot numbers", ref _showPlots);
+        ImGui.SameLine(); ImGui.Checkbox("Labels", ref _showLabels);
+        ImGui.SameLine(); ImGui.Checkbox("Box + quadrants", ref _showBox);
+
+        ImGui.Checkbox("Candidate spots", ref _showSpots);
+        ImGui.SameLine(); ImGui.Checkbox("You", ref _showPlayer);
+        ImGui.SameLine(); ImGui.Checkbox("Clue anchors", ref _showClueAnchors);
+
+        ImGui.TextDisabled("Plot numbers are off by default — on a housing map they outnumber the "
+                         + "real landmarks several to one.");
+    }
+
+    /// <summary>
+    /// The anchors each clue CATEGORY can actually reach for, in its own colour.
+    ///
+    /// <para>Separate from the landmark layer because they are a different question. Landmarks are
+    /// what the map draws; these are what the clue writer can name — aethernet shards it found in
+    /// the object table, NPC placements from the Level sheet, enemy group centroids. Seeing them
+    /// on the map is how "why did every clue anchor to the same thing" gets answered.</para>
+    /// </summary>
+    private static void DrawClueAnchors(ImDrawListPtr drawList, PlotFn plot)
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        var around = player?.Position ?? Vector3.Zero;
+
+        Layer(DigClueSources.AetherytesNear(around), new Vector4(1f, 0.85f, 0.25f, 0.95f));
+        Layer(DigClueSources.Sections(),             new Vector4(0.65f, 0.55f, 1f, 0.95f));
+        Layer(DigClueSources.MapNpcs(),              new Vector4(0.40f, 1f, 0.60f, 0.95f));
+        Layer(DigClueSources.NearbyEnemies(around),  new Vector4(1f, 0.45f, 0.75f, 0.95f));
+
+        void Layer(IReadOnlyList<DigClueSources.Anchor> anchors, Vector4 colour)
+        {
+            uint c = ImGui.GetColorU32(colour);
+
+            foreach (var a in anchors)
+            {
+                if (!plot(a.World, out var at)) continue;
+
+                drawList.AddCircle(at, 6f, c, 14, 2f);
+                if (_showLabels) drawList.AddText(at + new Vector2(8f, 2f), c, a.Name);
+            }
+        }
+    }
+
+    private delegate bool PlotFn(Vector3 world, out Vector2 at);
+
+    /// <summary>Whether a marker name is purely a housing plot number.</summary>
+    private static bool IsAllDigits(string s)
+    {
+        if (s.Length == 0) return false;
+
+        foreach (char ch in s) if (ch < '0' || ch > '9') return false;
+        return true;
+    }
+
     private static Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? MapTexture(
         uint mapId, out string path)
     {
@@ -288,7 +378,13 @@ internal sealed class DigMapWindow
             string id = map.Id.ExtractText();
             if (id.Length == 0) return null;
 
-            string flat = id.Replace("/", "_");
+            // THE SLASH IS REMOVED, NOT REPLACED. Map.Id is "r1h1/00" and the texture is
+            // ui/map/r1h1/00/r1h100_m.tex — the directory keeps the slash, the FILENAME drops it.
+            // Building "r1h1_00_m.tex" is why every candidate missed and the window has been blank
+            // since it was written: the loop looked thorough while every entry in it was wrong the
+            // same way. The underscore form is kept last in case some map really does use it.
+            string flat   = id.Replace("/", string.Empty);
+            string scored = id.Replace("/", "_");
 
             // PROBED, not guessed. DataManager.FileExists asks the game's own index whether a path
             // is real, so the right one is found by checking rather than by my being confident about
@@ -296,11 +392,12 @@ internal sealed class DigMapWindow
             // an empty square that looks like a rendering bug.
             string[] candidates =
             {
-                $"ui/map/{id}/{flat}_m.tex",
-                $"ui/map/{id}/{flat}m_m.tex",
-                $"ui/map/{id}/{flat}_m_m.tex",
+                $"ui/map/{id}/{flat}_m.tex",     // the normal one
+                $"ui/map/{id}/{flat}m_m.tex",    // some maps carry an 'm' variant
                 $"ui/map/{id}/{flat}d.tex",
+                $"ui/map/{id}/{flat}_s.tex",     // small version, better than nothing
                 $"ui/map/{id}/{flat}.tex",
+                $"ui/map/{id}/{scored}_m.tex",   // underscore form, last resort
             };
 
             // ASKED FOR, not pre-screened. An earlier version only tried a candidate that

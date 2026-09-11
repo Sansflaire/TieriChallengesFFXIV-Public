@@ -236,6 +236,20 @@ internal static class DigLandmarks
     {
         lo = hi = default;
 
+        // ZEROTH: a box set by hand, for this territory.
+        //
+        // It outranks everything below because it is the only one that is a MEASUREMENT. The three
+        // derived boxes are all inferences about where a player can be, and in Empyreum all three
+        // were wrong in different ways. Walking to two corners involves no conversion, no sheet and
+        // no assumption about what a navmesh flag means.
+        if (DigTuning.TryManualBox(Plugin.ClientState.TerritoryType,
+                                   out float bx0, out float bz0, out float bx1, out float bz1))
+        {
+            lo = new Vector2(bx0, bz0);
+            hi = new Vector2(bx1, bz1);
+            return true;
+        }
+
         // FIRST: the spread of the map's own labels.
         //
         // THIS WAS DEMOTED IN FAVOUR OF THE NAVMESH AND THAT WAS A MISTAKE, reverted at 0.84.45.5

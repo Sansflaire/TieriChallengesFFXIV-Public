@@ -254,6 +254,66 @@ internal static class DigTuning
     /// </summary>
     public static float RoamAwkwardness = 0.5f;
 
+    /// <summary>
+    /// A HAND-SET walkable box in WORLD coordinates, and the territory it belongs to.
+    ///
+    /// <para><b>This outranks every derived box, and it exists because all three derivations were
+    /// wrong in Empyreum.</b> The map rectangle is a mostly-empty square; the navmesh box swallowed
+    /// terrain nobody can stand on; the landmark spread is the best of them and still only covers
+    /// where the game puts labels. Walking to two opposite corners and pressing a button involves no
+    /// conversion, no sheet, no inference — it is the one measurement that cannot be wrong about the
+    /// thing it measures.</para>
+    ///
+    /// <para><b>Keyed to a territory on purpose.</b> A box set in Empyreum must never silently apply
+    /// in a field zone; when the stored territory does not match, the box is ignored and the derived
+    /// chain takes over.</para>
+    /// </summary>
+    public static uint  BoxTerritory;
+    public static bool  BoxSet;
+    public static float BoxMinX, BoxMinZ, BoxMaxX, BoxMaxZ;
+
+    /// <summary>Records one corner from a world position, normalising so min really is min.</summary>
+    public static void SetBoxCorner(bool first, uint territory, float x, float z)
+    {
+        // A corner set in a different zone than the other one would make a box spanning two maps.
+        // Changing territory therefore restarts the box rather than extending it.
+        if (!BoxSet || BoxTerritory != territory)
+        {
+            BoxTerritory = territory;
+            BoxMinX = BoxMaxX = x;
+            BoxMinZ = BoxMaxZ = z;
+            BoxSet  = true;
+        }
+
+        if (first) { BoxMinX = x; BoxMinZ = z; }
+        else       { BoxMaxX = x; BoxMaxZ = z; }
+
+        if (BoxMinX > BoxMaxX) (BoxMinX, BoxMaxX) = (BoxMaxX, BoxMinX);
+        if (BoxMinZ > BoxMaxZ) (BoxMinZ, BoxMaxZ) = (BoxMaxZ, BoxMinZ);
+
+        Save();
+    }
+
+    public static void ClearBox()
+    {
+        BoxSet = false;
+        BoxTerritory = 0;
+        BoxMinX = BoxMinZ = BoxMaxX = BoxMaxZ = 0f;
+        Save();
+    }
+
+    /// <summary>The hand-set box for this territory, if one was set here and it is not degenerate.</summary>
+    public static bool TryManualBox(uint territory, out float minX, out float minZ,
+                                    out float maxX, out float maxZ)
+    {
+        minX = BoxMinX; minZ = BoxMinZ; maxX = BoxMaxX; maxZ = BoxMaxZ;
+
+        return BoxSet
+            && BoxTerritory == territory
+            && maxX - minX > 5f
+            && maxZ - minZ > 5f;
+    }
+
     // ── the shared dig HUD ───────────────────────────────────────────────────
 
     /// <summary>
@@ -615,6 +675,14 @@ internal static class DigTuning
         public float? RoamRepeatPenalty { get; set; }
         public float? RoamAwkwardness { get; set; }
 
+        /// <summary>The hand-set walkable box. Absent on any file written before it existed.</summary>
+        public uint?  BoxTerritory { get; set; }
+        public bool?  BoxSet { get; set; }
+        public float? BoxMinX { get; set; }
+        public float? BoxMinZ { get; set; }
+        public float? BoxMaxX { get; set; }
+        public float? BoxMaxZ { get; set; }
+
         public float? HudDropPx { get; set; }
         public float? HudClueGapPx { get; set; }
 
@@ -827,6 +895,16 @@ internal static class DigTuning
                                          ? Math.Clamp(rp, 0f, 0.99f) : 0.85f;
                 RoamAwkwardness    = d.RoamAwkwardness is { } aw && float.IsFinite(aw)
                                          ? Math.Clamp(aw, 0f, 1f) : 0.5f;
+
+                // Read OUTSIDE any default-on-absent guard: a file with no box must leave BoxSet
+                // false rather than inventing a zero-sized one at the world origin, which would
+                // override every derived box with a degenerate rectangle in the middle of nowhere.
+                BoxSet       = d.BoxSet == true;
+                BoxTerritory = d.BoxTerritory ?? 0u;
+                BoxMinX      = d.BoxMinX ?? 0f;
+                BoxMinZ      = d.BoxMinZ ?? 0f;
+                BoxMaxX      = d.BoxMaxX ?? 0f;
+                BoxMaxZ      = d.BoxMaxZ ?? 0f;
             }
             else ResetRoam();
 
@@ -994,6 +1072,8 @@ internal static class DigTuning
                 RoamDig = RoamDig, RoamRadar = RoamRadar, RoamDifficulty = RoamDifficulty,
                 RoamClueCategories = RoamClueCategories,
                 RoamRepeatPenalty = RoamRepeatPenalty, RoamAwkwardness = RoamAwkwardness,
+                BoxSet = BoxSet, BoxTerritory = BoxTerritory,
+                BoxMinX = BoxMinX, BoxMinZ = BoxMinZ, BoxMaxX = BoxMaxX, BoxMaxZ = BoxMaxZ,
                 HudDropPx = HudDropPx, HudClueGapPx = HudClueGapPx,
                 ClueStyleSaved = true,
                 ClueFaceR = ClueFaceColor.X, ClueFaceG = ClueFaceColor.Y, ClueFaceB = ClueFaceColor.Z,

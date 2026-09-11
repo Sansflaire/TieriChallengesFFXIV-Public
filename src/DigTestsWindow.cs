@@ -218,10 +218,78 @@ internal sealed class DigTestsWindow
         // to open while wondering.
         DrawRoamNavmesh();
 
+        SubSection("roam", "Map bounds — set by hand",  DrawManualBox);
         SubSection("roam", "Rules",                     DrawRoamRules);
         SubSection("roam", "Clue categories",           DrawClueCategories);
         SubSection("roam", "Placement — where spots go", DrawRoamPlacement);
         SubSection("roam", "Diagnostics",               DrawRoamDiagnostics);
+    }
+
+    /// <summary>
+    /// The hand-set walkable box: walk to two opposite corners, press two buttons.
+    /// </summary>
+    private void DrawManualBox()
+    {
+        ImGui.TextColored(Rule,
+            "THE BOX EVERY DIRECTION IS MEASURED AGAINST, set by walking rather than by guessing.\n"
+          + "Every derived box has been wrong here. The map rectangle is a mostly-empty square. The\n"
+          + "navmesh box swallowed terrain nobody can stand on. The landmark spread is the best of\n"
+          + "the three and still only covers where the game puts LABELS.\n"
+          + "Walking to two opposite corners involves no conversion, no sheet and no assumption\n"
+          + "about what a navmesh flag means — it is the one measurement that cannot be wrong about\n"
+          + "the thing it measures. Stand at the NORTH-WEST limit of where you can actually walk,\n"
+          + "press A; go to the SOUTH-EAST limit, press B.\n"
+          + "It is keyed to THIS territory and is ignored everywhere else, so a box set here can\n"
+          + "never silently apply in a field zone. It also bounds PLACEMENT, so nothing is buried\n"
+          + "outside it.");
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        uint territory = Plugin.ClientState.TerritoryType;
+
+        if (player == null) { ImGui.TextDisabled("No character loaded."); return; }
+
+        ImGui.Text($"You are at world ({player.Position.X:0.0}, {player.Position.Z:0.0})");
+
+        if (ImGui.Button("Set corner A (north-west) here"))
+        {
+            DigTuning.SetBoxCorner(true, territory, player.Position.X, player.Position.Z);
+            DigLandmarks.Invalidate();
+            Say("corner A set.");
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("Set corner B (south-east) here"))
+        {
+            DigTuning.SetBoxCorner(false, territory, player.Position.X, player.Position.Z);
+            DigLandmarks.Invalidate();
+            Say("corner B set.");
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("Clear manual box"))
+        {
+            DigTuning.ClearBox();
+            DigLandmarks.Invalidate();
+            Say("manual box cleared — falling back to the derived boxes.");
+        }
+
+        if (DigTuning.TryManualBox(territory, out float x0, out float z0, out float x1, out float z1))
+        {
+            ImGui.TextColored(Ok,
+                $"ACTIVE for this zone: x {x0:0.0} to {x1:0.0}, z {z0:0.0} to {z1:0.0}"
+              + $"   ({x1 - x0:0} x {z1 - z0:0} yalms)");
+        }
+        else if (DigTuning.BoxSet)
+        {
+            ImGui.TextColored(Warn,
+                $"A box is stored for territory {DigTuning.BoxTerritory}, not this one ({territory}).\n"
+              + "It is ignored here. Set both corners in this zone to use one.");
+        }
+        else
+        {
+            ImGui.TextDisabled("No manual box — using the derived ones (landmarks, then navmesh, "
+                             + "then the map rectangle).");
+        }
     }
 
     private void DrawRoamRules()
