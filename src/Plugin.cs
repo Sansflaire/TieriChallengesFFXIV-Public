@@ -196,6 +196,17 @@ public sealed class Plugin : IDalamudPlugin
     private readonly DigTestsWindow _digTestsWindow;
     private readonly DigMapWindow   _digMapWindow;
 
+    /// <summary>
+    /// The Activity tab's runner, and the player-facing reference map it opens.
+    ///
+    /// <para>Separate from <see cref="_digTests"/> rather than folded into it: the lab owns the
+    /// one-test-at-a-time rule and the tests themselves, while this owns what an ACTIVITY adds on top
+    /// — a chosen difficulty that does not disturb the lab's sliders, a recorded result, and the
+    /// conditions that throw a run away.</para>
+    /// </summary>
+    private readonly ActivityService   _activities;
+    private readonly ActivityMapWindow _activityMap = new();
+
     /// <summary>The dig HUD. Null when PanacheUI could not load — it is a Panache surface.</summary>
     private readonly DigHuntOverlay? _digOverlay;
 #endif
@@ -359,6 +370,7 @@ public sealed class Plugin : IDalamudPlugin
         DigTrailStore.Load();
         _digTestsWindow = new DigTestsWindow(_digTests);
         _digMapWindow   = new DigMapWindow(_digTests);
+        _activities     = new ActivityService(_digTests);
 
         // Clicking the dial digs. The overlay forwards the click; deciding what a click MEANS stays
         // out here, so the overlay does not grow game logic.
@@ -384,6 +396,8 @@ public sealed class Plugin : IDalamudPlugin
             _mainWindow.OnOpenDatasets  = () => _datasetViewer.IsVisible = true;
             _mainWindow.OnOpenProbe     = () => _probeWindow.IsVisible = true;
             _mainWindow.OnOpenDigTests  = () => _digTestsWindow.IsVisible = true;
+            _mainWindow.Activities      = _activities;
+            _mainWindow.OnOpenActivityMap = () => _activityMap.IsVisible = true;
             _mainWindow.OnOpenSoundTest = () =>
             {
                 if (_soundTestWindow != null) _soundTestWindow.IsVisible = true;
@@ -541,6 +555,10 @@ public sealed class Plugin : IDalamudPlugin
 #if DEV_BUILD
         _digOverlay?.Dispose();
         _soundTestWindow?.Dispose();
+
+        // Unsubscribes from the roam test's finish/abandon events. Managed only, like everything
+        // else in this block — unload fires on every rebuild, at a moment the player did not choose.
+        _activities.Dispose();
         LiveProbe.Detach();
         _datasetViewer.Unload();
 
@@ -799,6 +817,13 @@ public sealed class Plugin : IDalamudPlugin
         // unconditionally so a test started from chat keeps running with the lab window closed.
         try { _digTests.Tick(); }
         catch (Exception ex) { Diag.Error($"[Dig] tick failed: {ex.Message}"); }
+
+        // AFTER the tests, so it sees the state they have just settled into. A zone change is noticed
+        // by both — the roam test abandons its own trail, and this notices the activity that owned
+        // it is over. Running this first would have it cancel a run the test was about to end anyway,
+        // with a worse message.
+        try { _activities.Tick(); }
+        catch (Exception ex) { Diag.Error($"[Activity] tick failed: {ex.Message}"); }
 #endif
 
 #if DEV_BUILD
@@ -909,6 +934,9 @@ public sealed class Plugin : IDalamudPlugin
 
         try { _digMapWindow.Draw(); }
         catch (Exception ex) { Diag.Error($"[Dig] map debug window failed: {ex.Message}"); }
+
+        try { _activityMap.Draw(); }
+        catch (Exception ex) { Diag.Error($"[Activity] reference map failed: {ex.Message}"); }
 #endif
 
 #if DEV_BUILD

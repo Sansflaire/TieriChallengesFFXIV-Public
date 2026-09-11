@@ -96,6 +96,27 @@ internal sealed class DigTests
     /// while it lasts — so leaving another test running would put two headlines in one slot, which
     /// is the exact thing <see cref="Start"/> exists to prevent.</para>
     /// </summary>
+    /// <summary>
+    /// Starts a Wild Trail for the ACTIVITY mode, with its own clue count and difficulty.
+    ///
+    /// <para>Routed through here for the same reason the bench spawn is: the one-test-at-a-time rule
+    /// belongs to this class, and an activity is a running test like any other. Starting one while a
+    /// lab test is up would put two headlines in one HUD slot.</para>
+    /// </summary>
+    public string StartRoamActivity(int clues, float difficulty)
+    {
+        string prefix = string.Empty;
+
+        foreach (var t in _all)
+        {
+            if (ReferenceEquals(t, Roam) || !t.IsActive) continue;
+            t.Stop();
+            prefix = $"({t.Name} stopped) ";
+        }
+
+        return prefix + Roam.Start(clues, difficulty);
+    }
+
     public string StartRoamSingle(ClueCategory category, float difficulty)
     {
         string prefix = string.Empty;

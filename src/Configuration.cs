@@ -15,6 +15,16 @@ public enum GroupMode
 
     /// <summary>By expansion, then by zone within it — the shape of the in-game Teleport menu.</summary>
     Zones = 1,
+
+    /// <summary>
+    /// Things that can be played over and over rather than completed once.
+    ///
+    /// <para><b>Its own mode rather than a category, because an activity has no completion.</b> Every
+    /// other view here is a way of arranging challenges, and a challenge is finished exactly once —
+    /// the store is write-once per GUID and the progress arithmetic is x-of-y. An activity produces
+    /// runs instead, so it has nothing to contribute to either.</para>
+    /// </summary>
+    Activities = 2,
 }
 
 /// <summary>
@@ -380,6 +390,24 @@ public sealed class Configuration : IPluginConfiguration
     /// has been picked yet; 0 is a real selection meaning the "not tied to a zone" bucket.
     /// </summary>
     public int SelectedTerritory { get; set; } = -1;
+
+    /// <summary>
+    /// Selected activity in <see cref="GroupMode.Activities"/>, by its stable string id — the same
+    /// rule as the other two selections, which are both by identity rather than by position.
+    /// </summary>
+    public string SelectedActivity { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The activity's difficulty, as whole numbers 0–10.
+    ///
+    /// <para><b>Stored on the player's scale, not the generator's.</b> The clue writer works in
+    /// 0..1; converting at the one call site that starts a run keeps the fraction out of the config
+    /// file, where a stored 0.7000000001 would eventually show as a slider that will not sit on 7.</para>
+    /// </summary>
+    public int ActivityDifficulty { get; set; } = 5;
+
+    /// <summary>How many clues an activity run buries. Clamped against the generator's own limit.</summary>
+    public int ActivityClues { get; set; } = 5;
 
     /// <summary>
     /// Expansions the user has collapsed, by ExVersion row id. Persisted because collapsing a

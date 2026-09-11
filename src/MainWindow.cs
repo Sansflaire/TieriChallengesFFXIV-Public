@@ -49,7 +49,7 @@ namespace TieriChallengesFFXIV;
 /// <c>IconButton</c>). A glyph tint cannot be hover-driven at all — there is no
 /// <c>HoverImageTint</c>.
 /// </summary>
-internal sealed class MainWindow : IDisposable
+internal sealed partial class MainWindow : IDisposable
 {
     public bool IsVisible;
 
@@ -89,6 +89,15 @@ internal sealed class MainWindow : IDisposable
         if (_config.Grouping == GroupMode.Zones)
         {
             ZoneIndex.Reveal(_config, ZoneIndex.TerritoryOf(_config, challengeId));
+            _save();
+        }
+
+        // The Activity pane shows no challenges AT ALL, so there is nothing for a reveal to land on
+        // and the button would silently do nothing. Leaving the tab is the only way to honour a
+        // request to show a challenge — and it is what the player asked for by pressing Show.
+        if (_config.Grouping == GroupMode.Activities)
+        {
+            _config.Grouping = GroupMode.Categories;
             _save();
         }
 
@@ -1345,7 +1354,7 @@ internal sealed class MainWindow : IDisposable
 
         // Tallied once and handed down. Per-row lookups would walk the whole catalogue for each
         // of ~150 zone rows; see ZoneIndex.Counts for why that shape was rejected.
-        var counts = _config.Grouping == GroupMode.Zones
+        var counts = EffectiveGrouping == GroupMode.Zones
             ? ZoneIndex.Tally(_config, _store)
             : null;
 
@@ -1363,7 +1372,15 @@ internal sealed class MainWindow : IDisposable
             s.PointerEvents   = PointerEvents.None;
         }));
 
-        if (_config.Grouping == GroupMode.Zones)
+#if DEV_BUILD
+        if (EffectiveGrouping == GroupMode.Activities)
+        {
+            body.AppendChild(BuildActivityDetail(detailW));
+            return body;
+        }
+#endif
+
+        if (EffectiveGrouping == GroupMode.Zones)
         {
             uint zone = ResolveZoneSelection();
             body.AppendChild(BuildDetail(
@@ -1419,9 +1436,37 @@ internal sealed class MainWindow : IDisposable
         return categories[0];
     }
 
+    /// <summary>
+    /// Whether the Activity tab is available at all.
+    ///
+    /// <para><b>Dev-only for now, and that is not an oversight.</b> The one activity is the Wild
+    /// Trail, which is the dig tree — <c>#if DEV_BUILD</c> gate and all, and a hard dependency on
+    /// vnavmesh. Shipping the tab publicly therefore ships that dependency, which the project rules
+    /// say must be declared in README.md and docs/HELP.md and refused at runtime with a line the
+    /// player can act on. None of that is done, so the tab stays here until it is.</para>
+    /// </summary>
+    private bool ActivitiesAvailable
+    {
+#if DEV_BUILD
+        get => !_config.PublicPreview;
+#else
+        get => false;
+#endif
+    }
+
+    /// <summary>
+    /// The grouping actually in force. An unavailable mode resolves to Categories rather than
+    /// showing an empty pane — the same fallback an unknown stored value has always taken.
+    /// </summary>
+    private GroupMode EffectiveGrouping =>
+        _config.Grouping == GroupMode.Activities && !ActivitiesAvailable
+            ? GroupMode.Categories
+            : _config.Grouping;
+
     private Node BuildMaster(int masterW, List<string> categories, string selected, ZoneIndex.Counts? counts)
     {
-        bool zones = _config.Grouping == GroupMode.Zones;
+        var mode   = EffectiveGrouping;
+        bool zones = mode == GroupMode.Zones;
 
         var pane = new Node().WithStyle(s =>
         {
@@ -1433,12 +1478,22 @@ internal sealed class MainWindow : IDisposable
 
         pane.AppendChild(BuildGroupToggle(zones));
         pane.AppendChild(BuildSearchBox("master_search", _masterSearch,
-                                        zones ? "Search zones…" : "Search categories…",
+                                        mode switch
+                                        {
+                                            GroupMode.Zones      => "Search zones…",
+                                            GroupMode.Activities => "Search activities…",
+                                            _                    => "Search categories…",
+                                        },
                                         masterW - PadPaneX * 2f));
 
         // Separate scroll ids per mode: the offset is keyed by Id, and a category list scrolled
         // halfway would otherwise hand its offset to a 150-row zone list and vice versa.
-        var scroll = new Node().WithId(zones ? "zone_scroll" : "cat_scroll").WithStyle(s =>
+        var scroll = new Node().WithId(mode switch
+        {
+            GroupMode.Zones      => "zone_scroll",
+            GroupMode.Activities => "activity_master_scroll",
+            _                    => "cat_scroll",
+        }).WithStyle(s =>
         {
             s.Flow        = Flow.Vertical;
             s.WidthMode   = SizeMode.Fill;
@@ -1452,6 +1507,12 @@ internal sealed class MainWindow : IDisposable
         {
             BuildZoneList(scroll, masterW, counts!);
         }
+#if DEV_BUILD
+        else if (mode == GroupMode.Activities)
+        {
+            BuildActivityList(scroll, masterW);
+        }
+#endif
         else if (categories.Count == 0)
         {
             // An empty catalogue is the NORMAL state before the first sync — there are no
@@ -1509,8 +1570,13 @@ internal sealed class MainWindow : IDisposable
             s.Gap        = 2;
         });
 
-        strip.AppendChild(ModeTab(GroupMode.Categories, "Category", !zones));
-        strip.AppendChild(ModeTab(GroupMode.Zones,      "Zone",      zones));
+        var mode = EffectiveGrouping;
+
+        strip.AppendChild(ModeTab(GroupMode.Categories, "Category", mode == GroupMode.Categories));
+        strip.AppendChild(ModeTab(GroupMode.Zones,      "Zone",      mode == GroupMode.Zones));
+
+        if (ActivitiesAvailable)
+            strip.AppendChild(ModeTab(GroupMode.Activities, "Activity", mode == GroupMode.Activities));
 
         // Tail of the divider, from the last tab to the right edge. Without it the line would
         // stop where the tabs do and the pane would look unfinished.

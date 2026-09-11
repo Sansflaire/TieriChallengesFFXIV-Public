@@ -130,7 +130,28 @@ internal sealed unsafe class DigRoamService : IDigTest
 
     // ── the player's actions ─────────────────────────────────────────────────
 
-    public string Start()
+    /// <summary>
+    /// Raised when a trail is FINISHED — seconds taken and digs spent. Never raised for an
+    /// abandoned one, which is what keeps <see cref="ActivityRuns"/> free of times that are not
+    /// results.
+    /// </summary>
+    public event Action<double, int>? Finished;
+
+    /// <summary>Raised when a RUNNING trail is stopped before its last clue.</summary>
+    public event Action? Abandoned;
+
+    public string Start() => Start(null, null);
+
+    /// <summary>
+    /// Starts a trail, optionally overriding the lab's own clue count and difficulty.
+    ///
+    /// <para><b>Overrides are passed, never written into <see cref="DigTuning"/>.</b> The Activity
+    /// mode chooses its own difficulty and clue count from its own controls; routing them through
+    /// the global tuning to be read straight back would make the lab's sliders jump to whatever the
+    /// last activity used, and would make an activity in progress change shape the moment somebody
+    /// opened the lab. Null means "use the lab's value", which is exactly what the lab wants.</para>
+    /// </summary>
+    public string Start(int? stops, float? difficulty)
     {
         // NO CanPerform GATE. Starting buries spots and writes clues; it does not touch game code
         // or play an animation, so refusing it because the player is mounted was refusing something
@@ -157,7 +178,7 @@ internal sealed unsafe class DigRoamService : IDigTest
         _territory   = Plugin.ClientState.TerritoryType;
         _navRefusals = 0;
 
-        int want = Math.Clamp(DigTuning.RoamStops, 1, 20);
+        int want = Math.Clamp(stops ?? DigTuning.RoamStops, 1, 20);
 
         var placed = new List<Vector3>();
 
@@ -184,9 +205,11 @@ internal sealed unsafe class DigRoamService : IDigTest
         // of thing five times, which is exactly what this replaced.
         var writer = new DigClueWriter(_rng);
 
+        float hard = Math.Clamp(difficulty ?? DigTuning.RoamDifficulty, 0f, 1f);
+
         foreach (var s in _stops)
         {
-            s.Clue     = writer.Write(s.Position);
+            s.Clue     = writer.Write(s.Position, hard);
             s.Category = writer.LastCategory;
         }
 
@@ -670,15 +693,36 @@ internal sealed unsafe class DigRoamService : IDigTest
         try { Plugin.Sound.Play(SoundService.Cue.ChallengeComplete); }
         catch (Exception ex) { Diag.Error($"[Roam] end cue failed: {ex.Message}"); }
 
-        string time = CompletionStore.FormatRaceTime(ElapsedSeconds);
+        double seconds = ElapsedSeconds;
+
+        string time = CompletionStore.FormatRaceTime(seconds);
         Plugin.ChatGui.Print($"[Challenges] That's the end of the trail! {time}, {_digs} dig(s).");
+
+        // LAST, and inside its own guard. A listener that throws must not be able to leave the trail
+        // half-finished — the phase, the count and the chat line are all already committed above, so
+        // the worst a broken subscriber can do is lose its own record.
+        try { Finished?.Invoke(seconds, _digs); }
+        catch (Exception ex) { Diag.Error($"[Roam] finish listener failed: {ex.Message}"); }
     }
 
     public string Stop()
     {
         if (_phase == Phase.Off) return "no wild trail is running.";
+
+        bool wasRunning = _phase == Phase.Running;
+
         _phase = Phase.Off;
         _stops.Clear();
+
+        // Only a RUNNING trail was abandoned. Stopping one that has already reached Done is just the
+        // result screen timing out, and announcing that as an abandonment would throw away a run the
+        // player actually finished.
+        if (wasRunning)
+        {
+            try { Abandoned?.Invoke(); }
+            catch (Exception ex) { Diag.Error($"[Roam] abandon listener failed: {ex.Message}"); }
+        }
+
         return "wild trail abandoned.";
     }
 

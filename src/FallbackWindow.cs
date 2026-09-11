@@ -341,7 +341,16 @@ internal sealed class FallbackWindow
         if (ImGui.BeginChild("##tc_fb_master", new Vector2(masterW, 0), true))
         {
             // Same segmented control as the Panache renderer, in the plainest form ImGui has.
-            if (ImGui.RadioButton("Category##tc_fb_group", !zones) && zones)
+            //
+            // THE CONDITION IS "not already Categories", NOT "is Zones". There is a third grouping
+            // now — Activities — and this renderer has no pane for it, so it falls back to showing
+            // categories. Gating the click on `zones` meant that with Activities stored, the
+            // Category button was lit, the category list was on screen, and pressing the button did
+            // nothing at all: the stored mode stayed Activities and the Panache renderer would open
+            // straight back into it. Two renderers, one config, so this has to handle every value it
+            // can hold rather than the two it used to.
+            if (ImGui.RadioButton("Category##tc_fb_group", !zones)
+                && _config.Grouping != GroupMode.Categories)
             {
                 _config.Grouping = GroupMode.Categories;
                 _save();

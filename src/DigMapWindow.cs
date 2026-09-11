@@ -1133,6 +1133,16 @@ internal sealed class DigMapWindow
     /// prints the path it tried</b> rather than failing silently — the dots are the point, and the
     /// image is context.</para>
     /// </summary>
+    /// <summary>
+    /// The same lookup, for the player-facing reference map.
+    ///
+    /// <para>Shared rather than copied: the path is derived from <c>Map.Id</c> by a rule that has
+    /// already been got wrong once, and two windows deriving it separately is two chances to get it
+    /// wrong again — in one of which the failure is a grid instead of a map and nobody notices.</para>
+    /// </summary>
+    internal static Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? MapTextureFor(
+        uint mapId, out string path) => MapTexture(mapId, out path);
+
     private static Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? MapTexture(
         uint mapId, out string path)
     {

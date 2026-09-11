@@ -115,9 +115,53 @@ internal sealed class DigTestsWindow
 
         ImGui.TextDisabled("saved to dig-tuning.json — delete it for defaults");
 
+        DrawActivityBaseline();
+
         // Drawn from the top level so collapsing the clue-categories section, or any other, does not
         // take the glossary window with it.
         DrawVocabularyWindow();
+    }
+
+    /// <summary>
+    /// The Activity tab's relationship to these settings, stated where the settings are.
+    ///
+    /// <para><b>What the Activity mode plays with is these live values — there is no copy.</b> HUD
+    /// placement, dig speed, the speed multiplier, every colour: the minigame reads the same statics
+    /// this window writes, so a slider moved here is a slider moved there. That is Sansflaire's
+    /// instruction and it is why nothing is applied when a run starts.</para>
+    ///
+    /// <para><b>The baseline is therefore a save slot, not a second source.</b> Pushing records the
+    /// current feel as "this is how the activity is meant to play"; restoring brings it back after an
+    /// afternoon of fiddling. Without it the only way back is Reset, which returns the SHIPPED
+    /// defaults rather than the tuned ones — which is the wrong place to land when what you wanted
+    /// was yesterday's settings.</para>
+    /// </summary>
+    private void DrawActivityBaseline()
+    {
+        ImGui.Separator();
+
+        ImGui.TextColored(new Vector4(0.70f, 0.80f, 1f, 0.95f), "ACTIVITY MODE");
+
+        ImGui.TextWrapped("The Activity tab plays with these exact settings — there is no separate "
+                        + "copy, so anything changed here changes the minigame immediately.");
+
+        if (ImGui.Button("Push these as the activity baseline")) Say(DigTuning.PushActivityDefaults());
+
+        ImGui.SameLine();
+
+        // Disabled rather than hidden when nothing has been pushed: a button that appears only after
+        // an unrelated action reads as the UI changing under you, and the reason it cannot be used
+        // is worth stating.
+        bool has = DigTuning.HasActivityDefaults;
+
+        ImGui.BeginDisabled(!has);
+        if (ImGui.Button("Restore the activity baseline")) Say(DigTuning.RestoreActivityDefaults());
+        ImGui.EndDisabled();
+
+        ImGui.TextDisabled(has
+            ? $"baseline pushed {DigTuning.ActivityDefaultsStamp:d MMM yyyy, HH:mm} "
+            + "— activity-tuning.json"
+            : "no baseline pushed yet — Reset would take you to the shipped defaults, not yours");
     }
 
     /// <summary>

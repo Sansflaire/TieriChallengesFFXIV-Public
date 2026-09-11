@@ -1030,6 +1030,73 @@ internal static class DigTuning
     private static string Path =>
         System.IO.Path.Combine(Plugin.PluginInterface.GetPluginConfigDirectory(), "dig-tuning.json");
 
+    // ── the activity baseline ────────────────────────────────────────────────
+    //
+    // WHAT THE ACTIVITY MODE READS IS THESE LIVE VALUES, WITH NOTHING IN BETWEEN. Sansflaire's
+    // instruction: "all of the current settings I have within the diglab are what get used as the
+    // minigame settings — HUD placements, dig animation speed, multiplier, colours". So the activity
+    // does NOT snapshot at run start and does not hold its own copy; there is one set of numbers and
+    // both the lab and the minigame read it.
+    //
+    // The baseline below is therefore not a second live source — it is a SAVE SLOT. Pushing captures
+    // the current feel as "this is how the activity is meant to play"; restoring brings it back after
+    // an afternoon of moving sliders. Without it, the only way back from a fiddled lab is Reset, which
+    // returns the SHIPPED defaults rather than the tuned ones Sansflaire actually settled on.
+
+    private static string ActivityPath =>
+        System.IO.Path.Combine(Plugin.PluginInterface.GetPluginConfigDirectory(),
+                               "activity-tuning.json");
+
+    /// <summary>Whether a baseline has ever been pushed.</summary>
+    public static bool HasActivityDefaults => File.Exists(ActivityPath);
+
+    /// <summary>When the baseline was last pushed, in local time, or null if never.</summary>
+    public static DateTime? ActivityDefaultsStamp
+    {
+        get
+        {
+            try { return HasActivityDefaults ? File.GetLastWriteTime(ActivityPath) : null; }
+            catch { return null; }
+        }
+    }
+
+    /// <summary>
+    /// Captures the current tuning as the activity's baseline.
+    ///
+    /// <para><b>Saves first, then copies the saved file.</b> Copying the live file without saving
+    /// would capture whatever was last written to disk rather than what is on screen — and every
+    /// slider here saves on release, so "what is on disk" is usually right and occasionally, for the
+    /// one control being dragged, is not. Once is cheap; being usually right is not good enough for
+    /// a button whose whole job is to record a moment.</para>
+    /// </summary>
+    public static string PushActivityDefaults()
+    {
+        try
+        {
+            Save();
+            File.Copy(Path, ActivityPath, overwrite: true);
+            return "activity baseline updated from the current settings.";
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[DigTuning] activity baseline push failed: {ex.Message}");
+            return $"could not write the activity baseline: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Puts the pushed baseline back into the live tuning, through the ordinary loader.
+    /// </summary>
+    public static string RestoreActivityDefaults()
+    {
+        if (!HasActivityDefaults) return "no activity baseline has been pushed yet.";
+
+        Load(ActivityPath);
+        Save();
+
+        return "restored the activity baseline.";
+    }
+
     /// <summary>Restores the shipped defaults. The window offers this per test and for everything.</summary>
     public static void ResetHunt()
     {
@@ -1102,13 +1169,24 @@ internal static class DigTuning
         Apply();
     }
 
-    public static void Load()
+    public static void Load() => Load(Path);
+
+    /// <summary>
+    /// The same loader, pointed at a different file.
+    ///
+    /// <para><b>One deserialise-and-assign path, always.</b> The activity baseline below is a copy of
+    /// this same JSON, and restoring it goes through here rather than through a second Apply method
+    /// built out of the <see cref="Dto"/>'s fields. There are over eighty of them; a second copy of
+    /// that assignment list would be wrong within a release and wrong silently, because a field
+    /// nobody remembered to add simply keeps its current value.</para>
+    /// </summary>
+    private static void Load(string path)
     {
         try
         {
-            if (!File.Exists(Path)) return;
+            if (!File.Exists(path)) return;
 
-            var d = JsonSerializer.Deserialize<Dto>(File.ReadAllText(Path));
+            var d = JsonSerializer.Deserialize<Dto>(File.ReadAllText(path));
             if (d == null) return;
 
             // Guard every value. A hand-edited or half-written file must not be able to put the

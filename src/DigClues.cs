@@ -84,10 +84,21 @@ internal sealed class DigClueWriter
     /// A clue for <paramref name="spot"/>, and the weight bookkeeping that stops the next one being
     /// the same kind of clue.
     /// </summary>
-    public string Write(Vector3 spot)
+    public string Write(Vector3 spot) => Write(spot, DigTuning.RoamDifficulty);
+
+    /// <summary>
+    /// The same, at an explicitly supplied difficulty.
+    ///
+    /// <para><b>The Activity mode picks its own difficulty and must not write it into
+    /// <see cref="DigTuning"/> to be read back.</b> Round-tripping through global state would mean a
+    /// run in progress changed difficulty the moment somebody moved the lab's slider, and that the
+    /// lab's slider silently became whatever the last activity run used. Passing the value is the
+    /// version where neither can happen.</para>
+    /// </summary>
+    public string Write(Vector3 spot, float difficulty)
     {
         var enabled = (ClueCategory)DigTuning.RoamClueCategories;
-        float hard  = Math.Clamp(DigTuning.RoamDifficulty, 0f, 1f);
+        float hard  = Math.Clamp(difficulty, 0f, 1f);
 
         // Build every candidate BEFORE weighing any of them. Availability is "the writer produced
         // something", never a separate guess about whether it could have.
