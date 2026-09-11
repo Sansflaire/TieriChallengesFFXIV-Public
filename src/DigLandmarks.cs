@@ -236,13 +236,20 @@ internal static class DigLandmarks
     {
         lo = hi = default;
 
-        // FIRST: the navmesh. It is the walkable area by definition, and it is the same surface
-        // placement uses — so the square directions are measured in is the square spots land in.
-        if (TryWorldBounds(out var searchLo, out var searchHi) &&
-            DigNavmesh.TryWalkableBounds(searchLo, searchHi, out lo, out hi))
-            return true;
-
-        // SECOND: the spread of the map's own labels, in world space.
+        // FIRST: the spread of the map's own labels.
+        //
+        // THIS WAS DEMOTED IN FAVOUR OF THE NAVMESH AND THAT WAS A MISTAKE, reverted at 0.84.45.5
+        // on direct evidence: the debug view draws both, and the labels hug the ward while the
+        // navmesh box swallowed huge regions of terrain nobody can stand on. The reasoning for
+        // preferring the navmesh — "it is the walkable area by definition" — rested on vnavmesh's
+        // reachable filter meaning "the player can walk here". That was never verified; it is a
+        // mesh-graph property whose flood-fill seed is unknown to us, and spots were landing far
+        // outside the ward while passing it.
+        //
+        // The labels are a weaker signal in principle and the better one in fact. On a housing map
+        // they are plot numbers spread across the whole ward; on a field map they are camps and
+        // landmarks spread across the playable area. Neither covers open ground perfectly, and both
+        // are unambiguously INSIDE the place a player can be — which the navmesh box was not.
         var marks = ForCurrentMap();
 
         if (marks.Count >= 4)
@@ -268,6 +275,12 @@ internal static class DigLandmarks
                 return true;
             }
         }
+
+        // SECOND: the navmesh, for a map with too few labels to bound anything. Still better than
+        // the raw rectangle — it is at least made of ground — but demoted, per the note above.
+        if (TryWorldBounds(out var searchLo, out var searchHi) &&
+            DigNavmesh.TryWalkableBounds(searchLo, searchHi, out lo, out hi))
+            return true;
 
         // LAST: the map rectangle. Known crude — it is mostly empty square for a small zone — but
         // it is never wrong about orientation, only about where the middle is.

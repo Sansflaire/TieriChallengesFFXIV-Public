@@ -29,8 +29,22 @@ internal static class DigNavmesh
     /// <c>vnavmesh.Query.Mesh.NearestPointReachable</c> — <c>(position, halfExtentXZ, halfExtentY)</c>
     /// returning the nearest point on the <b>reachable</b> navmesh, or null when there is none.
     ///
-    /// <para><b>THIS IS THE ONE THAT ANSWERS THE QUESTION, and <c>NearestPoint</c> is not.</b> Read
-    /// from vnavmesh 1.2.3.14's own source rather than inferred:</para>
+    /// <para><b>CORRECTION (0.84.45.5): this does NOT mean "the player can walk here", and an
+    /// earlier version of this comment claimed it did.</b> The registration below is verbatim from
+    /// vnavmesh's source and is accurate. What was NOT verified — and was stated as fact anyway —
+    /// is what <c>allowUnreachable: false</c> excludes. That claim came from a summary of
+    /// <c>NavmeshQuery.cs</c> which said the flag "appears to be" a static polygon property and
+    /// "likely" marks disconnected islands. Both hedges were dropped when it was written down here,
+    /// and three versions were built on top of it.</para>
+    ///
+    /// <para><b>The observed behaviour contradicts it.</b> Spots passing this filter landed well
+    /// outside a housing ward's walls, in terrain the player cannot reach. So the flood fill is
+    /// seeded from something other than the player, or the ward is bounded by collision the navmesh
+    /// does not model. It remains a USEFUL filter — it is strictly better than <c>NearestPoint</c>
+    /// and rejects genuine off-mesh points — but it is not a reachability proof, and placement no
+    /// longer relies on it alone.</para>
+    ///
+    /// <para>Read from vnavmesh 1.2.3.14's own source rather than inferred:</para>
     /// <code>
     ///   RegisterFunc("Query.Mesh.NearestPoint",
     ///       (p, xz, y) => Query?.FindNearestPointOnMesh(p, xz, y));            // default filter

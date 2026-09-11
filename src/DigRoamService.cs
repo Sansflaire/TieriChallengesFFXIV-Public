@@ -250,6 +250,18 @@ internal sealed unsafe class DigRoamService : IDigTest
             // being described with a straight face, because every other test here narrows the
             // problem without knowing what "reachable" means. A navmesh IS the set of places a
             // character can walk, so it does know.
+            // INSIDE THE BOX THE CLUES ARE WRITTEN AGAINST, first and cheaply.
+            //
+            // The debug view showed candidates landing far outside the ward while passing the
+            // navmesh gate — so the navmesh gate is not sufficient on its own, whatever its filter
+            // means. This is the blunt fix and it is the honest one: a spot outside the area the
+            // map puts NAMES in is a spot no clue could describe anyway, because every anchor a
+            // clue could reach for is inside that area. Rejecting it costs nothing and it cannot
+            // be wrong in the direction that matters.
+            if (DigLandmarks.WalkableBox(out var boxLo, out var boxHi) &&
+                (spot.X < boxLo.X || spot.X > boxHi.X || spot.Z < boxLo.Y || spot.Z > boxHi.Y))
+                continue;
+
             // Asks for REACHABLE mesh, which is a different question from "is there mesh here" and
             // is the one that was being got wrong. Unreachable polygons are flagged by a flood fill
             // at mesh build time, so an island cut off from the walkable body of the zone — the sand
