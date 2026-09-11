@@ -196,6 +196,23 @@ internal sealed unsafe class DigRoamService : IDigTest
     /// <summary>Candidates thrown away purely because the navmesh could not be consulted.</summary>
     private int _navRefusals;
 
+    /// <summary>
+    /// Why candidates were rejected, per gate. <b>Four gates now stand between a random point and a
+    /// buried spot, and "0 placed" says nothing about which one did it.</b> Guessing between them is
+    /// what this session has repeatedly got wrong, so they are counted instead.
+    /// </summary>
+    private int _rejGround, _rejRange, _rejBox, _rejAnchor, _rejNav, _rejCrowd, _rejStep, _rejRoof;
+
+    private void ResetRejections() =>
+        _rejGround = _rejRange = _rejBox = _rejAnchor = _rejNav = _rejCrowd = _rejStep = _rejRoof = 0;
+
+    /// <summary>A human-readable tally of the last placement run's rejections.</summary>
+    public string RejectionReport =>
+        $"no ground {_rejGround}   out of range {_rejRange}   outside box {_rejBox}   "
+      + $"no marker within {DigTuning.RoamMaxAnchorDistance:0}y {_rejAnchor}   "
+      + $"not on reachable navmesh {_rejNav}   ON A ROOF {_rejRoof}   "
+      + $"too close to another {_rejCrowd}   step/ledge {_rejStep}";
+
     private bool TryPlace(Vector3 from, List<Vector3> taken, out Vector3 spot, float nearOnly = 0f)
     {
         spot = default;
@@ -226,7 +243,7 @@ internal sealed unsafe class DigRoamService : IDigTest
                 // No player-relative rise gate: across a whole zone it would reject every hill and
                 // basement for being far from where the player happens to stand. The roof question
                 // is asked below instead, by something local enough to stay true anywhere.
-                if (!DigGround.TryGroundAt(from, x, z, 0f, out spot)) continue;
+                if (!DigGround.TryGroundAt(from, x, z, 0f, out spot)) { _rejGround++; continue; }
             }
             else if (!DigGround.TryPointNear(from, MathF.Max(5f, min),
                                              MathF.Max(min + 5f, cap > 0f ? cap : 220f),
@@ -239,8 +256,8 @@ internal sealed unsafe class DigRoamService : IDigTest
 
             // Not under the player's feet, and inside the optional cap. Cap 0 means no cap, which
             // is the default and the whole point.
-            if (fromPlayer < min) continue;
-            if (cap > 0f && fromPlayer > cap) continue;
+            if (fromPlayer < min)               { _rejRange++; continue; }
+            if (cap > 0f && fromPlayer > cap)   { _rejRange++; continue; }
 
             // THE REACHABILITY GATE, and the only one of these that actually answers the question.
             //
@@ -260,7 +277,7 @@ internal sealed unsafe class DigRoamService : IDigTest
             // be wrong in the direction that matters.
             if (DigLandmarks.WalkableBox(out var boxLo, out var boxHi) &&
                 (spot.X < boxLo.X || spot.X > boxHi.X || spot.Z < boxLo.Y || spot.Z > boxHi.Y))
-                continue;
+            { _rejBox++; continue; }
 
             // NEAR SOMETHING THE MAP NAMES — the containment that follows the zone's SHAPE.
             //
@@ -278,7 +295,7 @@ internal sealed unsafe class DigRoamService : IDigTest
 
                 if (near is not { } anchor ||
                     DigGround.Flat(anchor.World, spot) > DigTuning.RoamMaxAnchorDistance)
-                    continue;
+                { _rejAnchor++; continue; }
             }
 
             // Asks for REACHABLE mesh, which is a different question from "is there mesh here" and
@@ -291,18 +308,26 @@ internal sealed unsafe class DigRoamService : IDigTest
             // Null means vnavmesh could not answer at all. It is a hard requirement of this test and
             // Start refused before we got here, so reaching this is a mid-run disappearance — treat
             // it exactly like a no.
-            if (walkable != true) { _navRefusals++; continue; }
+            if (walkable != true) { _navRefusals++; _rejNav++; continue; }
 
-            // SNAP TO THE MESH, then re-ground. The query already had to find the nearest reachable
-            // point to answer at all, so keeping only its yes/no would throw away the better half:
-            // the spot now sits where the navmesh says a character stands rather than up to a
-            // tolerance away, which is the difference between a dig radius centred on the path and
-            // one centred on the kerb beside it.
+            // SNAP TO THE MESH, then refine the height DOWNWARD FROM THE MESH POINT.
             //
-            // Re-grounded because the navmesh surface is a simplification that sits a little above
-            // or below the visual floor, and the spot's height is what the in-world drawing uses.
-            if (DigGround.TryGroundAt(spot, onMesh.X, onMesh.Z, 0f, out var settled)) spot = settled;
-            else                                                                      spot = onMesh;
+            // THIS LINE PUT SPOTS ON ROOFTOPS. It used to re-ground with TryGroundAt, which starts
+            // its ray 120 yalms up and takes the first surface it meets — over a house, the roof. So
+            // the navmesh would correctly return a point on the path outside a building, and this
+            // would then hoist it onto the building. Every later gate agreed it was fine, because in
+            // XZ it IS fine; only the height was wrong, and nothing downstream looks at height.
+            //
+            // Refining from just above the mesh point cannot relocate the spot onto something else:
+            // it only corrects the small offset between the navmesh surface, which is a
+            // simplification, and the visual floor.
+            spot = DigGround.TryGroundBelow(onMesh, 2f, 6f, out var settled) ? settled : onMesh;
+
+            // THE ROOF TEST, and it had become dead code. It used to live inside an
+            // `if (walkable == null)` branch — the vnavmesh-not-installed path — so the moment the
+            // navmesh started answering, the one check specifically designed to reject rooftops
+            // stopped running at all. It belongs here, unconditionally, on the final position.
+            if (DigGround.IsElevated(spot, DigTuning.RoamMaxRise)) { _rejRoof++; continue; }
 
             // Far enough from the others that no single dig can turn up two, and so the trail is a
             // route rather than a huddle.
@@ -314,11 +339,12 @@ internal sealed unsafe class DigRoamService : IDigTest
                 break;
             }
 
-            if (crowded) continue;
+            if (crowded) { _rejCrowd++; continue; }
 
             // The wall-versus-hill test. Without it a spot can sit astride a kerb, where half its
             // dig radius is somewhere the player cannot stand.
-            if (DigGround.HasStep(spot, DigTuning.RoamDig, DigTuning.SitePieceMaxStep)) continue;
+            if (DigGround.HasStep(spot, DigTuning.RoamDig, DigTuning.SitePieceMaxStep))
+            { _rejStep++; continue; }
 
             return true;
         }
@@ -446,10 +472,24 @@ internal sealed unsafe class DigRoamService : IDigTest
         var player = Plugin.ObjectTable.LocalPlayer;
         if (player == null) return found;
 
-        for (int i = 0; i < count; i++)
+        ResetRejections();
+
+        // KEEPS GOING PAST A FAILURE, unlike a real run.
+        //
+        // A trail stops at the first failure because its stops must be a coherent set. The debug
+        // sampler must not: breaking made "0 of 200" mean "the FIRST attempt failed", which reads as
+        // "nothing can be placed anywhere" and is a far stronger claim than the evidence. Three
+        // consecutive failures is the real stop, so a genuinely impossible zone still terminates.
+        int consecutiveFailures = 0;
+
+        for (int i = 0; i < count && consecutiveFailures < 3; i++)
         {
-            if (!TryPlace(player.Position, found, out var spot)) break;
-            found.Add(spot);
+            if (TryPlace(player.Position, found, out var spot))
+            {
+                found.Add(spot);
+                consecutiveFailures = 0;
+            }
+            else consecutiveFailures++;
         }
 
         return found;

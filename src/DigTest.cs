@@ -201,6 +201,35 @@ internal static class DigGround
     }
 
     /// <summary>
+    /// Ground found by dropping a SHORT ray from just above a known-good point, rather than from
+    /// the sky.
+    ///
+    /// <para><b>Grounding from above is how spots ended up on rooftops.</b> The normal probe starts
+    /// 120 yalms up and takes the first surface it meets — which, over a house, is the roof. That is
+    /// correct when all you have is an XZ guess. It is catastrophic when you already know the
+    /// correct height, because it throws that knowledge away and re-derives a worse answer: a
+    /// navmesh point on the path outside a house, re-grounded from the sky, becomes a point on the
+    /// roof of the house.</para>
+    ///
+    /// <para>So this starts just above the point it was given and only looks a little way down. It
+    /// refines a height that is already nearly right; it cannot relocate the spot onto something
+    /// else entirely.</para>
+    /// </summary>
+    public static bool TryGroundBelow(Vector3 point, float above, float length, out Vector3 ground)
+    {
+        ground = point;
+
+        var origin = new Vector3(point.X, point.Y + above, point.Z);
+
+        if (!BGCollisionModule.RaycastMaterialFilter(origin, new Vector3(0f, -1f, 0f),
+                                                     out var hit, length))
+            return false;
+
+        ground = new Vector3(point.X, hit.Point.Y, point.Z);
+        return true;
+    }
+
+    /// <summary>
     /// Whether a point is standing on something with more ground a long way UNDER it — a roof, a
     /// balcony, a bridge, the top of a wall.
     ///

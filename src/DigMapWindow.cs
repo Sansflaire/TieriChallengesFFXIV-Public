@@ -33,6 +33,7 @@ internal sealed class DigMapWindow
 
     private List<Vector3> _spots = new();
     private string        _status = "Press Sample.";
+    private string        _rejections = string.Empty;
 
     /// <summary>How many candidates a sample draws. Enough to show a pattern, not so many that a
     /// bad one hides in the crowd.</summary>
@@ -83,10 +84,9 @@ internal sealed class DigMapWindow
             _spots       = _tests.Roam.SampleCandidates(_sampleCount);
             _spotsForMap = mapId;
             _status      = $"{_spots.Count} of {_sampleCount} placed.";
-
-            if (_spots.Count < _sampleCount)
-                _status += " Fewer than asked means placement ran out of valid ground — spacing, "
-                         + "the roof test or the step test rejected the rest.";
+            _rejections  = _tests.Roam.RejectionReport;
+            _reachable.Clear();
+            _pending.Clear();
         }
 
         ImGui.SameLine();
@@ -94,6 +94,12 @@ internal sealed class DigMapWindow
 
         ImGui.SameLine();
         ImGui.TextDisabled(_status);
+
+        // WHICH GATE REJECTED, counted rather than guessed. Four gates stand between a random point
+        // and a buried spot, and "0 placed" says nothing about which one did it — so it says now.
+        // The biggest number is the gate to go and look at.
+        if (_rejections.Length > 0)
+            ImGui.TextColored(new Vector4(1f, 0.80f, 0.35f, 1f), "rejected — " + _rejections);
 
         if (_spotsForMap != 0 && _spotsForMap != mapId)
             ImGui.TextColored(Warn, "These dots were sampled on a DIFFERENT map — sample again.");
@@ -313,6 +319,58 @@ internal sealed class DigMapWindow
             drawList.AddCircle(me, 8f, green, 14, 1.5f);
         }
 
+        // THE ROUTE TO WHATEVER THE POINTER IS NEAREST.
+        //
+        // "REACHABLE 44" is an assertion, and an assertion made while the player is staring at a
+        // wall is worthless. Drawing the route turns it into something inspectable: if the line
+        // goes the long way round the ward it really is reachable and merely far, and if it cuts
+        // straight through a building the navmesh is wrong and we can finally say which.
+        if (_routes.Count > 0 && _showSpots)
+        {
+            var pointer = ImGui.GetMousePos();
+
+            int   best = -1;
+            float bestD = 30f;
+
+            foreach (var kv in _routes)
+            {
+                if (kv.Key >= _spots.Count || !Plot(_spots[kv.Key], out var at)) continue;
+
+                float d = Vector2.Distance(at, pointer);
+                if (d >= bestD) continue;
+
+                bestD = d;
+                best  = kv.Key;
+            }
+
+            if (best >= 0)
+            {
+                uint amber = ImGui.GetColorU32(new Vector4(1f, 0.80f, 0.25f, 0.95f));
+                var  route = _routes[best];
+
+                Vector2? prev = null;
+                float length = 0f;
+
+                for (int w = 0; w < route.Count; w++)
+                {
+                    if (w > 0) length += DigGround.Flat(route[w - 1], route[w]);
+
+                    if (!Plot(route[w], out var at)) { prev = null; continue; }
+
+                    if (prev is { } p) drawList.AddLine(p, at, amber, 2f);
+                    prev = at;
+                }
+
+                float direct = Plugin.ObjectTable.LocalPlayer is { } me2
+                    ? DigGround.Flat(me2.Position, _spots[best]) : 0f;
+
+                string detour = direct > 1f ? $"   {length / direct:0.0}x the straight line" : string.Empty;
+
+                drawList.AddText(pointer + new Vector2(12f, 12f), amber,
+                    $"{route.Count} waypoints, {length:0}y walk{detour}");
+            }
+        }
+
         // Paired with the PushClipRect above. Popped BEFORE the Dummy and the status lines, or
         // every widget after this would inherit the map's clip and the text below would vanish.
         drawList.PopClipRect();
@@ -521,6 +579,9 @@ internal sealed class DigMapWindow
     /// Per-candidate reachability, by index into <c>_spots</c>. Null while a query is in flight.
     /// </summary>
     private static readonly Dictionary<int, bool?> _reachable = new();
+
+    /// <summary>The actual route to each verified spot, so the verdict can be inspected not trusted.</summary>
+    private static readonly Dictionary<int, List<Vector3>> _routes = new();
     private static readonly List<(int Index, System.Threading.Tasks.Task<List<Vector3>> Task)> _pending = new();
 
     /// <summary>
@@ -541,6 +602,7 @@ internal sealed class DigMapWindow
     {
         _reachable.Clear();
         _pending.Clear();
+        _routes.Clear();
 
         var player = Plugin.ObjectTable.LocalPlayer;
         if (player == null) return;
@@ -569,9 +631,12 @@ internal sealed class DigMapWindow
 
             // A route is a non-empty waypoint list. A faulted query is "cannot say", not "no" —
             // recording a cancellation as unreachable would quietly indict a perfectly good spot.
-            _reachable[index] = task.IsCompletedSuccessfully
-                ? task.Result is { Count: > 0 }
-                : (bool?)null;
+            if (!task.IsCompletedSuccessfully) { _reachable[index] = null; continue; }
+
+            var route = task.Result;
+
+            _reachable[index] = route is { Count: > 0 };
+            if (route is { Count: > 0 }) _routes[index] = route;
         }
     }
 
