@@ -367,7 +367,48 @@ internal static class DigGround
             if (MathF.Abs(ground.Y - cursor.Y) > MathF.Max(0.05f, DigTuning.WalkMaxStep))
                 return false;   // too abrupt to walk
 
+            // AND A SHORT HORIZONTAL RAY, because a downward ray cannot see a vertical wall.
+            //
+            // This is what the ground walk alone could never catch, and it is why a spot behind the
+            // Empyreum apartment facade still verified as walkable. A building sits ON the terrain:
+            // the floor runs underneath it, so sampling the ground finds a similar height on both
+            // sides of the wall and the walk strolls through the stone. Ground sampling detects
+            // steps and gaps. It is blind, by construction, to a vertical face with floor either
+            // side of it.
+            //
+            // The very first version of this check was a horizontal ray and was abandoned because it
+            // held its altitude while the ground did not. That objection dies at this length: over
+            // one 1.2-yalm stride, between two points already known to be on the ground and within a
+            // stride of each other, there is no altitude to drift. The two tests are complements —
+            // the walk follows the terrain, the ray sees what stands on it.
+            if (!StrideClear(cursor, ground, height)) return false;
+
             cursor = ground;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Whether anything solid stands between two adjacent ground samples, checked at two heights.
+    ///
+    /// <para>Two heights because one misses in both directions: a knee-high ray clears a railing a
+    /// character cannot vault, and a chest-high one passes over a low wall it also cannot cross.</para>
+    /// </summary>
+    private static bool StrideClear(Vector3 fromGround, Vector3 toGround, float height)
+    {
+        foreach (float h in new[] { 0.45f, height })
+        {
+            var from = new Vector3(fromGround.X, fromGround.Y + h, fromGround.Z);
+            var to   = new Vector3(toGround.X,   toGround.Y   + h, toGround.Z);
+
+            var delta = to - from;
+            float len = delta.Length();
+
+            if (len < 0.02f) continue;
+
+            if (BGCollisionModule.RaycastMaterialFilter(from, delta / len, out _, len))
+                return false;
         }
 
         return true;
