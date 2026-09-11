@@ -1050,8 +1050,15 @@ internal static class DigTuning
                 RoamAwkwardness    = d.RoamAwkwardness is { } aw && float.IsFinite(aw)
                                          ? Math.Clamp(aw, 0f, 1f) : 0.5f;
 
+                // NARROW MIGRATION, the same shape as the dig-hold one: a stored value of EXACTLY
+                // the old default is overruled, anything else was chosen on purpose and is left
+                // alone. 40 was the default when this shipped and it turned out to carve the open
+                // middle out of every plaza — markers cluster, so a radius around them is a halo,
+                // not a boundary. Anyone who deliberately set 40 loses that choice once; everyone
+                // else stops fighting a default nobody picked.
                 RoamMaxAnchorDistance = d.RoamMaxAnchorDistance is { } ma && float.IsFinite(ma)
-                                            ? Math.Clamp(ma, 0f, 2000f) : 40f;
+                                            ? (MathF.Abs(ma - 40f) < 0.001f ? 0f : Math.Clamp(ma, 0f, 2000f))
+                                            : 0f;
                 WalkMaxStep = d.WalkMaxStep is { } ws && float.IsFinite(ws)
                                   ? Math.Clamp(ws, 0.2f, 4f) : 1.1f;
 

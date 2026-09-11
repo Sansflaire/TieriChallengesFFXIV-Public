@@ -400,20 +400,21 @@ internal sealed unsafe class DigRoamService : IDigTest
             if (DigGround.IsElevated(spot, DigTuning.RoamMaxRise))
             { Reject("roof", spot, ref _rejRoof); continue; }
 
-            // WALLED OFF FROM THE NEAREST NAMED PLACE — the collision check, using the system that
-            // actually stops the character rather than the one that models where it may walk.
+            // THE "WALLED OFF" GATE IS GONE, AND IT WAS INCOHERENT RATHER THAN MISTUNED.
             //
-            // vnavmesh has been observed returning routes straight through static zone geometry, so
-            // its verdict alone is not sufficient however it is filtered. A marker sits on open
-            // ground by construction, so a clear line from the spot to the nearest one means the
-            // spot is at least on the same side of the walls as somewhere real.
+            // It walked a line from the candidate to its NEAREST MARKER and rejected the candidate
+            // if anything blocked it. But which marker is nearest is an accident of where labels
+            // happen to sit: an open plaza's nearest marker is routinely on the far side of a
+            // building, so a spot standing in the middle of clear paving failed a test about a
+            // sightline it had no relationship to.
             //
-            // It rejects legitimate spots round a corner, which is why it is tied to the same
-            // distance knob rather than being unconditional: 0 turns both off together.
-            if (DigTuning.RoamMaxAnchorDistance > 0f &&
-                DigLandmarks.Nearest(spot) is { } marker &&
-                !DigGround.SegmentClear(spot, marker.World))
-            { Reject("walled off", spot, ref _rejWall); continue; }
+            // It never measured whether the SPOT was enclosed — only whether one arbitrary anchor
+            // was visible from it. Sansflaire's observation that "most of these are not actually walled
+            // off" is not a tuning report, it is the gate being wrong about what it measures, and
+            // there is no threshold that fixes a question this shape.
+            //
+            // Not replaced with a cleverer version. Enclosure is exactly what null zones express
+            // directly, drawn by someone who can see the ward.
 
             // Far enough from the others that no single dig can turn up two, and so the trail is a
             // route rather than a huddle.

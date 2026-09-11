@@ -451,15 +451,14 @@ internal sealed class DigTestsWindow
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
         ImGui.TextColored(Rule,
-            "MUST BE NEAR SOMETHING THE MAP NAMES. This is the containment that follows the zone's\n"
-          + "SHAPE, which a bounding box cannot: a ward is not a rectangle, so a box round Empyreum\n"
-          + "has corners outside the walls and spots landed in them. Markers — plot numbers,\n"
-          + "subdivision labels, shops — blanket the walkable area and stop at its edge, so \"is a\n"
-          + "marker near\" traces the outline for free.\n"
-          + "A PROXY, NOT A PROOF: an open field legitimately has no marker in the middle of it, so\n"
-          + "on a sparse map this rejects most of the zone. Lower it on dense maps, raise it or set\n"
-          + "0 to disable on open ones. Turn the map debug's Plot numbers layer on to see how dense\n"
-          + "the markers actually are before choosing.");
+            "MUST BE NEAR SOMETHING THE MAP NAMES — and this now DEFAULTS TO 0, meaning OFF.\n"
+          + "It rejects any spot further than this from a named map marker, as a crude proxy for\n"
+          + "\"am I still inside the playable area\". The flaw is visible the moment rejections are\n"
+          + "plotted: markers CLUSTER, so a radius around them is a halo rather than a boundary, and\n"
+          + "the open plazas BETWEEN markers — the best places to dig — are exactly what it removes.\n"
+          + "At 40 it killed roughly a quarter of all candidates in Empyreum.\n"
+          + "Null zones express the same intent directly and correctly, so this is kept only for a\n"
+          + "map nobody has hand-authored. Raise it if you want the crude version back.");
 
         ImGui.SliderFloat("Max distance to a named marker (0 = off)",
                           ref DigTuning.RoamMaxAnchorDistance, 0f, 300f,
