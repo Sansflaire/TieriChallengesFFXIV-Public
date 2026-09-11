@@ -316,6 +316,45 @@ internal static class DigTuning
     public static Vector3 BannerTopColor    = DefaultBannerTop;
     public static Vector3 BannerBottomColor = DefaultBannerBottom;
 
+    /// <summary>
+    /// The dark outline around the dig artwork: whether it is drawn at all, how far it reaches past
+    /// the silhouette, and how opaque it is.
+    ///
+    /// <para><b>It is already an OUTER outline</b> — the shape is stamped in dark behind, then the
+    /// artwork is drawn on top at its true size and position, so the dark only survives where it
+    /// sticks out past the art. Nothing is inset and the artwork is never shrunk.</para>
+    ///
+    /// <para><b>Two things can still make it read as eating into the image, and both are width.</b>
+    /// The first is that the artwork's own edge is antialiased, so its outermost pixels are
+    /// partially transparent and the dark behind shows THROUGH them — a fringe just inside the
+    /// visible edge, which gets more obvious the more opaque the outline is. The second is that a
+    /// stamp cannot tell the outside of a shape from a hole inside it, so any transparent detail
+    /// WITHIN the artwork fills with dark too, and at a wide offset that dark creeps in from both
+    /// sides of every interior line. Narrow is therefore the fix for both, which is why this
+    /// defaults thinner than it used to and can be switched off outright.</para>
+    /// </summary>
+    public static bool  IconOutline      = true;
+    public static float IconOutlineWidth = 1.0f;
+    public static float IconOutlineAlpha = 0.85f;
+
+    /// <summary>
+    /// Motion echoes behind a sliding trail banner: how many, how far apart in time, and how
+    /// quickly they fade back.
+    ///
+    /// <para><b>Step is in SECONDS, not pixels, and that is what makes the trail follow the
+    /// easing.</b> Each echo is the banner drawn where it actually was that many seconds ago, so
+    /// they bunch up as it decelerates into place and stretch out as it accelerates away — which is
+    /// what a real motion blur does. Fixed pixel offsets would give an evenly spaced comb that
+    /// looks the same whether the banner is flying or nearly stopped.</para>
+    ///
+    /// <para>Echoes appear only while the banner is actually moving; during the hold every echo
+    /// would land on the same spot and simply darken it.</para>
+    /// </summary>
+    public static bool  BannerEcho        = true;
+    public static int   BannerEchoCount   = 6;
+    public static float BannerEchoStep    = 0.045f;
+    public static float BannerEchoFalloff = 0.60f;
+
     public static readonly Vector3 DefaultBannerTop    = new(1.00f, 0.847f, 0.302f);
     public static readonly Vector3 DefaultBannerBottom = new(0.70f, 0.593f, 0.211f);
 
@@ -492,6 +531,13 @@ internal static class DigTuning
         public float BannerBottomR { get; set; }
         public float BannerBottomG { get; set; }
         public float BannerBottomB { get; set; }
+        public bool  IconOutline { get; set; }
+        public float IconOutlineWidth { get; set; }
+        public float IconOutlineAlpha { get; set; }
+        public bool  BannerEcho { get; set; }
+        public int   BannerEchoCount { get; set; }
+        public float BannerEchoStep { get; set; }
+        public float BannerEchoFalloff { get; set; }
     }
 
     private static string Path =>
@@ -543,6 +589,9 @@ internal static class DigTuning
         IconGradientDrop = 0.70f;
         LabelOffsetX = 0f; LabelOffsetY = -26f; LabelScale = 1f;
         BannerTopColor = DefaultBannerTop; BannerBottomColor = DefaultBannerBottom;
+        IconOutline = true; IconOutlineWidth = 1.0f; IconOutlineAlpha = 0.85f;
+        BannerEcho = true; BannerEchoCount = 6;
+        BannerEchoStep = 0.045f; BannerEchoFalloff = 0.60f;
     }
 
     public static void ResetAll()
@@ -649,6 +698,15 @@ internal static class DigTuning
 
                 BannerTopColor    = Rgb(d.BannerTopR,    d.BannerTopG,    d.BannerTopB);
                 BannerBottomColor = Rgb(d.BannerBottomR, d.BannerBottomG, d.BannerBottomB);
+
+                IconOutline      = d.IconOutline;
+                IconOutlineWidth = Clamp(d.IconOutlineWidth, 0f, 6f, 1.0f);
+                IconOutlineAlpha = Clamp(d.IconOutlineAlpha, 0f, 1f, 0.85f);
+
+                BannerEcho        = d.BannerEcho;
+                BannerEchoCount   = d.BannerEchoCount > 0 ? Math.Clamp(d.BannerEchoCount, 1, 16) : 6;
+                BannerEchoStep    = Clamp(d.BannerEchoStep,    0.005f, 0.30f, 0.045f);
+                BannerEchoFalloff = Clamp(d.BannerEchoFalloff, 0.05f,  0.95f, 0.60f);
             }
             else ResetRays();
 
@@ -770,6 +828,10 @@ internal static class DigTuning
                 BannerTopB = BannerTopColor.Z,
                 BannerBottomR = BannerBottomColor.X, BannerBottomG = BannerBottomColor.Y,
                 BannerBottomB = BannerBottomColor.Z,
+                IconOutline = IconOutline, IconOutlineWidth = IconOutlineWidth,
+                IconOutlineAlpha = IconOutlineAlpha,
+                BannerEcho = BannerEcho, BannerEchoCount = BannerEchoCount,
+                BannerEchoStep = BannerEchoStep, BannerEchoFalloff = BannerEchoFalloff,
             };
 
             // Temp-then-replace, like the completion stores: a half-written tuning file read on the

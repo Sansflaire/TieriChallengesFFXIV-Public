@@ -220,6 +220,26 @@ internal sealed class DigTestsWindow
 
         ImGui.ColorEdit3("Banner bottom", ref DigTuning.BannerBottomColor);
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.Spacing();
+        ImGui.TextColored(Rule,
+            "Motion echoes behind the banner as it slides. Each ghost is the banner drawn where it\n"
+          + "genuinely WAS that many seconds ago, not offset by a fixed number of pixels — so the\n"
+          + "trail bunches up as it decelerates into place and stretches as it leaves, the way real\n"
+          + "motion blur does. They only appear while it is actually moving; during the hold every\n"
+          + "ghost would land on the banner and just darken it.\n"
+          + "Step is the gap in TIME between ghosts, so a larger one reaches further back.");
+
+        if (ImGui.Checkbox("Echo trail", ref DigTuning.BannerEcho)) DigTuning.Save();
+
+        ImGui.SliderInt("Echoes", ref DigTuning.BannerEchoCount, 1, 16);
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Echo step", ref DigTuning.BannerEchoStep, 0.005f, 0.30f, "%.3f s");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Echo falloff", ref DigTuning.BannerEchoFalloff, 0.05f, 0.95f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
     }
 
     private void DrawClueText()
@@ -280,6 +300,25 @@ internal sealed class DigTestsWindow
           + "blending only ever adds coverage. It would have to be baked into the PNG.");
 
         ImGui.SliderFloat("Artwork gradient", ref DigTuning.IconGradientDrop, 0.2f, 1f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.Spacing();
+        ImGui.TextColored(Rule,
+            "The dark outline is OUTER: the shape goes down in dark first and the artwork covers\n"
+          + "it, so the dark survives only where it reaches past the art. The artwork is drawn at\n"
+          + "true size and position and is never inset or shrunk.\n"
+          + "Two things can still make a WIDE one look like it eats the image. The art's own edge\n"
+          + "is antialiased, so its outermost pixels are part-transparent and the dark behind\n"
+          + "shows through them as a fringe. And a stamp cannot tell the outside of a shape from a\n"
+          + "hole inside it, so transparent detail WITHIN the art fills with dark too, creeping in\n"
+          + "from both sides of every interior line. Narrow fixes both — hence the 1.0 default.");
+
+        if (ImGui.Checkbox("Dark outline", ref DigTuning.IconOutline)) DigTuning.Save();
+
+        ImGui.SliderFloat("Outline width##icon", ref DigTuning.IconOutlineWidth, 0f, 6f, "%.1f px");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.SliderFloat("Outline opacity##icon", ref DigTuning.IconOutlineAlpha, 0f, 1f, "%.2f");
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
     }
 

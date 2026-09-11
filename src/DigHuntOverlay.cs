@@ -132,6 +132,20 @@ internal sealed class DigHuntOverlay : IDisposable
     /// </summary>
     private string _reminderText = string.Empty;
 
+    /// <summary>
+    /// Opacity of the DIG! word, ramped exactly like every other envelope here.
+    ///
+    /// <para><b>The two words do not share a rule, because they answer different questions.</b>
+    /// CLUE! belongs to the clue: it is a label for the line underneath, so it borrows that line's
+    /// opacity outright and appears and leaves with it — a heading with nothing under it is just
+    /// clutter. DIG! belongs to the SPOT, which is a state the player is standing in rather than a
+    /// message that was shown, so it needs an envelope of its own that follows being in range.</para>
+    /// </summary>
+    private float _digWordAlpha;
+
+    private const float WordFadeIn  = 0.28f;
+    private const float WordFadeOut = 0.45f;
+
     private PanacheSurface? _reminder;
 
     /// <summary>
@@ -162,8 +176,14 @@ internal sealed class DigHuntOverlay : IDisposable
     /// directions for a rim, one larger down-right pass for depth. No second set of artwork is
     /// needed, and the outline tracks the figure exactly because it IS the figure.</para>
     /// </summary>
-    private const float OutlinePx = 1.5f;
-    private const float ShadowPx  = 3f;
+    /// <summary>
+    /// The outline width is a live tuning value now — see <see cref="DigTuning.IconOutlineWidth"/>.
+    /// Width is the one thing that decides whether an outer outline reads as hugging the edge or as
+    /// creeping into the art, so it belongs on a slider rather than in a constant.
+    /// </summary>
+    private static float OutlinePx => Math.Clamp(DigTuning.IconOutlineWidth, 0f, 6f);
+
+    private const float ShadowPx = 3f;
 
     /// <summary>
     /// The shine that appears around the rim once a dig would land: how far it reaches past the
@@ -277,6 +297,30 @@ internal sealed class DigHuntOverlay : IDisposable
 
     private IDalamudTextureWrap? _labelClue;
     private IDalamudTextureWrap? _labelDig;
+
+    /// <summary>
+    /// The word's artwork is built at the size the WORD is drawn, which is the dial's size times
+    /// <see cref="DigTuning.LabelScale"/> — not the dial's size.
+    ///
+    /// <para><b>This is what made the word look soft once it could be scaled.</b> It shared the
+    /// dial's build size, so at any scale above 1 a texture built for ~190px was being stretched to
+    /// 300 or 500 by the GPU's sampler — magnifying a small bitmap rather than resampling the
+    /// 1254px source it came from. Building at the drawn size means a bigger word genuinely
+    /// resolves more of the original artwork instead of enlarging a reduction of it.</para>
+    /// </summary>
+    private int  _labelBuiltFor;
+    private int  _labelWantSize;
+    private long _labelWantSince;
+
+    /// <summary>
+    /// How long the wanted size must hold still before the word is rebuilt at it.
+    ///
+    /// <para>Dragging the scale slider changes the wanted size every frame, and a rebuild decodes a
+    /// 1254px PNG and resamples it twice — sixty times a second while the mouse moves. Waiting for
+    /// the number to settle costs a moment of the old texture being stretched mid-drag, which is
+    /// exactly when nobody is judging sharpness.</para>
+    /// </summary>
+    private const long LabelRebuildDelayMs = 200;
 
     // ── the trail banners ────────────────────────────────────────────────────
 
@@ -406,13 +450,6 @@ internal sealed class DigHuntOverlay : IDisposable
             _dialCentre = newCentre;
             _dialOuter  = newOuter;
 
-            // Labels are optional: a missing one costs the word, not the dial.
-            var newClue = BuildScaled(System.IO.Path.Combine(folder, ClueFile), targetPx, targetPx);
-            var newDig  = BuildScaled(System.IO.Path.Combine(folder, DigFile),  targetPx, targetPx);
-
-            if (newClue != null) { _labelClue?.Dispose(); _labelClue = newClue; }
-            if (newDig  != null) { _labelDig?.Dispose();  _labelDig  = newDig;  }
-
             Diag.Info($"[Dig] dial artwork resampled to {targetPx}px.");
         }
         catch (Exception ex)
@@ -482,6 +519,49 @@ internal sealed class DigHuntOverlay : IDisposable
             return null;
         }
         finally { working?.Dispose(); }
+    }
+
+    /// <summary>
+    /// Builds the CLUE! / DIG! word at the size it is actually drawn — see
+    /// <see cref="_labelBuiltFor"/> for why that is not the dial's size.
+    /// </summary>
+    private void EnsureLabelArt(int targetPx)
+    {
+        if (targetPx <= 0 || targetPx == _labelBuiltFor) return;
+
+        // Debounce: the wanted size has to hold still before a rebuild is worth doing.
+        if (targetPx != _labelWantSize)
+        {
+            _labelWantSize  = targetPx;
+            _labelWantSince = Environment.TickCount64;
+            return;
+        }
+
+        if (Environment.TickCount64 - _labelWantSince < LabelRebuildDelayMs) return;
+
+        _labelBuiltFor = targetPx;
+
+        try
+        {
+            string? dir = Plugin.PluginInterface.AssemblyLocation.Directory?.FullName;
+            if (string.IsNullOrEmpty(dir)) return;
+
+            string folder = System.IO.Path.Combine(dir!, "digicons");
+
+            // Built independently: a missing DIG! should not cost CLUE!. Each is simply not drawn
+            // if it failed, which costs the word rather than the dial.
+            var clue = BuildScaled(System.IO.Path.Combine(folder, ClueFile), targetPx, targetPx);
+            var dig  = BuildScaled(System.IO.Path.Combine(folder, DigFile),  targetPx, targetPx);
+
+            if (clue != null) { _labelClue?.Dispose(); _labelClue = clue; }
+            if (dig  != null) { _labelDig?.Dispose();  _labelDig  = dig;  }
+
+            Diag.Info($"[Dig] word artwork resampled to {targetPx}px.");
+        }
+        catch (Exception ex)
+        {
+            Diag.Error($"[Dig] word artwork failed: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -816,6 +896,40 @@ internal sealed class DigHuntOverlay : IDisposable
         float shadow  = ShadowPx  * uiScale;
         float outline = OutlinePx * uiScale;
 
+        // Motion echoes, BEHIND everything and only while the banner is actually travelling.
+        //
+        // Each ghost is the banner drawn where it genuinely WAS a few frames ago — the slide is
+        // re-evaluated at an earlier time rather than offset by a fixed number of pixels. That is
+        // what makes the trail follow the easing: the ghosts bunch together as the banner
+        // decelerates into place and stretch apart as it accelerates away, which is what motion
+        // blur does. Evenly spaced pixel offsets would look identical whether it was flying or
+        // nearly stopped.
+        //
+        // No outline and no shadow on a ghost. They are a smear of light, and stamping each one
+        // would cost eight draws apiece to make the trail look like a stack of solid copies.
+        if (DigTuning.BannerEcho)
+        {
+            int   echoes  = Math.Clamp(DigTuning.BannerEchoCount, 1, 16);
+            float step    = Math.Clamp(DigTuning.BannerEchoStep, 0.005f, 0.30f);
+            float falloff = Math.Clamp(DigTuning.BannerEchoFalloff, 0.05f, 0.95f);
+
+            for (int k = echoes; k >= 1; k--)
+            {
+                if (!BannerFrame(_banner, t - k * step, out _, out float wasSlide)) continue;
+
+                float dx = (wasSlide - slide) * viewport.Size.X;
+
+                // Under a pixel of travel is not movement; during the hold every ghost would land
+                // on the banner itself and merely darken it.
+                if (MathF.Abs(dx) < 1f) continue;
+
+                GradientImage(drawList, art.Handle,
+                              min + new Vector2(dx, 0f), min + size + new Vector2(dx, 0f),
+                              DigTuning.BannerTopColor, DigTuning.BannerBottomColor,
+                              alpha * MathF.Pow(falloff, k), BannerGradientBands);
+            }
+        }
+
         // Same three layers as the dial, and in the same order: depth, rim, face. The banner is
         // large text over open world, which is exactly the case a bare tint cannot survive.
         drawList.AddImage(art.Handle, min + new Vector2(shadow, shadow),
@@ -933,6 +1047,7 @@ internal sealed class DigHuntOverlay : IDisposable
             _reminderAlpha = 0f;
             _reminderUntil = 0;
             _reminderText  = string.Empty;
+            _digWordAlpha  = 0f;
             _hiddenForDig  = false;
             return;
         }
@@ -984,6 +1099,16 @@ internal sealed class DigHuntOverlay : IDisposable
 
         if      (_radarFade < target) _radarFade = MathF.Min(target, _radarFade + step);
         else if (_radarFade > target) _radarFade = MathF.Max(target, _radarFade - step);
+
+        // The DIG! word's own envelope, integrated HERE rather than in the draw so it keeps moving
+        // on frames the dial is not drawn — an envelope that only advances while its subject is on
+        // screen can never finish fading out.
+        bool  onSpot     = inRange && closeness!.Value >= 1f;
+        float wordTarget = onSpot ? 1f : 0f;
+        float wordStep   = ImGui.GetIO().DeltaTime / (onSpot ? WordFadeIn : WordFadeOut);
+
+        if      (_digWordAlpha < wordTarget) _digWordAlpha = MathF.Min(wordTarget, _digWordAlpha + wordStep);
+        else if (_digWordAlpha > wordTarget) _digWordAlpha = MathF.Max(wordTarget, _digWordAlpha - wordStep);
 
         if (_radarFade <= 0.002f)
         {
@@ -1434,7 +1559,7 @@ internal sealed class DigHuntOverlay : IDisposable
         // cursor, because the cursor only exists inside the window. They agree exactly: HUD windows
         // are drawn with zero padding, so content starts at the window's top-left.
         DrawDialLabel(new Vector2(MathF.Round(pos.X), MathF.Round(pos.Y)),
-                      phys, accentRgb, (_radarHovered ? 1f : 0.95f) * fade, solid, uiScale, press);
+                      phys, accentRgb, fade, solid, uiScale, press);
     }
 
     /// <summary>
@@ -1450,14 +1575,28 @@ internal sealed class DigHuntOverlay : IDisposable
     /// because it is the dig button, so a bigger one swallows game clicks over a bigger patch of
     /// screen. This one takes no input at all.</para>
     /// </summary>
-    private void DrawDialLabel(Vector2 dialOrigin, float phys, Vector3 rgb, float alpha,
+    private void DrawDialLabel(Vector2 dialOrigin, float phys, Vector3 rgb, float fade,
                                bool solid, float uiScale, float press)
     {
-        var art = solid ? _labelDig : _labelClue;
-        if (art == null || alpha <= 0.002f) return;
+        // CLUE! borrows the clue line's opacity outright, so it can only ever be on screen while
+        // there is a clue under it to label. DIG! runs on its own envelope, because it marks a
+        // state the player is standing in rather than a message that was shown. Both are then
+        // bounded by the dial's own fade, so neither can outlive the thing it sits on.
+        float alpha = (solid ? _digWordAlpha : _reminderAlpha) * fade;
+
+        if (alpha <= 0.002f) return;
 
         float scale = Math.Clamp(DigTuning.LabelScale, 0.2f, 3f);
-        float side  = phys * scale;
+
+        // A WHOLE number of pixels, and built at that number. A fractional destination would have
+        // the GPU resample a 1:1 blit across a half-pixel offset and hand back the sharpness the
+        // resampling just bought — the same rule the dial itself follows.
+        int side = Math.Max(1, (int)MathF.Round(phys * scale));
+
+        EnsureLabelArt(side);
+
+        var art = solid ? _labelDig : _labelClue;
+        if (art == null) return;
 
         // Scaled about the dial's CENTRE, then offset. Centring first is what keeps the offsets
         // meaning the same thing at every scale — grow it about the top-left instead and every
@@ -1802,7 +1941,13 @@ internal sealed class DigHuntOverlay : IDisposable
     {
         if (alpha <= 0.002f) return;
 
-        Stamp(drawList, tex, origin, size, outline, Tint(Ink, 0.85f * alpha));
+        // OUTER, always: the shape goes down in dark FIRST and the artwork covers it, so the dark
+        // survives only where it reaches past the art. The artwork itself is drawn at its true size
+        // and position and is never inset or shrunk — see DigTuning.IconOutline for the two ways a
+        // wide outline can still look like it is eating the image, and why narrow is the answer.
+        if (DigTuning.IconOutline && outline > 0f)
+            Stamp(drawList, tex, origin, size, outline,
+                  Tint(Ink, Math.Clamp(DigTuning.IconOutlineAlpha, 0f, 1f) * alpha));
 
         GradientImage(drawList, tex.Handle, origin, origin + size, top, bottom, alpha, bands);
     }
