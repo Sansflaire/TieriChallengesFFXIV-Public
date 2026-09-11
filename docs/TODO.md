@@ -103,6 +103,17 @@ started right now. Update the indented line in the same edit that changes a depe
 ## 🔨 Implement
 
 ### Blocking
+- [ ] **I47** 🙋 ⚡ Un-gate the **Activity** tab for public builds — a decision, then four edits.
+      The tab and its Wild Trail are `#if DEV_BUILD` today because the activity IS the dig tree,
+      which has a hard vnavmesh dependency. Shipping it makes vnavmesh a **public requirement**
+      (Sansflaire's instruction, 2026-09-10), so the gate comes off only together with: a line in
+      `README.md`, a section in `docs/HELP.md`, a runtime refusal the player can act on, and
+      `MainWindow.ActivitiesAvailable` returning true. Nothing here is hard; it is one call about
+      whether players installing a second plugin is acceptable.
+- [ ] **I48** 🤖 More than ONE authored activity map. `DigTuning` stores a single hand-drawn box
+      against a single `BoxTerritory`, so drawing one in a second zone replaces the first —
+      `ActivityCatalog.AuthoredMaps` already returns a list and needs no change when the store
+      becomes per-territory.
 - [ ] **I1** 🤖 ⚡🔴 Kill hook (`ActionEffectHandler.Receive`, DamageMeter pattern) + `Enemy` condition
       type. **Also unblocks the pre-existing 1.0 enemy-challenge milestone — pays for itself twice.**
 - [ ] **I2** 🤖 🔴 Materials list format + loader
