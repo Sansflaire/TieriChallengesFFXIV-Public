@@ -592,6 +592,9 @@ public sealed class Plugin : IDalamudPlugin
             if (raw.StartsWith("trail", StringComparison.OrdinalIgnoreCase))
             { HandleDigCommand(_digTests.Trail, raw.Substring(5).Trim()); return; }
 
+            if (raw.StartsWith("roam", StringComparison.OrdinalIgnoreCase))
+            { HandleDigCommand(_digTests.Roam, raw.Substring(4).Trim()); return; }
+
             // Set the dig animation length without opening the lab, so a timing can be dialled in
             // between digs. "/tchal digtime" with no argument just reports the current value.
             if (raw.StartsWith("digtime", StringComparison.OrdinalIgnoreCase))

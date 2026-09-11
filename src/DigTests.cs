@@ -24,10 +24,11 @@ internal sealed class DigTests
     public readonly DigHuntService  Hunt  = new();
     public readonly DigSiteService  Site  = new();
     public readonly DigTrailService Trail = new();
+    public readonly DigRoamService  Roam  = new();
 
     private readonly List<IDigTest> _all;
 
-    public DigTests() => _all = new List<IDigTest> { Hunt, Site, Trail };
+    public DigTests() => _all = new List<IDigTest> { Hunt, Site, Trail, Roam };
 
     public IReadOnlyList<IDigTest> All => _all;
 

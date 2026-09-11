@@ -96,6 +96,7 @@ internal sealed class DigTestsWindow
         Section("Test 1 — Sense Hunt",        DrawHunt);
         Section("Test 2 — Area Surveillance", DrawSite);
         Section("Test 3 — Clue Trail",        DrawTrail);
+        Section("Test 4 — Wild Trail",        DrawRoam);
 
         // Outside the headers on purpose. These are the two things reached for while fiddling with
         // whichever section happens to be open, and hunting for them inside a collapsed one would
@@ -161,6 +162,104 @@ internal sealed class DigTestsWindow
         if (ImGui.Button("Stop##live")) Say(_tests.StopAll());
         ImGui.SameLine();
         if (ImGui.Button("Dig##live")) Say(_tests.Dig());
+    }
+
+    private void DrawRoam()
+    {
+        ImGui.TextColored(Rule,
+            "RULES\n"
+          + "  Test 3's ordered trail, except the stops and the clues are GENERATED for the map\n"
+          + "  you are standing on. Dig each to get the clue to the next.\n"
+          + "  Every clue is anchored to something the GAME draws on the map — the named markers\n"
+          + "  behind every label on your map screen. That is what makes a generated clue usable:\n"
+          + "  you can open the map, find the word, and go. A bearing from wherever you happened\n"
+          + "  to be standing — which is what the removed Test 3 generator produced — cannot be\n"
+          + "  looked up anywhere, which is why that one was deleted rather than tuned.\n"
+          + "  Spots obey Test 2's ground rules: within Max rise of you, and no step across the\n"
+          + "  dig radius, so none sits on a roof, a ledge or astride a wall.\n"
+          + "  Leaving the zone ABANDONS the run, unlike Test 3 — every spot was placed against\n"
+          + "  this map's geometry and every clue names this map's landmarks.");
+
+        ImGui.TextColored(Warn,
+            "REACHABILITY IS A HEURISTIC, NOT A PROOF. Nothing here knows whether you can WALK to\n"
+          + "a point — a raycast finds ground, and the floor inside a sealed building is ground.\n"
+          + "Height and the step test reject roofs, ledges and the far side of a wall; a spot\n"
+          + "inside a locked house would still get through. A navmesh query is the real answer\n"
+          + "and this does not have one.");
+
+        if (ImGui.Button("Start##roam")) Say(_tests.Start(_tests.Roam));
+        ImGui.SameLine();
+        if (ImGui.Button("Stop##roam")) Say(_tests.Roam.Stop());
+        ImGui.SameLine();
+        if (ImGui.Button("Repeat clue##roam")) Say(_tests.Roam.Recall());
+
+        ImGui.Spacing();
+        ImGui.TextColored(Cmd, "/tchal roam start | stop | dig | clue");
+
+        ImGui.Spacing();
+        ImGui.SliderInt("Spots", ref DigTuning.RoamStops, 1, 20);
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.TextColored(Rule,
+            "DIFFICULTY is how much a clue WITHHOLDS, not how vague its words are.\n"
+          + "  0.00–0.33  EASY   — a landmark, a direction from it, and a sense of distance.\n"
+          + "                      \"EAST of Blue Badger Gate, close by.\"\n"
+          + "  0.34–0.66  MEDIUM — the landmark and the direction, but no distance: you pick\n"
+          + "                      which way to set off and decide when you have overshot.\n"
+          + "  0.67–1.00  HARD   — two landmarks and NO bearing, plus a map quadrant. The spot is\n"
+          + "                      the intersection of \"near this\" and \"near that\", which is read\n"
+          + "                      off the map rather than walked in a straight line.\n"
+          + "No setting ever gives coordinates. A coordinate is not a clue, it is the answer.");
+
+        ImGui.SliderFloat("Difficulty", ref DigTuning.RoamDifficulty, 0f, 1f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        Slider("Nearest spot (yalms)",  ref DigTuning.RoamMinRange, 5f, 200f);
+        Slider("Furthest spot (yalms)", ref DigTuning.RoamMaxRange, 20f, 600f);
+        Slider("Min gap between spots", ref DigTuning.RoamSpacing,  5f, 120f);
+        Slider("Dig radius",            ref DigTuning.RoamDig,      1f, 30f);
+        Slider("Radar appears within",  ref DigTuning.RoamRadar,    2f, 150f);
+
+        if (DigTuning.RoamRadar <= DigTuning.RoamDig)
+        {
+            DigTuning.RoamRadar = DigTuning.RoamDig + 1f;
+            ImGui.TextColored(Warn, "Radar range clamped above the dig radius — same rule as Test 3.");
+        }
+
+        ImGui.Spacing();
+        ImGui.TextColored(Head, "WHAT THIS MAP OFFERS");
+        ImGui.TextColored(Rule,
+            "Dumps the named landmarks the clue writer can draw on here, with the world position\n"
+          + "each one converts to and how far it is from you.\n"
+          + "IT IS ALSO THE VERIFICATION. The marker-to-world conversion is the algebraic inverse\n"
+          + "of two formulas this repo spot-checked but never confirmed in game. Stand ON a\n"
+          + "landmark and read zero yalms and it is proven; read fifty and it is not. Until\n"
+          + "somebody does that, treat every generated clue as derived rather than confirmed.\n"
+          + "Only NAMED markers are listed. The icon-only ones — retainer bells, market boards,\n"
+          + "menders — carry an icon id and no text, and turning an id into the words \"a retainer\n"
+          + "bell\" needs a lookup table this plugin does not have and will not invent.");
+
+        if (ImGui.Button("Dump map landmarks")) DumpLandmarks();
+    }
+
+    private void DumpLandmarks()
+    {
+        var marks = DigLandmarks.ForCurrentMap();
+        var player = Plugin.ObjectTable.LocalPlayer;
+
+        Say($"map {DigLandmarks.CurrentMapId()} — {marks.Count} named landmark(s).");
+
+        foreach (var m in marks)
+        {
+            string away = player != null
+                ? $"{DigGround.Flat(player.Position, m.World):0.0}y away"
+                : "no player";
+
+            Say($"  {m.Name}  —  map ({m.MapX:0.0}, {m.MapY:0.0})  world ({m.World.X:0.0}, {m.World.Z:0.0})  {away}");
+        }
+
+        if (player != null)
+            Say($"  you are in {DigLandmarks.Quadrant(player.Position)}.");
     }
 
     private void DrawMaxRise()

@@ -173,6 +173,55 @@ internal static class DigGround
         return true;
     }
 
+    /// <summary>Spokes and spacing for the step test. Eight directions catch any wall that crosses
+    /// the circle; only a wall clipping a corner between spokes can slip past.</summary>
+    private const int   StepRays       = 8;
+    private const float StepSpacing    = 0.5f;
+    private const int   MaxStepSamples = 16;
+
+    /// <summary>
+    /// Whether the ground within <paramref name="radius"/> of a point contains a STEP — a wall, a
+    /// ledge, a kerb — as opposed to a slope.
+    ///
+    /// <para><b>Total height cannot tell those apart and this can.</b> A 2-yalm rise across a
+    /// 4-yalm radius is a 26° hillside and fine to dig on; a 1-yalm garden wall is a <i>smaller</i>
+    /// total rise and completely unusable. The difference is not how far the ground moves but how
+    /// suddenly, so this walks outward in short increments and looks at the change between
+    /// neighbours rather than the spread across the circle.</para>
+    ///
+    /// <para><b>It has to raycast, and a cached lattice cannot substitute.</b> Lattice samples are
+    /// a couple of yalms apart and read back with bilinear interpolation, which turns a one-yalm
+    /// wall into a gentle ramp — the smoothing that makes a drawn grid look good is exactly what
+    /// destroys the evidence here.</para>
+    /// </summary>
+    public static bool HasStep(Vector3 centre, float radius, float maxStep)
+    {
+        float r   = MathF.Max(0.5f, radius);
+        float max = MathF.Max(0.02f, maxStep);
+
+        int   steps   = Math.Clamp((int)MathF.Ceiling(r / StepSpacing), 2, MaxStepSamples);
+        float centreY = GroundAt(centre, centre.X, centre.Z).Y;
+
+        for (int d = 0; d < StepRays; d++)
+        {
+            float a   = MathF.Tau * d / StepRays;
+            float cos = MathF.Cos(a), sin = MathF.Sin(a);
+
+            float prev = centreY;
+
+            for (int k = 1; k <= steps; k++)
+            {
+                float rr = r * k / steps;
+                float y  = GroundAt(centre, centre.X + rr * cos, centre.Z + rr * sin).Y;
+
+                if (MathF.Abs(y - prev) > max) return true;
+                prev = y;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>Distance on the XZ plane. Height is bounded at placement, so it never matters here.</summary>
     public static float Flat(Vector3 a, Vector3 b)
     {

@@ -156,6 +156,32 @@ internal static class DigTuning
     public static float TrailRadar = 30f;
 
 
+    // ── Test 4: Wild Trail ───────────────────────────────────────────────────
+
+    /// <summary>How many spots are buried, and how far apart they must be.</summary>
+    public static int   RoamStops   = 5;
+    public static float RoamSpacing = 25f;
+
+    /// <summary>
+    /// Closest and furthest a spot may be buried from where the trail was started.
+    ///
+    /// <para>Not from the PREVIOUS stop — every spot is placed relative to the player at the moment
+    /// of starting, so the whole trail fits in one walkable neighbourhood. Chaining each from the
+    /// last would let a run wander off the map's edge one hop at a time.</para>
+    /// </summary>
+    public static float RoamMinRange = 30f;
+    public static float RoamMaxRange = 220f;
+
+    /// <summary>How close a dig must be to a wild spot, and where its radar appears.</summary>
+    public static float RoamDig   = 4f;
+    public static float RoamRadar = 30f;
+
+    /// <summary>
+    /// How much a clue withholds. 0 names a landmark, a direction and a distance; 1 gives two
+    /// landmarks and no bearing, leaving the player to intersect them.
+    /// </summary>
+    public static float RoamDifficulty = 0.35f;
+
     // ── the shared dig HUD ───────────────────────────────────────────────────
 
     /// <summary>
@@ -493,6 +519,16 @@ internal static class DigTuning
         /// Nullable because 0 is a legitimate value for both — "no drop" and "no gap" are things
         /// somebody might genuinely want, so absent has to be distinguishable from chosen-zero.
         /// </summary>
+        public bool? RoamSaved { get; set; }
+
+        public int   RoamStops { get; set; }
+        public float RoamSpacing { get; set; }
+        public float RoamMinRange { get; set; }
+        public float RoamMaxRange { get; set; }
+        public float RoamDig { get; set; }
+        public float RoamRadar { get; set; }
+        public float RoamDifficulty { get; set; }
+
         public float? HudDropPx { get; set; }
         public float? HudClueGapPx { get; set; }
 
@@ -581,6 +617,12 @@ internal static class DigTuning
         TrailDig = 4f; TrailRadar = 30f; RadarFadeSeconds = 2.5f;
     }
 
+    public static void ResetRoam()
+    {
+        RoamStops = 5; RoamSpacing = 25f; RoamMinRange = 30f; RoamMaxRange = 220f;
+        RoamDig = 4f; RoamRadar = 30f; RoamDifficulty = 0.35f;
+    }
+
     public static void ResetHud()
     {
         HudDropPx = DefaultHudDropPx; HudClueGapPx = DefaultHudClueGapPx;
@@ -615,7 +657,8 @@ internal static class DigTuning
 
     public static void ResetAll()
     {
-        ResetHunt(); ResetSite(); ResetTrail(); ResetHud(); ResetClueStyle(); ResetRays();
+        ResetHunt(); ResetSite(); ResetTrail(); ResetRoam();
+        ResetHud(); ResetClueStyle(); ResetRays();
         MaxRise        = 25f;
         DigHoldSeconds = PropService.DefaultHoldMilliseconds / 1000f;
         DigSpeed       = 1f;
@@ -671,6 +714,18 @@ internal static class DigTuning
             TrailRadar       = Pos(d.TrailRadar,       30f);
             RadarFadeSeconds = Pos(d.RadarFadeSeconds, 2.5f);
             MaxRise          = Pos(d.MaxRise,          25f);
+
+            if (d.RoamSaved == true)
+            {
+                RoamStops      = d.RoamStops > 0 ? Math.Clamp(d.RoamStops, 1, 20) : 5;
+                RoamSpacing    = Pos(d.RoamSpacing,   25f);
+                RoamMinRange   = Pos(d.RoamMinRange,  30f);
+                RoamMaxRange   = Pos(d.RoamMaxRange, 220f);
+                RoamDig        = Pos(d.RoamDig,        4f);
+                RoamRadar      = Pos(d.RoamRadar,     30f);
+                RoamDifficulty = Clamp(d.RoamDifficulty, 0f, 1f, 0.35f);
+            }
+            else ResetRoam();
 
             // Clamped, not Pos-guarded: 0 is meaningful for both, and a negative drop (lifting the
             // pair) is a legitimate thing to want. Only a missing or non-finite value defaults.
@@ -829,6 +884,10 @@ internal static class DigTuning
                 RadarFadeSeconds = RadarFadeSeconds,
                 MaxRise = MaxRise, DigHoldSeconds = DigHoldSeconds, DigSpeed = DigSpeed,
                 DigSpeedMethod = DigSpeedMethod,
+                RoamSaved = true,
+                RoamStops = RoamStops, RoamSpacing = RoamSpacing,
+                RoamMinRange = RoamMinRange, RoamMaxRange = RoamMaxRange,
+                RoamDig = RoamDig, RoamRadar = RoamRadar, RoamDifficulty = RoamDifficulty,
                 HudDropPx = HudDropPx, HudClueGapPx = HudClueGapPx,
                 ClueStyleSaved = true,
                 ClueFaceR = ClueFaceColor.X, ClueFaceG = ClueFaceColor.Y, ClueFaceB = ClueFaceColor.Z,

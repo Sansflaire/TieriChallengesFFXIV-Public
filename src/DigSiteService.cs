@@ -547,33 +547,13 @@ internal sealed class DigSiteService : IDigTest
     /// into a gentle ramp — the smoothing that makes the grid look good is exactly what destroys
     /// the evidence here. Hence <see cref="RayTestsPerFrame"/> and one piece per frame.</para>
     /// </summary>
-    private bool HasStep(Vector3 centre)
-    {
-        float r       = MathF.Max(0.5f, DigTuning.SitePieceRadius);
-        float maxStep = MathF.Max(0.02f, DigTuning.SitePieceMaxStep);
-
-        int steps = Math.Clamp((int)MathF.Ceiling(r / StepSpacing), 2, MaxStepSamples);
-        float centreY = DigGround.GroundAt(centre, centre.X, centre.Z).Y;
-
-        for (int d = 0; d < StepRays; d++)
-        {
-            float a   = MathF.Tau * d / StepRays;
-            float cos = MathF.Cos(a), sin = MathF.Sin(a);
-
-            float prev = centreY;
-
-            for (int k = 1; k <= steps; k++)
-            {
-                float rr = r * k / steps;
-                float y  = DigGround.GroundAt(centre, centre.X + rr * cos, centre.Z + rr * sin).Y;
-
-                if (MathF.Abs(y - prev) > maxStep) return true;
-                prev = y;
-            }
-        }
-
-        return false;
-    }
+    /// <remarks>
+    /// The algorithm moved to <see cref="DigGround.HasStep"/> when Test 4 needed the same rule.
+    /// Two copies of "is this a wall or a hill" would be two answers to the same question the first
+    /// time either was tuned.
+    /// </remarks>
+    private static bool HasStep(Vector3 centre) =>
+        DigGround.HasStep(centre, DigTuning.SitePieceRadius, DigTuning.SitePieceMaxStep);
 
     /// <summary>
     /// A floor sampler for one marker that <b>vetoes</b> points too far above or below the marker's
