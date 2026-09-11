@@ -232,9 +232,38 @@ internal sealed class DigMapWindow
             string id = map.Id.ExtractText();
             if (id.Length == 0) return null;
 
-            path = $"ui/map/{id}/{id.Replace("/", "_")}_m.tex";
+            string flat = id.Replace("/", "_");
 
-            return Plugin.TextureProvider.GetFromGame(path).GetWrapOrDefault();
+            // PROBED, not guessed. DataManager.FileExists asks the game's own index whether a path
+            // is real, so the right one is found by checking rather than by my being confident about
+            // a naming convention — and when none exists the window can say so instead of showing
+            // an empty square that looks like a rendering bug.
+            string[] candidates =
+            {
+                $"ui/map/{id}/{flat}_m.tex",
+                $"ui/map/{id}/{flat}m_m.tex",
+                $"ui/map/{id}/{flat}_m_m.tex",
+                $"ui/map/{id}/{flat}d.tex",
+                $"ui/map/{id}/{flat}.tex",
+            };
+
+            foreach (var c in candidates)
+            {
+                bool exists;
+                try   { exists = Plugin.DataManager.FileExists(c); }
+                catch { exists = false; }
+
+                if (!exists) continue;
+
+                path = c;
+
+                // Null here means "still decoding", not "absent" — the texture arrives on a later
+                // frame and this runs every frame, so it resolves itself.
+                return Plugin.TextureProvider.GetFromGame(c).GetWrapOrDefault();
+            }
+
+            path = $"none of {candidates.Length} candidates exist for map id \"{id}\"";
+            return null;
         }
         catch { return null; }
     }

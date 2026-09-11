@@ -38,6 +38,7 @@ internal sealed class DigTestsWindow
     private static readonly Vector4 Running = new(0.44f, 0.86f, 0.62f, 1f);
     private static readonly Vector4 Cmd     = new(0.55f, 0.75f, 0.95f, 1f);
     private static readonly Vector4 Warn    = new(0.95f, 0.62f, 0.35f, 1f);
+    private static readonly Vector4 Ok      = new(0.44f, 0.86f, 0.62f, 1f);
 
     /// <summary>
     /// Plays a banner without a trail. Supplied by the plugin rather than reached for here, so this
@@ -183,12 +184,26 @@ internal sealed class DigTestsWindow
           + "  Leaving the zone ABANDONS the run, unlike Test 3 — every spot was placed against\n"
           + "  this map's geometry and every clue names this map's landmarks.");
 
-        ImGui.TextColored(Warn,
-            "REACHABILITY IS A HEURISTIC, NOT A PROOF. Nothing here knows whether you can WALK to\n"
-          + "a point — a raycast finds ground, and the floor inside a sealed building is ground.\n"
-          + "Height and the step test reject roofs, ledges and the far side of a wall; a spot\n"
-          + "inside a locked house would still get through. A navmesh query is the real answer\n"
-          + "and this does not have one.");
+        if (DigNavmesh.Available)
+        {
+            ImGui.TextColored(Ok,
+                "REACHABILITY: vnavmesh is answering. Every spot is checked against the navmesh —\n"
+              + "the actual set of places a character can walk — so terrain outside the walkable\n"
+              + "area is rejected outright rather than merely being unlikely.");
+
+            ImGui.SliderFloat("Navmesh tolerance", ref DigTuning.RoamNavTolerance, 0.1f, 20f, "%.1f y");
+            if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+        }
+        else
+        {
+            ImGui.TextColored(Warn,
+                "REACHABILITY: vnavmesh is NOT answering — not installed, not loaded, or still\n"
+              + "building this zone. Placement has fallen back to raycast heuristics, which are\n"
+              + "weaker: a raycast finds ground, and the sand outside a housing ward is perfectly\n"
+              + "solid ground. Spots CAN land where you cannot walk while this says so.\n"
+              + "This message exists because a silent fallback looks exactly like a working gate\n"
+              + "that has gone wrong.");
+        }
 
         if (ImGui.Button("Start##roam")) Say(_tests.Start(_tests.Roam));
         ImGui.SameLine();

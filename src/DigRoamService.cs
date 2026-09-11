@@ -205,10 +205,24 @@ internal sealed unsafe class DigRoamService : IDigTest
             if (fromPlayer < min) continue;
             if (cap > 0f && fromPlayer > cap) continue;
 
-            // A roof, a balcony, the top of a wall — anywhere with open space underneath. This is
-            // what keeps spots off places that need flying, now that distance from the player no
-            // longer stands in for it.
-            if (DigGround.IsElevated(spot, DigTuning.RoamMaxRise)) continue;
+            // THE REACHABILITY GATE, and the only one of these that actually answers the question.
+            //
+            // A raycast finds the first solid surface under a position, and a housing ward is
+            // surrounded by terrain that is perfectly solid and completely unreachable — the sand
+            // outside the walls, the ground beneath the skybox. Spots were landing out there and
+            // being described with a straight face, because every other test here narrows the
+            // problem without knowing what "reachable" means. A navmesh IS the set of places a
+            // character can walk, so it does know.
+            bool? walkable = DigNavmesh.IsWalkable(spot, DigTuning.RoamNavTolerance);
+
+            if (walkable == false) continue;
+
+            // Null means vnavmesh could not answer — not installed, not loaded, or still building
+            // this zone. Fall through to the raycast heuristics, which are weaker but are what
+            // existed before. The lab reports which of the two is in force, because a silent
+            // fallback looks exactly like a working gate that has gone wrong.
+            if (walkable == null
+                && DigGround.IsElevated(spot, DigTuning.RoamMaxRise)) continue;
 
             // Far enough from the others that no single dig can turn up two, and so the trail is a
             // route rather than a huddle.
