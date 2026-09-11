@@ -40,8 +40,9 @@ internal sealed unsafe class DigRoamService : IDigTest
     /// </summary>
     private sealed class Buried
     {
-        public Vector3 Position;
-        public string  Clue = string.Empty;
+        public Vector3      Position;
+        public string       Clue     = string.Empty;
+        public ClueCategory Category = ClueCategory.None;
     }
 
     private readonly List<Buried> _stops = new();
@@ -133,6 +134,7 @@ internal sealed unsafe class DigRoamService : IDigTest
         // Re-read every time: the map's landmarks are what the clues are made of, and a cached set
         // from the previous zone would write clues about places that are not here.
         DigLandmarks.Invalidate();
+        DigClueSources.Invalidate();
 
         var landmarks = DigLandmarks.ForCurrentMap();
 
@@ -161,7 +163,17 @@ internal sealed unsafe class DigRoamService : IDigTest
 
         // Clues are written AFTER every spot is placed, so a clue may refer to another stop's
         // surroundings without the writing order deciding what it is allowed to know.
-        foreach (var s in _stops) s.Clue = Clue(s.Position, landmarks);
+        //
+        // ONE writer for the whole trail, because the anti-repeat state IS the writer. A fresh one
+        // per clue would start every draw from equal weights and the trail could say the same kind
+        // of thing five times, which is exactly what this replaced.
+        var writer = new DigClueWriter(_rng);
+
+        foreach (var s in _stops)
+        {
+            s.Clue     = writer.Write(s.Position);
+            s.Category = writer.LastCategory;
+        }
 
         _index       = 0;
         _digs        = 0;
@@ -185,17 +197,25 @@ internal sealed unsafe class DigRoamService : IDigTest
     /// <summary>Candidates thrown away purely because the navmesh could not be consulted.</summary>
     private int _navRefusals;
 
-    private bool TryPlace(Vector3 from, List<Vector3> taken, out Vector3 spot)
+    private bool TryPlace(Vector3 from, List<Vector3> taken, out Vector3 spot, float nearOnly = 0f)
     {
         spot = default;
 
         float min = MathF.Max(0f, DigTuning.RoamMinRange);
         float cap = MathF.Max(0f, DigTuning.RoamMaxRange);
 
+        // A near-only placement overrides both range knobs — it is used by the single-category test
+        // spawn, whose whole point is that the spot is within walking distance so the CLUE can be
+        // judged rather than the walk.
+        if (nearOnly > 0f) { min = MathF.Min(10f, nearOnly * 0.25f); cap = nearOnly; }
+
         // THE WHOLE MAP IS ELIGIBLE. Spots are drawn from the map's own world rectangle rather than
         // from a ring around the player, so anywhere the drawn map covers can hold one. The old ring
         // made "how far did you walk before starting" decide what the trail could contain.
-        bool haveBounds = DigLandmarks.TryWorldBounds(out var lo, out var hi);
+        // Declared up front rather than as out-vars: short-circuiting the && leaves them untouched,
+        // and the compiler cannot know haveBounds implies they were written.
+        Vector2 lo = default, hi = default;
+        bool haveBounds = nearOnly <= 0f && DigLandmarks.TryWorldBounds(out lo, out hi);
 
         for (int attempt = 0; attempt < PlacementAttempts; attempt++)
         {
@@ -273,6 +293,72 @@ internal sealed unsafe class DigRoamService : IDigTest
     }
 
     private const int PlacementAttempts = 120;
+
+    /// <summary>How close a single-category test spot is buried. Walkable in well under a minute.</summary>
+    public const float TestSpotRange = 45f;
+
+    /// <summary>
+    /// Buries ONE spot near the player with a clue pinned to <paramref name="category"/> at
+    /// <paramref name="hard"/>, so a single clue category can be judged on its own.
+    ///
+    /// <para><b>It runs as a real one-stop trail</b> — same HUD, same radar, same dig — rather than
+    /// printing a sample clue to chat. A clue that reads well in a chat line and is useless while
+    /// actually standing in the zone is precisely the failure this is meant to catch, and only the
+    /// real thing catches it.</para>
+    ///
+    /// <para><b>A category that cannot describe the spot is reported, not papered over.</b> That is
+    /// the single most useful outcome of this button: "Enemy produced nothing" means the object table
+    /// had no named hostiles loaded near the spot, which is a fact about the category's reach and not
+    /// a bug to go hunting for.</para>
+    /// </summary>
+    public string StartSingle(ClueCategory category, float hard)
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return "no character loaded.";
+
+        if (DigTuning.RoamRequireNavmesh && DigNavmesh.Available && !DigNavmesh.Ready)
+            return DigNavmesh.StatusLine() + " — wait for it to finish, then try again.";
+
+        DigLandmarks.Invalidate();
+        DigClueSources.Invalidate();
+
+        _stops.Clear();
+        _territory   = Plugin.ClientState.TerritoryType;
+        _navRefusals = 0;
+
+        if (!TryPlace(player.Position, new List<Vector3>(), out var spot, nearOnly: TestSpotRange))
+            return _navRefusals > 0
+                ? "found nowhere walkable within " + (int)TestSpotRange + "y — move somewhere more open."
+                : "found nowhere to bury anything within " + (int)TestSpotRange + "y.";
+
+        string clue = new DigClueWriter(_rng).WriteAs(category, spot, hard);
+
+        if (clue.Length == 0)
+            return $"{category} had nothing to say about a spot near you — "
+                 + $"nothing of that kind is in range. ({DigClueSources.Census(player.Position)})";
+
+        _stops.Add(new Buried { Position = spot, Clue = clue, Category = category });
+
+        _index       = 0;
+        _digs        = 0;
+        _distance    = float.MaxValue;
+        _startedAtMs = Environment.TickCount64;
+        _phase       = Phase.Running;
+
+        return $"[{category} / {BandName(hard)}] {clue}";
+    }
+
+    /// <summary>
+    /// The difficulty band a 0..1 value falls in, using the writer's own thresholds.
+    /// Named <c>BandName</c> because <see cref="IDigTest.Band"/> already owns <c>Band</c> here — and
+    /// that one is the HUD's warmth, an entirely unrelated meaning.
+    /// </summary>
+    public static string BandName(float hard) => hard switch
+    {
+        < 0.34f => "EASY",
+        < 0.67f => "MEDIUM",
+        _       => "HARD",
+    };
 
     /// <summary>
     /// Places <paramref name="count"/> spots WITHOUT starting a run, for the map debug view.
@@ -388,7 +474,10 @@ internal sealed unsafe class DigRoamService : IDigTest
 
         var spot = current.Position;
 
-        string line = $"spot {_index + 1}/{_stops.Count}: "
+        // The CATEGORY first, because it is the fastest way to read a bad clue: an anchor-based
+        // category that points somewhere untrue is a conversion problem, while Quadrant or Clock
+        // being wrong cannot be — they use no anchor at all.
+        string line = $"[{current.Category}] spot {_index + 1}/{_stops.Count}: "
                     + $"{DigGround.Flat(player.Position, spot):0.0}y {DigGround.Compass(player.Position, spot)} of you";
 
         if (DigLandmarks.TryMapCoords(spot, out float mx, out float my))
@@ -464,62 +553,10 @@ internal sealed unsafe class DigRoamService : IDigTest
     }
 
     // ── clue writing ─────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Turns a buried position into something a person can act on, at the difficulty asked for.
-    ///
-    /// <para><b>Difficulty is how much is WITHHELD, not how vague the words are.</b> An easy clue
-    /// names one landmark, a direction from it and a sense of distance — go there, walk that way,
-    /// sweep. A hard one gives the same position through constraints the player has to intersect
-    /// themselves: two landmarks and no bearing, or a quadrant and nothing else. Neither is ever a
-    /// coordinate, because a coordinate is not a clue, it is the answer.</para>
-    ///
-    /// <para><b>Every anchor is a place the game draws on the map.</b> That is what makes a
-    /// generated clue usable at all — the player can open the map, find the word, and go. A bearing
-    /// from where they happened to be standing, which is what the old generator produced, cannot be
-    /// looked up anywhere.</para>
-    /// </summary>
-    private static string Clue(Vector3 spot, IReadOnlyList<DigLandmarks.Landmark> landmarks)
-    {
-        float hard = Math.Clamp(DigTuning.RoamDifficulty, 0f, 1f);
-
-        var    nearest = DigLandmarks.Nearest(spot);
-        string quad    = DigLandmarks.Quadrant(spot);
-
-        // No named landmarks on this map at all — some zones genuinely have none. The quadrant is
-        // then the only honest thing that can be said, and saying it plainly beats inventing an
-        // anchor that does not exist.
-        if (nearest is not { } near)
-            return landmarks.Count == 0
-                ? $"Somewhere in {quad}. (This map has no named landmarks to go by.)"
-                : $"Somewhere in {quad}.";
-
-        float dist = DigGround.Flat(spot, near.World);
-
-        // EASY — a place, a direction and a rough distance. Three of the four things needed.
-        if (hard < 0.34f)
-            return $"{DigGround.Compass(near.World, spot)} of {near.Name}, {DigGround.Vagueness(dist)}.";
-
-        // MEDIUM — the place and the direction, but no sense of how far. The player knows which way
-        // to set off and has to decide for themselves when they have gone too far.
-        if (hard < 0.67f)
-            return $"{DigGround.Compass(near.World, spot)} of {near.Name}, in {quad}.";
-
-        // HARD — two anchors and no bearing at all. The position is the intersection of "near this"
-        // and "near that", which the player has to work out by looking at the map rather than by
-        // walking in a straight line. Falls back to a quadrant-only clue on a map with one
-        // landmark, which is harder still and is the honest thing to say when there is nothing to
-        // triangulate against.
-        var second = DigLandmarks.Nearest(spot, near);
-
-        if (second is not { } far)
-            return $"Buried in {quad}, nearer {near.Name} than anywhere else named.";
-
-        float farDist = DigGround.Flat(spot, far.World);
-
-        return farDist > dist
-            ? $"Between {near.Name} and {far.Name}, closer to the former. Look in {quad}."
-            : $"Between {near.Name} and {far.Name}, closer to the latter. Look in {quad}.";
-    }
+    //
+    // Lives in DigClues.cs. It moved out of here when it grew from "direction from the nearest
+    // landmark" into a weighted draw over seven categories with its own per-trail state — at which
+    // point it stopped being a detail of the roam test and became a thing in its own right, with
+    // its own sources and its own reason to be read.
 }
 #endif

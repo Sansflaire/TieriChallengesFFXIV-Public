@@ -470,6 +470,22 @@ internal sealed unsafe class PropService
                 case Stage.WaitAttach:
                     if (chara->OrnamentData.OrnamentId == (ushort)_ornament || _frames >= AttachGrace)
                     {
+                        // WHERE THE DEAD SECOND GOES, measured rather than guessed.
+                        //
+                        // The complaint is that a dig now takes about a second to visibly start.
+                        // There are two candidates and they are indistinguishable from outside:
+                        // the accessory model taking time to load (this stage), or the timeline
+                        // taking time to reach slot 0 (the next one). Input is blocked from the
+                        // moment Start is called, so whichever it is, the player is frozen for it —
+                        // which is what turned a delay that was always there into one that is felt.
+                        //
+                        // One dig with this logged answers it. Fixing it before measuring would
+                        // mean reordering the attach and the play on a hunch, and playing an
+                        // animation before the prop exists risks the attach resetting the slot —
+                        // trading a visible annoyance for an invisible failure.
+                        Diag.Info($"[Prop] attach stage took {_frames} frame(s) "
+                                + $"(ornament {(chara->OrnamentData.OrnamentId == (ushort)_ornament ? "attached" : "TIMED OUT")})");
+
                         // Baseline BEFORE the play call, while the values still describe what the
                         // character was doing rather than what we just did to it.
                         CaptureSpeedBaseline(chara);
@@ -485,6 +501,10 @@ internal sealed unsafe class PropService
                 case Stage.Playing:
                     if (slot0 == _timeline)
                     {
+                        // The other half of the same measurement — see the attach stage above.
+                        Diag.Info($"[Prop] play stage took {_frames} frame(s) before the timeline "
+                                + "reached slot 0");
+
                         // The animation is genuinely in the slot now — this is the first moment a
                         // speed write can survive, and the first honest moment to start the clock.
                         ApplySpeed(chara, announce: true);

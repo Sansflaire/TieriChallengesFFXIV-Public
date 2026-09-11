@@ -59,11 +59,85 @@ internal sealed class DigTests
         return prefix + test.Name + ": " + test.Start();
     }
 
-    /// <summary>Digs with whichever test is running, or just plays the animation if none is.</summary>
+    /// <summary>
+    /// Digs with whichever test is running, or just plays the animation if none is.
+    ///
+    /// <para><b>Being mounted is not a refusal, it is a step.</b> A dig request from a mounted player
+    /// dismounts them and digs the moment the game lets go — "you are mounted" was making the player
+    /// do by hand something the click could obviously have done for them. The dig is deferred rather
+    /// than retried in a loop: the dismount takes a beat, and <see cref="Tick"/> is already running.</para>
+    /// </summary>
     public string Dig()
     {
+        if (DigMount.Mounted)
+        {
+            string r = DigMount.RequestDismount();
+
+            // Only arm the follow-up if the dismount was actually issued. Arming it after a refusal
+            // would spend the whole window re-discovering that we cannot dismount, then print a
+            // second failure for the same cause.
+            if (r.StartsWith("dismounting", StringComparison.OrdinalIgnoreCase))
+                _digAfterDismountBy = Environment.TickCount64 + DismountWaitMs;
+
+            return r;
+        }
+
+        _digAfterDismountBy = 0;
+
         var active = Active;
         return active?.Dig() ?? Plugin.Props.Dig();
+    }
+
+    /// <summary>
+    /// Buries one bench spot for a single clue category, stopping whatever else was running.
+    ///
+    /// <para>Routed through here rather than called on <see cref="Roam"/> directly so the
+    /// one-test-at-a-time rule still holds. A bench spawn is a real running test — it owns the HUD
+    /// while it lasts — so leaving another test running would put two headlines in one slot, which
+    /// is the exact thing <see cref="Start"/> exists to prevent.</para>
+    /// </summary>
+    public string StartRoamSingle(ClueCategory category, float difficulty)
+    {
+        string prefix = string.Empty;
+
+        foreach (var t in _all)
+        {
+            if (ReferenceEquals(t, Roam) || !t.IsActive) continue;
+            t.Stop();
+            prefix = $"({t.Name} stopped) ";
+        }
+
+        return prefix + Roam.StartSingle(category, difficulty);
+    }
+
+    /// <summary>How long to wait for a dismount before giving up on the queued dig.</summary>
+    private const long DismountWaitMs = 4000;
+
+    /// <summary>Deadline for a dig queued behind a dismount, or 0 when nothing is queued.</summary>
+    private long _digAfterDismountBy;
+
+    /// <summary>
+    /// Fires the dig that was waiting on a dismount, or abandons it once the deadline passes.
+    /// Abandoning is loud — a queued action that silently evaporates is indistinguishable from a
+    /// click that never registered.
+    /// </summary>
+    private void ServiceQueuedDig()
+    {
+        if (_digAfterDismountBy == 0) return;
+
+        if (DigMount.Mounted)
+        {
+            if (Environment.TickCount64 < _digAfterDismountBy) return;
+
+            _digAfterDismountBy = 0;
+            Plugin.ChatGui.Print("[Challenges] Still mounted — the dig was dropped. Try again.");
+            return;
+        }
+
+        _digAfterDismountBy = 0;
+
+        try { Plugin.ChatGui.Print("[Challenges] " + Dig()); }
+        catch (Exception ex) { Diag.Error($"[Dig] queued dig failed: {ex.Message}"); }
     }
 
     /// <summary>
@@ -122,6 +196,11 @@ internal sealed class DigTests
         }
 
         _wasPerforming = performing;
+
+        // After the dig-finished check, before the tests tick: a dig fired here belongs to this
+        // frame's state, and firing it above would let the same frame see it both start and end.
+        try { ServiceQueuedDig(); }
+        catch (Exception ex) { Diag.Error($"[Dig] queued dig service failed: {ex.Message}"); }
 
         foreach (var t in _all)
         {

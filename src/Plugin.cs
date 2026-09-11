@@ -1152,8 +1152,61 @@ public sealed class Plugin : IDalamudPlugin
     /// <para>There is deliberately no "where is it" verb. Reading the distance is what the lab
     /// window is for — in chat it would just be the answer.</para>
     /// </summary>
+    /// <summary>
+    /// Parses "<c>try &lt;category&gt; [easy|medium|hard]</c>" and buries one bench spot.
+    ///
+    /// <para>The category is matched on a PREFIX of the enum name, so "try land" and "try aeth" both
+    /// work — the point of the command is to fire it repeatedly while standing in a zone judging the
+    /// output, and making that require the full word would just be typing.</para>
+    /// </summary>
+    private string TryClueCategory(DigRoamService roam, string arg)
+    {
+        var parts = arg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        if (parts.Length == 0)
+            return "usage: /tchal roam try <landmark|aetheryte|section|quadrant|clock|npc|enemy> "
+                 + "[easy|medium|hard]";
+
+        ClueCategory chosen = ClueCategory.None;
+
+        foreach (ClueCategory c in Enum.GetValues<ClueCategory>())
+        {
+            if (c is ClueCategory.None or ClueCategory.All) continue;
+
+            if (!c.ToString().StartsWith(parts[0], StringComparison.OrdinalIgnoreCase)) continue;
+
+            chosen = c;
+            break;
+        }
+
+        if (chosen == ClueCategory.None) return $"no clue category starts with \"{parts[0]}\".";
+
+        // Defaults to the Difficulty slider when no band is named, so the command and the lab agree
+        // about what "no opinion" means rather than the command quietly picking its own.
+        float hard = DigTuning.RoamDifficulty;
+
+        if (parts.Length > 1)
+            hard = parts[1].ToLowerInvariant() switch
+            {
+                "easy"   => 0.15f,
+                "medium" => 0.50f,
+                "hard"   => 0.85f,
+                _        => hard,
+            };
+
+        return _digTests.StartRoamSingle(chosen, hard);
+    }
+
     private void HandleDigCommand(IDigTest test, string arg)
     {
+        // Handled ahead of the switch because it carries arguments, and the switch matches the whole
+        // string. "try landmark hard" buries one bench spot for one clue category.
+        if (arg.StartsWith("try", StringComparison.OrdinalIgnoreCase) && test is DigRoamService roamTry)
+        {
+            ChatGui.Print("[Challenges] " + TryClueCategory(roamTry, arg.Substring(3).Trim()));
+            return;
+        }
+
         switch (arg.ToLowerInvariant())
         {
             case "":
@@ -1161,8 +1214,11 @@ public sealed class Plugin : IDalamudPlugin
                 ChatGui.Print("[Challenges] " + _digTests.Start(test));
                 break;
 
+            // Through DigTests rather than the test directly, so a dig from chat gets the same
+            // dismount-and-then-dig treatment the dial's click does. Two routes to one verb that
+            // behave differently is how "it works from the button but not the command" happens.
             case "dig":
-                ChatGui.Print("[Challenges] " + test.Dig());
+                ChatGui.Print("[Challenges] " + _digTests.Dig());
                 break;
 
             case "stop":

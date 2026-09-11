@@ -229,6 +229,7 @@ internal sealed class DigTestsWindow
           + "something unreachable is an invisible one you waste ten minutes walking into.");
 
         if (ImGui.Button("Start##roam")) Say(_tests.Start(_tests.Roam));
+
         ImGui.SameLine();
         if (ImGui.Button("Stop##roam")) Say(_tests.Roam.Stop());
         ImGui.SameLine();
@@ -260,6 +261,9 @@ internal sealed class DigTestsWindow
         ImGui.TextColored(Cmd, "/tchal roam start | stop | dig | clue | where");
 
         ImGui.Spacing();
+        ImGui.TextColored(Cmd, "/tchal roam try <category> [easy|medium|hard]");
+
+        ImGui.Spacing();
         ImGui.SliderInt("Spots", ref DigTuning.RoamStops, 1, 20);
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
@@ -276,6 +280,8 @@ internal sealed class DigTestsWindow
 
         ImGui.SliderFloat("Difficulty", ref DigTuning.RoamDifficulty, 0f, 1f, "%.2f");
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        DrawClueCategories();
 
         ImGui.TextColored(Rule,
             "THE WHOLE MAP IS ELIGIBLE. Spots are drawn from the map's own world rectangle, so\n"
@@ -301,6 +307,7 @@ internal sealed class DigTestsWindow
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
         Slider("Min gap between spots", ref DigTuning.RoamSpacing,  5f, 120f);
+        // (clue-category controls are drawn above, next to Difficulty)
         Slider("Dig radius",            ref DigTuning.RoamDig,      1f, 30f);
         Slider("Radar appears within",  ref DigTuning.RoamRadar,    2f, 150f);
 
@@ -324,6 +331,117 @@ internal sealed class DigTestsWindow
           + "bell\" needs a lookup table this plugin does not have and will not invent.");
 
         if (ImGui.Button("Dump map landmarks")) DumpLandmarks();
+    }
+
+    /// <summary>Every clue category, in bit order, with the label the bench shows.</summary>
+    private static readonly (ClueCategory Cat, string Label)[] ClueCats =
+    {
+        (ClueCategory.Landmark,  "Landmark — any named map label"),
+        (ClueCategory.Aetheryte, "Aetheryte — the one anchor you can teleport to"),
+        (ClueCategory.Section,   "Map section — subdivisions, wards, plazas, gates"),
+        (ClueCategory.Quadrant,  "Quadrant — map grid, no anchor at all"),
+        (ClueCategory.Clock,     "Clock — bearing from the middle of the map"),
+        (ClueCategory.Npc,       "NPC — a named friendly the client has loaded"),
+        (ClueCategory.Enemy,     "Enemy — a named hostile the client has loaded"),
+    };
+
+    /// <summary>Which category the bench will spawn, and at what difficulty.</summary>
+    private int _tryCat;
+    private int _tryBand = 1;
+
+    private static readonly string[] Bands = { "EASY", "MEDIUM", "HARD" };
+
+    /// <summary>Middle of each band, so the spawned clue is representative rather than borderline.</summary>
+    private static readonly float[] BandValue = { 0.15f, 0.50f, 0.85f };
+
+    /// <summary>
+    /// The clue-category controls: which categories a real trail may draw on, the anti-repeat
+    /// strength, the awkwardness, and a bench that spawns ONE spot from ONE category.
+    /// </summary>
+    private void DrawClueCategories()
+    {
+        ImGui.Spacing();
+        ImGui.TextColored(Head, "CLUE CATEGORIES");
+        ImGui.TextColored(Rule,
+            "A trail draws each clue's KIND from these by weight, so it does not say the same sort\n"
+          + "of thing five times. Using a category knocks its share down; every clue written\n"
+          + "without it lets the share climb back. It is a WEIGHT and not a ban on purpose — on a\n"
+          + "map where only two categories can say anything, a ban would deadlock on clue three.\n"
+          + "A category that cannot describe a given spot contributes nothing to that draw, which\n"
+          + "is different from being suppressed: availability is decided by actually trying to\n"
+          + "write the clue, so no predicate can disagree with what the writer would do.");
+
+        int mask = DigTuning.RoamClueCategories;
+
+        foreach (var (cat, label) in ClueCats)
+        {
+            bool on = (mask & (int)cat) != 0;
+
+            if (ImGui.Checkbox(label + "##cat" + (int)cat, ref on))
+            {
+                mask = on ? mask | (int)cat : mask & ~(int)cat;
+
+                // Never let the mask reach zero. With every category off the writer has nothing to
+                // draw from and falls back to a bare quadrant line for every stop, which looks
+                // exactly like the generator being broken.
+                if (mask == 0) mask = (int)ClueCategory.Quadrant;
+
+                DigTuning.RoamClueCategories = mask;
+                DigTuning.Save();
+            }
+        }
+
+        ImGui.Spacing();
+        ImGui.SliderFloat("Anti-repeat strength", ref DigTuning.RoamRepeatPenalty, 0f, 0.99f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.TextColored(Rule,
+            "AWKWARDNESS is how willing a clue is to anchor itself to something that is NOT the\n"
+          + "nearest landmark. At 0 it always picks the nearest, which is the old behaviour and is\n"
+          + "kept reachable on purpose — it is the ONE MOVE that separates \"these clues are cruel\"\n"
+          + "from \"these clues are wrong\". Turn it up and you get true-but-irritating clues like\n"
+          + "\"Far EAST of\" somewhere on the west side, where being east of it narrows very little.");
+
+        ImGui.SliderFloat("Awkwardness", ref DigTuning.RoamAwkwardness, 0f, 1f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.Spacing();
+        ImGui.TextColored(Head, "TRY ONE CATEGORY");
+        ImGui.TextColored(Rule,
+            "Buries a SINGLE spot within " + (int)DigRoamService.TestSpotRange + "y of you with the\n"
+          + "clue pinned to one category and one difficulty, and runs it as a real one-stop trail —\n"
+          + "same HUD, same radar, same dig. A clue that reads well as a chat line and is useless\n"
+          + "while you are standing in the zone is exactly what this catches, and only the real\n"
+          + "thing catches it.\n"
+          + "The bench ignores the checkboxes and the weights above, and does not disturb them.\n"
+          + "If the category cannot describe the spot it says so and buries nothing — that is a\n"
+          + "fact about the category's reach, not a bug. NPC and Enemy only see what the client has\n"
+          + "streamed in around YOU, so they are the two that legitimately come up empty.");
+
+        ImGui.SetNextItemWidth(340f);
+        string[] labels = new string[ClueCats.Length];
+        for (int i = 0; i < ClueCats.Length; i++) labels[i] = ClueCats[i].Label;
+        ImGui.Combo("Category##try", ref _tryCat, labels, labels.Length);
+
+        ImGui.SetNextItemWidth(140f);
+        ImGui.Combo("Difficulty##try", ref _tryBand, Bands, Bands.Length);
+
+        if (ImGui.Button("Bury one here##try"))
+        {
+            int c = Math.Clamp(_tryCat,  0, ClueCats.Length - 1);
+            int b = Math.Clamp(_tryBand, 0, Bands.Length - 1);
+
+            // Through DigTests.Start so it still stops whatever else was running — the one-test-at-
+            // a-time rule is not suspended for a bench spawn, or the HUD would carry two headlines.
+            Say(_tests.StartRoamSingle(ClueCats[c].Cat, BandValue[b]));
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("What can this map offer?##try"))
+        {
+            var p = Plugin.ObjectTable.LocalPlayer;
+            Say(p == null ? "no character loaded." : DigClueSources.Census(p.Position));
+        }
     }
 
     private void DumpLandmarks()

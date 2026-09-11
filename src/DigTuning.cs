@@ -217,6 +217,38 @@ internal static class DigTuning
     /// </summary>
     public static float RoamDifficulty = 0.35f;
 
+    /// <summary>
+    /// Which KINDS of clue the generator may write, as a bitmask of <c>ClueCategory</c>.
+    ///
+    /// <para>A bitmask rather than seven bools because it is seven bools that are always read
+    /// together, always saved together, and always drawn as one row of checkboxes — and because
+    /// adding an eighth category should not mean adding an eighth field to the save file, the
+    /// migration and the reset. Append bits, never renumber: a saved mask stores raw bit positions.</para>
+    ///
+    /// <para>Turning a category off is the diagnostic for "this category writes bad clues", and it is
+    /// the reason this is a setting rather than a constant. 127 is every bit through Enemy.</para>
+    /// </summary>
+    public static int RoamClueCategories = 127;
+
+    /// <summary>
+    /// How hard a just-used clue category is knocked down in the next draw. 0 means no anti-repeat at
+    /// all; 0.85 means it keeps 15% of its share and climbs back over the following few clues.
+    ///
+    /// <para><b>A weight and not a ban, deliberately.</b> On a map where only two categories can say
+    /// anything, a ban deadlocks on the third clue; a weight just lets one come round again.</para>
+    /// </summary>
+    public static float RoamRepeatPenalty = 0.85f;
+
+    /// <summary>
+    /// How willing a clue is to anchor itself to something that is NOT the nearest landmark.
+    ///
+    /// <para>0 always picks the nearest, which is the old behaviour and is kept reachable on purpose:
+    /// it is the one-move test that separates "these clues are cruel" from "these clues are wrong".
+    /// 1 lets a clue reach right down the distance-ordered list, which is what produces a true but
+    /// irritating "Far EAST of somewhere on the west side".</para>
+    /// </summary>
+    public static float RoamAwkwardness = 0.5f;
+
     // ── the shared dig HUD ───────────────────────────────────────────────────
 
     /// <summary>
@@ -567,6 +599,16 @@ internal static class DigTuning
         public float RoamRadar { get; set; }
         public float RoamDifficulty { get; set; }
 
+        /// <summary>
+        /// Nullable for the same reason as the HUD pair: 0 is a legitimate choice for every one of
+        /// these — no categories, no anti-repeat, no awkwardness — so absent must be distinguishable
+        /// from chosen-zero. A file written before these existed leaves them null and gets the
+        /// defaults, rather than being read as "the user turned every clue category off".
+        /// </summary>
+        public int?   RoamClueCategories { get; set; }
+        public float? RoamRepeatPenalty { get; set; }
+        public float? RoamAwkwardness { get; set; }
+
         public float? HudDropPx { get; set; }
         public float? HudClueGapPx { get; set; }
 
@@ -660,6 +702,7 @@ internal static class DigTuning
         RoamStops = 5; RoamSpacing = 25f; RoamMinRange = 15f; RoamMaxRange = 0f;
         RoamMaxRise = 3.5f; RoamNavTolerance = 2f; RoamRequireNavmesh = true;
         RoamDig = 4f; RoamRadar = 30f; RoamDifficulty = 0.35f;
+        RoamClueCategories = 127; RoamRepeatPenalty = 0.85f; RoamAwkwardness = 0.5f;
     }
 
     public static void ResetHud()
@@ -768,6 +811,17 @@ internal static class DigTuning
                 RoamDig        = Pos(d.RoamDig,        4f);
                 RoamRadar      = Pos(d.RoamRadar,     30f);
                 RoamDifficulty = Clamp(d.RoamDifficulty, 0f, 1f, 0.35f);
+
+                // The three clue knobs post-date RoamSaved, so they are read INSIDE this branch but
+                // each defaults on its own. A file saved between the two versions has RoamSaved true
+                // and these absent — reading them as chosen-zero would silently turn every clue
+                // category off and make the generator look broken.
+                RoamClueCategories = d.RoamClueCategories is { } cc && cc != 0
+                                         ? cc & 127 : 127;
+                RoamRepeatPenalty  = d.RoamRepeatPenalty is { } rp && float.IsFinite(rp)
+                                         ? Math.Clamp(rp, 0f, 0.99f) : 0.85f;
+                RoamAwkwardness    = d.RoamAwkwardness is { } aw && float.IsFinite(aw)
+                                         ? Math.Clamp(aw, 0f, 1f) : 0.5f;
             }
             else ResetRoam();
 
@@ -934,6 +988,8 @@ internal static class DigTuning
                 RoamMaxRise = RoamMaxRise, RoamNavTolerance = RoamNavTolerance,
                 RoamRequireNavmesh = RoamRequireNavmesh,
                 RoamDig = RoamDig, RoamRadar = RoamRadar, RoamDifficulty = RoamDifficulty,
+                RoamClueCategories = RoamClueCategories,
+                RoamRepeatPenalty = RoamRepeatPenalty, RoamAwkwardness = RoamAwkwardness,
                 HudDropPx = HudDropPx, HudClueGapPx = HudClueGapPx,
                 ClueStyleSaved = true,
                 ClueFaceR = ClueFaceColor.X, ClueFaceG = ClueFaceColor.Y, ClueFaceB = ClueFaceColor.Z,
