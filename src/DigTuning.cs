@@ -350,6 +350,101 @@ internal static class DigTuning
         return false;
     }
 
+    /// <summary>
+    /// Collapses the exclusions for one territory into as few rectangles as exactly possible.
+    ///
+    /// <para><b>Two merges, both exact, and deliberately not a polygon union.</b> An L-shaped union
+    /// of two rectangles is not a rectangle, so a general union needs a different shape entirely —
+    /// and the check it feeds would stop being four float comparisons. These two cases cover what
+    /// hand-drawing actually produces: dragging over the same area twice, and dragging a strip in
+    /// several passes.</para>
+    /// <list type="number">
+    /// <item><b>Containment.</b> A rectangle wholly inside another is dropped. Exact: the union is
+    /// unchanged.</item>
+    /// <item><b>Colinear merge.</b> Two rectangles whose spans match on one axis, and which touch or
+    /// overlap on the other, become one. Exact when the matching axis matches perfectly.</item>
+    /// </list>
+    ///
+    /// <para><b>The tolerance only ever GROWS a zone.</b> Hand-drawn rectangles never align to the
+    /// yalm, so near-matching edges are merged to their OUTER bound. That makes the merged zone a
+    /// superset of the two originals — it can exclude slightly more than was drawn, never less, so
+    /// it can never let through a spot the drawn zones would have caught. Growing an exclusion is
+    /// the safe direction to be approximate in; shrinking one is not, which is why the union is
+    /// taken rather than the intersection.</para>
+    /// </summary>
+    public static int MergeNullZones(uint territory, float tolerance = 2f)
+    {
+        int before = 0;
+        foreach (var n in NullZones) if (n.Territory == territory) before++;
+
+        bool changed = true;
+
+        // Repeated to fixpoint: merging two rectangles can make the result contain a third, and one
+        // pass would leave that one behind looking like the merge had failed.
+        while (changed)
+        {
+            changed = false;
+
+            for (int i = 0; i < NullZones.Count && !changed; i++)
+            {
+                if (NullZones[i].Territory != territory) continue;
+
+                for (int j = i + 1; j < NullZones.Count && !changed; j++)
+                {
+                    if (NullZones[j].Territory != territory) continue;
+
+                    var a = NullZones[i];
+                    var b = NullZones[j];
+
+                    if (Contains(a, b)) { NullZones.RemoveAt(j); changed = true; break; }
+                    if (Contains(b, a)) { NullZones.RemoveAt(i); changed = true; break; }
+
+                    if (!TryColinear(a, b, tolerance, out var merged)) continue;
+
+                    NullZones[i] = merged;
+                    NullZones.RemoveAt(j);
+                    changed = true;
+                }
+            }
+        }
+
+        Save();
+
+        int after = 0;
+        foreach (var n in NullZones) if (n.Territory == territory) after++;
+
+        return before - after;
+    }
+
+    private static bool Contains(NullZone outer, NullZone inner) =>
+        inner.MinX >= outer.MinX && inner.MaxX <= outer.MaxX &&
+        inner.MinZ >= outer.MinZ && inner.MaxZ <= outer.MaxZ;
+
+    /// <summary>Two rectangles that line up on one axis and meet on the other, as one rectangle.</summary>
+    private static bool TryColinear(NullZone a, NullZone b, float tol, out NullZone merged)
+    {
+        merged = null!;
+
+        bool sameX = MathF.Abs(a.MinX - b.MinX) <= tol && MathF.Abs(a.MaxX - b.MaxX) <= tol;
+        bool sameZ = MathF.Abs(a.MinZ - b.MinZ) <= tol && MathF.Abs(a.MaxZ - b.MaxZ) <= tol;
+
+        // Overlapping or touching on the other axis, within the same tolerance so a one-yalm gap
+        // left by hand does not prevent the merge.
+        bool meetZ = a.MinZ <= b.MaxZ + tol && b.MinZ <= a.MaxZ + tol;
+        bool meetX = a.MinX <= b.MaxX + tol && b.MinX <= a.MaxX + tol;
+
+        if (!((sameX && meetZ) || (sameZ && meetX))) return false;
+
+        merged = new NullZone
+        {
+            Territory = a.Territory,
+            MinX = MathF.Min(a.MinX, b.MinX), MaxX = MathF.Max(a.MaxX, b.MaxX),
+            MinZ = MathF.Min(a.MinZ, b.MinZ), MaxZ = MathF.Max(a.MaxZ, b.MaxZ),
+        };
+
+        return true;
+    }
+
     /// <summary>Adds an exclusion, normalising the corners so min really is min.</summary>
     public static void AddNullZone(uint territory, float x0, float z0, float x1, float z1)
     {
@@ -364,7 +459,9 @@ internal static class DigTuning
             MinZ = MathF.Min(z0, z1), MaxZ = MathF.Max(z0, z1),
         });
 
-        Save();
+        // Merged as it is drawn, so overlapping passes over the same area collapse immediately
+        // rather than accumulating into a list nobody wants to look at.
+        MergeNullZones(territory);
     }
 
     public static void RemoveNullZone(NullZone zone)

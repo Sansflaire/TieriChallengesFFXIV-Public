@@ -442,19 +442,7 @@ internal sealed class DigMapWindow
 
         uint territory = Plugin.ClientState.TerritoryType;
 
-        foreach (var n in DigTuning.NullZones)
-        {
-            if (n.Territory != territory) continue;
-
-            if (!plot(new Vector3(n.MinX, 0f, n.MinZ), out var a)) continue;
-            if (!plot(new Vector3(n.MaxX, 0f, n.MaxZ), out var b)) continue;
-
-            var lo = new Vector2(MathF.Min(a.X, b.X), MathF.Min(a.Y, b.Y));
-            var hi = new Vector2(MathF.Max(a.X, b.X), MathF.Max(a.Y, b.Y));
-
-            drawList.AddRectFilled(lo, hi, fill);
-            drawList.AddRect(lo, hi, edge, 0f, ImDrawFlags.None, 2f);
-        }
+        DrawNullUnion(drawList, territory, fill, edge, plot);
 
         if (!_nullMode) { _nullDragging = false; return; }
 
@@ -503,6 +491,115 @@ internal sealed class DigMapWindow
             if (TryWorldAt(_nullStart, origin, side, out var w0) &&
                 TryWorldAt(endAt,      origin, side, out var w1))
                 DigTuning.AddNullZone(territory, w0.X, w0.Z, w1.X, w1.Z);
+        }
+    }
+
+    /// <summary>
+    /// Draws the exclusions as ONE SHAPE — their true union — rather than as stacked translucent
+    /// rectangles.
+    ///
+    /// <para><b>The mess was visual, not computational.</b> Five hundred rectangle tests is four
+    /// float comparisons each with an early-out; that was never the cost. What was actually wrong is
+    /// that overlapping translucent fills double-darken and every overlap draws its own outline
+    /// through the middle of its neighbour, so twenty rectangles look like chaos while describing a
+    /// perfectly simple region.</para>
+    ///
+    /// <para><b>Exact, by grid decomposition.</b> Every rectangle edge contributes a cut line on its
+    /// axis; the resulting cells are each either wholly inside the union or wholly outside it, so
+    /// filling the covered ones paints the union exactly once with no overlap anywhere. The outline
+    /// is drawn only on cell edges whose neighbour is uncovered, which is precisely the union's
+    /// boundary — so a ring of rectangles reads as one outlined region.</para>
+    ///
+    /// <para>Falls back to plain per-rectangle drawing past a rectangle count where the grid would
+    /// get large, since the cell count grows as the square. That is a drawing decision only; the
+    /// data is unchanged either way and placement never looks at any of this.</para>
+    /// </summary>
+    private static void DrawNullUnion(ImDrawListPtr drawList, uint territory, uint fill, uint edge,
+                                      PlotFn plot)
+    {
+        var rects = new List<DigTuning.NullZone>();
+        foreach (var n in DigTuning.NullZones) if (n.Territory == territory) rects.Add(n);
+
+        if (rects.Count == 0) return;
+
+        const int MaxForGrid = 48;
+
+        if (rects.Count > MaxForGrid)
+        {
+            foreach (var n in rects)
+            {
+                if (!plot(new Vector3(n.MinX, 0f, n.MinZ), out var a)) continue;
+                if (!plot(new Vector3(n.MaxX, 0f, n.MaxZ), out var b)) continue;
+
+                drawList.AddRectFilled(Vector2.Min(a, b), Vector2.Max(a, b), fill);
+            }
+
+            return;
+        }
+
+        // The cut lines: every distinct edge coordinate on each axis.
+        var xs = new List<float>();
+        var zs = new List<float>();
+
+        foreach (var n in rects)
+        {
+            AddUnique(xs, n.MinX); AddUnique(xs, n.MaxX);
+            AddUnique(zs, n.MinZ); AddUnique(zs, n.MaxZ);
+        }
+
+        xs.Sort();
+        zs.Sort();
+
+        int cx = xs.Count - 1, cz = zs.Count - 1;
+        if (cx < 1 || cz < 1) return;
+
+        var covered = new bool[cx, cz];
+
+        for (int i = 0; i < cx; i++)
+        {
+            for (int j = 0; j < cz; j++)
+            {
+                // The CENTRE of a cell decides it. A cell cannot be partly covered — every edge that
+                // could split it is already a cut line — so one interior point settles the whole cell.
+                float mx = (xs[i] + xs[i + 1]) * 0.5f;
+                float mz = (zs[j] + zs[j + 1]) * 0.5f;
+
+                foreach (var n in rects)
+                {
+                    if (mx < n.MinX || mx > n.MaxX || mz < n.MinZ || mz > n.MaxZ) continue;
+                    covered[i, j] = true;
+                    break;
+                }
+            }
+        }
+
+        for (int i = 0; i < cx; i++)
+        {
+            for (int j = 0; j < cz; j++)
+            {
+                if (!covered[i, j]) continue;
+
+                if (!plot(new Vector3(xs[i],     0f, zs[j]),     out var a)) continue;
+                if (!plot(new Vector3(xs[i + 1], 0f, zs[j + 1]), out var b)) continue;
+
+                var lo = Vector2.Min(a, b);
+                var hi = Vector2.Max(a, b);
+
+                drawList.AddRectFilled(lo, hi, fill);
+
+                // Boundary only: an edge is drawn when the cell across it is NOT covered, which is
+                // exactly the outline of the union and nothing interior.
+                if (j == 0      || !covered[i, j - 1]) drawList.AddLine(lo, new Vector2(hi.X, lo.Y), edge, 2f);
+                if (j == cz - 1 || !covered[i, j + 1]) drawList.AddLine(new Vector2(lo.X, hi.Y), hi, edge, 2f);
+                if (i == 0      || !covered[i - 1, j]) drawList.AddLine(lo, new Vector2(lo.X, hi.Y), edge, 2f);
+                if (i == cx - 1 || !covered[i + 1, j]) drawList.AddLine(new Vector2(hi.X, lo.Y), hi, edge, 2f);
+            }
+        }
+
+        static void AddUnique(List<float> into, float v)
+        {
+            foreach (float e in into) if (MathF.Abs(e - v) < 0.01f) return;
+            into.Add(v);
         }
     }
 
@@ -857,6 +954,15 @@ internal sealed class DigMapWindow
             ImGui.SameLine();
             if (ImGui.Button("Undo last") && lastHere != null)
                 DigTuning.RemoveNullZone(lastHere);
+
+            ImGui.SameLine();
+            if (ImGui.Button("Merge"))
+            {
+                int removed = DigTuning.MergeNullZones(territory);
+                _status = removed > 0
+                    ? $"merged {removed} zone(s) away."
+                    : "nothing to merge — no rectangle contains another or lines up with one.";
+            }
         }
 
         ImGui.TextDisabled(_nullMode
