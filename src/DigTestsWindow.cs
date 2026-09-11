@@ -236,6 +236,16 @@ internal sealed class DigTestsWindow
         ImGui.SliderFloat("Fade shape", ref DigTuning.RayFalloff, 0.2f, 5f, "%.2f");
         if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
 
+        ImGui.SliderFloat("Edge fade", ref DigTuning.RayEdgeFade, 0f, 1f, "%.2f");
+        if (ImGui.IsItemDeactivatedAfterEdit()) DigTuning.Save();
+
+        ImGui.TextColored(Rule,
+            "Edge fade softens each beam's LEFT and RIGHT sides. 0 is a hard-edged wedge.\n"
+          + "It also widens the beams as it rises, and it has to: beams tile the full turn\n"
+          + "exactly, so a beam fading to nothing inside its own slot would meet its neighbour\n"
+          + "where BOTH are zero — a dark seam at every join. Spreading each beam over its\n"
+          + "neighbours puts its faded edge on top of theirs rather than beside it.");
+
         ImGui.TextColored(Rule,
             "The three VARIANCE sliders are how unlike each other the beams are. Width spreads the\n"
           + "angular slices, speed spreads their breathing rates, reach keeps some of them shorter\n"

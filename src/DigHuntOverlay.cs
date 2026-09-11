@@ -591,6 +591,18 @@ internal sealed class DigHuntOverlay : IDisposable
     private const int RaySegments = 32;
 
     /// <summary>
+    /// Slices ACROSS a beam, for the left/right edge fade. Capped against the beam count so the
+    /// burst cannot blow the draw list's index budget — see the note where it is computed.
+    /// </summary>
+    private const int RayAngularSlices = 7;
+
+    /// <summary>
+    /// How much wider than its own slot a beam gets at full edge fade. Just under 2, so a beam's
+    /// faded edge reaches the CENTRE of each neighbour and the join is covered from both sides.
+    /// </summary>
+    private const float RayOverlapAtFullFade = 1.9f;
+
+    /// <summary>
     /// Stable pseudo-random in [0,1) from a beam index and a salt, so each beam gets its own width,
     /// speed, reach and starting phase.
     ///
@@ -673,15 +685,31 @@ internal sealed class DigHuntOverlay : IDisposable
         var savedFlags = drawList.Flags;
         drawList.Flags &= ~ImDrawListFlags.AntiAliasedFill;
 
+        float edgeFade = Math.Clamp(DigTuning.RayEdgeFade, 0f, 1f);
+
+        // Widen every beam by the same measure the edges are softened by. Beams tile the turn
+        // EXACTLY, so a beam that faded to nothing within its own slot would meet its neighbour
+        // where both are zero — a dark seam at every join, which is the gap problem again wearing a
+        // different hat. Spreading each beam over its neighbours puts its faded edge ON TOP of
+        // theirs instead of beside it, so the boundary stays lit. At zero fade there is no spread,
+        // because a hard edge has nothing to cover.
+        float overlap = 1f + edgeFade * (RayOverlapAtFullFade - 1f);
+
+        // Slices across a beam, bounded by how many beams there are. ImDrawIdx is 16 bits, so a
+        // draw list past about 65k indices is relying on the backend's vertex-offset support to
+        // keep rendering correctly; at 48 beams an unbounded 7 slices would be 10,752 quads and
+        // 64k indices from this effect alone. Staying well under is cheaper than finding out.
+        int slices = Math.Clamp(126 / count, 3, RayAngularSlices);
+
         float cursor = 0f;
 
         for (int i = 0; i < count; i++)
         {
             float span = MathF.Tau * width[i] / total;
 
-            float a0 = cursor;
-            float a1 = cursor + span;
-            cursor   = a1;
+            float mid  = cursor + span * 0.5f;
+            float half = span * 0.5f * overlap;
+            cursor    += span;
 
             // Own speed, own reach, own starting point in the cycle. All hashed off the index so
             // they are stable frame to frame — see Hash01.
@@ -702,24 +730,39 @@ internal sealed class DigHuntOverlay : IDisposable
                 float t0 = s       / (float)RaySegments;
                 float t1 = (s + 1) / (float)RaySegments;
 
-                // Alpha from the slice's midpoint. Reaches exactly zero at the tip, so a beam ends
-                // by running out rather than by stopping.
-                float mid = (t0 + t1) * 0.5f;
-                float a   = opacity * MathF.Pow(1f - mid, falloff);
-                if (a <= 0.0015f) continue;
+                // Alpha along the beam, from the slice's midpoint. Reaches exactly zero at the tip,
+                // so a beam ends by running out rather than by stopping.
+                float tm     = (t0 + t1) * 0.5f;
+                float radial = opacity * MathF.Pow(1f - tm, falloff);
+                if (radial <= 0.0015f) continue;
 
                 float r0 = innerR + len * t0;
                 float r1 = innerR + len * t1;
 
-                // Wound consistently around the ring — AddQuadFilled goes through
-                // AddConvexPolyFilled, which renders a figure-of-eight as two slivers rather than
-                // erroring.
-                drawList.AddQuadFilled(
-                    centre + Polar(a0, r0),
-                    centre + Polar(a1, r0),
-                    centre + Polar(a1, r1),
-                    centre + Polar(a0, r1),
-                    Tint(rgb, a));
+                for (int k = 0; k < slices; k++)
+                {
+                    float u0 = -1f + 2f * k       / slices;
+                    float u1 = -1f + 2f * (k + 1) / slices;
+
+                    // Alpha ACROSS the beam. A cosine rather than a straight taper, because a
+                    // linear fade leaves a visible crease down the middle where the two sides meet
+                    // at a corner — cosine is flat at the centre and flat at the edges, so neither
+                    // the middle nor the join announces itself.
+                    float um    = (u0 + u1) * 0.5f;
+                    float shape = MathF.Cos(um * MathF.PI * 0.5f);
+                    float a     = radial * (1f - edgeFade * (1f - shape));
+                    if (a <= 0.0015f) continue;
+
+                    // Wound consistently around the ring — AddQuadFilled goes through
+                    // AddConvexPolyFilled, which renders a figure-of-eight as two slivers rather
+                    // than erroring.
+                    drawList.AddQuadFilled(
+                        centre + Polar(mid + u0 * half, r0),
+                        centre + Polar(mid + u1 * half, r0),
+                        centre + Polar(mid + u1 * half, r1),
+                        centre + Polar(mid + u0 * half, r1),
+                        Tint(rgb, a));
+                }
             }
         }
 
