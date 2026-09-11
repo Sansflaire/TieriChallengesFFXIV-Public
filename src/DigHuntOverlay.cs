@@ -1103,7 +1103,10 @@ internal sealed class DigHuntOverlay : IDisposable
         // The DIG! word's own envelope, integrated HERE rather than in the draw so it keeps moving
         // on frames the dial is not drawn — an envelope that only advances while its subject is on
         // screen can never finish fading out.
-        bool  onSpot     = inRange && closeness!.Value >= 1f;
+        // Gated on the dig too, not only on range. Digging the right spot takes the button away and
+        // the word has to leave with it — but by fading, which means the target has to fall here
+        // rather than the word simply stopping being drawn.
+        bool  onSpot     = inRange && closeness!.Value >= 1f && !_hiddenForDig;
         float wordTarget = onSpot ? 1f : 0f;
         float wordStep   = ImGui.GetIO().DeltaTime / (onSpot ? WordFadeIn : WordFadeOut);
 
@@ -1120,9 +1123,17 @@ internal sealed class DigHuntOverlay : IDisposable
         // Hidden for the dig, but only once the press has finished playing: the click has to be
         // seen to land before the button is allowed to disappear, or it reads as the dial
         // vanishing on contact rather than as a button being pressed.
-        if (_hiddenForDig && Environment.TickCount64 - _pressedAtMs >= PressMs) return;
+        bool showDial = !(_hiddenForDig && Environment.TickCount64 - _pressedAtMs >= PressMs);
 
-        DrawRadar(_radarCloseness, _radarFade);
+        if (showDial) DrawRadar(_radarCloseness, _radarFade);
+
+        // The word is drawn WHETHER OR NOT THE DIAL IS, and after it.
+        //
+        // After, because its window has to be begun later than the dial's to sit on top of it — the
+        // lettering overlaps the rim by design. Whether or not, because a dig takes the button away
+        // instantly and the word is supposed to fade: while it was drawn inside the dial's early
+        // returns it could only ever vanish along with it.
+        DrawDialLabel(UiScale.Factor, _radarCloseness, _radarFade);
     }
 
     /// <summary>True while the dial is withheld for a dig started from the right spot.</summary>
@@ -1358,15 +1369,7 @@ internal sealed class DigHuntOverlay : IDisposable
         if (_shinePhase > MathF.Tau) _shinePhase %= MathF.Tau;
 
         float uiScale = UiScale.Factor;
-        int   phys    = (int)(RadarSize * uiScale);
-
-        var viewport = ImGui.GetMainViewport();
-
-        // The reminder below adds the SAME drop, so the two move as one and the gap between them is
-        // decided only by ReminderGapPx.
-        var pos = new Vector2(
-            viewport.Pos.X + (viewport.Size.X - phys) * 0.5f,
-            viewport.Pos.Y + viewport.Size.Y * TopFraction + DropPx * uiScale);
+        var (pos, phys) = DialRect(uiScale);
 
         // The one HUD window that takes input — it is a button. Sized to the dial and nothing more,
         // so the amount of screen that can swallow a click is one small circle for the few seconds
@@ -1383,19 +1386,8 @@ internal sealed class DigHuntOverlay : IDisposable
         // information instead of both restating proximity.
         Vector3 baseRgb = solid ? Rgb(DigCol) : Ramp(closeness);
 
-        // Click feedback. Instant depress, then an ease back over PressMs — a linear decay reads as
-        // a press-and-release, where a symmetric in-out reads as a pulse and gets confused with the
-        // one already running.
-        float press = 0f;
-        if (_pressedAtMs > 0)
-        {
-            long since = Environment.TickCount64 - _pressedAtMs;
-            press = since >= PressMs ? 0f : 1f - since / (float)PressMs;
-        }
-
-        // Darker and less saturated while held, so the dial reads as taking the click rather than
-        // merely moving.
-        var accentRgb = Vector3.Lerp(baseRgb, Desaturate(baseRgb) * 0.62f, press);
+        float press     = PressAmount();
+        var   accentRgb = PressedAccent(baseRgb, press);
 
         float wave = 0.5f + 0.5f * MathF.Sin(_radarPhase);
 
@@ -1551,16 +1543,46 @@ internal sealed class DigHuntOverlay : IDisposable
         }
 
         EndHud();
-
-        // AFTER the dial's window closes, so it is begun later and therefore drawn over it. The
-        // word overlaps the rim by design, and a background-list draw would put it underneath.
-        //
-        // The anchor is derived from the window's own position rather than read back from the
-        // cursor, because the cursor only exists inside the window. They agree exactly: HUD windows
-        // are drawn with zero padding, so content starts at the window's top-left.
-        DrawDialLabel(new Vector2(MathF.Round(pos.X), MathF.Round(pos.Y)),
-                      phys, accentRgb, fade, solid, uiScale, press);
     }
+
+    /// <summary>
+    /// Where the dial sits and how big it is. Shared, because the word is positioned relative to it
+    /// from a completely different call path now — two copies of this arithmetic would drift the
+    /// first time the drop or the size changed.
+    /// </summary>
+    private static (Vector2 pos, int phys) DialRect(float uiScale)
+    {
+        int phys = (int)(RadarSize * uiScale);
+
+        var viewport = ImGui.GetMainViewport();
+
+        // The reminder below adds the SAME drop, so dial, word and clue all move as one and the gap
+        // between dial and clue is decided only by ReminderGapPx.
+        return (new Vector2(
+                    viewport.Pos.X + (viewport.Size.X - phys) * 0.5f,
+                    viewport.Pos.Y + viewport.Size.Y * TopFraction + DropPx * uiScale),
+                phys);
+    }
+
+    /// <summary>
+    /// Click feedback, 1 at the instant of the press decaying to 0 over <see cref="PressMs"/>.
+    /// A linear decay reads as a press-and-release; a symmetric in-out reads as a pulse and gets
+    /// confused with the one the dial is already running.
+    /// </summary>
+    private float PressAmount()
+    {
+        if (_pressedAtMs <= 0) return 0f;
+
+        long since = Environment.TickCount64 - _pressedAtMs;
+        return since >= PressMs ? 0f : 1f - since / (float)PressMs;
+    }
+
+    /// <summary>
+    /// Darker and less saturated while held, so a pressed control reads as taking the click rather
+    /// than merely moving.
+    /// </summary>
+    private static Vector3 PressedAccent(Vector3 rgb, float press) =>
+        Vector3.Lerp(rgb, Desaturate(rgb) * 0.62f, press);
 
     /// <summary>
     /// The CLUE! / DIG! word, in a window of its own.
@@ -1575,16 +1597,26 @@ internal sealed class DigHuntOverlay : IDisposable
     /// because it is the dig button, so a bigger one swallows game clicks over a bigger patch of
     /// screen. This one takes no input at all.</para>
     /// </summary>
-    private void DrawDialLabel(Vector2 dialOrigin, float phys, Vector3 rgb, float fade,
-                               bool solid, float uiScale, float press)
+    private void DrawDialLabel(float uiScale, float closeness, float fade)
     {
-        // CLUE! borrows the clue line's opacity outright, so it can only ever be on screen while
-        // there is a clue under it to label. DIG! runs on its own envelope, because it marks a
-        // state the player is standing in rather than a message that was shown. Both are then
-        // bounded by the dial's own fade, so neither can outlive the thing it sits on.
-        float alpha = (solid ? _digWordAlpha : _reminderAlpha) * fade;
+        // TWO INDEPENDENT LAYERS, not one word chosen by the current state.
+        //
+        // Picking `solid ? DIG! : CLUE!` was the bug: `solid` flips the instant the player crosses
+        // the dig radius, so walking out SWAPPED the artwork rather than fading it, and DIG!'s
+        // envelope — ramping down correctly the whole time — was never the one being drawn. Drawing
+        // both and letting each carry its own opacity means leaving the spot crossfades out of DIG!
+        // and into CLUE! if there is a clue to show, and digging fades DIG! out over nothing.
+        //
+        // CLUE! borrows the clue line's opacity outright, so it is only ever up while there is a
+        // clue beneath it to label. DIG! has its own envelope, because it marks a state the player
+        // is standing in rather than a message that was shown. Both are bounded by the dial's fade,
+        // so neither outlives what it sits on.
+        float clueAlpha = _reminderAlpha * fade;
+        float digAlpha  = _digWordAlpha  * fade;
 
-        if (alpha <= 0.002f) return;
+        if (clueAlpha <= 0.002f && digAlpha <= 0.002f) return;
+
+        var (pos, phys) = DialRect(uiScale);
 
         float scale = Math.Clamp(DigTuning.LabelScale, 0.2f, 3f);
 
@@ -1595,17 +1627,17 @@ internal sealed class DigHuntOverlay : IDisposable
 
         EnsureLabelArt(side);
 
-        var art = solid ? _labelDig : _labelClue;
-        if (art == null) return;
+        if (_labelClue == null && _labelDig == null) return;
+
+        float press = PressAmount();
+        float sink  = press * PressOffsetPx * uiScale;
 
         // Scaled about the dial's CENTRE, then offset. Centring first is what keeps the offsets
         // meaning the same thing at every scale — grow it about the top-left instead and every
         // size change would also walk the word sideways.
-        float sink = press * PressOffsetPx * uiScale;
-
         var min = new Vector2(
-            MathF.Round(dialOrigin.X + (phys - side) * 0.5f + DigTuning.LabelOffsetX * uiScale + sink),
-            MathF.Round(dialOrigin.Y + (phys - side) * 0.5f + DigTuning.LabelOffsetY * uiScale + sink));
+            MathF.Round(pos.X + (phys - side) * 0.5f + DigTuning.LabelOffsetX * uiScale + sink),
+            MathF.Round(pos.Y + (phys - side) * 0.5f + DigTuning.LabelOffsetY * uiScale + sink));
 
         // Room for the outline and shadow to reach past the artwork without being cut off again.
         float pad  = (OutlinePx + ShadowPx) * uiScale + 2f;
@@ -1613,8 +1645,20 @@ internal sealed class DigHuntOverlay : IDisposable
 
         if (!BeginHud("##tc_dig_label", min - new Vector2(pad, pad), span, span)) return;
 
-        DrawEmblem(ImGui.GetWindowDrawList(), art, min, new Vector2(side, side),
-                   rgb, alpha, OutlinePx * uiScale, GradientBands);
+        var drawList = ImGui.GetWindowDrawList();
+        var size     = new Vector2(side, side);
+        float outline = OutlinePx * uiScale;
+
+        // Each word takes the colour its OWN state implies, not the dial's current one — a DIG!
+        // fading out as the player walks away should keep the dig yellow while it goes rather than
+        // sliding back down the proximity ramp with the dial behind it.
+        if (clueAlpha > 0.002f && _labelClue != null)
+            DrawEmblem(drawList, _labelClue, min, size,
+                       PressedAccent(Ramp(closeness), press), clueAlpha, outline, GradientBands);
+
+        if (digAlpha > 0.002f && _labelDig != null)
+            DrawEmblem(drawList, _labelDig, min, size,
+                       PressedAccent(Rgb(DigCol), press), digAlpha, outline, GradientBands);
 
         EndHud();
     }
