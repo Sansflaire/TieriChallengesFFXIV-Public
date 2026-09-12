@@ -28,9 +28,9 @@
          from what was built. Bump it on EVERY change — see docs/How To Versioning.md.
          The one thing that does NOT follow automatically is the manifest's AssemblyVersion
          in ../TieriChallengesFFXIV.json; update that by hand to match. -->
-    <Version>0.84.54.5</Version>
-    <AssemblyVersion>0.84.54.5</AssemblyVersion>
-    <FileVersion>0.84.54.5</FileVersion>
+    <Version>0.84.54.6</Version>
+    <AssemblyVersion>0.84.54.6</AssemblyVersion>
+    <FileVersion>0.84.54.6</FileVersion>
   </PropertyGroup>
 
   <!-- TWO FLAVOURS OF THIS PLUGIN.
@@ -132,7 +132,7 @@
           DestinationFolder="$(PluginDeployPath)" SkipUnchangedFiles="true" />
   </Target>
 
-  <!-- Dig HUD artwork. SHIPS PUBLICLY since 0.84.54.5, when the Activity tab un-gated the Wild
+  <!-- Dig HUD artwork. SHIPS PUBLICLY since 0.84.54.6, when the Activity tab un-gated the Wild
        Trail: DigHuntOverlay is now in the public DLL and these are the dial, the CLUE!/DIG! words
        and the two trail banners a player actually sees. The overlay still falls back to its drawn
        circles when the files are absent, so a missing PNG degrades rather than crashes — but

@@ -255,6 +255,16 @@ internal sealed class DigClueWriter
         lines.Add("                                      everywhere is far from something, so it is");
         lines.Add("                                      always paired with a region.");
         lines.Add("");
+        lines.Add("AN ANCHOR IS ONLY GENERALISED WHEN THAT SAYS SOMETHING.");
+        lines.Add("  The vaguer tiers swap an anchor's NAME for its category — \"one of the gates\".");
+        lines.Add("  That only carries information when the name HAS a category word and when");
+        lines.Add("  several things share it, so both are checked and the tier is capped when");
+        lines.Add("  either fails. A one-word name is never generalised; a category with one");
+        lines.Add("  member is named outright instead.");
+        lines.Add("    \"North of one of the places\"   <- this used to ship, and says nothing");
+        lines.Add("  Difficulty cannot be bought with meaninglessness: a clue that cannot be made");
+        lines.Add("  vaguer without becoming empty simply stays sharper than the slider asked.");
+        lines.Add("");
         lines.Add("NO FACT REPEATS ANOTHER'S DIRECTION.");
         lines.Add("  A region and a clock bearing both answer \"which side of the middle\", so once the");
         lines.Add("  clock goes vague enough to drop the hour they become the same statement:");
@@ -476,8 +486,31 @@ internal sealed class DigClueWriter
     /// <summary>
     /// One fact: a direction from an anchor, put more or less precisely.
     /// </summary>
-    private string DirectionFact(DigClueSources.Anchor a, Vector3 spot, float dist, int vague)
+    private string DirectionFact(DigClueSources.Anchor a, Vector3 spot, float dist, int vague,
+                                 int kindPool = int.MaxValue)
     {
+        // THE ANCHOR DECIDES HOW VAGUE IT CAN BE MADE, and ignoring that shipped a clue that said
+        // nothing at all: "North of one of the places."
+        //
+        // Tiers 2 and up replace the anchor's NAME with its category, so they only carry information
+        // when there IS a category and when several things share it. Two separate failures:
+        //
+        //   no category word  - a one-word name has none, and the placeholder was the word "place".
+        //                       "one of the places" constrains nothing whatsoever.
+        //   only one of them  - "one of the aetherytes" where the map has a single aetheryte is
+        //                       strictly less useful than naming it, for no gain in difficulty.
+        //
+        // So the cap is a property of the anchor rather than of the slider. A clue that cannot be
+        // made vaguer without becoming empty simply stays sharper — difficulty must not be
+        // purchasable with meaninglessness.
+        string kind = AnchorKind(a.Name);
+
+        int cap = kind.Length == 0 ? 1      // nothing to generalise to; keep the name
+                : kindPool < 2     ? 2      // a category of one; "a western gate" still locates it
+                :                    4;
+
+        if (vague > cap) vague = cap;
+
         // THE ANCHOR ITSELF GETS VAGUER, not just the bearing — that is the mechanism Sansflaire
         // described: "Far South from Gate A" to "Somewhere South of Gate A" to "Somewhere below a
         // western gate" to "Below one of the gates". Degrading only the compass keeps handing over
@@ -525,17 +558,20 @@ internal sealed class DigClueWriter
     /// The category-word for an anchor — its last word, which is what makes "Blue Badger Gate"
     /// generalise to "gate" and "the Ingleside aethernet shard" to "shard".
     ///
-    /// <para>A single-word name has no category to fall back on, so it becomes "place": "one of the
-    /// Odilies" would be nonsense, and inventing a taxonomy for NPC names is exactly the kind of
-    /// table this file has repeatedly refused to invent.</para>
+    /// <para><b>A name with no category word returns EMPTY, and it used to return "place".</b> That
+    /// produced <i>"North of one of the places"</i> — a sentence that names nothing, constrains
+    /// nothing and cannot be acted on. It was the whole of a clue. Empty is the honest answer and
+    /// the callers refuse to generalise rather than generalising into a word that means anything.
+    /// Inventing a taxonomy for NPC names is the alternative, and it is exactly the kind of table
+    /// this file has repeatedly refused to invent.</para>
     /// </summary>
     private static string AnchorKind(string name)
     {
         var parts = name.Trim().Split(' ');
-        if (parts.Length < 2) return "place";
+        if (parts.Length < 2) return string.Empty;
 
         string last = parts[parts.Length - 1].ToLowerInvariant();
-        return last.Length < 3 ? "place" : last;
+        return last.Length < 3 ? string.Empty : last;
     }
 
     /// <summary>
@@ -549,6 +585,12 @@ internal sealed class DigClueWriter
     private static string KindPhrase(string name, bool plural)
     {
         string kind = AnchorKind(name);
+
+        // No category word means there is nothing to generalise to, so the NAME is returned. The
+        // cap in DirectionFact means this should be unreachable there — it is here so that any
+        // future caller degrades to something true rather than to "the places".
+        if (kind.Length == 0) return name;
+
         return plural ? $"the {Plural(kind)}" : $"the {kind}";
     }
 
@@ -564,6 +606,8 @@ internal sealed class DigClueWriter
     private static string SidedKind(string name, Vector3 world)
     {
         string kind = AnchorKind(name);
+        if (kind.Length == 0) return name;
+
         string side = SideOf(world);
 
         if (side.Length == 0) return IsPlural(kind) ? $"the {kind}" : $"a {kind}";
@@ -679,6 +723,22 @@ internal sealed class DigClueWriter
 
         var (count, vague) = Budget(hard);
 
+        // HOW MANY ANCHORS SHARE THIS ONE'S CATEGORY. It is what decides whether "one of the gates"
+        // is a generalisation or a worse way of naming the only gate — see DirectionFact's cap.
+        // Counted over the anchors this category actually offered, because that is the set the clue
+        // could have been written from.
+        int PoolFor(DigClueSources.Anchor of)
+        {
+            string kind = AnchorKind(of.Name);
+            if (kind.Length == 0) return 0;
+
+            int n = 0;
+            foreach (var other in anchors)
+                if (string.Equals(AnchorKind(other.Name), kind, StringComparison.Ordinal)) n++;
+
+            return n;
+        }
+
         // Built in DESCENDING usefulness and only as many as the budget allows. That ordering is the
         // whole design: the facts that survive are the most actionable ones, so a HARD clue is the
         // single best thing that could have been said rather than an arbitrary survivor. Each fact
@@ -704,9 +764,13 @@ internal sealed class DigClueWriter
         // so concatenating produced "one of the ratss". That exact bug was found and fixed in
         // DirectionFact and this second call site was missed, which is why the helper exists at all
         // rather than the fix living inline.
+        // The negative form generalises the anchor exactly as the direction form does, so it takes
+        // the same rule: generalise only when there is a category AND more than one thing in it.
+        bool canGeneralise = AnchorKind(a.Name).Length > 0 && PoolFor(a) >= 2;
+
         facts.Add(awkward
-            ? $"a long way from {(vague[0] >= 2 ? "one of " + KindPhrase(a.Name, plural: true) : a.Name)}"
-            : DirectionFact(a, spot, dist, vague[0]));
+            ? $"a long way from {(vague[0] >= 2 && canGeneralise ? "one of " + KindPhrase(a.Name, plural: true) : a.Name)}"
+            : DirectionFact(a, spot, dist, vague[0], PoolFor(a)));
 
         if (count >= 2)
         {
@@ -756,7 +820,8 @@ internal sealed class DigClueWriter
                 PickAnchor(anchors, spot, hard, out _, exclude: a.Name) is { } b &&
                 !string.Equals(DigGround.Compass4(b.World, spot), firstBearing, StringComparison.Ordinal))
             {
-                string candidate = DirectionFact(b, spot, DigGround.Flat(b.World, spot), vague[2]);
+                string candidate = DirectionFact(b, spot, DigGround.Flat(b.World, spot),
+                                                 vague[2], PoolFor(b));
 
                 if (!string.Equals(candidate, facts[0], StringComparison.OrdinalIgnoreCase))
                     secondFact = candidate + " as well";
