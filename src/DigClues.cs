@@ -220,12 +220,16 @@ internal sealed class DigClueWriter
 
         lines.Add("");
         lines.Add("MAP REGION — measured against the WALKABLE BOX, not the map image.");
-        lines.Add("  A central band of 14% per axis counts as neither side, so \"the middle of the");
-        lines.Add("  map\" is a real answer and not a rounding artefact:");
+        lines.Add("  A central strip of 14% either side of the middle counts as NEITHER side on that");
+        lines.Add("  axis, so \"the middle\" is a real answer rather than a rounding artefact. Note the");
+        lines.Add("  two axes are judged separately — a phrase names whichever axes came out decided:");
         lines.Add("    \"the NORTH of the map\"          north band, neither east nor west");
         lines.Add("    \"the EAST side of the map\"      east band, neither north nor south");
         lines.Add("    \"the NORTH-EAST of the map\"     both, i.e. a corner quarter");
-        lines.Add("    \"the middle band of the map\"    inside the central band on BOTH axes");
+        lines.Add("    \"the middle of the map — a broad central area\"");
+        lines.Add("                                    inside the central strip on BOTH axes at once,");
+        lines.Add("                                    i.e. a central BOX ~28% wide by ~28% deep.");
+        lines.Add("                                    It has no orientation — it is not a stripe.");
         lines.Add("");
         lines.Add("EVERY REGION PHRASE NAMES AN AREA, NEVER A POINT.");
         lines.Add("  \"Dead in the very centre\" used to be said for a region over a hundred yalms");

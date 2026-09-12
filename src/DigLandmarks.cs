@@ -170,7 +170,7 @@ internal static class DigLandmarks
     /// that was removed; nothing has to be transformed to answer "is this east of the middle", so
     /// nothing is.</para>
     ///
-    /// <para>A central band is deliberately its own answer rather than being forced into a corner:
+    /// <para>A central region is deliberately its own answer rather than being forced into a corner:
     /// a spot two yalms from the middle is not "north-east" in any useful sense, and saying so would
     /// send the player to the wrong quarter with full confidence.</para>
     /// </summary>
@@ -192,10 +192,17 @@ internal static class DigLandmarks
         string ns = world.Z < cz - bandZ ? "NORTH" : world.Z > cz + bandZ ? "SOUTH" : string.Empty;
         string ew = world.X > cx + bandX ? "EAST"  : world.X < cx - bandX ? "WEST"  : string.Empty;
 
-        // "the middle BAND", not "the middle". This phrase is a 28%-wide strip on both axes — a
-        // large region — and calling it "the middle of the map" reads as a point. Same defect as
-        // the grid cells named "very centre": the words promised precision the clue cannot have.
-        if (ns.Length == 0 && ew.Length == 0) return "the middle band of the map";
+        // NOT "the middle band". A BAND HAS AN ORIENTATION and this region has none — it is reached
+        // only when the point is inside the central strip on BOTH axes at once, so it is a central
+        // BOX about 28% of the width by 28% of the depth. The first question the phrase drew was
+        // "is that horizontal or vertical", which is a clue asking the player a question instead of
+        // answering one.
+        //
+        // The earlier "the middle of the map" was rejected for reading as a POINT, and that still
+        // holds — so the phrase names the shape and says outright that it is wide. Same fix the grid
+        // cells got when the centre one was called "very centre".
+        if (ns.Length == 0 && ew.Length == 0)
+            return "the middle of the map — a broad central area, not a precise spot";
         if (ns.Length == 0) return $"the {ew} side of the map";
         if (ew.Length == 0) return $"the {ns} of the map";
 
