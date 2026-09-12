@@ -326,6 +326,14 @@ internal sealed class TestCityService : IDisposable
     /// button; clears itself. Reading the log directly beats asking a person to retype numbers.</summary>
     public bool DebugLogNextFrame;
 
+    /// <summary>Which of the game's matrices transforms the city. Auto rejects any whose third
+    /// column is zero, because such a matrix cannot produce depth for any vertex.</summary>
+    public CityMatrixSource MatrixSource = CityMatrixSource.Auto;
+
+    /// <summary>Which candidate the last frame actually used. On the panel because the wrong choice
+    /// is otherwise invisible — the city just does not appear.</summary>
+    public string MatrixChosen { get; private set; } = "not selected";
+
     private void SampleProjection(Matrix4x4 viewProj)
     {
         var lp = Plugin.ObjectTable.LocalPlayer;
@@ -772,7 +780,9 @@ internal sealed class TestCityService : IDisposable
         _d3d ??= new TestCityD3D();
 
         if (!_d3d.TryInitialise()) return false;
-        if (!TestCityD3D.TryViewProj(out var viewProj)) return false;
+        if (!TestCityD3D.TryViewProj(MatrixSource, out var viewProj, out var chosen)) return false;
+
+        MatrixChosen = chosen;
 
         SampleProjection(viewProj);
 
@@ -794,6 +804,14 @@ internal sealed class TestCityService : IDisposable
             Diag.Info($"[City] TRACE viewProj row1 {viewProj.M21,10:F4} {viewProj.M22,10:F4} {viewProj.M23,10:F4} {viewProj.M24,10:F4}");
             Diag.Info($"[City] TRACE viewProj row2 {viewProj.M31,10:F4} {viewProj.M32,10:F4} {viewProj.M33,10:F4} {viewProj.M34,10:F4}");
             Diag.Info($"[City] TRACE viewProj row3 {viewProj.M41,10:F4} {viewProj.M42,10:F4} {viewProj.M43,10:F4} {viewProj.M44,10:F4}");
+
+            // EVERY candidate's Z column, so the choice is evidence rather than a preference. A
+            // matrix whose third column is all zeros gives clip.z == 0 for every vertex in the
+            // world, which under reverse-Z fails both our own depth test and the scene comparison.
+            Diag.Info($"[City] TRACE matrixSource={MatrixSource} chosen='{MatrixChosen}'");
+            foreach (var (name, m) in TestCityD3D.MatrixCandidates())
+                Diag.Info($"[City] TRACE candidate Zcol=({m.M13,9:F4},{m.M23,9:F4},{m.M33,9:F4},{m.M43,9:F4}) "
+                        + $"Wcol=({m.M14,9:F4},{m.M24,9:F4},{m.M34,9:F4},{m.M44,9:F4})  {name}");
         }
 
         _mesh.Clear();

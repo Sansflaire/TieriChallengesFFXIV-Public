@@ -135,7 +135,14 @@ internal sealed class TestCityWindow
     {
         if (!_city.IsBuilt)
         {
-            ImGui.TextColored(Warn, "NO CITY — press Build.");
+            // Loud, and it says WHY it is unbuilt. The city is in-memory by design, so every plugin
+            // reload — i.e. every rebuild — wipes it, and an unbuilt city looks exactly like a
+            // broken renderer: DrawWorld returns on its first line and no probe, toggle or trace
+            // runs at all. That ambiguity cost a full round of live testing on 2026-09-12.
+            ImGui.TextColored(Warn, "NO CITY BUILT — press Build City. Nothing else on this window\n"
+                                  + "does anything until you do: no rendering, no diagnostics, no\n"
+                                  + "probes. The city is deliberately in memory only, so it is wiped\n"
+                                  + "every time the plugin reloads — which includes every rebuild.");
             return;
         }
 
@@ -277,7 +284,41 @@ internal sealed class TestCityWindow
         if (!ImGui.CollapsingHeader("Diagnostics — why is nothing drawing?"))
             return;
 
+        // Repeated here on purpose. The build state lives on another tab, so every switch below can
+        // be flipped against an unbuilt city, where DrawWorld returns immediately and NONE of this
+        // executes — producing a confident negative result that means nothing.
+        if (!_city.IsBuilt)
+        {
+            ImGui.TextColored(Warn, "NO CITY BUILT — every switch below is inert and every result\n"
+                                  + "you read from them will be meaningless. Press Build City first.");
+            return;
+        }
+
         ImGui.TextDisabled("Three switches, three different questions. Turn ON one at a time.");
+        ImGui.Spacing();
+
+        // ── 0. the matrix, which is where the third fault actually was ───────
+        ImGui.TextUnformatted("0 · Which of the game's matrices transforms the city");
+
+        int src = (int)_city.MatrixSource;
+        if (ImGui.RadioButton("Auto — first one that can produce depth", ref src, (int)CityMatrixSource.Auto))
+            _city.MatrixSource = CityMatrixSource.Auto;
+        if (ImGui.RadioButton("Control.ViewProjectionMatrix", ref src, (int)CityMatrixSource.ControlViewProjection))
+            _city.MatrixSource = CityMatrixSource.ControlViewProjection;
+        if (ImGui.RadioButton("view x RenderCamera.ProjectionMatrix2  (+0x50)", ref src, (int)CityMatrixSource.RenderCameraProjection2))
+            _city.MatrixSource = CityMatrixSource.RenderCameraProjection2;
+        if (ImGui.RadioButton("view x RenderCamera.ProjectionMatrix   (+0x1A0, NO depth column)", ref src, (int)CityMatrixSource.RenderCameraProjection))
+            _city.MatrixSource = CityMatrixSource.RenderCameraProjection;
+        _city.MatrixSource = (CityMatrixSource)src;
+
+        ImGui.TextDisabled($"using: {_city.MatrixChosen}");
+        ImGui.TextDisabled("+0x1A0 is what this feature shipped with, and its third column is\n"
+                         + "entirely ZERO — so clip.z was 0 for every vertex in the world. Under\n"
+                         + "reverse-Z that is the far plane, which fails BOTH our own Greater\n"
+                         + "depth test against a buffer cleared to 0 and the scene comparison.\n"
+                         + "Nothing about the city looked wrong because X, Y and W were exact;\n"
+                         + "it simply had no depth and so drew nothing at all.");
+
         ImGui.Spacing();
 
         // ── 1. presentation ──────────────────────────────────────────────────

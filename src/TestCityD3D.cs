@@ -14,8 +14,24 @@ using Vortice.Mathematics;
 using CsDevice = FFXIVClientStructs.FFXIV.Client.Graphics.Kernel.Device;
 using CsRtm    = FFXIVClientStructs.FFXIV.Client.Graphics.Render.RenderTargetManager;
 using CameraManager = FFXIVClientStructs.FFXIV.Client.Game.Control.CameraManager;
+using CSControl = FFXIVClientStructs.FFXIV.Client.Game.Control.Control;
 
 namespace TieriChallengesFFXIV;
+
+/// <summary>
+/// Which of the game's matrices to transform the city with.
+///
+/// <para>It is a setting because the obvious candidate turned out to have no depth column at all,
+/// and picking wrongly is invisible: X, Y and W stay pixel-perfect while the city silently
+/// vanishes. Auto takes the first candidate that can actually produce depth.</para>
+/// </summary>
+internal enum CityMatrixSource
+{
+    Auto = 0,
+    ControlViewProjection = 1,
+    RenderCameraProjection2 = 2,
+    RenderCameraProjection = 3,
+}
 
 /// <summary>One vertex of the city mesh: a world position and a colour. 28 bytes.</summary>
 [StructLayout(LayoutKind.Sequential)]
@@ -738,32 +754,104 @@ internal sealed unsafe class TestCityD3D : IDisposable
     /// <c>CameraManager → Camera → SceneCamera.RenderCamera</c>, whose <c>ViewMatrix</c> sits at
     /// +0x10 and <c>ProjectionMatrix</c> at +0x1A0.</para>
     /// </summary>
-    public static bool TryViewProj(out Matrix4x4 viewProj)
+    /// <summary>
+    /// Whether a candidate matrix can produce depth at all.
+    ///
+    /// <para><b>This is arithmetic, not a heuristic.</b> A fragment's clip depth is
+    /// <c>dot(position, the matrix's third column)</c>, so a third column of all zeros yields
+    /// <c>clip.z == 0</c> for every vertex in the world — no exceptions and no camera angle that
+    /// helps. Under reverse-Z, 0 is the far plane, which means every fragment simultaneously fails
+    /// our own <c>Greater</c> depth test against a buffer cleared to 0 AND loses the scene-depth
+    /// comparison. Rejecting such a matrix cannot discard a working one.</para>
+    /// </summary>
+    private static bool HasDepth(in Matrix4x4 m)
+        => MathF.Abs(m.M13) + MathF.Abs(m.M23) + MathF.Abs(m.M33) + MathF.Abs(m.M43) > 1e-6f;
+
+    private static Matrix4x4 Conv(in FFXIVClientStructs.FFXIV.Common.Math.Matrix4x4 m)
+        => new(m.M11, m.M12, m.M13, m.M14,
+               m.M21, m.M22, m.M23, m.M24,
+               m.M31, m.M32, m.M33, m.M34,
+               m.M41, m.M42, m.M43, m.M44);
+
+    /// <summary>
+    /// Every matrix that could serve as our view-projection, in the order Auto prefers them.
+    ///
+    /// <para><b>There are three because the obvious one does not carry depth.</b>
+    /// <c>Render.Camera</c> holds TWO projection matrices — <c>ProjectionMatrix2</c> at +0x50 and
+    /// <c>ProjectionMatrix</c> at +0x1A0 — read from the struct definition, not guessed. This feature
+    /// shipped using +0x1A0, whose third column is entirely zero; X, Y and W come out pixel-exact
+    /// against Dalamud's own <c>WorldToScreen</c>, so nothing about the city looked wrong, it simply
+    /// had no depth and therefore drew nothing at all.</para>
+    ///
+    /// <para><c>Control.ViewProjectionMatrix</c> (+0x76B0) is preferred because it is the matrix
+    /// FFXIV-TV's <c>CopyBlitRenderer</c> uses for this exact comparison against this exact captured
+    /// depth buffer, and is therefore the only candidate with evidence behind it rather than a
+    /// plausible name.</para>
+    /// </summary>
+    public static (string Name, Matrix4x4 M)[] MatrixCandidates()
     {
-        viewProj = Matrix4x4.Identity;
+        var list = new System.Collections.Generic.List<(string, Matrix4x4)>(3);
+
+        var control = CSControl.Instance();
+        if (control != null)
+            list.Add(("Control.ViewProjectionMatrix", Conv(control->ViewProjectionMatrix)));
 
         var manager = CameraManager.Instance();
-        if (manager == null) return false;
+        var camera  = manager == null ? null : manager->Camera;
+        var render  = camera  == null ? null : camera->SceneCamera.RenderCamera;
 
-        var camera = manager->Camera;
-        if (camera == null) return false;
+        if (render != null)
+        {
+            var view = Conv(render->ViewMatrix);
+            list.Add(("view x RenderCamera.ProjectionMatrix2", Matrix4x4.Multiply(view, Conv(render->ProjectionMatrix2))));
+            list.Add(("view x RenderCamera.ProjectionMatrix",  Matrix4x4.Multiply(view, Conv(render->ProjectionMatrix))));
+        }
 
-        var render = camera->SceneCamera.RenderCamera;
-        if (render == null) return false;
+        return list.ToArray();
+    }
 
-        var view = render->ViewMatrix;
-        var proj = render->ProjectionMatrix;
+    /// <summary>
+    /// The game's view-projection, from the requested source.
+    ///
+    /// <para><b>Using the game's matrix rather than building our own is what makes the depth
+    /// comparison exact.</b> A fragment transformed by this lands at the same clip depth the game
+    /// wrote for the same world point, so the shader compares two numbers in one space — no
+    /// linearisation, no near/far reconstruction, no reverse-Z guesswork.</para>
+    ///
+    /// <para><b>Auto skips any candidate with no depth column</b> — see <see cref="HasDepth"/>.
+    /// The explicit settings exist so a wrong Auto choice can be overruled in-game without a
+    /// rebuild, since rebuilding wipes the in-memory city and costs a whole test round.</para>
+    /// </summary>
+    public static bool TryViewProj(CityMatrixSource source, out Matrix4x4 viewProj, out string chosen)
+    {
+        viewProj = Matrix4x4.Identity;
+        chosen   = "none";
 
-        viewProj = Matrix4x4.Multiply(
-            new Matrix4x4(view.M11, view.M12, view.M13, view.M14,
-                          view.M21, view.M22, view.M23, view.M24,
-                          view.M31, view.M32, view.M33, view.M34,
-                          view.M41, view.M42, view.M43, view.M44),
-            new Matrix4x4(proj.M11, proj.M12, proj.M13, proj.M14,
-                          proj.M21, proj.M22, proj.M23, proj.M24,
-                          proj.M31, proj.M32, proj.M33, proj.M34,
-                          proj.M41, proj.M42, proj.M43, proj.M44));
+        var candidates = MatrixCandidates();
+        if (candidates.Length == 0) return false;
 
+        if (source != CityMatrixSource.Auto)
+        {
+            int i = (int)source - 1;
+            if (i < 0 || i >= candidates.Length) return false;
+
+            (chosen, viewProj) = candidates[i];
+            return true;
+        }
+
+        foreach (var (name, m) in candidates)
+        {
+            if (!HasDepth(m)) continue;
+            chosen   = name;
+            viewProj = m;
+            return true;
+        }
+
+        // Nothing had a usable depth column. Take the first anyway and say so, rather than refusing
+        // to draw: a visible city with broken occlusion is diagnosable, a blank screen is what we
+        // just spent three builds on.
+        (chosen, viewProj) = candidates[0];
+        chosen += " (NO DEPTH COLUMN - occlusion cannot work)";
         return true;
     }
 
