@@ -9,33 +9,33 @@ namespace TieriChallengesFFXIV;
 
 /// <summary>Which wall a building's door is cut into. Named sides rather than an angle, because a
 /// city block is axis-aligned by construction and an angle would invite rotating one.</summary>
-internal enum CitySide { NegX, PosX, NegZ, PosZ }
+internal enum CitySide { NegX = 0, PosX = 1, NegZ = 2, PosZ = 3 }
 
 /// <summary>
-/// One building. <b>Its footprint is stored in TILE INDICES, never in world coordinates</b> — that
-/// is the whole mechanism behind "buildings line up with the grid". The renderer reads the corner's
-/// world XZ back out of the same lattice the floor grid is drawn from, so the two cannot disagree
-/// about where a tile edge is; there is no second copy of the arithmetic to drift.
+/// One building. <b>Its footprint is stored in TILE INDICES, never in world coordinates</b> — the
+/// renderer turns those into world corners through <see cref="TestCityService.TileCorner"/>, which
+/// the grid drawer also calls. That shared function is what makes "buildings line up with the tiles"
+/// structural rather than two sums that agree until one is edited.
 /// </summary>
 internal sealed class CityBuilding
 {
-    /// <summary>Lower corner, in lattice index space.</summary>
+    /// <summary>Lower corner, in tile indices.</summary>
     public int TileX;
     public int TileZ;
 
-    /// <summary>Footprint in whole tiles. Always at least 1.</summary>
+    /// <summary>Footprint in whole tiles.</summary>
     public int TilesX;
     public int TilesZ;
 
     /// <summary>
-    /// Ground the building stands on — the <b>highest</b> sample under its footprint, so it never
-    /// floats. <see cref="SkirtY"/> is the lowest, and the walls are drawn down to there so a
-    /// building on a slope has no gap under its downhill corner.
+    /// Ground the building stands on — the <b>highest</b> interpolated height under its footprint, so
+    /// it never floats. <see cref="SkirtY"/> is the lowest, and walls are drawn down to there so a
+    /// building on a slope shows no daylight under its downhill corner.
     /// </summary>
     public float BaseY;
     public float SkirtY;
 
-    /// <summary>Height above <see cref="BaseY"/>. Quantised to a whole number of floors.</summary>
+    /// <summary>Height above <see cref="BaseY"/>, quantised to a whole number of floors.</summary>
     public float Height;
 
     public int Floors;
@@ -45,80 +45,113 @@ internal sealed class CityBuilding
     /// <summary>Which wall the door is in — always the one facing the middle of the city.</summary>
     public CitySide DoorSide;
 
-    /// <summary>
-    /// Seeds the window-lighting pattern. Fixed at placement rather than drawn per frame: lights
-    /// re-rolled every frame would strobe, which reads as a rendering fault rather than as a city.
-    /// </summary>
+    /// <summary>Seeds the window-lighting pattern. Fixed at placement: re-rolled per frame it would
+    /// strobe, which reads as a rendering fault rather than as a city.</summary>
     public int Seed;
+
+    /// <summary>
+    /// Packed per-face occlusion, 9 bits per face, 5 faces — see <see cref="TestCityOcclusion"/>.
+    /// Starts fully visible so a fresh city draws whole and then resolves over the next few frames,
+    /// rather than flashing empty.
+    /// </summary>
+    public ulong Occlusion = TestCityOcclusion.AllFacesVisible();
+
+    /// <summary>Distance from the eye, refreshed each frame — the render set is nearest-first.</summary>
+    public float EyeDistance;
 }
 
-/// <summary>Everything the renderer needs to know about how the city should LOOK, in one lump, so
-/// the drawing code takes no dependency on the service that owns the settings.</summary>
+/// <summary>Everything the renderer needs to know about how the city should LOOK, in one lump, so the
+/// drawing code takes no dependency on the service that owns the settings.</summary>
 internal struct CityLook
 {
     public float   WallAlpha;
-    public float   FloorHeight;
     public int     LitPercent;
     public bool    ShowWindows;
     public bool    ShowRoofs;
     public bool    ShowEdges;
+    public bool    Occlude;
     public Vector3 LitRgb;
     public Vector3 DarkRgb;
 }
 
 /// <summary>
-/// DEVELOPER BUILD ONLY — <b>Test City</b>. Lays a 1:1 tile grid on the ground under the player and
+/// DEVELOPER BUILD ONLY — <b>Test City</b>. Lays a tile grid on the ground under the player and
 /// stands coloured buildings on it, each with windows and a door at its base.
 ///
-/// <para><b>What it is for.</b> Sansflaire asked for it to try something. It is the dig lab's Test 2 walls
-/// taken to their conclusion: the same measured-once ground lattice, the same background draw list,
-/// but closed boxes with detail on their faces instead of a fence. Nothing about it is player-facing
-/// and nothing about it ships — see the gate on this file.</para>
+/// <para><b>Ground measurement is DECOUPLED from tile density, and that is what makes a huge, fine
+/// grid possible at all.</b> One raycast per tile corner is fine at 32 tiles and ruinous at 256: a
+/// 257×257 lattice is 66,049 rays in the frame the city is built. So the ground is measured on its
+/// own spacing — <see cref="MeasureSpacing"/> yalms, auto-widened so the sample count can never
+/// exceed <see cref="MaxSamplesPerSide"/> — and every height in the city comes from
+/// <see cref="HeightAt"/> interpolating it. Rays now scale with the city's SIZE, not its tile count,
+/// and are bounded whatever the sliders say. This is the same decoupling
+/// <see cref="DigSiteService.SampleGrid"/> performs in reverse, for the same reason.</para>
 ///
-/// <para><b>The lattice is measured ONCE, when the city is built.</b> Draping a grid over terrain is
-/// a downward raycast per vertex, and a 32-tile grid is 1,089 of them; per frame that would be tens
-/// of thousands a second. A city does not move once it is placed, so this is the only place terrain
-/// is sampled and both the floor and every building base read back out of the same array. Same rule
-/// and same reason as <see cref="DigSiteService"/>.</para>
+/// <para><b>The consequence is worth knowing rather than discovering.</b> At 2-yalm sampling a
+/// quarter-yalm tile grid is draped smoothly over the terrain instead of following every bump —
+/// correct to within the sampling, and visibly approximate on broken ground. Tighten
+/// <see cref="MeasureSpacing"/> for a small city; there is no way to have both fine measurement and
+/// a vast extent inside one frame's ray budget.</para>
 ///
 /// <para><b>Escape does not clear the city, deliberately.</b> The house rule is that Escape releases
-/// what the plugin started and <i>never destroys</i> — and a placed city is state somebody spent a
-/// build on, exactly like a running dig test, which Escape also leaves alone. The window is closed
-/// by its own control or by <c>/tchal city</c>.</para>
+/// what the plugin started and <i>never destroys</i> — a placed city is state somebody spent a build
+/// on, exactly like a running dig test, which Escape also leaves alone.</para>
 /// </summary>
 internal sealed class TestCityService
 {
     // ── limits ───────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Ceiling on tiles across. 48 tiles is a 49×49 lattice — 2,401 raycasts in the frame the city
-    /// is built, which is the same order as the dig site's own cap and is paid once.
-    /// </summary>
-    private const int MaxGridTiles = 48;
+    /// <summary>Tiles across. Raised from 48 at Sansflaire's request; it is no longer what bounds the
+    /// raycast count, so the ceiling is now about draw budget rather than build cost.</summary>
+    private const int MaxGridTiles = 400;
     private const int MinGridTiles = 4;
 
-    private const float MinTileSize = 0.5f;
+    /// <summary>Tile size. The floor came down from 0.5 for the same request.</summary>
+    private const float MinTileSize = 0.05f;
     private const float MaxTileSize = 8f;
 
-    /// <summary>Backstop on the building count. A tight pitch on a wide grid could otherwise ask for
-    /// hundreds, and every one of them costs panels every frame.</summary>
-    private const int MaxBuildings = 64;
+    /// <summary>
+    /// Hard ceiling on the ground sample lattice per side. 65 is 4,225 rays in the build frame —
+    /// the same order as the dig site's own cap, and paid once rather than per frame.
+    /// </summary>
+    private const int MaxSamplesPerSide = 65;
 
-    /// <summary>Lifts the drawn grid clear of the surface so it does not vanish into a dip.</summary>
-    private const float GridLift = 0.06f;
+    /// <summary>Backstop on placement. Far above what is drawn — see <see cref="MaxRendered"/>.</summary>
+    private const int MaxBuildings = 400;
 
-    // ── settings, live-editable from the lab window ──────────────────────────
+    /// <summary>
+    /// Buildings drawn per frame, nearest first.
+    ///
+    /// <para><b>This, not the building count, is what keeps a 400-tile city affordable.</b> Each
+    /// building is up to five panels and each panel is a projection plus an occlusion lookup, so the
+    /// per-frame cost has to be bounded by something that does not grow with the city. Drawing the
+    /// nearest N is the standard answer and it is honest: the ones dropped are the far ones.</para>
+    /// </summary>
+    private const int MaxRendered = 64;
+
+    /// <summary>
+    /// Faces re-tested for occlusion per frame, round-robin.
+    ///
+    /// <para>Nine rays each, so 40 faces is ~360 rays a frame — sustainable, where testing every
+    /// visible face every frame would be over 2,000. A full sweep of the drawn set takes a handful of
+    /// frames, which is only visible while the camera is moving.</para>
+    /// </summary>
+    private const int OcclusionFacesPerFrame = 40;
+
+    // ── settings, live-editable from the panel ───────────────────────────────
     //
-    // DELIBERATELY NOT PERSISTED, and not in Configuration either. DigTuning exists because dig
-    // ranges are a feel worth keeping across a rebuild; this is a first cut of an experiment, and a
-    // persisted shape is a migration path forever (§3). If it earns one it gets its own file, the
-    // way dig-tuning.json did — not a corner of the player's config.
+    // DELIBERATELY NOT PERSISTED, and not in Configuration either. DigTuning earned its own JSON
+    // because a dig range is a feel worth keeping across a rebuild; an experiment has not, and a
+    // persisted shape is a migration path forever (§3).
 
-    /// <summary>Side of one tile, in yalms. 1.0 is the literal 1:1 tile that was asked for.</summary>
+    /// <summary>Side of one tile, in yalms.</summary>
     public float TileSize = 1f;
 
-    /// <summary>Tiles across the whole grid, centred on the player.</summary>
+    /// <summary>Tiles across the whole city, centred on the player.</summary>
     public int GridTiles = 32;
+
+    /// <summary>Spacing of the ground samples, in yalms. Auto-widened if the extent demands it.</summary>
+    public float MeasureSpacing = 2f;
 
     /// <summary>Footprint of one building, in tiles. Square.</summary>
     public int BuildingTiles = 5;
@@ -132,8 +165,12 @@ internal sealed class TestCityService
     public float MinHeight = 9f;
     public float MaxHeight = 28f;
 
-    /// <summary>Storey height. Windows are laid out one row per floor, so this sets their spacing.</summary>
+    /// <summary>Storey height. Windows are one row per floor, so this sets their spacing.</summary>
     public float FloorHeight = 3.2f;
+
+    /// <summary>Buildings beyond this are not drawn at all. 0 disables the distance cut (the nearest
+    /// <see cref="MaxRendered"/> still applies — that one is not optional).</summary>
+    public float DrawDistance = 220f;
 
     public float WallAlpha   = 0.88f;
     public int   LitPercent  = 55;
@@ -142,53 +179,136 @@ internal sealed class TestCityService
     public bool  ShowRoofs   = true;
     public bool  ShowEdges   = true;
 
+    /// <summary>Hide the parts of a building the world stands in front of.</summary>
+    public bool Occlude = true;
+
+    // Grid drawing. Extent and fineness are separate knobs from the city's own — see TestCityGrid.
+    public int   FineTiles  = 32;
+    public int   MajorEvery = 8;
+    public bool  ShowChecker = true;
+
     public Vector3 GridRgb = new(0.62f, 0.70f, 0.86f);
     public Vector3 LitRgb  = new(1.00f, 0.88f, 0.52f);
     public Vector3 DarkRgb = new(0.10f, 0.12f, 0.18f);
 
     // ── state ────────────────────────────────────────────────────────────────
 
-    private readonly Random            _rng       = new();
+    private readonly Random             _rng       = new();
     private readonly List<CityBuilding> _buildings = new();
+    private readonly List<CityBuilding> _rendered  = new();
 
-    private Vector3[,] _grid = new Vector3[0, 0];
-    private int        _tiles;
-    private float      _builtTileSize;
-    private uint       _territory;
+    /// <summary>Measured ground, on <see cref="_sampleSpacing"/> — NOT the tile grid.</summary>
+    private Vector3[,] _samples = new Vector3[0, 0];
+    private float      _sampleSpacing;
 
-    /// <summary>Player's tile at build time, for the readout and the clear zone.</summary>
+    /// <summary>World XZ of tile corner (0, 0), and the built tile size. Held separately from the
+    /// slider so editing it mid-frame cannot move a city that is being drawn.</summary>
+    private float _originX;
+    private float _originZ;
+    private float _builtTileSize;
+    private int   _tiles;
+
+    private uint _territory;
+
     private int _playerI;
     private int _playerJ;
 
+    /// <summary>Round-robin cursor for the occlusion budget, over <c>_buildings</c>.</summary>
+    private int _occlCursor;
+
     /// <summary>
-    /// Panels (walls and roofs) actually submitted on the last frame.
+    /// Panels submitted on the last frame.
     ///
     /// <para><b>This counter is the point, not decoration.</b> Face culling that comes out backwards
     /// draws precisely the hidden faces, and a city whose every face was culled is indistinguishable
-    /// from a city that was never built. Buildings &gt; 0 with panels at 0 says the cull is inverted;
-    /// both at 0 says placement found nowhere to build.</para>
+    /// from a city that was never built. Buildings &gt; 0 with panels 0 says the cull is inverted;
+    /// both 0 says placement found nowhere to build.</para>
     /// </summary>
     public int PanelsDrawn { get; private set; }
 
-    /// <summary>Whether the eye used for culling and ordering came from the game camera, or from the
-    /// player-head fallback. Surfaced because a wrong eye looks like broken geometry.</summary>
+    /// <summary>Occlusion rays fired on the last frame — the budget, made visible.</summary>
+    public int RaysLastFrame { get; private set; }
+
+    /// <summary>Buildings actually drawn, against <see cref="BuildingCount"/> placed.</summary>
+    public int RenderedCount => _rendered.Count;
+
+    /// <summary>Whether the eye used for culling and ordering came from the game camera or from the
+    /// player-head fallback. Surfaced because a wrong eye looks exactly like broken geometry.</summary>
     public bool EyeFromCamera { get; private set; }
 
-    public bool IsBuilt => _grid.GetLength(0) >= 2;
+    public bool IsBuilt => _samples.GetLength(0) >= 2 && _tiles > 0;
 
-    public int BuildingCount => _buildings.Count;
+    public int   BuildingCount => _buildings.Count;
+    public int   TilesAcross   => _tiles;
+    public float BuiltTileSize => _builtTileSize;
+    public float SampleSpacing => _sampleSpacing;
+    public int   SamplesPerSide => _samples.GetLength(0);
 
-    public int TilesAcross => _tiles;
+    public float Extent => _tiles * _builtTileSize;
 
-    public Vector3 Origin => IsBuilt ? _grid[0, 0] : Vector3.Zero;
+    public int PlayerTileX => _playerI;
+    public int PlayerTileZ => _playerJ;
+
+    // ── geometry, shared by the grid and the buildings ───────────────────────
+
+    /// <summary>
+    /// World XZ of a tile corner. <b>The single source of tile geometry</b> — the grid drawer and the
+    /// building renderer both come through here, so there is one copy of
+    /// <c>origin + index * tileSize</c> in the whole feature and nothing to drift against.
+    /// </summary>
+    public Vector2 TileCorner(int i, int j) =>
+        new(_originX + i * _builtTileSize, _originZ + j * _builtTileSize);
+
+    /// <summary>
+    /// Measured ground height at a world XZ, bilinear over the sample lattice.
+    ///
+    /// <para>Clamped to the lattice rather than refusing outside it: a building's edge or a grid line
+    /// at the very boundary should flatten against the edge sample, not fall through to zero.</para>
+    /// </summary>
+    public float HeightAt(float x, float z)
+    {
+        int n = _samples.GetLength(0);
+        if (n < 2) return 0f;
+
+        float span = MathF.Max(0.0001f, (n - 1) * _sampleSpacing);
+
+        float fi = Math.Clamp((x - _samples[0, 0].X) / span, 0f, 1f) * (n - 1);
+        float fj = Math.Clamp((z - _samples[0, 0].Z) / span, 0f, 1f) * (n - 1);
+
+        int i0 = Math.Clamp((int)fi, 0, n - 2);
+        int j0 = Math.Clamp((int)fj, 0, n - 2);
+
+        float ti = fi - i0;
+        float tj = fj - j0;
+
+        float y00 = _samples[i0,     j0    ].Y;
+        float y10 = _samples[i0 + 1, j0    ].Y;
+        float y01 = _samples[i0,     j0 + 1].Y;
+        float y11 = _samples[i0 + 1, j0 + 1].Y;
+
+        return (y00 * (1f - ti) + y10 * ti) * (1f - tj)
+             + (y01 * (1f - ti) + y11 * ti) * tj;
+    }
+
+    /// <summary>A tile corner lifted to the measured ground — what both drawers actually want.</summary>
+    public Vector3 TileCornerGround(int i, int j)
+    {
+        var c = TileCorner(i, j);
+        return new Vector3(c.X, HeightAt(c.X, c.Y), c.Y);
+    }
+
+    /// <summary>
+    /// The tile a world XZ falls in — the exact inverse of <see cref="TileCorner"/>, and kept beside
+    /// it so the two cannot be changed independently. Not clamped: the caller decides what being
+    /// outside the city means.
+    /// </summary>
+    public (int I, int J) TileIndexAt(float x, float z) =>
+        ((int)MathF.Floor((x - _originX) / MathF.Max(0.0001f, _builtTileSize)),
+         (int)MathF.Floor((z - _originZ) / MathF.Max(0.0001f, _builtTileSize)));
 
     // ── actions ──────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Measures the ground under the player, then stands buildings on it. One frame's work: unlike a
-    /// dig site nothing is hidden here, so there is nothing to spread over ticks to keep secret and
-    /// no reason for the player to wait.
-    /// </summary>
+    /// <summary>Measures the ground under the player, then stands buildings on it.</summary>
     public string Build()
     {
         var player = Plugin.ObjectTable.LocalPlayer;
@@ -200,11 +320,12 @@ internal sealed class TestCityService
 
             _territory = Plugin.ClientState.TerritoryType;
 
-            SampleGrid(player.Position);
+            SampleGround(player.Position);
             PlaceBuildings();
 
-            return $"city built — {_buildings.Count} building(s) on a {_tiles}×{_tiles} grid "
-                 + $"of {_builtTileSize:0.##}y tiles.";
+            return $"city built — {_buildings.Count} building(s), {_tiles}×{_tiles} tiles of "
+                 + $"{_builtTileSize:0.###}y ({Extent:0}y across), ground sampled every "
+                 + $"{_sampleSpacing:0.##}y.";
         }
         catch (Exception ex)
         {
@@ -218,19 +339,19 @@ internal sealed class TestCityService
     {
         bool had = IsBuilt;
 
-        _grid = new Vector3[0, 0];
-        _tiles = 0;
+        _samples = new Vector3[0, 0];
+        _tiles   = 0;
         _buildings.Clear();
-        PanelsDrawn = 0;
+        _rendered.Clear();
+        PanelsDrawn   = 0;
+        RaysLastFrame = 0;
+        _occlCursor   = 0;
 
         return had ? "city cleared." : "no city to clear.";
     }
 
-    /// <summary>
-    /// Re-measures and re-places without re-rolling the look. Used by the window's sliders: changing
-    /// the tile size or the grid extent has to be visible on the city in front of you, not on the
-    /// next one.
-    /// </summary>
+    /// <summary>Re-measures and re-places. Used by the panel's sliders: changing the tile size or the
+    /// extent has to be visible on the city in front of you, not on the next one.</summary>
     public void Rebuild()
     {
         if (!IsBuilt) return;
@@ -239,8 +360,8 @@ internal sealed class TestCityService
 
     /// <summary>
     /// Drops the city when the measured ground stops being the ground we are standing on. The
-    /// lattice is a set of heights in one territory; carried into another it would draw a city
-    /// hanging in the air at the old zone's altitudes.
+    /// samples are heights in one territory; carried into another they would draw a city hanging in
+    /// the air at the old zone's altitudes.
     /// </summary>
     public void Tick()
     {
@@ -267,75 +388,86 @@ internal sealed class TestCityService
         }
     }
 
-    // ── placement ────────────────────────────────────────────────────────────
+    // ── measurement ──────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Measures ground height at every tile corner.
+    /// Measures ground height on its own spacing, and fixes the tile origin.
     ///
     /// <para><b>The lattice is snapped to a world-aligned multiple of the tile size</b>, not centred
     /// exactly on the player. Two builds from slightly different standing positions then land on the
-    /// same tiles, which is what makes "that building is on that tile" a statement you can check
-    /// twice rather than a coincidence of where you happened to stop walking.</para>
+    /// same tiles, which is what makes "that building is on that tile" checkable twice rather than a
+    /// coincidence of where you happened to stop walking.</para>
     /// </summary>
-    private void SampleGrid(Vector3 centre)
+    private void SampleGround(Vector3 centre)
     {
         int   tiles = Math.Clamp(GridTiles, MinGridTiles, MaxGridTiles);
         float t     = Math.Clamp(TileSize, MinTileSize, MaxTileSize);
 
-        float ox = MathF.Floor(centre.X / t) * t - (tiles / 2) * t;
-        float oz = MathF.Floor(centre.Z / t) * t - (tiles / 2) * t;
+        _originX = MathF.Floor(centre.X / t) * t - (tiles / 2) * t;
+        _originZ = MathF.Floor(centre.Z / t) * t - (tiles / 2) * t;
+        _builtTileSize = t;
+        _tiles         = tiles;
 
-        int n    = tiles + 1;
-        var grid = new Vector3[n, n];
+        float extent = tiles * t;
+
+        // Samples wanted at the requested spacing, then CLAMPED — and the spacing recomputed from
+        // whatever count survived. That inversion is the whole safety: the slider expresses a wish
+        // and the cap decides, so no combination of extent and spacing can ask for more rays than
+        // MaxSamplesPerSide squared.
+        int wanted = (int)MathF.Ceiling(extent / MathF.Max(0.1f, MeasureSpacing)) + 1;
+        int n      = Math.Clamp(wanted, 2, MaxSamplesPerSide);
+
+        _sampleSpacing = extent / (n - 1);
+
+        var samples = new Vector3[n, n];
 
         for (int i = 0; i < n; i++)
         {
-            float wx = ox + i * t;
+            float wx = _originX + i * _sampleSpacing;
 
             for (int j = 0; j < n; j++)
             {
-                float wz = oz + j * t;
+                float wz = _originZ + j * _sampleSpacing;
 
-                // GroundAt never fails — a ray that finds nothing keeps the reference height. That
-                // is exactly right for drawing (a hole in the grid is worse than a vertex a little
-                // off) and would be wrong for placing anything the player has to reach.
+                // GroundAt never fails — a ray that finds nothing keeps the reference height. Right
+                // for drawing (a hole in the grid is worse than a vertex slightly off) and wrong for
+                // placing anything the player has to reach, which is not what this is.
                 var g = DigGround.GroundAt(centre, wx, wz);
-                grid[i, j] = new Vector3(wx, g.Y + GridLift, wz);
+                samples[i, j] = new Vector3(wx, g.Y, wz);
             }
         }
 
-        _grid          = grid;
-        _tiles         = tiles;
-        _builtTileSize = t;
+        _samples = samples;
 
-        _playerI = Math.Clamp((int)MathF.Floor((centre.X - ox) / t), 0, tiles - 1);
-        _playerJ = Math.Clamp((int)MathF.Floor((centre.Z - oz) / t), 0, tiles - 1);
+        _playerI = Math.Clamp((int)MathF.Floor((centre.X - _originX) / t), 0, tiles - 1);
+        _playerJ = Math.Clamp((int)MathF.Floor((centre.Z - _originZ) / t), 0, tiles - 1);
 
-        Diag.Info($"[City] ground sampled: {tiles}×{tiles} tiles of {t:0.##}y, {n * n} point(s).");
+        Diag.Info($"[City] ground sampled: {n}×{n} point(s) every {_sampleSpacing:0.##}y over "
+                + $"{extent:0}y; tile grid {tiles}×{tiles} at {t:0.###}y.");
     }
 
+    // ── placement ────────────────────────────────────────────────────────────
+
     /// <summary>
-    /// Fills the grid with blocks on a fixed pitch, skipping the ones that would land on top of the
-    /// player. A regular pitch rather than scattered placement on purpose: the thing being looked at
-    /// is whether buildings sit on tile boundaries, and a grid of them makes a misalignment of half a
-    /// tile obvious across the whole scene instead of arguable on one box.
+    /// Fills the grid with blocks on a fixed pitch, skipping the ones that would land on the player.
+    /// A regular pitch is deliberate: the thing being looked at is whether buildings sit on tile
+    /// boundaries, and a grid of them makes a half-tile misalignment obvious across the whole scene
+    /// instead of arguable on one box.
     /// </summary>
     private void PlaceBuildings()
     {
-        int w      = Math.Clamp(BuildingTiles, 1, 12);
-        int street = Math.Clamp(StreetTiles, 1, 8);
-        int clear  = Math.Clamp(ClearTiles, 0, 20);
+        int w      = Math.Clamp(BuildingTiles, 1, 64);
+        int street = Math.Clamp(StreetTiles, 1, 64);
+        int clear  = Math.Clamp(ClearTiles, 0, 200);
         int pitch  = w + street;
 
-        int  idx = 0;
+        int  idx  = 0;
         bool full = false;
 
         for (int i = 0; i + w <= _tiles && !full; i += pitch)
         {
             for (int j = 0; j + w <= _tiles; j += pitch)
             {
-                // The player's own ground, plus a margin, stays empty — "surrounding my character"
-                // rather than "on top of my character".
                 bool overPlayer = _playerI >= i - clear && _playerI < i + w + clear
                                && _playerJ >= j - clear && _playerJ < j + w + clear;
                 if (overPlayer) continue;
@@ -347,22 +479,22 @@ internal sealed class TestCityService
         }
 
         if (full)
-            Diag.Info($"[City] stopped at the {MaxBuildings}-building cap — widen the streets or "
-                    + "shrink the grid for a full block layout.");
+            Diag.Info($"[City] stopped at the {MaxBuildings}-building cap — widen the streets, "
+                    + "enlarge the footprint, or shrink the grid for a full block layout.");
     }
 
     private CityBuilding MakeBuilding(int i, int j, int w, int idx)
     {
-        // Height quantised to whole floors, so the window rows divide the wall exactly and the top
-        // row is not a sliver. The slider range is honoured to within one storey.
+        // Quantised to whole floors so the window rows divide the wall exactly and the top row is
+        // not a sliver. The slider range is honoured to within one storey.
         float wanted = MinHeight + (float)_rng.NextDouble() * MathF.Max(0f, MaxHeight - MinHeight);
-        int   floors = Math.Clamp((int)MathF.Round(wanted / MathF.Max(1f, FloorHeight)), 1, 40);
+        int   floors = Math.Clamp((int)MathF.Round(wanted / MathF.Max(1f, FloorHeight)), 1, 60);
         float height = floors * MathF.Max(1f, FloorHeight);
 
         Footprint(i, j, w, out float lowest, out float highest);
 
         // Door faces the middle of the city: a building east of centre opens westward. Streets are
-        // the gaps between blocks, so this is also the side a street is on.
+        // the gaps between blocks, so that is also the side a street is on.
         float dx = (i + w * 0.5f) - _tiles * 0.5f;
         float dz = (j + w * 0.5f) - _tiles * 0.5f;
 
@@ -386,19 +518,25 @@ internal sealed class TestCityService
         };
     }
 
-    /// <summary>Lowest and highest measured ground under a footprint, corners included.</summary>
+    /// <summary>
+    /// Lowest and highest ground under a footprint, from the interpolated surface.
+    ///
+    /// <para>Nine probes — corners, edge midpoints and the centre — rather than every tile corner.
+    /// The surface between samples is a bilinear patch, so more probes on a small footprint cannot
+    /// reveal anything the nine miss; and they cost nothing, since none of them is a ray.</para>
+    /// </summary>
     private void Footprint(int i, int j, int w, out float lowest, out float highest)
     {
         lowest  = float.MaxValue;
         highest = float.MinValue;
 
-        int n = _grid.GetLength(0);
-
-        for (int a = i; a <= i + w && a < n; a++)
+        for (int a = 0; a <= 2; a++)
         {
-            for (int b = j; b <= j + w && b < n; b++)
+            for (int b = 0; b <= 2; b++)
             {
-                float y = _grid[a, b].Y;
+                var c = TileCorner(i + a * w / 2, j + b * w / 2);
+                float y = HeightAt(c.X, c.Y);
+
                 if (y < lowest)  lowest  = y;
                 if (y > highest) highest = y;
             }
@@ -407,10 +545,8 @@ internal sealed class TestCityService
         if (lowest > highest) { lowest = 0f; highest = 0f; }
     }
 
-    /// <summary>
-    /// Distinct hues rather than shades of one. Cycled in order instead of drawn at random, because
-    /// random picks put two of the same colour next to each other often enough to look like a bug.
-    /// </summary>
+    /// <summary>Distinct hues rather than shades of one, cycled in order instead of drawn at random —
+    /// random picks put two of the same colour side by side often enough to look like a bug.</summary>
     private static readonly Vector3[] Palette =
     {
         new(0.86f, 0.38f, 0.36f),   // brick
@@ -425,51 +561,113 @@ internal sealed class TestCityService
 
     // ── in-world ─────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// The floor grid, then the buildings over it.
-    ///
-    /// <para>The grid goes through <see cref="DigVolumeRender.DrawGroundGrid"/> at stride 1 rather
-    /// than getting its own drawer: at that stride it is a checker and a line on every single tile,
-    /// which is exactly the 1:1 grid wanted, and reusing it means there is no second opinion about
-    /// where a tile edge lies.</para>
-    /// </summary>
+    /// <summary>The floor grid, then the buildings over it.</summary>
     public void DrawWorld()
     {
         if (!IsBuilt) return;
 
         try
         {
-            if (ShowGrid) DigVolumeRender.DrawGroundGrid(_grid, 1, GridRgb);
-
             EyeFromCamera = TryEye(out var eye);
             if (!EyeFromCamera)
             {
-                // No camera to read. Ordering and culling both need an eye, and a fallback is
-                // honest only if it is visible — hence EyeFromCamera in the lab readout. Roughly
-                // head height above the player is close enough to keep the scene coherent.
+                // No camera to read. Ordering, culling and occlusion all need an eye, and a fallback
+                // is only honest if it is visible — hence EyeFromCamera in the panel. Roughly head
+                // height above the player keeps the scene coherent.
                 var lp = Plugin.ObjectTable.LocalPlayer;
                 if (lp == null) { PanelsDrawn = 0; return; }
                 eye = lp.Position + new Vector3(0f, 8f, 0f);
             }
 
+            if (ShowGrid) TestCityGrid.Draw(this, eye, GridRgb, FineTiles, MajorEvery, ShowChecker);
+
+            SelectRendered(eye);
+            RefreshOcclusion(eye);
+
             var look = new CityLook
             {
                 WallAlpha   = Math.Clamp(WallAlpha, 0.05f, 1f),
-                FloorHeight = MathF.Max(1f, FloorHeight),
                 LitPercent  = Math.Clamp(LitPercent, 0, 100),
                 ShowWindows = ShowWindows,
                 ShowRoofs   = ShowRoofs,
                 ShowEdges   = ShowEdges,
+                Occlude     = Occlude,
                 LitRgb      = LitRgb,
                 DarkRgb     = DarkRgb,
             };
 
-            PanelsDrawn = TestCityRender.Draw(_grid, _buildings, eye, look);
+            PanelsDrawn = TestCityRender.Draw(this, _rendered, eye, look);
         }
         catch (Exception ex)
         {
             Diag.Error($"[City] world draw failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Picks the nearest buildings within the draw distance. Rebuilt every frame rather than cached:
+    /// the camera moves constantly, and sorting a few hundred floats is nothing next to the panels it
+    /// decides not to draw.
+    /// </summary>
+    private void SelectRendered(Vector3 eye)
+    {
+        _rendered.Clear();
+
+        float limit = DrawDistance > 0f ? DrawDistance : float.MaxValue;
+
+        foreach (var b in _buildings)
+        {
+            var c = TileCorner(b.TileX + b.TilesX / 2, b.TileZ + b.TilesZ / 2);
+
+            // Flat distance on purpose: a tall building's height should not push it out of the draw
+            // set, and the eye is usually well above the ground anyway.
+            b.EyeDistance = MathF.Sqrt((c.X - eye.X) * (c.X - eye.X) + (c.Y - eye.Z) * (c.Y - eye.Z));
+
+            if (b.EyeDistance <= limit) _rendered.Add(b);
+        }
+
+        _rendered.Sort(static (x, y) => x.EyeDistance.CompareTo(y.EyeDistance));
+
+        if (_rendered.Count > MaxRendered) _rendered.RemoveRange(MaxRendered, _rendered.Count - MaxRendered);
+    }
+
+    /// <summary>
+    /// Re-tests occlusion for a budgeted slice of buildings, round-robin.
+    ///
+    /// <para>The cursor walks <c>_buildings</c> — the placed set, in a fixed order — rather than the
+    /// render set, which is re-sorted every frame and would make the cursor meaningless. Buildings
+    /// outside the render set are skipped without a ray, so the budget is spent where it shows.</para>
+    /// </summary>
+    private void RefreshOcclusion(Vector3 eye)
+    {
+        RaysLastFrame = 0;
+
+        if (_buildings.Count == 0) return;
+
+        if (!Occlude)
+        {
+            // Reset to fully visible as the toggle goes off, or a stale mask would keep hiding parts
+            // of a building with occlusion apparently disabled — which looks like a rendering bug and
+            // is exactly the kind of thing that costs an hour.
+            foreach (var b in _buildings) b.Occlusion = TestCityOcclusion.AllFacesVisible();
+            return;
+        }
+
+        int faces = 0;
+        int steps = 0;
+
+        while (faces < OcclusionFacesPerFrame && steps < _buildings.Count)
+        {
+            var b = _buildings[_occlCursor % _buildings.Count];
+            _occlCursor = (_occlCursor + 1) % _buildings.Count;
+            steps++;
+
+            if (!_rendered.Contains(b)) continue;
+
+            faces += TestCityRender.TestOcclusion(this, b, eye);
+        }
+
+        RaysLastFrame = faces * TestCityOcclusion.CellCount;
     }
 
     /// <summary>
@@ -481,7 +679,7 @@ internal sealed class TestCityService
     /// from, and <c>Graphics.Scene.Camera</c> inherits <c>Position</c> from
     /// <c>Graphics.Scene.Object</c> at +0x50. A precondition per hop rather than a try/catch around
     /// the lot: a C# catch cannot survive a bad native dereference (BROKEN.md 012), so the null
-    /// checks ARE the safety and the catch is only for the managed arithmetic after it.</para>
+    /// checks ARE the safety.</para>
     /// </summary>
     private static unsafe bool TryEye(out Vector3 eye)
     {

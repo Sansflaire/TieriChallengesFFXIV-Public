@@ -7,40 +7,44 @@ using Dalamud.Bindings.ImGui;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY — the <b>Test City</b> panel: build it, clear it, and dial in the tiles,
-/// the blocks and the look. Everything about the experiment lives in three gated files (this,
-/// <see cref="TestCityService"/>, <see cref="TestCityRender"/>) for the same reason the dig lab is
-/// one file per test: a feature whose rules are in a doc, whose commands are in the command switch
-/// and whose settings are in a header is four places to forget one of, and the one people forget is
-/// the gate.
+/// DEVELOPER BUILD ONLY — the <b>Test City</b> lab. <b>One window, one tab per test</b>, at Sansflaire's
+/// instruction: the city on one tab, the circular goal area on another, and any future test as
+/// another tab rather than another window. The dig lab's lesson applies — everything about a test
+/// (its rules, its commands, its buttons and its settings) lives in one gated place, because a test
+/// spread across four files is four places to forget one of, and the one people forget is the gate.
 ///
 /// <para>Raw ImGui rather than PanacheUI, which is permitted here: the match-the-main-window rule
 /// covers <i>player-facing</i> surfaces, and no player can reach this.</para>
 ///
-/// <para><b>A slider that changes WHERE something goes rebuilds the city; one that changes how it
-/// LOOKS does not.</b> Tile size, grid extent, block pitch and the height range all feed placement
-/// and the measured lattice, so they re-run the build on release — and that re-rolls heights and
-/// window patterns, which is stated on screen rather than being a surprise. Opacity, lit fraction
-/// and the colours are pure drawing and take effect on the next frame with the city untouched.</para>
+/// <para><b>A slider that changes WHERE something goes rebuilds; one that changes how it LOOKS does
+/// not.</b> Tile size, extent, block pitch, height range and measure spacing all feed placement or
+/// the measured ground, so they re-run the build on release — and that re-rolls heights and window
+/// patterns, which is stated on screen rather than being a surprise. Opacity, lit fraction, colours
+/// and the occlusion toggle are pure drawing and take effect on the next frame.</para>
 /// </summary>
 internal sealed class TestCityWindow
 {
     public bool IsVisible;
 
     private readonly TestCityService _city;
+    private readonly TestGoalService _goal;
 
     private static readonly Vector4 Head = new(0.95f, 0.78f, 0.35f, 1f);
     private static readonly Vector4 Rule = new(0.68f, 0.68f, 0.76f, 1f);
     private static readonly Vector4 Ok   = new(0.44f, 0.86f, 0.62f, 1f);
     private static readonly Vector4 Warn = new(0.95f, 0.62f, 0.35f, 1f);
 
-    public TestCityWindow(TestCityService city) => _city = city;
+    public TestCityWindow(TestCityService city, TestGoalService goal)
+    {
+        _city = city;
+        _goal = goal;
+    }
 
     public void Draw()
     {
         if (!IsVisible) return;
 
-        ImGui.SetNextWindowSize(new Vector2(520, 640), ImGuiCond.FirstUseEver);
+        ImGui.SetNextWindowSize(new Vector2(560, 700), ImGuiCond.FirstUseEver);
 
         if (!ImGui.Begin("Test City  (DEV ONLY)###tc_test_city", ref IsVisible))
         {
@@ -58,23 +62,52 @@ internal sealed class TestCityWindow
     {
         ImGui.TextColored(Head, "DEVELOPER BUILD ONLY");
         ImGui.TextColored(Rule,
-            "None of this ships. The service, the renderer and this window are all behind\n"
-          + "#if DEV_BUILD, so a player cannot reach any of it.");
+            "None of this ships. Every service, renderer and tab here is behind #if DEV_BUILD,\n"
+          + "so a player cannot reach any of it.");
 
         ImGui.Separator();
 
-        DrawActions();
-        DrawStatus();
+        if (!ImGui.BeginTabBar("##tc_city_tabs")) return;
+
+        if (ImGui.BeginTabItem("City"))
+        {
+            // Guarded per tab: one tab throwing must not take the tab bar down with it, and an
+            // EndTabItem that never ran would unbalance ImGui for every window drawn afterwards.
+            try { DrawCityTab(); }
+            catch (Exception ex) { Diag.Error($"[City] city tab failed: {ex.Message}"); }
+
+            ImGui.EndTabItem();
+        }
+
+        if (ImGui.BeginTabItem("Goal Area"))
+        {
+            try { DrawGoalTab(); }
+            catch (Exception ex) { Diag.Error($"[Goal] tab failed: {ex.Message}"); }
+
+            ImGui.EndTabItem();
+        }
+
+        ImGui.EndTabBar();
+    }
+
+    // ── tab 1: the city ──────────────────────────────────────────────────────
+
+    private void DrawCityTab()
+    {
+        DrawCityActions();
+        DrawCityStatus();
 
         ImGui.Separator();
 
-        Section("Ground grid — 1:1 tiles", DrawGrid);
+        Section("Ground grid — tiles and measurement", DrawGrid);
+        Section("Grid drawing — fine window and major lines", DrawGridDraw);
         Section("Blocks — where buildings go", DrawBlocks);
         Section("Buildings — height and floors", DrawHeights);
         Section("Look — opacity, windows, colours", DrawLook);
+        Section("Occlusion — hide what the world blocks", DrawOcclusion);
     }
 
-    private void DrawActions()
+    private void DrawCityActions()
     {
         if (ImGui.Button("Build city here")) Say(_city.Build());
 
@@ -92,14 +125,13 @@ internal sealed class TestCityWindow
     /// <summary>
     /// The live readout, and it is not decoration.
     ///
-    /// <para><b>Panels is the number that can tell a rendering fault from an empty city.</b> There is
-    /// no depth buffer, so face visibility is decided here rather than by the GPU — and a visibility
-    /// test that came out inverted would draw precisely the four hidden faces of every building,
-    /// which on screen is indistinguishable from nothing having been placed. Buildings above zero
-    /// with panels at zero says the cull is backwards; both at zero says placement found nowhere to
-    /// build. Without this line those two look the same.</para>
+    /// <para><b>Panels is the number that tells a rendering fault from an empty city.</b> There is no
+    /// depth buffer, so face visibility is decided in our code rather than by the GPU — and a test
+    /// that came out inverted would draw precisely the hidden faces of every building, which on
+    /// screen is indistinguishable from nothing having been placed. Buildings above zero with panels
+    /// at zero says the cull is backwards; both at zero says placement found nowhere to build.</para>
     /// </summary>
-    private void DrawStatus()
+    private void DrawCityStatus()
     {
         if (!_city.IsBuilt)
         {
@@ -107,22 +139,28 @@ internal sealed class TestCityWindow
             return;
         }
 
-        var o = _city.Origin;
+        ImGui.TextColored(Ok, $"{_city.RenderedCount} of {_city.BuildingCount} building(s) drawn · "
+                            + $"{_city.PanelsDrawn} panel(s) · {_city.RaysLastFrame} occlusion ray(s) "
+                            + "last frame");
 
-        ImGui.TextColored(Ok, $"{_city.BuildingCount} building(s) · {_city.PanelsDrawn} panel(s) "
-                            + "drawn last frame");
-        ImGui.TextDisabled($"{_city.TilesAcross}×{_city.TilesAcross} tiles · "
-                         + $"grid corner ({o.X:0.#}, {o.Z:0.#})");
+        ImGui.TextDisabled($"{_city.TilesAcross}×{_city.TilesAcross} tiles of "
+                         + $"{_city.BuiltTileSize:0.###}y = {_city.Extent:0}y across · ground sampled "
+                         + $"{_city.SamplesPerSide}×{_city.SamplesPerSide} every "
+                         + $"{_city.SampleSpacing:0.##}y");
 
-        // Which eye the culling and the ordering used. A wrong eye position looks exactly like broken
-        // geometry, so the fallback is said out loud rather than substituted quietly.
-        if (_city.EyeFromCamera)
-            ImGui.TextDisabled("eye: game camera");
-        else
-            ImGui.TextColored(Warn, "eye: PLAYER FALLBACK — camera unreadable, faces may sort oddly");
+        // Which eye the culling, the ordering and the occlusion used. A wrong eye position looks
+        // exactly like broken geometry, so the fallback is said out loud rather than substituted
+        // quietly.
+        if (_city.EyeFromCamera) ImGui.TextDisabled("eye: game camera");
+        else ImGui.TextColored(Warn, "eye: PLAYER FALLBACK — camera unreadable, faces may sort oddly");
 
         if (_city.BuildingCount > 0 && _city.PanelsDrawn == 0)
             ImGui.TextColored(Warn, "buildings placed but nothing drawn — face culling is inverted");
+
+        if (_city.SampleSpacing > _city.BuiltTileSize * 4f)
+            ImGui.TextColored(Warn, $"ground is measured every {_city.SampleSpacing:0.##}y but tiles "
+                                  + $"are {_city.BuiltTileSize:0.###}y — the grid is draped, not "
+                                  + "followed. Tighten measure spacing or shrink the extent.");
     }
 
     private void DrawGrid()
@@ -131,40 +169,62 @@ internal sealed class TestCityWindow
 
         ImGui.ColorEdit3("Grid colour", ref _city.GridRgb);
 
-        ImGui.SliderFloat("Tile size (yalms)", ref _city.TileSize, 0.5f, 8f, "%.2f");
+        ImGui.SliderFloat("Tile size (yalms)", ref _city.TileSize, 0.05f, 8f, "%.3f");
         RebuildIfReleased();
 
-        ImGui.SliderInt("Tiles across", ref _city.GridTiles, 4, 48);
+        ImGui.SliderInt("Tiles across", ref _city.GridTiles, 4, 400);
         RebuildIfReleased();
 
-        ImGui.TextDisabled("The grid is measured once per build — one downward raycast per tile\n"
-                         + "corner, so 48 tiles is ~2,400 rays paid in a single frame. Buildings\n"
-                         + "take their corners from this same lattice, which is what makes them\n"
-                         + "line up with the tiles rather than merely look as though they do.");
+        ImGui.SliderFloat("Ground measured every (yalms)", ref _city.MeasureSpacing, 0.5f, 16f, "%.2f");
+        RebuildIfReleased();
+
+        ImGui.TextDisabled("MEASUREMENT IS DECOUPLED FROM TILES, and it has to be: one ray per tile\n"
+                         + "corner is 66,000 rays at 400 tiles. Ground is sampled on its own spacing\n"
+                         + "and every height is interpolated from it, so rays scale with the city's\n"
+                         + "SIZE and are capped at 65 per side whatever these sliders say. The cost\n"
+                         + "is that coarse sampling drapes the grid over terrain instead of following\n"
+                         + "it — the readout above warns when the two are badly mismatched.");
+    }
+
+    private void DrawGridDraw()
+    {
+        ImGui.SliderInt("Fine tiles around you", ref _city.FineTiles, 2, TestCityGrid.MaxFine);
+        ImGui.SliderInt("Major line every N tiles", ref _city.MajorEvery, 1, 64);
+        ImGui.Checkbox("Checkerboard", ref _city.ShowChecker);
+
+        ImGui.TextDisabled("The fine 1:1 grid is drawn in a window that FOLLOWS YOU, and major lines\n"
+                         + "cover the whole extent. Drawing every tile of a 400-tile grid would be\n"
+                         + "160,000 checker quads a frame, so this is the one part that does not\n"
+                         + "scale with the city. Both are capped; the major step widens itself rather\n"
+                         + "than drawing a partial grid, because a grid with a false edge is worse\n"
+                         + "than a coarse one.");
     }
 
     private void DrawBlocks()
     {
-        ImGui.SliderInt("Building footprint (tiles)", ref _city.BuildingTiles, 1, 12);
+        ImGui.SliderInt("Building footprint (tiles)", ref _city.BuildingTiles, 1, 64);
         RebuildIfReleased();
 
-        ImGui.SliderInt("Street width (tiles)", ref _city.StreetTiles, 1, 8);
+        ImGui.SliderInt("Street width (tiles)", ref _city.StreetTiles, 1, 64);
         RebuildIfReleased();
 
-        ImGui.SliderInt("Clear tiles around you", ref _city.ClearTiles, 0, 20);
+        ImGui.SliderInt("Clear tiles around you", ref _city.ClearTiles, 0, 200);
         RebuildIfReleased();
 
-        ImGui.TextDisabled("Blocks are laid on a fixed pitch of footprint + street. A regular grid\n"
-                         + "is deliberate: a half-tile misalignment shows up across the whole scene\n"
-                         + "instead of being arguable on one box.");
+        ImGui.SliderFloat("Draw distance (yalms, 0 = no limit)", ref _city.DrawDistance, 0f, 800f, "%.0f");
+
+        ImGui.TextDisabled("Blocks sit on a fixed pitch of footprint + street. Placement caps at 400\n"
+                         + "buildings and DRAWING caps at the nearest 64 — that second cap, not the\n"
+                         + "first, is what keeps a huge city affordable, since cost has to be bounded\n"
+                         + "by something that does not grow with the extent.");
     }
 
     private void DrawHeights()
     {
-        ImGui.SliderFloat("Shortest (yalms)", ref _city.MinHeight, 3f, 80f, "%.0f");
+        ImGui.SliderFloat("Shortest (yalms)", ref _city.MinHeight, 3f, 120f, "%.0f");
         RebuildIfReleased();
 
-        ImGui.SliderFloat("Tallest (yalms)", ref _city.MaxHeight, 3f, 120f, "%.0f");
+        ImGui.SliderFloat("Tallest (yalms)", ref _city.MaxHeight, 3f, 200f, "%.0f");
         if (ImGui.IsItemDeactivatedAfterEdit())
         {
             // Kept in order here rather than at use: a max below the min silently produces a city of
@@ -176,8 +236,8 @@ internal sealed class TestCityWindow
         ImGui.SliderFloat("Floor height (yalms)", ref _city.FloorHeight, 1.5f, 8f, "%.2f");
         RebuildIfReleased();
 
-        ImGui.TextDisabled("Heights are rounded to a whole number of floors, so the top window row\n"
-                         + "is never a sliver. The range is honoured to within one storey.");
+        ImGui.TextDisabled("Heights round to a whole number of floors, so the top window row is never\n"
+                         + "a sliver. The range is honoured to within one storey.");
     }
 
     private void DrawLook()
@@ -195,19 +255,135 @@ internal sealed class TestCityWindow
         ImGui.ColorEdit3("Lit window", ref _city.LitRgb);
         ImGui.ColorEdit3("Dark window / door", ref _city.DarkRgb);
 
-        ImGui.TextDisabled("Which windows are lit is fixed per building at build time — rolling it\n"
-                         + "per frame would strobe the whole city. Wall shading comes from one\n"
-                         + "fixed light, which is what makes five flat fills read as a solid.");
+        ImGui.TextDisabled("Which windows are lit is fixed per building at build time — rolling it per\n"
+                         + "frame would strobe the whole city. Wall shading comes from one fixed\n"
+                         + "light, which is what makes five flat fills read as a solid.");
     }
 
+    private void DrawOcclusion()
+    {
+        ImGui.Checkbox("Hide what the world blocks", ref _city.Occlude);
+
+        ImGui.TextDisabled("COLLISION RAYCASTS, not the depth buffer — Sansflaire's call after the three\n"
+                         + "routes were costed. Each drawn face samples a 3x3 grid from the camera;\n"
+                         + "fully hidden faces are skipped, fully visible ones are a single quad, and\n"
+                         + "partly hidden ones draw only their visible cells. Results are cached per\n"
+                         + "face and refreshed 40 faces a frame, so the whole visible set resolves in\n"
+                         + "a few frames rather than costing 2,000 rays every frame.\n"
+                         + "\n"
+                         + "WHAT IT CANNOT DO: only the collision mesh occludes. Terrain, walls and\n"
+                         + "buildings yes; characters, foliage and particles no. Edges are blocky at\n"
+                         + "the 3x3 granularity. Both are properties of this route, not bugs — closing\n"
+                         + "them means reading the game's depth buffer, which is a bigger build.");
+    }
+
+    // ── tab 2: the goal area ─────────────────────────────────────────────────
+
+    private void DrawGoalTab()
+    {
+        ImGui.TextColored(Head, "TEST 2 — CIRCULAR GOAL AREA");
+        ImGui.TextColored(Rule,
+            "A circle on the ground whose wall pulses up from it and fades, repeatedly.\n"
+          + "Walk in and it turns green, plays the objective cue and says so once.");
+
+        ImGui.Separator();
+
+        if (ImGui.Button("Place goal area here")) Say(_goal.Place());
+
+        ImGui.SameLine();
+
+        ImGui.BeginDisabled(!_goal.IsPlaced);
+        if (ImGui.Button("Move here")) Say(_goal.Place());
+        ImGui.SameLine();
+        if (ImGui.Button("Clear")) Say(_goal.Clear());
+        ImGui.EndDisabled();
+
+        ImGui.TextDisabled("the ring's ground is measured ONCE at placement — a pulse redraws every\n"
+                         + "frame, and a ray per vertex per frame would be thousands a second");
+
+        if (_goal.IsPlaced)
+        {
+            float d = _goal.EdgeDistance;
+
+            if (_goal.IsInside)
+                ImGui.TextColored(Ok, $"INSIDE — {-d:0.#}y past the edge · {_goal.RingPoints} ring point(s)");
+            else
+                ImGui.TextDisabled($"outside — {d:0.#}y to the edge · {_goal.RingPoints} ring point(s)");
+        }
+        else
+        {
+            ImGui.TextColored(Warn, "NOT PLACED — press Place.");
+        }
+
+        ImGui.Separator();
+
+        Section("Shape — radius, height, segments", DrawGoalShape);
+        Section("Pulse — speed and how many", DrawGoalPulse);
+        Section("Look — colour, opacity, falloff", DrawGoalLook);
+    }
+
+    private void DrawGoalShape()
+    {
+        ImGui.SliderFloat("Radius (yalms)", ref _goal.Radius, 1f, 60f, "%.1f");
+        RemeasureIfReleased();
+
+        ImGui.SliderFloat("Wall height (yalms)", ref _goal.WallHeight, 0.5f, 40f, "%.1f");
+
+        ImGui.SliderInt("Ring segments", ref _goal.Segments, 8, 96);
+        RemeasureIfReleased();
+
+        ImGui.Checkbox("Ground disc", ref _goal.ShowDisc);
+        ImGui.SameLine();
+        ImGui.Checkbox("Ground ring", ref _goal.ShowRing);
+
+        ImGui.TextDisabled("Radius and segments re-measure the ring; height does not, since the wall's\n"
+                         + "height is a per-frame value and the ground it stands on has not moved.");
+    }
+
+    private void DrawGoalPulse()
+    {
+        ImGui.SliderFloat("Pulse length (seconds)", ref _goal.PulseSeconds, 0.2f, 8f, "%.2f");
+        ImGui.SliderInt("Concurrent pulses", ref _goal.PulseCount, 1, 6);
+
+        ImGui.TextDisabled("Pulses are staggered by an even share of the period, so N of them are\n"
+                         + "evenly spaced in time whatever N is. Height eases out — a linear rise\n"
+                         + "reads as a loading bar — and the fade is held at full for the first 55%%\n"
+                         + "so the wall is solid while it is still growing.");
+    }
+
+    private void DrawGoalLook()
+    {
+        ImGui.ColorEdit3("Colour", ref _goal.Rgb);
+
+        ImGui.Checkbox("Turn green inside", ref _goal.TintOnEntry);
+        if (_goal.TintOnEntry) ImGui.ColorEdit3("Inside colour", ref _goal.InsideRgb);
+
+        ImGui.SliderFloat("Base opacity", ref _goal.BaseAlpha, 0.05f, 1f, "%.2f");
+        ImGui.SliderFloat("Fade curve", ref _goal.FadeCurve, 0.3f, 4f, "%.2f");
+
+        ImGui.Checkbox("Hide what the world blocks", ref _goal.Occlude);
+        ImGui.TextDisabled("OFF by default, unlike the city: this is a marker you are meant to find,\n"
+                         + "and an objective you cannot see through a fence is a worse failure than\n"
+                         + "one that shows through it. One ray per segment when on, not the nine a\n"
+                         + "city face costs.");
+    }
+
+    // ── helpers ──────────────────────────────────────────────────────────────
+
     /// <summary>
-    /// Re-runs the build when the slider just released. <b>On release, never per frame</b> — the
-    /// build re-measures the ground with a raycast per tile corner, and doing that while a slider is
-    /// being dragged would fire thousands of rays a second.
+    /// Re-runs the city build when the slider just released. <b>On release, never per frame</b> — a
+    /// build re-measures the ground, and doing that while a slider is dragged would fire thousands of
+    /// rays a second.
     /// </summary>
     private void RebuildIfReleased()
     {
         if (ImGui.IsItemDeactivatedAfterEdit()) _city.Rebuild();
+    }
+
+    /// <summary>Same contract for the goal area's ring.</summary>
+    private void RemeasureIfReleased()
+    {
+        if (ImGui.IsItemDeactivatedAfterEdit()) _goal.Remeasure();
     }
 
     /// <summary>One collapsible block, closed by default. ImGui remembers each header's state in its
@@ -219,7 +395,7 @@ internal sealed class TestCityWindow
         ImGui.Indent();
 
         // Guarded individually rather than relying on the caller's catch: one section throwing must
-        // not take the rest of the window with it, and an Unindent that never ran would shift every
+        // not take the rest of the tab with it, and an Unindent that never ran would shift every
         // window drawn afterwards.
         try { body(); }
         catch (Exception ex) { Diag.Error($"[City] section '{title}' failed: {ex.Message}"); }

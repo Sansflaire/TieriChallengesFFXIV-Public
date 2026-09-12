@@ -207,7 +207,15 @@ public sealed class Plugin : IDalamudPlugin
     /// with the lab closed.</para>
     /// </summary>
     private readonly TestCityService _testCity = new();
-    private readonly TestCityWindow  _testCityWindow;
+
+    /// <summary>
+    /// The Test City window's second tab: a circular goal area whose wall pulses up from the ground.
+    /// Its own service rather than a mode of the city's — it places, measures and pulses nothing the
+    /// city knows about, and the one thing they share (camera-ray occlusion) is a static helper.
+    /// </summary>
+    private readonly TestGoalService _testGoal = new();
+
+    private readonly TestCityWindow _testCityWindow;
 #endif
 
     /// <summary>
@@ -413,7 +421,7 @@ public sealed class Plugin : IDalamudPlugin
 
         _digTestsWindow = new DigTestsWindow(_digTests);
         _digMapWindow   = new DigMapWindow(_digTests);
-        _testCityWindow = new TestCityWindow(_testCity);
+        _testCityWindow = new TestCityWindow(_testCity, _testGoal);
 
         // The lab's banner preview. Wired here rather than handed to the window's constructor,
         // because the overlay is built after it and does not exist at all when Panache is missing —
@@ -994,6 +1002,12 @@ public sealed class Plugin : IDalamudPlugin
 
         try { _testCity.DrawWorld(); }
         catch (Exception ex) { Diag.Error($"[City] world draw failed: {ex.Message}"); }
+
+        try { _testGoal.Tick(); }
+        catch (Exception ex) { Diag.Error($"[Goal] tick failed: {ex.Message}"); }
+
+        try { _testGoal.DrawWorld(); }
+        catch (Exception ex) { Diag.Error($"[Goal] world draw failed: {ex.Message}"); }
 
         try { _testCityWindow.Draw(); }
         catch (Exception ex) { Diag.Error($"[City] window failed: {ex.Message}"); }
