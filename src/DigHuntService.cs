@@ -1,11 +1,10 @@
-#if DEV_BUILD
 using System;
 using System.Numerics;
 
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. <b>Test 1 — Sense Hunt.</b> One spot is buried somewhere around the
+/// <b>Test 1 — Sense Hunt.</b> One spot is buried somewhere around the
 /// player. They get a compass Sense on demand and a proximity readout that warms red → yellow →
 /// green and finally reads DIG. Digging on the spot ends it and reports the time.
 ///
@@ -267,4 +266,3 @@ internal sealed class DigHuntService : IDigTest
         return DigBand.Cold;
     }
 }
-#endif

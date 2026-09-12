@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -10,7 +9,7 @@ using LSheets = Lumina.Excel.Sheets;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. The kinds of thing a generated clue can be written ABOUT.
+/// The kinds of thing a generated clue can be written ABOUT.
 ///
 /// <para>Stored as bit positions in <see cref="DigTuning.RoamClueCategories"/>, so append only and
 /// never renumber — a saved mask stores the raw bits.</para>
@@ -31,7 +30,7 @@ internal enum ClueCategory
 }
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. Writes the clue for one buried spot, choosing what KIND of clue to write by
+/// Writes the clue for one buried spot, choosing what KIND of clue to write by
 /// weighted draw so a trail does not say the same thing five times.
 ///
 /// <para><b>Anti-repeat is a weight, not a ban.</b> Each category starts at an equal share. Using one
@@ -980,7 +979,7 @@ internal sealed class DigClueWriter
 }
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. Where the named things a clue can point at come from.
+/// Where the named things a clue can point at come from.
 ///
 /// <para>Every source here is either a game sheet or the live object table. <b>Nothing is hand-listed
 /// and nothing is scraped</b>, which is what makes a generated clue use the game's own words for a
@@ -1680,4 +1679,3 @@ internal static class DigClueSources
              + "A usable count far below its raw count means our own filter, not the game.";
     }
 }
-#endif

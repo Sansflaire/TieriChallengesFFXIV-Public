@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -9,7 +8,7 @@ using Dalamud.Plugin.Ipc;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. Asks vnavmesh whether a point is somewhere a character can actually stand.
+/// Asks vnavmesh whether a point is somewhere a character can actually stand.
 ///
 /// <para><b>This is the reachability oracle the dig tests had been doing without, and the reason
 /// they needed one is that a raycast is not one.</b> A downward ray finds the first solid surface
@@ -429,4 +428,3 @@ internal static class DigNavmesh
         get { Resolve(); return _reachable != null && Available; }
     }
 }
-#endif

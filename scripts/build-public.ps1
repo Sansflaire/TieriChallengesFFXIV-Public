@@ -57,8 +57,18 @@ $markers = @(
     'Missing details',         # dev-only challenge flag
     'Animation: '              # dev status readout
 )
-$text  = [Text.Encoding]::Unicode.GetString([IO.File]::ReadAllBytes($Dll))
-$found = @($markers | Where-Object { $text.IndexOf($_) -ge 0 })
+# BOTH BYTE PARITIES, and this is not belt-and-braces - a single-parity scan misses about half of
+# what is present. Encoding.Unicode decodes from offset 0, so it only finds a #US heap entry whose
+# bytes begin on an EVEN offset; one starting on an odd offset decodes to garbage and reads absent.
+#
+# Found 2026-09-11 while verifying the Activity split: a single-parity probe reported two of four
+# known-present strings. Here that failure is worse than a wrong answer, because "absent" is the
+# PASS - so this guard was a coin flip per marker that always looked like good news, which is the
+# exact thing it exists to prevent.
+$bytes = [IO.File]::ReadAllBytes($Dll)
+$even  = [Text.Encoding]::Unicode.GetString($bytes)
+$odd   = [Text.Encoding]::Unicode.GetString($bytes, 1, $bytes.Length - 1)
+$found = @($markers | Where-Object { $even.IndexOf($_) -ge 0 -or $odd.IndexOf($_) -ge 0 })
 
 if ($found.Count -gt 0) {
     Fail ("DEV markers present in the release artifact: {0}`n" -f ($found -join ', ')) +
@@ -196,6 +206,36 @@ New-Item -ItemType Directory -Path $bgDst | Out-Null
 # on the first file - unlike the unfiltered Get-ChildItem the icon and sound steps pass straight in.
 Copy-Item -Path $bgImages.FullName -Destination $bgDst
 Ok "bundled $($bgImages.Count) background image(s), $bgKB KB"
+
+# Dig HUD artwork. Ships since 0.84.54.0, when the Activity tab un-gated the Wild Trail: these are
+# the dial, the CLUE!/DIG! words and the two trail banners a player looks at for the whole run.
+#
+# NAMED INDIVIDUALLY rather than copied as a folder. DigHuntOverlay falls back to drawn circles for
+# any file it cannot load, so a missing PNG is silent - the player simply gets a worse HUD and no
+# error anywhere. Listing them is what turns that into a build failure. See BROKEN.md 005, which is
+# the same shape: an asset used before it was packaged, and every public install got the fallback.
+$digSrc = Join-Path $Root 'ref\digicons'
+if (-not (Test-Path $digSrc)) { Fail "Missing dig artwork folder: $digSrc" }
+
+$digNames = @(
+    'NatalMSQDigIcon_centerIcon.png',
+    'NatalMSQDigIcon_outerCircle.png',
+    'CLUE!_digIcon.png',
+    'DIG!_digIcon.png',
+    'TrailStart!_digIcon.png',
+    'TrailEnd!_digIcon.png'
+)
+
+$digDst = Join-Path $payload 'digicons'
+New-Item -ItemType Directory -Path $digDst | Out-Null
+
+foreach ($n in $digNames) {
+    $f = Join-Path $digSrc $n
+    if (-not (Test-Path $f)) { Fail "Missing dig artwork: $f - the HUD would silently fall back to drawn circles." }
+    Copy-Item $f $digDst
+}
+$digKB = [math]::Round((Get-ChildItem $digDst -File | Measure-Object Length -Sum).Sum / 1KB)
+Ok "bundled $($digNames.Count) dig icon(s), $digKB KB"
 
 # Player-facing help document, read at runtime by HelpLibrary. Fails rather than shipping a
 # build whose Help window would open on an error - see BROKEN.md 005.

@@ -145,7 +145,7 @@ internal sealed class DigMapWindow
         var drawList = ImGui.GetWindowDrawList();
         var rect     = new Vector2(side, side);
 
-        var tex = MapTexture(mapId, out string path);
+        var tex = DigLandmarks.MapTexture(mapId, out string path);
 
         // ZOOM AND PAN. The image is drawn at zoom scale with a pan offset, and Plot below applies
         // exactly the same transform — one place decides where things go, so a dot cannot drift away
@@ -1125,85 +1125,6 @@ internal sealed class DigMapWindow
         return true;
     }
 
-    /// <summary>
-    /// The map's background image.
-    ///
-    /// <para>The path is built from <c>Map.Id</c> ("s1h1/00" becomes
-    /// <c>ui/map/s1h1/00/s1h1_00_m.tex</c>). <b>If that is wrong the window degrades to a grid and
-    /// prints the path it tried</b> rather than failing silently — the dots are the point, and the
-    /// image is context.</para>
-    /// </summary>
-    /// <summary>
-    /// The same lookup, for the player-facing reference map.
-    ///
-    /// <para>Shared rather than copied: the path is derived from <c>Map.Id</c> by a rule that has
-    /// already been got wrong once, and two windows deriving it separately is two chances to get it
-    /// wrong again — in one of which the failure is a grid instead of a map and nobody notices.</para>
-    /// </summary>
-    internal static Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? MapTextureFor(
-        uint mapId, out string path) => MapTexture(mapId, out path);
-
-    private static Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? MapTexture(
-        uint mapId, out string path)
-    {
-        path = string.Empty;
-
-        try
-        {
-            var maps = Plugin.DataManager.GetExcelSheet<LSheets.Map>();
-            if (maps?.GetRowOrDefault(mapId) is not { } map) return null;
-
-            string id = map.Id.ExtractText();
-            if (id.Length == 0) return null;
-
-            // THE SLASH IS REMOVED, NOT REPLACED. Map.Id is "r1h1/00" and the texture is
-            // ui/map/r1h1/00/r1h100_m.tex — the directory keeps the slash, the FILENAME drops it.
-            // Building "r1h1_00_m.tex" is why every candidate missed and the window has been blank
-            // since it was written: the loop looked thorough while every entry in it was wrong the
-            // same way. The underscore form is kept last in case some map really does use it.
-            string flat   = id.Replace("/", string.Empty);
-            string scored = id.Replace("/", "_");
-
-            // PROBED, not guessed. DataManager.FileExists asks the game's own index whether a path
-            // is real, so the right one is found by checking rather than by my being confident about
-            // a naming convention — and when none exists the window can say so instead of showing
-            // an empty square that looks like a rendering bug.
-            string[] candidates =
-            {
-                $"ui/map/{id}/{flat}_m.tex",     // the normal one
-                $"ui/map/{id}/{flat}m_m.tex",    // some maps carry an 'm' variant
-                $"ui/map/{id}/{flat}d.tex",
-                $"ui/map/{id}/{flat}_s.tex",     // small version, better than nothing
-                $"ui/map/{id}/{flat}.tex",
-                $"ui/map/{id}/{scored}_m.tex",   // underscore form, last resort
-            };
-
-            // ASKED FOR, not pre-screened. An earlier version only tried a candidate that
-            // DataManager.FileExists confirmed, and no image ever appeared — so either the probe
-            // disagrees with the texture loader about what exists, or the loader can produce a
-            // texture the index check rejects. Either way the check was filtering out the answer.
-            // Asking the loader directly is the shorter question, and it is the one that matters.
-            foreach (var c in candidates)
-            {
-                Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? wrap = null;
-
-                try   { wrap = Plugin.TextureProvider.GetFromGame(c).GetWrapOrDefault(); }
-                catch { /* not this one */ }
-
-                if (wrap == null) continue;
-
-                path = c;
-                return wrap;
-            }
-
-            // Named so a wrong guess is reportable rather than just a blank square. A texture that
-            // is merely still decoding also lands here for a frame or two and then resolves.
-            path = $"map id \"{id}\" — none of {candidates.Length} candidate paths loaded "
-                 + $"(first tried {candidates[0]})";
-            return null;
-        }
-        catch { return null; }
-    }
 
     private static readonly Vector4 Rule = new(0.68f, 0.68f, 0.76f, 1f);
     private static readonly Vector4 Warn = new(0.95f, 0.62f, 0.35f, 1f);

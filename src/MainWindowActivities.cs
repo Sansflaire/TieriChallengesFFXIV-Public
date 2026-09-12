@@ -16,15 +16,20 @@ namespace TieriChallengesFFXIV;
 /// pane is part of the window, so it is written as part of the window and merely kept in its own
 /// file.</para>
 ///
-/// <para><b>Everything here is <c>#if DEV_BUILD</c> except the tab plumbing.</b> The activity is the
-/// Wild Trail, and the Wild Trail is the dig tree, which is dev-only gate and all — see the project
-/// rules. The mode value itself lives in the public <c>GroupMode</c> enum so a config written by a
-/// dev build still deserialises in a public one; it simply falls through to Categories there, which
-/// is what an unknown grouping has always done.</para>
+/// <para><b>This ships publicly.</b> The activity is the Wild Trail, the Wild Trail is the roam dig
+/// test, and the point of the tab from the day it was asked for was that other people play it — the
+/// copy-a-run-for-your-friends button says so on its face. What stayed behind the dev gate is the
+/// LAB: the four tests' settings window and the map debug view, which plots the candidate spots and
+/// is therefore the answer sheet.</para>
+///
+/// <para><b>Shipping it makes vnavmesh a real requirement</b>, since nothing else can tell which
+/// ground a character can actually reach. That is declared in README.md and docs/HELP.md and refused
+/// at runtime with a line the player can act on — see <see cref="ActivityService.Unavailable"/>. A
+/// required sibling plugin that is never mentioned anywhere a player reads is indistinguishable from
+/// the feature being broken.</para>
 /// </summary>
 internal sealed partial class MainWindow
 {
-#if DEV_BUILD
 
     /// <summary>The live activity runner. Null until <see cref="Plugin"/> hands it over.</summary>
     public ActivityService? Activities { get; set; }
@@ -169,14 +174,29 @@ internal sealed partial class MainWindow
             s.Gap         = 12;
         });
 
+        // THE HARD REQUIREMENT FIRST, because everything below it is moot without one.
+        //
+        // Stated in the pane rather than by hiding the tab. A missing tab teaches the player nothing;
+        // a line naming the plugin they need is something they can act on — and it is re-read every
+        // frame, so installing vnavmesh makes the activity playable without a reload.
+        if (ActivityService.Unavailable is { } blocked)
+        {
+            scroll.AppendChild(EmptyNote("This activity needs vnavmesh.", blocked));
+            pane.AppendChild(scroll);
+            return pane;
+        }
+
         var maps = ActivityCatalog.AuthoredMaps();
 
         if (maps.Count == 0)
         {
+            // Deliberately does NOT name the dig lab. That window is developer-only, so telling a
+            // player to open it describes a door that is not in their build — the exact failure the
+            // HELP.md rule exists to prevent, one layer in.
             scroll.AppendChild(EmptyNote(
-                "No map is authored yet.",
-                "An activity map needs its walkable bounds drawn by hand before trails can be "
-              + "placed on it. Draw a box for a zone in the dig lab's map debug and it appears here."));
+                "No map is ready for this yet.",
+                "Wild Trail is hand-authored per map, and only the authored ones can place a trail. "
+              + "More are added in plugin updates."));
 
             pane.AppendChild(scroll);
             return pane;
@@ -586,5 +606,4 @@ internal sealed partial class MainWindow
         return row;
     }
 
-#endif
 }

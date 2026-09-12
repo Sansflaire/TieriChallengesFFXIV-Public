@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -10,7 +9,7 @@ using LSheets = Lumina.Excel.Sheets;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. The named places the game itself draws on the current map, converted into
+/// The named places the game itself draws on the current map, converted into
 /// world positions so a clue can be written about them.
 ///
 /// <para><b>This is game data, and the map screen is the proof.</b> Every label on an open map —
@@ -412,5 +411,74 @@ internal static class DigLandmarks
         // one would keep quadrants pointing at the previous zone's geometry.
         DigNavmesh.InvalidateBounds();
     }
+
+    /// <summary>
+    /// The game's own image for a map, and the path it was found at.
+    ///
+    /// <para><b>It lives here rather than in a window because two windows need it and one of them is
+    /// dev-only.</b> The debug map and the player's reference map draw the same texture; leaving the
+    /// lookup in the debug window would either drag that whole window into the public build or force
+    /// a second copy of a path rule that has already been got wrong once.</para>
+    /// </summary>
+    public static Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? MapTexture(
+        uint mapId, out string path)
+    {
+        path = string.Empty;
+
+        try
+        {
+            var maps = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>();
+            if (maps?.GetRowOrDefault(mapId) is not { } map) return null;
+
+            string id = map.Id.ExtractText();
+            if (id.Length == 0) return null;
+
+            // THE SLASH IS REMOVED, NOT REPLACED. Map.Id is "r1h1/00" and the texture is
+            // ui/map/r1h1/00/r1h100_m.tex — the directory keeps the slash, the FILENAME drops it.
+            // Building "r1h1_00_m.tex" is why every candidate missed and the window has been blank
+            // since it was written: the loop looked thorough while every entry in it was wrong the
+            // same way. The underscore form is kept last in case some map really does use it.
+            string flat   = id.Replace("/", string.Empty);
+            string scored = id.Replace("/", "_");
+
+            // PROBED, not guessed. DataManager.FileExists asks the game's own index whether a path
+            // is real, so the right one is found by checking rather than by my being confident about
+            // a naming convention — and when none exists the window can say so instead of showing
+            // an empty square that looks like a rendering bug.
+            string[] candidates =
+            {
+                $"ui/map/{id}/{flat}_m.tex",     // the normal one
+                $"ui/map/{id}/{flat}m_m.tex",    // some maps carry an 'm' variant
+                $"ui/map/{id}/{flat}d.tex",
+                $"ui/map/{id}/{flat}_s.tex",     // small version, better than nothing
+                $"ui/map/{id}/{flat}.tex",
+                $"ui/map/{id}/{scored}_m.tex",   // underscore form, last resort
+            };
+
+            // ASKED FOR, not pre-screened. An earlier version only tried a candidate that
+            // DataManager.FileExists confirmed, and no image ever appeared — so either the probe
+            // disagrees with the texture loader about what exists, or the loader can produce a
+            // texture the index check rejects. Either way the check was filtering out the answer.
+            // Asking the loader directly is the shorter question, and it is the one that matters.
+            foreach (var c in candidates)
+            {
+                Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? wrap = null;
+
+                try   { wrap = Plugin.TextureProvider.GetFromGame(c).GetWrapOrDefault(); }
+                catch { /* not this one */ }
+
+                if (wrap == null) continue;
+
+                path = c;
+                return wrap;
+            }
+
+            // Named so a wrong guess is reportable rather than just a blank square. A texture that
+            // is merely still decoding also lands here for a frame or two and then resolves.
+            path = $"map id \"{id}\" — none of {candidates.Length} candidate paths loaded "
+                 + $"(first tried {candidates[0]})";
+            return null;
+        }
+        catch { return null; }
+    }
 }
-#endif

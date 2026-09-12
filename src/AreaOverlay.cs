@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -8,7 +7,7 @@ using Dalamud.Bindings.ImGui;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. Draws trigger volumes into the world so they can actually be placed by
+/// Draws trigger volumes into the world so they can actually be placed by
 /// eye instead of by guessing at coordinates.
 ///
 /// Uses <c>ImGui.GetBackgroundDrawList()</c> + <c>IGameGui.WorldToScreen</c> — the same approach
@@ -263,4 +262,3 @@ internal sealed class AreaOverlay
         drawList.AddText(pos, color, text);
     }
 }
-#endif

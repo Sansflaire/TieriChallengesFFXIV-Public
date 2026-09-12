@@ -194,6 +194,71 @@ complete.
 
 While running you get a live clock in the corner, which turns red for the last five seconds.
 
+# Activities
+
+## What an activity is
+<!-- keywords: activity, activities, tab, repeat, again, replay, minigame, mini game, game mode, play, infinite, endless, over and over -->
+
+The **Activity** tab holds things you play rather than things you finish. A challenge completes once
+and stays complete; an activity has no end — you play it again whenever you like, and each time is a
+run of its own.
+
+Because of that, an activity has no progress bar and nothing to tick off. What it keeps instead is a
+list of the runs you have finished, with how long each took.
+
+## Wild Trail
+<!-- keywords: wild trail, trail, dig, digging, treasure, clue, clues, hunt, buried, shovel, map game, scavenger -->
+
+A chain of clues is buried around the map. Read the clue, work out where it means, walk there, and
+dig. If you are close enough you turn up the next clue; if not, you have lost only the walk.
+
+Pick three things before you start:
+
+- **Map.** Wild Trail is hand-authored per map, so only prepared maps are offered. You have to be
+  standing in the map to start.
+- **Difficulty, 0 to 10.** This changes both how MUCH a clue tells you and how precisely it says it.
+  At the easy end a clue gives you three separate facts, put as plainly as they can be. In the
+  middle, two. At the hard end, one — and vaguely.
+- **Clues.** How many are buried. More clues is a longer run, not a harder one.
+
+The **Reference map** button opens a map of the area marked up with everything a clue can refer to:
+which part of the map is called what, which way each clock direction points, and the named places,
+people and creatures a clue might mention. It never shows you where anything is buried.
+
+## Why a run gets cancelled
+<!-- keywords: cancelled, canceled, lost, stopped, disappeared, gone, vanished, zone, logout, log out, instance, dungeon, duty, ended, abandoned, time lost -->
+
+A run is thrown away if you change zone, log out, or enter an instance. The time is not recorded and
+the run does not appear in your history.
+
+This is deliberate rather than harsh: the clues describe the map you started in and mean nothing
+anywhere else, so a trail that survived a zone change would simply be unsolvable.
+
+Abandoning a run yourself does the same thing. Only a run you finish is kept.
+
+## Sharing a run
+<!-- keywords: share, copy, clipboard, paste, friend, friends, brag, show, boast, send, tell -->
+
+Click any run in the **Past runs** list and the line is copied to your clipboard, ready to paste
+anywhere. It names the map, the difficulty, how many clues you dug up and your time. The row says
+"Copied!" for a moment so you know it worked.
+
+## Wild Trail needs vnavmesh
+<!-- keywords: vnavmesh, navmesh, requirement, required, needs, missing, greyed, grey, disabled, cannot start, wont start, doesnt work, broken, error -->
+
+Wild Trail requires the **vnavmesh** plugin. It is the only thing that can tell which ground your
+character is actually able to walk to.
+
+Without it, a trail would happily bury a clue in a place nobody can reach — the ground outside a
+housing ward's walls is solid, real ground, and completely unreachable, and nothing else in the game
+can tell those two apart. Rather than hand you an unsolvable trail, the Activity tab says what is
+missing.
+
+Nothing else in this plugin needs vnavmesh. If you never open the Activity tab you never need it.
+
+If the tab tells you vnavmesh is still building its map of the zone, that is normal after entering a
+new area — wait a few seconds and start again.
+
 # Running a race
 
 ## Starting, restarting and abandoning a race

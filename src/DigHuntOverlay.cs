@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Numerics;
 
@@ -16,7 +15,7 @@ using SkiaSharp;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. The heads-up display shared by all three dig tests: one line saying how
+/// The heads-up display shared by all three dig tests: one line saying how
 /// warm the player is, one line of flavour, the running clock, and — for the Clue Trail — the
 /// pulsing radar ring.
 ///
@@ -2153,4 +2152,3 @@ internal sealed class DigHuntOverlay : IDisposable
         return Vector3.Lerp(rgb, new Vector3(lum), 0.5f);
     }
 }
-#endif

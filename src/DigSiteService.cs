@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -6,7 +5,7 @@ using System.Numerics;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. <b>Test 2 — Area Surveillance.</b> A square site is drawn into the world
+/// <b>Test 2 — Area Surveillance.</b> A square site is drawn into the world
 /// as gradient walls. Somewhere inside it are <see cref="DigTuning.SitePieces"/> buried pieces; dig
 /// close enough to one and you turn it up. Collect them all and you get the relic, which ends the
 /// test and clears the site.
@@ -619,4 +618,3 @@ internal sealed class DigSiteService : IDigTest
         }
     }
 }
-#endif

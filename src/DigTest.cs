@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -11,7 +10,7 @@ namespace TieriChallengesFFXIV;
 internal enum DigBand { Cold, Red, Yellow, Green, Dig }
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. What every dig test looks like from the outside, so the HUD and the lab
+/// What every dig test looks like from the outside, so the HUD and the lab
 /// window can drive all three without knowing which one is running.
 ///
 /// <para>Exactly one test may be active at a time — <see cref="DigTests"/> enforces it. Two running
@@ -66,7 +65,7 @@ internal interface IDigTest
 }
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. Finds somewhere real to bury something.
+/// Finds somewhere real to bury something.
 ///
 /// <para><b>"A random valid location" is honestly "a random location that collision says has ground
 /// under it, at a height you could plausibly walk to".</b> There is no cheap oracle for the walkable
@@ -512,4 +511,3 @@ internal static class DigGround
         _       => "close by",
     };
 }
-#endif

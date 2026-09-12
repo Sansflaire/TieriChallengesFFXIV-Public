@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 
@@ -7,7 +6,7 @@ using Dalamud.Game.ClientState.Conditions;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. One thing a player can engage with <b>infinitely</b> — the defining
+/// One thing a player can engage with <b>infinitely</b> — the defining
 /// property of this whole tab.
 ///
 /// <para><b>An activity is NOT a challenge, and the distinction is the reason it needs its own tab
@@ -31,7 +30,7 @@ internal sealed class ActivityDef
 }
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. Which activities exist, and which maps they are authored for.
+/// Which activities exist, and which maps they are authored for.
 /// </summary>
 internal static class ActivityCatalog
 {
@@ -90,7 +89,7 @@ internal static class ActivityCatalog
 }
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. Owns a live activity run: what was started, on what settings, and every way
+/// Owns a live activity run: what was started, on what settings, and every way
 /// it can end.
 ///
 /// <para><b>It is a THIN layer over the dig test, on purpose.</b> The trail itself — placement,
@@ -135,6 +134,22 @@ internal sealed class ActivityService
         _tests.Roam.Finished  -= OnFinished;
         _tests.Roam.Abandoned -= OnAbandoned;
     }
+
+    /// <summary>
+    /// Why this activity cannot be played at all right now, or null when it can.
+    ///
+    /// <para><b>vnavmesh is a hard requirement and this is where the player is told so.</b> Nothing
+    /// else can answer "can a character actually walk to this point" — a raycast finds the first
+    /// solid surface under a position, and the ground outside a housing ward's walls is perfectly
+    /// solid and completely unreachable. Without it, a trail buries clues nobody can reach, which
+    /// looks exactly like the feature being broken.</para>
+    ///
+    /// <para><b>Surfaced in the pane, not enforced by hiding the tab.</b> A missing tab teaches the
+    /// player nothing; a line naming the plugin they need is something they can act on. It is also
+    /// re-read every frame rather than latched at load, so installing vnavmesh and enabling it makes
+    /// the activity playable without a reload.</para>
+    /// </summary>
+    public static string? Unavailable => DigRoamService.RefuseWithoutNavmesh();
 
     /// <summary>
     /// The lowest and highest clue counts an activity may ask for. The floor is 1 because a
@@ -300,4 +315,3 @@ internal sealed class ActivityService
         LastOutcome = "Run abandoned. Progress discarded.";
     }
 }
-#endif

@@ -1372,13 +1372,11 @@ internal sealed partial class MainWindow : IDisposable
             s.PointerEvents   = PointerEvents.None;
         }));
 
-#if DEV_BUILD
         if (EffectiveGrouping == GroupMode.Activities)
         {
             body.AppendChild(BuildActivityDetail(detailW));
             return body;
         }
-#endif
 
         if (EffectiveGrouping == GroupMode.Zones)
         {
@@ -1439,20 +1437,17 @@ internal sealed partial class MainWindow : IDisposable
     /// <summary>
     /// Whether the Activity tab is available at all.
     ///
-    /// <para><b>Dev-only for now, and that is not an oversight.</b> The one activity is the Wild
-    /// Trail, which is the dig tree — <c>#if DEV_BUILD</c> gate and all, and a hard dependency on
-    /// vnavmesh. Shipping the tab publicly therefore ships that dependency, which the project rules
-    /// say must be declared in README.md and docs/HELP.md and refused at runtime with a line the
-    /// player can act on. None of that is done, so the tab stays here until it is.</para>
+    /// <para><b>Always, since 0.84.54.0.</b> It was briefly dev-only, which was a misreading: the
+    /// tab was asked for with a copy-this-run-for-your-friends button in the same breath, so other
+    /// people playing it was the requirement rather than a later phase. Kept as a named property
+    /// rather than deleted because it is the one place to gate the tab if it ever needs gating
+    /// again, and a condition with a name is easier to find than an <c>#if</c> in three files.</para>
+    ///
+    /// <para>The vnavmesh requirement that shipping it creates is handled where it belongs — at
+    /// runtime, in the pane, with a line the player can act on — rather than by hiding the tab.
+    /// See <see cref="ActivityService.Unavailable"/>.</para>
     /// </summary>
-    private bool ActivitiesAvailable
-    {
-#if DEV_BUILD
-        get => !_config.PublicPreview;
-#else
-        get => false;
-#endif
-    }
+    private bool ActivitiesAvailable => true;
 
     /// <summary>
     /// The grouping actually in force. An unavailable mode resolves to Categories rather than
@@ -1507,12 +1502,10 @@ internal sealed partial class MainWindow : IDisposable
         {
             BuildZoneList(scroll, masterW, counts!);
         }
-#if DEV_BUILD
         else if (mode == GroupMode.Activities)
         {
             BuildActivityList(scroll, masterW);
         }
-#endif
         else if (categories.Count == 0)
         {
             // An empty catalogue is the NORMAL state before the first sync — there are no

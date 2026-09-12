@@ -187,19 +187,29 @@ public sealed class Plugin : IDalamudPlugin
     private readonly SoundTestWindow? _soundTestWindow;
 
     /// <summary>
-    /// The three dig tests — Sense Hunt, Area Surveillance, Clue Trail — and the lab that carries
-    /// their rules, commands, buttons and settings. Entirely dev-only, gate and all: unlike
-    /// <see cref="Props"/>, which ships because challenge content calls it, these are experiments a
-    /// player must not be able to reach. Sansflaire's call, 2026-09-09.
+    /// The LAB — the rules, commands, buttons and settings for the four dig tests, plus the map
+    /// debug view with its candidate spots and null zones.
+    ///
+    /// <para><b>These two windows are what stayed dev-only when the Activity shipped.</b> The
+    /// capability is public because a player plays it; the lab is not, because it is an authoring
+    /// and diagnosis tool whose map view literally plots the answers. Same split as
+    /// <see cref="Props"/>: the capability ships, the trigger does not.</para>
     /// </summary>
-    private readonly DigTests       _digTests = new();
     private readonly DigTestsWindow _digTestsWindow;
     private readonly DigMapWindow   _digMapWindow;
+#endif
+
+    /// <summary>
+    /// The dig tests themselves. <b>Public since 0.84.54.0</b>, because the Activity tab's Wild
+    /// Trail IS the roam test — the tab exists so other people can play it, which was the point of
+    /// the share-a-run button from the day it was asked for.
+    /// </summary>
+    private readonly DigTests _digTests = new();
 
     /// <summary>
     /// The Activity tab's runner, and the player-facing reference map it opens.
     ///
-    /// <para>Separate from <see cref="_digTests"/> rather than folded into it: the lab owns the
+    /// <para>Separate from <see cref="_digTests"/> rather than folded into it: that class owns the
     /// one-test-at-a-time rule and the tests themselves, while this owns what an ACTIVITY adds on top
     /// — a chosen difficulty that does not disturb the lab's sliders, a recorded result, and the
     /// conditions that throw a run away.</para>
@@ -209,7 +219,6 @@ public sealed class Plugin : IDalamudPlugin
 
     /// <summary>The dig HUD. Null when PanacheUI could not load — it is a Panache surface.</summary>
     private readonly DigHuntOverlay? _digOverlay;
-#endif
 
     public Plugin()
     {
@@ -361,16 +370,13 @@ public sealed class Plugin : IDalamudPlugin
         // Pick up new official challenges shortly after load, without blocking startup.
         if (_config.AutoSync) StartAutoSync();
 
-#if DEV_BUILD
-        _creatorWindow = new ChallengeCreatorWindow(_config, _store, SaveConfig, _tracker, _toastQueue);
-
-        // Tuning is restored before the lab can show a slider, so the numbers on screen are the
-        // numbers the tests will actually use.
+        // Tuning is restored before anything can read a range, so the numbers the Activity plays
+        // with are the saved ones rather than the shipped fallbacks. Public now: the Wild Trail is
+        // a player-facing activity and every one of these values shapes how it feels.
         DigTuning.Load();
         DigTrailStore.Load();
-        _digTestsWindow = new DigTestsWindow(_digTests);
-        _digMapWindow   = new DigMapWindow(_digTests);
-        _activities     = new ActivityService(_digTests);
+
+        _activities = new ActivityService(_digTests);
 
         // Clicking the dial digs. The overlay forwards the click; deciding what a click MEANS stays
         // out here, so the overlay does not grow game logic.
@@ -379,6 +385,18 @@ public sealed class Plugin : IDalamudPlugin
                 TextureProvider,
                 () => ChatGui.Print("[Challenges] " + _digTests.Dig()),
                 () => ChatGui.Print("[Challenges] " + _digTests.Recall()));
+
+        if (_mainWindow != null)
+        {
+            _mainWindow.Activities        = _activities;
+            _mainWindow.OnOpenActivityMap = () => _activityMap.IsVisible = true;
+        }
+
+#if DEV_BUILD
+        _creatorWindow = new ChallengeCreatorWindow(_config, _store, SaveConfig, _tracker, _toastQueue);
+
+        _digTestsWindow = new DigTestsWindow(_digTests);
+        _digMapWindow   = new DigMapWindow(_digTests);
 
         // The lab's banner preview. Wired here rather than handed to the window's constructor,
         // because the overlay is built after it and does not exist at all when Panache is missing —
@@ -396,8 +414,6 @@ public sealed class Plugin : IDalamudPlugin
             _mainWindow.OnOpenDatasets  = () => _datasetViewer.IsVisible = true;
             _mainWindow.OnOpenProbe     = () => _probeWindow.IsVisible = true;
             _mainWindow.OnOpenDigTests  = () => _digTestsWindow.IsVisible = true;
-            _mainWindow.Activities      = _activities;
-            _mainWindow.OnOpenActivityMap = () => _activityMap.IsVisible = true;
             _mainWindow.OnOpenSoundTest = () =>
             {
                 if (_soundTestWindow != null) _soundTestWindow.IsVisible = true;
@@ -552,13 +568,13 @@ public sealed class Plugin : IDalamudPlugin
         _toast?.Dispose();
         _progressToast?.Dispose();
         _racePrompt?.Dispose();
-#if DEV_BUILD
         _digOverlay?.Dispose();
-        _soundTestWindow?.Dispose();
 
-        // Unsubscribes from the roam test's finish/abandon events. Managed only, like everything
-        // else in this block — unload fires on every rebuild, at a moment the player did not choose.
+        // Unsubscribes from the roam test's finish/abandon events. Managed only — unload fires on
+        // every rebuild, at a moment the player did not choose, so nothing here may touch game code.
         _activities.Dispose();
+#if DEV_BUILD
+        _soundTestWindow?.Dispose();
         LiveProbe.Detach();
         _datasetViewer.Unload();
 
@@ -812,9 +828,9 @@ public sealed class Plugin : IDalamudPlugin
         try { Props.Tick(); }
         catch (Exception ex) { Diag.Error($"[Prop] tick failed: {ex.Message}"); }
 
-#if DEV_BUILD
         // Places spots, tracks how warm the player is, and expires result screens. Ticked
-        // unconditionally so a test started from chat keeps running with the lab window closed.
+        // unconditionally so a trail started from the Activity tab keeps running with the window
+        // closed — which is the normal way it is played.
         try { _digTests.Tick(); }
         catch (Exception ex) { Diag.Error($"[Dig] tick failed: {ex.Message}"); }
 
@@ -824,7 +840,6 @@ public sealed class Plugin : IDalamudPlugin
         // with a worse message.
         try { _activities.Tick(); }
         catch (Exception ex) { Diag.Error($"[Activity] tick failed: {ex.Message}"); }
-#endif
 
 #if DEV_BUILD
         // One-shot map geometry dump for the zone we are in. Fired from the DRAW loop, not the
@@ -920,23 +935,23 @@ public sealed class Plugin : IDalamudPlugin
         }
         catch (Exception ex) { Log.Error(ex, "Race prompt draw exception"); }
 
-#if DEV_BUILD
-        // The dig HUD and the in-world site walls. Both are dev-only, and both are drawn whether or
-        // not the lab window is open — a test runs in the world, not in a panel.
+        // The dig HUD and the in-world site walls. Both are drawn whether or not any window is
+        // open — a trail is played in the world, not in a panel.
         try { _digOverlay?.Draw(_digTests); }
         catch (Exception ex) { Diag.Error($"[Dig] overlay draw failed: {ex.Message}"); }
 
         try { _digTests.DrawWorld(); }
         catch (Exception ex) { Diag.Error($"[Dig] world draw failed: {ex.Message}"); }
 
+        try { _activityMap.Draw(); }
+        catch (Exception ex) { Diag.Error($"[Activity] reference map failed: {ex.Message}"); }
+
+#if DEV_BUILD
         try { _digTestsWindow.Draw(); }
         catch (Exception ex) { Diag.Error($"[Dig] lab window failed: {ex.Message}"); }
 
         try { _digMapWindow.Draw(); }
         catch (Exception ex) { Diag.Error($"[Dig] map debug window failed: {ex.Message}"); }
-
-        try { _activityMap.Draw(); }
-        catch (Exception ex) { Diag.Error($"[Activity] reference map failed: {ex.Message}"); }
 #endif
 
 #if DEV_BUILD

@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -8,7 +7,7 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. <b>Test 4 — Wild Trail.</b> Test 3's ordered clue trail, except the stops
+/// <b>Test 4 — Wild Trail.</b> Test 3's ordered clue trail, except the stops
 /// and the clues are GENERATED for the map the player is standing on.
 ///
 /// <para><b>This is not the trail generator that was removed, and the difference is the landmark
@@ -504,11 +503,12 @@ internal sealed unsafe class DigRoamService : IDigTest
     /// setting somebody might reasonably pick. Requiring the one component that knows the answer is
     /// simpler to explain and impossible to get wrong.</para>
     ///
-    /// <para><b>Scoped to this test, NOT to the plugin.</b> The public build contains none of this —
-    /// the entire dig tree is <c>#if DEV_BUILD</c> — so declaring a plugin-wide dependency would make
-    /// every player install vnavmesh for a feature they cannot reach.</para>
+    /// <para><b>Scoped to the ACTIVITY, not to the plugin.</b> Everything else here works without
+    /// vnavmesh, so this is refused where it is needed rather than at load: a player who never opens
+    /// the Activity tab never needs the sibling plugin, and a plugin-wide dependency would make them
+    /// install one for a feature they do not use.</para>
     /// </summary>
-    private static string? RefuseWithoutNavmesh()
+    internal static string? RefuseWithoutNavmesh()
     {
         if (!DigNavmesh.Available)
             return "this test REQUIRES vnavmesh and it is not answering. It is the only thing that "
@@ -886,4 +886,3 @@ internal sealed unsafe class DigRoamService : IDigTest
     // point it stopped being a detail of the roam test and became a thing in its own right, with
     // its own sources and its own reason to be read.
 }
-#endif

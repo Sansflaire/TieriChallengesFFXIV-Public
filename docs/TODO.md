@@ -103,13 +103,6 @@ started right now. Update the indented line in the same edit that changes a depe
 ## 🔨 Implement
 
 ### Blocking
-- [ ] **I47** 🙋 ⚡ Un-gate the **Activity** tab for public builds — a decision, then four edits.
-      The tab and its Wild Trail are `#if DEV_BUILD` today because the activity IS the dig tree,
-      which has a hard vnavmesh dependency. Shipping it makes vnavmesh a **public requirement**
-      (Sansflaire's instruction, 2026-09-10), so the gate comes off only together with: a line in
-      `README.md`, a section in `docs/HELP.md`, a runtime refusal the player can act on, and
-      `MainWindow.ActivitiesAvailable` returning true. Nothing here is hard; it is one call about
-      whether players installing a second plugin is acceptable.
 - [ ] **I48** 🤖 More than ONE authored activity map. `DigTuning` stores a single hand-drawn box
       against a single `BoxTerritory`, so drawing one in a second zone replaces the first —
       `ActivityCatalog.AuthoredMaps` already returns a list and needs no change when the store
@@ -251,6 +244,7 @@ Moved here with the date and the answer — never deleted.
 
 | Item | Outcome | Date |
 |---|---|---|
+| **I47** Un-gate the Activity tab for public builds | **Done, shipped 0.84.54.0.** It was briefly dev-only and that was a misreading of the request — the tab was asked for with a copy-this-run-for-your-friends button in the same breath, so other people playing it WAS the requirement. The whole dig tree ships; what stayed behind the gate is the LAB (`DigTestsWindow`, `DigMapWindow`) and the `/tchal dig*` commands, the same capability-ships-trigger-does-not split `PropService` uses. vnavmesh became a public requirement and is declared in `README.md` and `docs/HELP.md` and refused at runtime by `ActivityService.Unavailable` — in the pane, not by hiding the tab, because a missing tab teaches the player nothing. Dig artwork now ships and is asserted by `build-public.ps1` (the HUD falls back silently, so a missing PNG had no symptom). Verified against both built DLLs at both byte parities. | 2026-09-11 |
 | **I45** Three dig minigame tests + a way to tune their ranges | **Done, all three, dev-only.** **Sense Hunt** (`DigHuntService`): one buried spot, an on-demand 8-point compass Sense whose bearing is a deliberate SNAPSHOT, bands warming RED→YELLOW→GREEN→DIG, timed. **Area Surveillance** (`DigSiteService`): a drawn site with N spaced pieces that assemble into the relic — no warming here, sweeping is the thing being tested. **Clue Trail** (`DigTrailService`): ordered spots, each dig yielding the next clue, with a radar ring that pulses faster approaching and goes SOLID exactly when a dig will land. Ranges live in `DigTuning` (own JSON, live sliders). Everything — rules, commands, buttons, settings — is in `DigTestsWindow` behind `#if DEV_BUILD`; verified absent from the Release DLL. | 2026-09-09 |
 | **I46** In-world opaque→transparent gradient walls for box volumes | **Done** (`DigVolumeRender.DrawGradientBox`), used by Surveillance. Banded `AddQuadFilled` — ImGui has no per-vertex gradient for an arbitrary quad, and a projected wall is never screen-axis-aligned so `AddRectFilledMultiColor` does not apply. `PrimReserve`/`PrimWriteVtx`/`PrimWriteIdx` **are** exposed and would give the exact two-triangle version; not taken because `_VtxCurrentIdx` could not be verified (a .NET 10 assembly will not load into PS 5.1 reflection) and a wrong index count corrupts the shared draw list. Upgrade path recorded in `CLAUDE.md` §3. | 2026-09-09 |
 | Spawn the Shovel into the player's hands without owning it | **Done, verified unowned 2026-09-09.** `SetupOrnament(57)` attach -> `PlayActionTimeline(13383)` dig -> `SetupOrnament(0)` detach, driven by `/tchallenges shovel` (+ `off`). No ownership at any layer. Three safe routes were eliminated by testing first - Glamourer/weapon override, Brio IPC, Penumbra redirect - and the crashed function came back only under a staged detach-first protocol. See **BROKEN.md 012** and OPEN_QUESTIONS Dead Ends. | 2026-09-09 |

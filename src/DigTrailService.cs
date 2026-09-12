@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -6,7 +5,7 @@ using System.Numerics;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. <b>Test 3 — Clue Trail.</b> An ordered chain of <b>authored</b> stops. Each
+/// <b>Test 3 — Clue Trail.</b> An ordered chain of <b>authored</b> stops. Each
 /// carries a clue written by whoever placed it; digging on a stop reveals the clue to the next.
 ///
 /// <para><b>The stops and clues are authored, not generated, and that is the whole point.</b> The
@@ -327,4 +326,3 @@ internal sealed class DigTrailService : IDigTest
         catch { return $"territory {territory}"; }
     }
 }
-#endif

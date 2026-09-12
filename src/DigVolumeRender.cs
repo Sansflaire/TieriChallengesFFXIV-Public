@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -8,7 +7,7 @@ using Dalamud.Bindings.ImGui;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. Draws a box volume as four <b>solid-at-the-base, transparent-at-the-top
+/// Draws a box volume as four <b>solid-at-the-base, transparent-at-the-top
 /// gradient walls</b>, so a zone reads as a place you are standing in rather than as a wireframe
 /// floating in the air.
 ///
@@ -401,4 +400,3 @@ internal static class DigVolumeRender
         }
     }
 }
-#endif

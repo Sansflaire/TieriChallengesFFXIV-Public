@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,7 +7,7 @@ using Newtonsoft.Json;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. One finished activity run, and the whole history of them.
+/// One finished activity run, and the whole history of them.
 ///
 /// <para><b>This is a THIRD store with a fourth lifetime, and it is deliberately not merged into any
 /// of the existing three.</b> <c>completions-permanent.json</c> is write-once per challenge GUID,
@@ -54,7 +53,7 @@ internal sealed class ActivityRun
 }
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. The saved history of finished activity runs.
+/// The saved history of finished activity runs.
 ///
 /// <para>Newest first, capped, and written atomically like every other store here. A failed read is
 /// non-fatal and yields an empty history: a corrupt leaderboard must never stop the activity being
@@ -152,4 +151,3 @@ internal static class ActivityRuns
         }
     }
 }
-#endif

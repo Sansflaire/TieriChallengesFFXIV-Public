@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -8,7 +7,7 @@ using Dalamud.Bindings.ImGui;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. The PLAYER'S reference map for an activity — what the clue vocabulary means,
+/// The PLAYER'S reference map for an activity — what the clue vocabulary means,
 /// drawn on the map they are looking at.
 ///
 /// <para><b>It is a different window from <see cref="DigMapWindow"/> and not a mode of it, because it
@@ -100,7 +99,7 @@ internal sealed class ActivityMapWindow
         // clip does not bound it because the frame is smaller than the window.
         drawList.PushClipRect(origin, origin + rect, true);
 
-        var tex = DigMapWindow.MapTextureFor(mapId, out _);
+        var tex = DigLandmarks.MapTexture(mapId, out _);
 
         if (tex != null)
             drawList.AddImage(tex.Handle, origin + _pan * _zoom, origin + _pan * _zoom + rect * _zoom);
@@ -368,4 +367,3 @@ internal sealed class ActivityMapWindow
         ImGui.SetCursorScreenPos(origin);
     }
 }
-#endif

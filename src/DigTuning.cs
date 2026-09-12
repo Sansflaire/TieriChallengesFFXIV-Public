@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,7 +7,7 @@ using System.Text.Json;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. Every distance the three dig tests measure against, in one place, editable
+/// Every distance the three dig tests measure against, in one place, editable
 /// live from <see cref="DigTestsWindow"/>.
 ///
 /// <para><b>Why these are not consts.</b> Sansflaire asked for a debug way to define the ranges, and the
@@ -1505,4 +1504,3 @@ internal static class DigTuning
         }
     }
 }
-#endif

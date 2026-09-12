@@ -58,13 +58,26 @@ panels. It never cancels a race you are running or a search you have typed.
 - **Yours to set up.** Sound volume, mute and per-sound switches; independent toggles for the
   completion banner, corner popups and floating text, with a duration and an option to hold them
   during combat; a full colour palette editor; three text sizes; and a background image.
+- **Activities — things you play, not things you finish.** The **Activity** tab holds repeatable
+  games rather than one-off challenges. The first is **Wild Trail**: a chain of buried clues, each
+  one pointing at the next. Pick a map, a difficulty from 0 to 10 and how many clues to bury, then
+  read, walk and dig. Your finished runs are kept with their times, and clicking one copies a line
+  you can paste to a friend. **Wild Trail needs vnavmesh — see Requirements.**
 - **No spoilers.** Challenges in zones you have not reached stay hidden until you get there.
 - **Suggestions welcome.** There is a Suggest button in the window that sends feedback straight
   to the developer. Nothing about you is sent unless you choose to include it.
 
 ## Requirements
 
-Nothing extra — the plugin bundles everything it needs.
+For challenges, nothing extra — the plugin bundles everything it needs.
+
+**The Activity tab's Wild Trail additionally requires [vnavmesh](https://github.com/awgil/ffxiv_navmesh).**
+It is the only thing that can tell which ground a character can actually walk to, and without it a
+trail would bury clues in places nobody can reach — the ground outside a housing ward's walls is
+perfectly solid and completely unreachable, and nothing else in the game can tell the difference.
+
+Nothing else in the plugin depends on it. If vnavmesh is missing the Activity tab says so and names
+it; every challenge, race and setting works exactly as before.
 
 ---
 

@@ -1,11 +1,10 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. Owns the three dig tests and guarantees that <b>at most one runs at a
+/// Owns the three dig tests and guarantees that <b>at most one runs at a
 /// time</b>.
 ///
 /// <para>That guarantee is not tidiness. All three share one HUD slot and one Dig verb, so two
@@ -241,4 +240,3 @@ internal sealed class DigTests
         }
     }
 }
-#endif

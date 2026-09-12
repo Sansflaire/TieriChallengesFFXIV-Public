@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 
@@ -11,7 +10,7 @@ using LSheets = Lumina.Excel.Sheets;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. Gets the player off their mount so a dig can happen, instead of refusing the
+/// Gets the player off their mount so a dig can happen, instead of refusing the
 /// dig because they are on one.
 ///
 /// <para><b>Why this is dev-only while <see cref="PropService"/> ships.</b> PropService is in the
@@ -135,4 +134,3 @@ internal static unsafe class DigMount
         }
     }
 }
-#endif

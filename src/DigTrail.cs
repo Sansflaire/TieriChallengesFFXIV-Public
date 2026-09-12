@@ -1,4 +1,3 @@
-#if DEV_BUILD
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,7 +7,7 @@ using System.Text.Json;
 namespace TieriChallengesFFXIV;
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. One authored stop on a clue trail: a place someone stood, and the words
+/// One authored stop on a clue trail: a place someone stood, and the words
 /// that should lead a player to it.
 ///
 /// <para><b>The clue is written, never generated.</b> The first cut produced them — "NORTH-EAST, far
@@ -46,7 +45,7 @@ internal sealed class TrailStop
 }
 
 /// <summary>
-/// DEVELOPER BUILD ONLY. The authored trail, persisted to its own file.
+/// The authored trail, persisted to its own file.
 ///
 /// <para>Separate from <c>dig-tuning.json</c> on purpose: that file holds knobs, this holds
 /// <i>content</i>. Wiping tuning back to defaults must not throw away a trail somebody spent twenty
@@ -154,4 +153,3 @@ internal static class DigTrailStore
         return copy;
     }
 }
-#endif
