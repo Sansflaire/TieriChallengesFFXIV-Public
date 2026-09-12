@@ -260,6 +260,66 @@ internal sealed class TestCityWindow
                          + "light, which is what makes five flat fills read as a solid.");
     }
 
+    /// <summary>
+    /// The three switches that separate the three ways the depth route can submit a draw and still
+    /// show nothing.
+    ///
+    /// <para><b>Each one answers exactly one question and is silent about the others.</b> That
+    /// separation is the whole value: a combined "debug mode" that changed all three at once could
+    /// not tell you which one mattered. They are also all independent of the occlusion RADIO —
+    /// selecting "Off" there switches to the painted renderer and tests none of this, which is
+    /// precisely the trap that cost a round of testing.</para>
+    /// </summary>
+    private void DrawDepthDiagnostics()
+    {
+        ImGui.Separator();
+
+        if (!ImGui.CollapsingHeader("Diagnostics — why is nothing drawing?"))
+            return;
+
+        ImGui.TextDisabled("Three switches, three different questions. Turn ON one at a time.");
+        ImGui.Spacing();
+
+        // ── 1. presentation ──────────────────────────────────────────────────
+        ImGui.Checkbox("1 · Clear-only magenta probe", ref _city.DebugClearOnly);
+        ImGui.TextDisabled("Fills the whole screen with magenta and draws NO geometry.\n"
+                         + "  magenta  -> target, SRV and ImGui presentation all work; the\n"
+                         + "              fault is in the geometry we draw into the surface.\n"
+                         + "  nothing  -> the surface never reaches the screen at all, and no\n"
+                         + "              amount of geometry debugging would have helped.\n"
+                         + "A clear needs no shader, transform, vertex buffer, depth test or\n"
+                         + "write mask, which is what makes the answer unambiguous.");
+
+        ImGui.Spacing();
+
+        // ── 2. the scene-depth comparison ────────────────────────────────────
+        ImGui.Checkbox("2 · Bypass the scene-depth comparison", ref _city.DebugBypassSceneDepth);
+        ImGui.TextDisabled("Keeps the D3D route and its own depth buffer, but stops comparing\n"
+                         + "against the game's captured depth.\n"
+                         + "  city appears -> the comparison was rejecting every fragment.\n"
+                         + "  still blank  -> the comparison is innocent; look at transform or\n"
+                         + "                  presentation instead.\n"
+                         + "This is NOT the same as the \"Off\" radio above, which leaves the\n"
+                         + "D3D renderer entirely and draws the painted city.");
+
+        ImGui.Spacing();
+
+        // ── 3. the transform ─────────────────────────────────────────────────
+        ImGui.TextUnformatted("3 · Where our matrix puts you, vs. where Dalamud does");
+        ImGui.TextDisabled("Always on — pure CPU arithmetic, no GPU involved. The painted\n"
+                         + "renderer has always worked and it projects through Dalamud's\n"
+                         + "WorldToScreen, so that is a trusted second opinion for the same\n"
+                         + "question. Both pixel figures roughly equal, and near the middle of\n"
+                         + "the screen when you are centred -> the transform is fine. Wildly\n"
+                         + "different, or w<=0 while you are plainly on screen -> the matrix is\n"
+                         + "the fault and nothing downstream is worth looking at yet.");
+
+        ImGui.Spacing();
+        ImGui.PushStyleColor(ImGuiCol.Text, Ok);
+        ImGui.TextUnformatted(_city.DebugProjection);
+        ImGui.PopStyleColor();
+    }
+
     private void DrawOcclusion()
     {
         int mode = (int)_city.Mode;
@@ -307,6 +367,8 @@ internal sealed class TestCityWindow
                              + "stands on; lower it if a wall shows through something in front of\n"
                              + "it. Reverse-Z is non-linear, so the right value up close is not the\n"
                              + "right value at 200 yalms — which is why it is a knob.");
+
+            DrawDepthDiagnostics();
         }
 
         ImGui.Separator();

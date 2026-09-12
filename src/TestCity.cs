@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
+using Dalamud.Bindings.ImGui;
+
 using CameraManager = FFXIVClientStructs.FFXIV.Client.Game.Control.CameraManager;
 
 namespace TieriChallengesFFXIV;
@@ -287,6 +289,74 @@ internal sealed class TestCityService : IDisposable
     public bool DepthAvailable => _d3d?.IsReady ?? false;
     public bool DepthCaptured  => _d3d?.DepthCaptured ?? false;
     public int  MeshVertices   => _d3d?.VerticesLastFrame ?? 0;
+
+    // ── diagnostics, all default OFF and all dev-only ────────────────────────
+    //
+    // THREE INDEPENDENT SWITCHES, ONE PER CANDIDATE. The depth route submits a draw and nothing
+    // appears, which leaves exactly three possibilities — the transform is wrong, the depth
+    // comparison rejects everything, or the surface never reaches the screen. Each switch answers
+    // ONE of those and says nothing about the others, which is the point: a single "debug mode"
+    // that changes three things at once cannot tell you which one mattered.
+
+    /// <summary>Runs the depth route with the scene-depth comparison bypassed. NOT the same as
+    /// selecting "Off", which switches to the painted renderer entirely and tests none of this —
+    /// the trap that wasted a round of testing.</summary>
+    public bool DebugBypassSceneDepth;
+
+    /// <summary>Clears the offscreen target to magenta, draws no geometry, and blits it fully
+    /// opaque. A magenta screen proves the target, the SRV and the ImGui presentation route all
+    /// work, independently of any transform or depth test. A black screen means the surface never
+    /// arrives, and no amount of geometry debugging would have helped.</summary>
+    public bool DebugClearOnly;
+
+    /// <summary>
+    /// Where our own ViewProj puts a known world point, next to where Dalamud's
+    /// <c>WorldToScreen</c> puts the same point.
+    ///
+    /// <para><b>Pure CPU arithmetic against a known-good second opinion, and it needs no GPU at
+    /// all.</b> The painted renderer has always worked, and it projects through
+    /// <c>WorldToScreen</c> — so that function is a trusted oracle for this exact question. If our
+    /// matrix agrees with it the transform is exonerated in one glance; if it disagrees, nothing
+    /// about the depth buffer or the blit is worth investigating yet. This is the cheapest
+    /// discriminator available and it should have been the first thing built.</para>
+    /// </summary>
+    public string DebugProjection { get; private set; } = "not sampled";
+
+    private void SampleProjection(Matrix4x4 viewProj)
+    {
+        var lp = Plugin.ObjectTable.LocalPlayer;
+        if (lp == null) { DebugProjection = "no local player"; return; }
+
+        // Chest height rather than the feet: a point on the ground can legitimately sit just off
+        // the bottom of the screen, and "off screen" would then be indistinguishable from "wrong".
+        var world = lp.Position + new Vector3(0f, 1f, 0f);
+
+        var clip = Vector4.Transform(new Vector4(world, 1f), viewProj);
+
+        var io    = ImGui.GetIO();
+        float vpW = io.DisplaySize.X, vpH = io.DisplaySize.Y;
+
+        string ours;
+        if (MathF.Abs(clip.W) < 1e-6f)
+        {
+            ours = "w≈0 (degenerate)";
+        }
+        else
+        {
+            // NDC → pixels. Y flips because clip-space +Y is up and pixel +Y is down.
+            float nx = clip.X / clip.W, ny = clip.Y / clip.W, nz = clip.Z / clip.W;
+            ours = $"ndc({nx,7:F3},{ny,7:F3},{nz,7:F4}) → px({(nx + 1f) * 0.5f * vpW,7:F1},{(1f - ny) * 0.5f * vpH,7:F1})";
+        }
+
+        string oracle = AreaOverlay.Project(world, out var screen)
+                      ? $"px({screen.X,7:F1},{screen.Y,7:F1})"
+                      : "behind camera";
+
+        DebugProjection = $"ours   {ours}\n"
+                        + $"clip   ({clip.X:F2}, {clip.Y:F2}, {clip.Z:F4}, {clip.W:F3})\n"
+                        + $"oracle {oracle}   (Dalamud WorldToScreen — the painted path's projector)\n"
+                        + $"vp     {vpW:F0}×{vpH:F0}";
+    }
 
     /// <summary>
     /// Panels submitted on the last frame.
@@ -700,6 +770,10 @@ internal sealed class TestCityService : IDisposable
         if (!_d3d.TryInitialise()) return false;
         if (!TestCityD3D.TryViewProj(out var viewProj)) return false;
 
+        SampleProjection(viewProj);
+
+        _d3d.DebugClearOnly = DebugClearOnly;
+
         _mesh.Clear();
 
         if (ShowGrid)
@@ -713,7 +787,8 @@ internal sealed class TestCityService : IDisposable
         var vertices = _mesh.ToArray();
 
         if (!_d3d.Render(vertices, _mesh.TriangleVertexCount, viewProj,
-                         Mode != CityOcclusion.None, DepthBias, look.WallAlpha))
+                         Mode != CityOcclusion.None && !DebugBypassSceneDepth,
+                         DepthBias, look.WallAlpha))
             return false;
 
         UsingDepthRenderer = true;

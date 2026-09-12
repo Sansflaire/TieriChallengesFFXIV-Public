@@ -147,6 +147,18 @@ internal sealed unsafe class TestCityD3D : IDisposable
     /// </summary>
     public bool DrawSubmitted { get; private set; }
 
+    /// <summary>
+    /// DIAGNOSTIC. Clears the offscreen target to opaque magenta, draws no geometry, and blits it at
+    /// full opacity.
+    ///
+    /// <para>A clear does not depend on a shader, a transform, a vertex buffer, a depth test or a
+    /// colour-write mask, so magenta on screen isolates one question and answers it completely: does
+    /// a surface this class produced reach the screen at all? Black screen ⇒ the whole presentation
+    /// route is the fault and no amount of geometry debugging would ever have helped. Magenta ⇒
+    /// presentation is fine and the fault is in what we draw into it.</para>
+    /// </summary>
+    public bool DebugClearOnly;
+
     public int  VerticesLastFrame { get; private set; }
     public int  TrianglesLastFrame { get; private set; }
     public int  LinesLastFrame { get; private set; }
@@ -481,7 +493,7 @@ internal sealed unsafe class TestCityD3D : IDisposable
         LinesLastFrame     = 0;
         DrawSubmitted      = false;
 
-        if (vertices.Length == 0) return true;
+        if (vertices.Length == 0 && !DebugClearOnly) return true;
 
         try
         {
@@ -491,6 +503,17 @@ internal sealed unsafe class TestCityD3D : IDisposable
 
             if (vpW == 0 || vpH == 0) return false;
             if (!EnsureTargets(vpW, vpH)) return false;
+
+            // Presentation probe: clear, blit, and skip everything in between. Deliberately placed
+            // before the vertex upload and the constant buffer so that not one of those steps can
+            // affect the result — a probe that shares setup with the thing it is testing proves less
+            // than it appears to.
+            if (DebugClearOnly)
+            {
+                Draw(0, 0, vpW, vpH);
+                Blit(vpW, vpH, 1f);
+                return true;
+            }
 
             DepthCaptured = occlude && TryCaptureDepth();
 
@@ -560,7 +583,9 @@ internal sealed unsafe class TestCityD3D : IDisposable
 
         try
         {
-            ctx.ClearRenderTargetView(_colourRtv!, new Color4(0f, 0f, 0f, 0f));
+            ctx.ClearRenderTargetView(_colourRtv!,
+                DebugClearOnly ? new Color4(1f, 0f, 1f, 1f)     // diagnostic: opaque magenta
+                               : new Color4(0f, 0f, 0f, 0f));
 
             // Cleared to ZERO because of reverse-Z: 0 is the far plane. Clearing to 1 would put the
             // whole buffer at the near plane and nothing would ever pass the Greater test.
