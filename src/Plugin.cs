@@ -606,6 +606,11 @@ public sealed class Plugin : IDalamudPlugin
 
         // Managed-only; stops the per-frame animation write. Nothing native to unwind by design.
         try { _timelineProbe.ReleaseHold(); } catch { /* teardown must not throw */ }
+
+        // Releases Test City's D3D11 resources. COM releases only — no game code, which matters
+        // because this runs on every rebuild (BROKEN.md 012). The reference it took on the game's
+        // own context with AddRef is given back; the game's reference is untouched.
+        try { _testCity.Dispose(); } catch { /* teardown must not throw */ }
 #endif
         _mainWindow?.Dispose();
         _shutdown.Dispose();

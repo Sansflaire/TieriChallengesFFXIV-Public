@@ -28,9 +28,9 @@
          from what was built. Bump it on EVERY change — see docs/How To Versioning.md.
          The one thing that does NOT follow automatically is the manifest's AssemblyVersion
          in ../TieriChallengesFFXIV.json; update that by hand to match. -->
-    <Version>0.84.54.8</Version>
-    <AssemblyVersion>0.84.54.8</AssemblyVersion>
-    <FileVersion>0.84.54.8</FileVersion>
+    <Version>0.84.54.9</Version>
+    <AssemblyVersion>0.84.54.9</AssemblyVersion>
+    <FileVersion>0.84.54.9</FileVersion>
   </PropertyGroup>
 
   <!-- TWO FLAVOURS OF THIS PLUGIN.
@@ -43,6 +43,30 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <DefineConstants>$(DefineConstants);DEV_BUILD</DefineConstants>
   </PropertyGroup>
+
+  <!-- D3D11 interop for the dev-only Test City depth-buffer occlusion path.
+       DEBUG ONLY, and that condition is the whole point: every line of code that touches
+       Vortice is inside #if DEV_BUILD, so the public Release build neither restores these
+       packages nor ships their DLLs, and the public artifact is unchanged in shape.
+       Same packages and versions FFXIV-TV uses (src/FFXIV-TV.csproj) - which is the proof
+       they work against this Dalamud runtime, rather than a hopeful guess at a version. -->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <PackageReference Include="Vortice.Direct3D11"  Version="3.8.2" />
+    <PackageReference Include="Vortice.D3DCompiler" Version="3.8.2" />
+  </ItemGroup>
+
+  <!-- Dalamud gives every plugin its own PluginLoadContext, which resolves managed
+       assemblies ONLY from that plugin's own folder - the same rule that makes PanacheUI
+       vendored rather than shared. CopyToDevPlugins copies $(TargetPath) alone, so without
+       this the dev build would throw FileNotFoundException on Vortice the first time the
+       depth path ran. -->
+  <Target Name="CopyD3DInterop" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+    <ItemGroup>
+      <D3DInteropDll Include="$(TargetDir)Vortice.*.dll;$(TargetDir)SharpGen.Runtime*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(D3DInteropDll)" DestinationFolder="$(PluginDeployPath)"
+          SkipUnchangedFiles="true" />
+  </Target>
 
   <PropertyGroup>
     <DalamudLibPath>$(APPDATA)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>

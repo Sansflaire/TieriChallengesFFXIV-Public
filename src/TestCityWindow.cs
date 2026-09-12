@@ -262,19 +262,64 @@ internal sealed class TestCityWindow
 
     private void DrawOcclusion()
     {
-        ImGui.Checkbox("Hide what the world blocks", ref _city.Occlude);
+        int mode = (int)_city.Mode;
 
-        ImGui.TextDisabled("COLLISION RAYCASTS, not the depth buffer — Sansflaire's call after the three\n"
-                         + "routes were costed. Each drawn face samples a 3x3 grid from the camera;\n"
-                         + "fully hidden faces are skipped, fully visible ones are a single quad, and\n"
-                         + "partly hidden ones draw only their visible cells. Results are cached per\n"
-                         + "face and refreshed 40 faces a frame, so the whole visible set resolves in\n"
-                         + "a few frames rather than costing 2,000 rays every frame.\n"
+        if (ImGui.RadioButton("Off — draw everything", ref mode, (int)CityOcclusion.None))
+            _city.Mode = CityOcclusion.None;
+
+        if (ImGui.RadioButton("Collision raycasts (approximate)", ref mode, (int)CityOcclusion.Raycast))
+            _city.Mode = CityOcclusion.Raycast;
+
+        if (ImGui.RadioButton("D3D11 depth buffer (per-pixel)", ref mode, (int)CityOcclusion.DepthBuffer))
+            _city.Mode = CityOcclusion.DepthBuffer;
+
+        _city.Mode = (CityOcclusion)mode;
+
+        ImGui.Separator();
+
+        // Which route ACTUALLY ran, not which one is selected. The depth path falls back to the
+        // painted one on any failure, in the same frame — and a silent fallback would read as the
+        // depth path working badly rather than as it not running at all.
+        if (_city.Mode == CityOcclusion.DepthBuffer)
+        {
+            if (_city.UsingDepthRenderer)
+                ImGui.TextColored(Ok, "ACTIVE — real geometry, depth-tested per pixel");
+            else
+                ImGui.TextColored(Warn, "SELECTED BUT NOT RUNNING — painted fallback is drawing");
+
+            ImGui.TextDisabled($"d3d: {_city.DepthStatus}");
+
+            if (_city.DepthAvailable && !_city.DepthCaptured)
+                ImGui.TextColored(Warn, "geometry is drawing but the game's depth buffer was not\n"
+                                      + "captured — everything will appear unoccluded");
+
+            ImGui.SliderFloat("Depth bias", ref _city.DepthBias, 0f, 0.0005f, "%.6f");
+            ImGui.TextDisabled("Raise this if a building's base speckles against the ground it\n"
+                             + "stands on; lower it if a wall shows through something in front of\n"
+                             + "it. Reverse-Z is non-linear, so the right value up close is not the\n"
+                             + "right value at 200 yalms — which is why it is a knob.");
+        }
+
+        ImGui.Separator();
+
+        ImGui.TextDisabled("D3D11 DEPTH BUFFER is the real thing and the default. Every occluder the\n"
+                         + "game drew counts — characters, foliage, particles, all of it — and the\n"
+                         + "test is per pixel. Buildings become genuine triangles with their own\n"
+                         + "depth buffer, so they occlude EACH OTHER correctly too; the painter's\n"
+                         + "sort and the back-face cull are gone, along with the sign error a\n"
+                         + "winding test invites.\n"
                          + "\n"
-                         + "WHAT IT CANNOT DO: only the collision mesh occludes. Terrain, walls and\n"
-                         + "buildings yes; characters, foliage and particles no. Edges are blocky at\n"
-                         + "the 3x3 granularity. Both are properties of this route, not bugs — closing\n"
-                         + "them means reading the game's depth buffer, which is a bigger build.");
+                         + "How: CopyResource the game's depth-stencil, draw the city into our own\n"
+                         + "offscreen target, discard any fragment the scene depth says is behind\n"
+                         + "the world, then blit that surface to the ImGui background list. ZERO\n"
+                         + "render hooks — ported from FFXIV-TV's CopyBlitRenderer and XivMediaPlayer's\n"
+                         + "DepthTestedRenderer, whose hook-based sibling took dozens of versions to\n"
+                         + "stabilise and buys only HUD-over-geometry, which we never needed.\n"
+                         + "\n"
+                         + "COLLISION RAYCASTS are kept as the fallback and for comparison: only the\n"
+                         + "collision mesh occludes (no characters or foliage) and edges are blocky\n"
+                         + "at a 3x3 grid per face. Flipping between the two is how the difference\n"
+                         + "gets judged.");
     }
 
     // ── tab 2: the goal area ─────────────────────────────────────────────────

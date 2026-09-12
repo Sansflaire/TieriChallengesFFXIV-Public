@@ -56,7 +56,13 @@ $markers = @(
     'Set to my current zone',  # creator zone control
     'Missing details',         # dev-only challenge flag
     'Animation: ',             # dev status readout
-    'tc_test_city'             # Test City window id
+    'tc_test_city',            # Test City window id
+    # D3D11 interop for Test City's depth occlusion. Its PackageReference is Debug-only, so a hit
+    # here means either the condition was dropped or D3D code escaped its #if DEV_BUILD - and the
+    # public zip would then be missing assemblies it references, which fails at load rather than
+    # at build. Distinct from the others: this marker guards a DEPENDENCY, not a feature.
+    'Vortice.Direct3D11',
+    'testcity_vs'              # the HLSL entry point name, compiled at runtime
 )
 # BOTH BYTE PARITIES, and this is not belt-and-braces - a single-parity scan misses about half of
 # what is present. Encoding.Unicode decodes from offset 0, so it only finds a #US heap entry whose

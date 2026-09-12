@@ -60,6 +60,27 @@ internal sealed class CityBuilding
     public float EyeDistance;
 }
 
+/// <summary>
+/// How the city hides behind the world.
+///
+/// <para><b>All three are kept selectable on purpose.</b> The depth path is strictly better and is
+/// the default — but it is also the one that can fail on a machine or after a patch, and when it
+/// does the city must still draw. Keeping the raycast path alive is also the only way to compare the
+/// two by flipping between them, which is how "the raycasts aren't working great" got diagnosed in
+/// the first place.</para>
+/// </summary>
+internal enum CityOcclusion
+{
+    /// <summary>Draw everything. Useful for telling an occlusion bug from a geometry bug.</summary>
+    None = 0,
+
+    /// <summary>Collision raycasts, 3×3 per face, cached. Only the collision mesh occludes.</summary>
+    Raycast = 1,
+
+    /// <summary>Real D3D11 geometry, per-pixel tested against the game's depth buffer.</summary>
+    DepthBuffer = 2,
+}
+
 /// <summary>Everything the renderer needs to know about how the city should LOOK, in one lump, so the
 /// drawing code takes no dependency on the service that owns the settings.</summary>
 internal struct CityLook
@@ -97,7 +118,7 @@ internal struct CityLook
 /// what the plugin started and <i>never destroys</i> — a placed city is state somebody spent a build
 /// on, exactly like a running dig test, which Escape also leaves alone.</para>
 /// </summary>
-internal sealed class TestCityService
+internal sealed class TestCityService : IDisposable
 {
     // ── limits ───────────────────────────────────────────────────────────────
 
@@ -179,8 +200,20 @@ internal sealed class TestCityService
     public bool  ShowRoofs   = true;
     public bool  ShowEdges   = true;
 
-    /// <summary>Hide the parts of a building the world stands in front of.</summary>
-    public bool Occlude = true;
+    /// <summary>How the city hides behind the world. Depth buffer by default — it is the whole point
+    /// of 0.84.54.9 — falling back to the painted path automatically if D3D cannot start.</summary>
+    public CityOcclusion Mode = CityOcclusion.DepthBuffer;
+
+    /// <summary>
+    /// Depth-compare bias, in the game's own clip space.
+    ///
+    /// <para>A knob rather than a constant, for the same reason every dig range is: a building
+    /// stands ON the terrain, so its base pixels sit at almost exactly the terrain's depth, and how
+    /// much slack that needs before it stops speckling is a thing you find by looking at it. Reverse-Z
+    /// is non-linear, so the value that is right up close is not the value that is right at 200
+    /// yalms; there is no single correct number to hard-code.</para>
+    /// </summary>
+    public float DepthBias = 0.00002f;
 
     // Grid drawing. Extent and fineness are separate knobs from the city's own — see TestCityGrid.
     public int   FineTiles  = 32;
@@ -215,6 +248,32 @@ internal sealed class TestCityService
 
     /// <summary>Round-robin cursor for the occlusion budget, over <c>_buildings</c>.</summary>
     private int _occlCursor;
+
+    /// <summary>
+    /// The D3D11 renderer, built on first use rather than in the constructor.
+    ///
+    /// <para>Deliberately lazy: the constructor runs off the main thread during plugin load, where
+    /// the game's device singleton may not be up — and standing up D3D resources for a feature
+    /// nobody has opened would be work done on every login for nothing.</para>
+    /// </summary>
+    private TestCityD3D? _d3d;
+
+    private readonly CityMeshBuilder _mesh = new();
+
+    /// <summary>Which route actually drew the last frame. Reported rather than assumed: a silent
+    /// fallback from the depth path to the painted one would look like the depth path working
+    /// badly.</summary>
+    public bool UsingDepthRenderer { get; private set; }
+
+    public string DepthStatus =>
+        _d3d == null            ? "not started"
+      : !_d3d.IsReady           ? $"unavailable — {_d3d.LastError}"
+      : !_d3d.DepthCaptured     ? $"drawing, NO depth capture — {_d3d.LastError}"
+      : $"{_d3d.TrianglesLastFrame} tri · {_d3d.LinesLastFrame} line · {_d3d.DepthInfo}";
+
+    public bool DepthAvailable => _d3d?.IsReady ?? false;
+    public bool DepthCaptured  => _d3d?.DepthCaptured ?? false;
+    public int  MeshVertices   => _d3d?.VerticesLastFrame ?? 0;
 
     /// <summary>
     /// Panels submitted on the last frame.
@@ -561,7 +620,14 @@ internal sealed class TestCityService
 
     // ── in-world ─────────────────────────────────────────────────────────────
 
-    /// <summary>The floor grid, then the buildings over it.</summary>
+    /// <summary>
+    /// Draws the city, by whichever route <see cref="Mode"/> asks for.
+    ///
+    /// <para><b>The depth route is tried first and falls through on ANY failure</b>, in the same
+    /// frame, to the painted one. A dev experiment must never be the reason the plugin stops
+    /// drawing — and a silent fallback would be worse than a crash, so the panel reports which route
+    /// actually ran.</para>
+    /// </summary>
     public void DrawWorld()
     {
         if (!IsBuilt) return;
@@ -579,10 +645,7 @@ internal sealed class TestCityService
                 eye = lp.Position + new Vector3(0f, 8f, 0f);
             }
 
-            if (ShowGrid) TestCityGrid.Draw(this, eye, GridRgb, FineTiles, MajorEvery, ShowChecker);
-
             SelectRendered(eye);
-            RefreshOcclusion(eye);
 
             var look = new CityLook
             {
@@ -591,10 +654,19 @@ internal sealed class TestCityService
                 ShowWindows = ShowWindows,
                 ShowRoofs   = ShowRoofs,
                 ShowEdges   = ShowEdges,
-                Occlude     = Occlude,
+                Occlude     = Mode == CityOcclusion.Raycast,
                 LitRgb      = LitRgb,
                 DarkRgb     = DarkRgb,
             };
+
+            if (Mode == CityOcclusion.DepthBuffer && DrawViaDepth(eye, look)) return;
+
+            // ── painted fallback ─────────────────────────────────────────────
+            UsingDepthRenderer = false;
+
+            if (ShowGrid) TestCityGrid.Draw(this, eye, GridRgb, FineTiles, MajorEvery, ShowChecker);
+
+            RefreshOcclusion(eye);
 
             PanelsDrawn = TestCityRender.Draw(this, _rendered, eye, look);
         }
@@ -602,6 +674,40 @@ internal sealed class TestCityService
         {
             Diag.Error($"[City] world draw failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// The D3D11 route: build the mesh, hand it to the GPU, let the depth buffer sort it out.
+    /// Returns false if anything was missing, so the caller can paint instead this frame.
+    /// </summary>
+    private bool DrawViaDepth(Vector3 eye, in CityLook look)
+    {
+        _d3d ??= new TestCityD3D();
+
+        if (!_d3d.TryInitialise()) return false;
+        if (!TestCityD3D.TryViewProj(out var viewProj)) return false;
+
+        _mesh.Clear();
+
+        if (ShowGrid)
+        {
+            var lp = Plugin.ObjectTable.LocalPlayer;
+            _mesh.AddGrid(this, lp?.Position ?? eye, GridRgb, FineTiles, MajorEvery, ShowChecker);
+        }
+
+        foreach (var b in _rendered) _mesh.AddBuilding(this, b, look);
+
+        var vertices = _mesh.ToArray();
+
+        if (!_d3d.Render(vertices, _mesh.TriangleVertexCount, viewProj,
+                         Mode != CityOcclusion.None, DepthBias, look.WallAlpha))
+            return false;
+
+        UsingDepthRenderer = true;
+        PanelsDrawn        = _d3d.TrianglesLastFrame;
+        RaysLastFrame      = 0;
+
+        return true;
     }
 
     /// <summary>
@@ -644,7 +750,7 @@ internal sealed class TestCityService
 
         if (_buildings.Count == 0) return;
 
-        if (!Occlude)
+        if (Mode != CityOcclusion.Raycast)
         {
             // Reset to fully visible as the toggle goes off, or a stale mask would keep hiding parts
             // of a building with occlusion apparently disabled — which looks like a rendering bug and
@@ -695,6 +801,16 @@ internal sealed class TestCityService
         eye = new Vector3(p.X, p.Y, p.Z);
 
         return true;
+    }
+
+    /// <summary>
+    /// Releases the D3D resources. <b>Managed COM releases only — no game code</b>, because unload
+    /// runs on every rebuild at a moment the player did not choose (BROKEN.md 012).
+    /// </summary>
+    public void Dispose()
+    {
+        _d3d?.Dispose();
+        _d3d = null;
     }
 }
 #endif
