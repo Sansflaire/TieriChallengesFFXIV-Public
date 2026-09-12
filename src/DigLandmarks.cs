@@ -264,7 +264,22 @@ internal static class DigLandmarks
             return true;
         }
 
-        // FIRST: the spread of the map's own labels.
+        // FIRST: a SHIPPED authored box for this territory.
+        //
+        // Same standing as the hand-drawn one above and for the same reason — somebody walked the
+        // zone and measured it — but it is content rather than local state, so every install has it.
+        // Below the hand-drawn box only because an author actively drawing one is working on this
+        // map right now and their live edit must win over what shipped.
+        if (ActivityMaps.For(Plugin.ClientState.TerritoryType) is { Box: { } shipped } &&
+            shipped.IsUsable)
+        {
+            lo     = new Vector2(shipped.MinX, shipped.MinZ);
+            hi     = new Vector2(shipped.MaxX, shipped.MaxZ);
+            source = "authored map";
+            return true;
+        }
+
+        // SECOND: the spread of the map's own labels.
         //
         // THIS WAS DEMOTED IN FAVOUR OF THE NAVMESH AND THAT WAS A MISTAKE, reverted at 0.84.45.5
         // on direct evidence: the debug view draws both, and the labels hug the ward while the
@@ -305,7 +320,7 @@ internal static class DigLandmarks
             }
         }
 
-        // SECOND: the navmesh, for a map with too few labels to bound anything. Still better than
+        // THIRD: the navmesh, for a map with too few labels to bound anything. Still better than
         // the raw rectangle — it is at least made of ground — but demoted, per the note above.
         if (TryWorldBounds(out var searchLo, out var searchHi) &&
             DigNavmesh.TryWalkableBounds(searchLo, searchHi, out lo, out hi))

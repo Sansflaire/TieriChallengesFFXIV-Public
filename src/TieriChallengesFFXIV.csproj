@@ -28,9 +28,9 @@
          from what was built. Bump it on EVERY change — see docs/How To Versioning.md.
          The one thing that does NOT follow automatically is the manifest's AssemblyVersion
          in ../TieriChallengesFFXIV.json; update that by hand to match. -->
-    <Version>0.84.54.2</Version>
-    <AssemblyVersion>0.84.54.2</AssemblyVersion>
-    <FileVersion>0.84.54.2</FileVersion>
+    <Version>0.84.54.3</Version>
+    <AssemblyVersion>0.84.54.3</AssemblyVersion>
+    <FileVersion>0.84.54.3</FileVersion>
   </PropertyGroup>
 
   <!-- TWO FLAVOURS OF THIS PLUGIN.
@@ -119,7 +119,20 @@
           DestinationFolder="$(PluginDeployPath)" SkipUnchangedFiles="true" />
   </Target>
 
-  <!-- Dig HUD artwork. SHIPS PUBLICLY since 0.84.54.2, when the Activity tab un-gated the Wild
+  <!-- AUTHORED ACTIVITY CONTENT and the tuned baseline, shipped beside the DLL like HELP.md.
+       activity-maps.json is the walkable bounds and hand-drawn exclusions for every authored map;
+       activity-tuning.json is the feel the activity was tuned with. BOTH used to exist only in the
+       author's own pluginConfigs folder, which is why the Activity tab reported no authored map on
+       every other install and why a fresh one would have played at the code's fallback constants
+       rather than the tuned values. A per-user config file is not content. -->
+  <Target Name="CopyActivityContent" AfterTargets="Build">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\assets\activity-maps.json;$(MSBuildProjectDirectory)\..\assets\activity-tuning.json"
+          DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\assets\activity-maps.json;$(MSBuildProjectDirectory)\..\assets\activity-tuning.json"
+          DestinationFolder="$(PluginDeployPath)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Dig HUD artwork. SHIPS PUBLICLY since 0.84.54.3, when the Activity tab un-gated the Wild
        Trail: DigHuntOverlay is now in the public DLL and these are the dial, the CLUE!/DIG! words
        and the two trail banners a player actually sees. The overlay still falls back to its drawn
        circles when the files are absent, so a missing PNG degrades rather than crashes — but

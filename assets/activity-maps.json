@@ -1,0 +1,299 @@
+{
+  "comment": [
+    "AUTHORED ACTIVITY MAPS - shipped content, read at runtime by ActivityMaps.",
+    "",
+    "A map is 'authored' when somebody has walked it and drawn its walkable bounds and its",
+    "exclusions by hand. That is a MEASUREMENT, and it is the one input the trail generator has",
+    "that is not an inference - every automatic attempt to work out where a player can stand has",
+    "failed in a different way.",
+    "",
+    "This file exists because that authoring used to live only in the author's own dig-tuning.json,",
+    "which meant every other install had no authored map at all and the Activity tab told them so.",
+    "Box and zones are WORLD coordinates (x, z); +X is east and +Z is south."
+  ],
+  "maps": [
+    {
+      "activityId": "wild-trail",
+      "territory": 979,
+      "name": "Empyreum",
+      "box": {
+        "minX": -988.25,
+        "minZ": -953.892,
+        "maxX": -417.556,
+        "maxZ": -397.646
+      },
+      "nullZones": [
+        {
+          "minX": -977.721,
+          "minZ": -749.381,
+          "maxX": -886.691,
+          "maxZ": -661.631
+        },
+        {
+          "minX": -502.067,
+          "minZ": -746.1,
+          "maxX": -418.417,
+          "maxZ": -659.17
+        },
+        {
+          "minX": -511.56,
+          "minZ": -659.18,
+          "maxX": -459.778,
+          "maxZ": -580.895
+        },
+        {
+          "minX": -740.044,
+          "minZ": -949.363,
+          "maxX": -661.988,
+          "maxZ": -855.385
+        },
+        {
+          "minX": -897.598,
+          "minZ": -862.5,
+          "maxX": -817.334,
+          "maxZ": -806.252
+        },
+        {
+          "minX": -822.706,
+          "minZ": -885.884,
+          "maxX": -771.83,
+          "maxZ": -853.968
+        },
+        {
+          "minX": -434.022,
+          "minZ": -655.731,
+          "maxX": -302.924,
+          "maxZ": -477.061
+        },
+        {
+          "minX": -471.063,
+          "minZ": -537.344,
+          "maxX": -355.581,
+          "maxZ": -439.293
+        },
+        {
+          "minX": -1063.725,
+          "minZ": -768.671,
+          "maxX": -975.842,
+          "maxZ": -658.636
+        },
+        {
+          "minX": -997.268,
+          "minZ": -873.985,
+          "maxX": -885.781,
+          "maxZ": -745.793
+        },
+        {
+          "minX": -897.765,
+          "minZ": -976.756,
+          "maxX": -769.573,
+          "maxZ": -855.827
+        },
+        {
+          "minX": -755.814,
+          "minZ": -904.58,
+          "maxX": -742.755,
+          "maxZ": -891.759
+        },
+        {
+          "minX": -428.071,
+          "minZ": -860.827,
+          "maxX": -201.981,
+          "maxZ": -647.274
+        },
+        {
+          "minX": -495.773,
+          "minZ": -1010.858,
+          "maxX": -364.131,
+          "maxZ": -743.812
+        },
+        {
+          "minX": -451.756,
+          "minZ": -1210.326,
+          "maxX": -140.327,
+          "maxZ": -837.252
+        },
+        {
+          "minX": -637.964,
+          "minZ": -1062.622,
+          "maxX": -384.416,
+          "maxZ": -872.362
+        },
+        {
+          "minX": -957.51,
+          "minZ": -1133.2,
+          "maxX": -630.851,
+          "maxZ": -936.816
+        },
+        {
+          "minX": -1228.967,
+          "minZ": -1185.709,
+          "maxX": -327.199,
+          "maxZ": -962.449
+        },
+        {
+          "minX": -1250.17,
+          "minZ": -983.653,
+          "maxX": -883.476,
+          "maxZ": -824.004
+        },
+        {
+          "minX": -1260.149,
+          "minZ": -850.196,
+          "maxX": -990.741,
+          "maxZ": -705.514
+        },
+        {
+          "minX": -1245.181,
+          "minZ": -741.685,
+          "maxX": -990.741,
+          "maxZ": -118.055
+        },
+        {
+          "minX": -1006.955,
+          "minZ": -397.441,
+          "maxX": -166.302,
+          "maxZ": -124.291
+        },
+        {
+          "minX": -399.54,
+          "minZ": -695.536,
+          "maxX": -155.077,
+          "maxZ": -332.583
+        },
+        {
+          "minX": -261.094,
+          "minZ": -873.894,
+          "maxX": -148.84,
+          "maxZ": -673.085
+        },
+        {
+          "minX": -543.06,
+          "minZ": -514.782,
+          "maxX": -360.748,
+          "maxZ": -355.414
+        },
+        {
+          "minX": -746.456,
+          "minZ": -422.385,
+          "maxX": -504.613,
+          "maxZ": -380.218
+        },
+        {
+          "minX": -996.359,
+          "minZ": -447.189,
+          "maxX": -784.902,
+          "maxZ": -380.218
+        },
+        {
+          "minX": -1008.141,
+          "minZ": -535.245,
+          "maxX": -939.309,
+          "maxZ": -439.748
+        },
+        {
+          "minX": -1005.661,
+          "minZ": -597.876,
+          "maxX": -955.432,
+          "maxZ": -531.524
+        },
+        {
+          "minX": -766.64,
+          "minZ": -497.826,
+          "maxX": -725.635,
+          "maxZ": -460.213
+        },
+        {
+          "minX": -684.323,
+          "minZ": -496.901,
+          "maxX": -640.236,
+          "maxZ": -460.829
+        },
+        {
+          "minX": -925.416,
+          "minZ": -610.665,
+          "maxX": -896.127,
+          "maxZ": -598.641
+        },
+        {
+          "minX": -856.356,
+          "minZ": -648.895,
+          "maxX": -826.451,
+          "maxZ": -627.93
+        },
+        {
+          "minX": -888.728,
+          "minZ": -759.884,
+          "maxX": -862.214,
+          "maxZ": -739.228
+        },
+        {
+          "minX": -857.281,
+          "minZ": -760.501,
+          "maxX": -821.21,
+          "maxZ": -739.536
+        },
+        {
+          "minX": -751.225,
+          "minZ": -833.569,
+          "maxX": -712.687,
+          "maxZ": -798.731
+        },
+        {
+          "minX": -697.58,
+          "minZ": -835.419,
+          "maxX": -679.39,
+          "maxZ": -799.964
+        },
+        {
+          "minX": -680.007,
+          "minZ": -836.344,
+          "maxX": -644.552,
+          "maxZ": -806.438
+        },
+        {
+          "minX": -545.586,
+          "minZ": -873.957,
+          "maxX": -492.557,
+          "maxZ": -811.988
+        },
+        {
+          "minX": -533.87,
+          "minZ": -813.838,
+          "maxX": -493.174,
+          "maxZ": -795.648
+        },
+        {
+          "minX": -528.629,
+          "minZ": -758.652,
+          "maxX": -487.624,
+          "maxZ": -722.272
+        },
+        {
+          "minX": -546.202,
+          "minZ": -724.738,
+          "maxX": -491.632,
+          "maxZ": -706.24
+        },
+        {
+          "minX": -584.74,
+          "minZ": -724.43,
+          "maxX": -552.676,
+          "maxZ": -706.856
+        },
+        {
+          "minX": -451.619,
+          "minZ": -653.707,
+          "maxX": -443.848,
+          "maxZ": -645.736
+        },
+        {
+          "minX": -453.811,
+          "minZ": -646.732,
+          "maxX": -424.717,
+          "maxZ": -581.568
+        }
+      ]
+    }
+  ]
+}

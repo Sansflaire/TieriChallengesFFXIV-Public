@@ -369,6 +369,12 @@ internal static class DigTuning
     /// <summary>Whether a world position falls inside any exclusion for this territory.</summary>
     public static bool InNullZone(uint territory, float x, float z)
     {
+        // SHIPPED EXCLUSIONS FIRST. They are the authored map's own, so every install has them;
+        // the list below is the AUTHORING tool's live output and exists only on a machine where
+        // somebody is drawing. Checking only the local list is what would have let a public trail
+        // bury clues in the sea on a map whose exclusions were drawn months ago.
+        if (ActivityMaps.InNullZone(territory, x, z)) return true;
+
         foreach (var n in NullZones)
         {
             if (n.Territory != territory) continue;
@@ -1168,7 +1174,33 @@ internal static class DigTuning
         Apply();
     }
 
-    public static void Load() => Load(Path);
+    public static void Load()
+    {
+        // THE SHIPPED BASELINE FIRST, then the user's own file over the top.
+        //
+        // Without this a fresh install got the code's fallback constants rather than the values the
+        // activity was actually tuned with — a different dig length, a different dig speed, a
+        // differently placed and differently sized HUD. It looked like the same minigame and did not
+        // feel like it, and nothing anywhere said so.
+        //
+        // Ordering is the whole mechanism: a user who has changed anything has a dig-tuning.json,
+        // and it is applied second, so their choices always win over what shipped.
+        Load(ShippedBaselinePath);
+        Load(Path);
+    }
+
+    /// <summary>
+    /// The tuned values that ship beside the DLL. Absent on a source build that has not been
+    /// packaged, which is fine — <see cref="Load(string)"/> returns without touching anything.
+    /// </summary>
+    private static string ShippedBaselinePath
+    {
+        get
+        {
+            string dir = Plugin.PluginInterface.AssemblyLocation.Directory?.FullName ?? string.Empty;
+            return System.IO.Path.Combine(dir, "activity-tuning.json");
+        }
+    }
 
     /// <summary>
     /// The same loader, pointed at a different file.

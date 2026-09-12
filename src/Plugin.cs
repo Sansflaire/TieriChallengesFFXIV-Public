@@ -373,6 +373,11 @@ public sealed class Plugin : IDalamudPlugin
         // Tuning is restored before anything can read a range, so the numbers the Activity plays
         // with are the saved ones rather than the shipped fallbacks. Public now: the Wild Trail is
         // a player-facing activity and every one of these values shapes how it feels.
+        // BEFORE DigTuning, because WalkableBox consults the authored box and InNullZone consults
+        // the authored exclusions — anything that reads either before this runs would silently see
+        // an unauthored world.
+        ActivityMaps.Load();
+
         DigTuning.Load();
         DigTrailStore.Load();
 

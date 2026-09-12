@@ -68,22 +68,47 @@ internal static class ActivityCatalog
     /// a map with a box is exactly a map whose trails can be trusted, and a hard-coded list of
     /// territory ids would be a second answer to that question, free to disagree with the first.</para>
     ///
-    /// <para><b>Consequence worth knowing: there is currently room for exactly ONE.</b>
-    /// <see cref="DigTuning"/> stores a single box against a single <c>BoxTerritory</c>, so drawing a
-    /// box in a second zone replaces the first. That is a real limit of the tuning store and not of
-    /// this method — when the box store grows to a per-territory dictionary, this returns more rows
-    /// with no change here.</para>
+    /// <para><b>Two sources, and the shipped one is the one that matters.</b> Authored maps ship in
+    /// <c>activity-maps.json</c> and every install has them. The hand-drawn box in
+    /// <see cref="DigTuning"/> is the AUTHORING tool's live output — one map at a time, on the
+    /// author's machine — and is listed second so a map being prepared is playable before it is
+    /// exported. An install with neither has no activity maps, which is honest.</para>
     /// </summary>
     public static List<AuthoredMap> AuthoredMaps()
     {
         var list = new List<AuthoredMap>();
+        var seen = new HashSet<uint>();
 
-        if (!DigTuning.BoxSet) return list;
+        // SHIPPED CONTENT FIRST, and this is the half that was missing entirely.
+        //
+        // It used to read only the hand-drawn box below, which lives in the author's own
+        // dig-tuning.json. Every other install therefore had no authored map, the tab said so, and
+        // travelling to the right zone could not help because the check never looked at where the
+        // player was. See ActivityMaps for the whole post-mortem.
+        foreach (var m in ActivityMaps.All)
+        {
+            if (!seen.Add(m.Territory)) continue;
 
-        uint territory = DigTuning.BoxTerritory;
-        if (!DigTuning.TryManualBox(territory, out _, out _, out _, out _)) return list;
+            // The game's own name when the sheet has one — it is localised and always current —
+            // falling back to the name in the file for a territory the sheet cannot resolve.
+            string name = ZoneIndex.ZoneName(m.Territory);
+            if (string.IsNullOrWhiteSpace(name) || name.StartsWith("Territory ", StringComparison.Ordinal))
+                name = m.Name;
 
-        list.Add(new AuthoredMap(territory, ZoneIndex.ZoneName(territory)));
+            list.Add(new AuthoredMap(m.Territory, name));
+        }
+
+        // THEN the local hand-drawn box, which is the authoring tool's live output. It is how a new
+        // map is made: draw it, play it, then export it into the shipped file. Added second and
+        // de-duplicated, so re-drawing a box for a map that already ships does not list it twice.
+        if (DigTuning.BoxSet &&
+            DigTuning.TryManualBox(DigTuning.BoxTerritory, out _, out _, out _, out _) &&
+            seen.Add(DigTuning.BoxTerritory))
+        {
+            list.Add(new AuthoredMap(DigTuning.BoxTerritory,
+                                     ZoneIndex.ZoneName(DigTuning.BoxTerritory)));
+        }
+
         return list;
     }
 }

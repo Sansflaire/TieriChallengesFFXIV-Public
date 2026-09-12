@@ -151,6 +151,12 @@ internal sealed partial class MainWindow
             s.Flow       = Flow.Vertical;
             s.WidthMode  = SizeMode.Fixed; s.Width = detailW;
             s.HeightMode = SizeMode.Fill;
+
+            // THE PANE PAINTS ITS OWN GROUND. Without this the text sat directly on the user's
+            // background image and was genuinely unreadable — every other pane in this window goes
+            // through Surface(), which is also what makes the image show through at the opacity the
+            // player chose instead of being hidden or absent.
+            s.BackgroundColor = Surface(Theme.Base);
         });
 
         var activity = ResolveActivity();

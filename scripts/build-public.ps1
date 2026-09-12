@@ -237,6 +237,27 @@ foreach ($n in $digNames) {
 $digKB = [math]::Round((Get-ChildItem $digDst -File | Measure-Object Length -Sum).Sum / 1KB)
 Ok "bundled $($digNames.Count) dig icon(s), $digKB KB"
 
+# Authored activity content, plus the tuned baseline. Read at runtime by ActivityMaps and DigTuning.
+#
+# FAILS rather than shipping without them, and the reason is the bug that created this step: both
+# used to live only in the author's pluginConfigs folder, so every other install had no authored map
+# at all - the Activity tab said "no map is ready for this yet" and going to the right zone could not
+# help, because the check never looked at where the player was standing. A missing file here has the
+# same shape and the same lack of symptom, so it is asserted rather than assumed.
+foreach ($n in @('activity-maps.json','activity-tuning.json')) {
+    $src = Join-Path $Root "assets\$n"
+    if (-not (Test-Path $src)) { Fail "Missing activity content: $src - the Activity tab would report no authored maps." }
+    Copy-Item $src $payload
+}
+
+# Assert the maps file actually CONTAINS a usable map. An empty or malformed list parses fine and
+# produces exactly the broken state this whole step exists to prevent.
+$mapDoc = Get-Content (Join-Path $Root 'assets\activity-maps.json') -Raw | ConvertFrom-Json
+$usable = @($mapDoc.maps | Where-Object { $_.territory -gt 0 -and $_.box })
+if ($usable.Count -eq 0) { Fail 'activity-maps.json contains no usable authored map - the Activity tab would be unplayable for every user.' }
+$zoneCount = ($usable | ForEach-Object { @($_.nullZones).Count } | Measure-Object -Sum).Sum
+Ok "bundled $($usable.Count) authored map(s), $zoneCount null zone(s), and the tuned baseline"
+
 # Player-facing help document, read at runtime by HelpLibrary. Fails rather than shipping a
 # build whose Help window would open on an error - see BROKEN.md 005.
 $helpSrc = Join-Path $Root 'docs\HELP.md'
