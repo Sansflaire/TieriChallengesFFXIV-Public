@@ -260,16 +260,29 @@ internal sealed class TestCityService : IDisposable
 
     private readonly CityMeshBuilder _mesh = new();
 
-    /// <summary>Which route actually drew the last frame. Reported rather than assumed: a silent
-    /// fallback from the depth path to the painted one would look like the depth path working
-    /// badly.</summary>
+    /// <summary>
+    /// Which route ran last frame. Reported rather than assumed: a silent fallback from the depth
+    /// path to the painted one would look like the depth path working badly.
+    ///
+    /// <para><b>It means the depth route RAN, never that the city appeared.</b> This property said
+    /// "ACTIVE — real geometry, depth-tested per pixel" on the panel for a whole release while a zero
+    /// colour-write mask meant not one pixel ever reached the surface, and that green line is the
+    /// single reason the fault survived so long: nothing between here and the screen is measured, so
+    /// nothing here may claim the screen. Pair it with <see cref="DepthSubmitted"/> and say what was
+    /// actually observed — §4A pre-flight question 2, failed in the field.</para>
+    /// </summary>
     public bool UsingDepthRenderer { get; private set; }
+
+    /// <summary>Whether the depth route issued a real draw call last frame, as opposed to running
+    /// and finding nothing to hand over. Still only submission — see <see cref="UsingDepthRenderer"/>.</summary>
+    public bool DepthSubmitted => _d3d?.DrawSubmitted ?? false;
 
     public string DepthStatus =>
         _d3d == null            ? "not started"
       : !_d3d.IsReady           ? $"unavailable — {_d3d.LastError}"
-      : !_d3d.DepthCaptured     ? $"drawing, NO depth capture — {_d3d.LastError}"
-      : $"{_d3d.TrianglesLastFrame} tri · {_d3d.LinesLastFrame} line · {_d3d.DepthInfo}";
+      : !_d3d.DrawSubmitted     ? "ran, but no draw call was issued — the mesh was empty"
+      : !_d3d.DepthCaptured     ? $"submitted, NO depth capture — {_d3d.LastError}"
+      : $"submitted {_d3d.TrianglesLastFrame} tri · {_d3d.LinesLastFrame} line · depth {_d3d.DepthInfo}";
 
     public bool DepthAvailable => _d3d?.IsReady ?? false;
     public bool DepthCaptured  => _d3d?.DepthCaptured ?? false;

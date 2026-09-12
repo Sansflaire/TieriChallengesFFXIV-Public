@@ -136,6 +136,17 @@ internal sealed unsafe class TestCityD3D : IDisposable
     /// otherwise indistinguishable from "occlusion is working and nothing is in the way".</summary>
     public bool DepthCaptured { get; private set; }
 
+    /// <summary>
+    /// Whether a draw call was actually issued on the last frame.
+    ///
+    /// <para><b>It means SUBMITTED, and deliberately not "visible".</b> Nothing here inspects the
+    /// finished surface, so this cannot and must not be reported as pixels reaching the screen — that
+    /// claim is what hid the zero write mask through a whole release. A draw that wrote no colour
+    /// channel at all still sets this true, because from the CPU's side it succeeded. Anything the
+    /// panel says on the strength of this has to be phrased as what was measured.</para>
+    /// </summary>
+    public bool DrawSubmitted { get; private set; }
+
     public int  VerticesLastFrame { get; private set; }
     public int  TrianglesLastFrame { get; private set; }
     public int  LinesLastFrame { get; private set; }
@@ -242,11 +253,34 @@ internal sealed unsafe class TestCityD3D : IDisposable
 
         // Opaque. The offscreen pass must be order-independent, which is exactly what a depth
         // buffer with blending OFF gives; the city's translucency is applied once, at blit time.
-        _blendOpaque = _device.CreateBlendState(new BlendDescription
+        //
+        // RenderTarget[0] IS ASSIGNED EXPLICITLY, AND THAT IS NOT CEREMONY. Vortice's
+        // BlendDescription has no parameterless constructor (verified against the installed 3.8.2
+        // assembly: only (Blend, Blend) and (Blend, Blend, Blend, Blend) exist), so an object
+        // initializer leaves the struct zeroed — which means RenderTargetWriteMask is
+        // ColorWriteEnable.None and the pass cannot write a single colour channel. That is a legal,
+        // silent value: no exception, no warning, a draw call that reports success and produces a
+        // blank surface. It shipped that way in 0.84.54.9. Disabling BLENDING and disabling COLOUR
+        // WRITES are different settings, and only the first one was ever wanted.
+        var opaque = new BlendDescription
         {
             AlphaToCoverageEnable  = false,
             IndependentBlendEnable = false,
-        });
+        };
+
+        opaque.RenderTarget[0] = new RenderTargetBlendDescription
+        {
+            BlendEnable           = false,
+            SourceBlend           = Blend.One,
+            DestinationBlend      = Blend.Zero,
+            BlendOperation        = BlendOperation.Add,
+            SourceBlendAlpha      = Blend.One,
+            DestinationBlendAlpha = Blend.Zero,
+            BlendOperationAlpha   = BlendOperation.Add,
+            RenderTargetWriteMask = ColorWriteEnable.All,
+        };
+
+        _blendOpaque = _device.CreateBlendState(opaque);
 
         // CullMode.None on purpose. A depth buffer already hides the far side of a closed box, so
         // there is no winding convention left to get backwards — which was the single most
@@ -438,7 +472,16 @@ internal sealed unsafe class TestCityD3D : IDisposable
                        Matrix4x4 viewProj, bool occlude, float depthBias, float opacity)
     {
         if (!IsReady) return false;
-        if (vertices.Length == 0) { VerticesLastFrame = 0; return true; }
+
+        // Every per-frame count is cleared BEFORE any early return, not just the one the old
+        // zero-vertex path happened to touch. A stale triangle count surviving a frame that drew
+        // nothing is a counter that lies in exactly the direction nobody checks.
+        VerticesLastFrame  = 0;
+        TrianglesLastFrame = 0;
+        LinesLastFrame     = 0;
+        DrawSubmitted      = false;
+
+        if (vertices.Length == 0) return true;
 
         try
         {
@@ -472,6 +515,7 @@ internal sealed unsafe class TestCityD3D : IDisposable
             VerticesLastFrame  = count;
             TrianglesLastFrame = triVerts / 3;
             LinesLastFrame     = lineVerts / 2;
+            DrawSubmitted      = triVerts >= 3 || lineVerts >= 2;
 
             Blit(vpW, vpH, opacity);
 
@@ -653,7 +697,18 @@ internal sealed unsafe class TestCityD3D : IDisposable
     private const string ShaderSource = @"
 cbuffer Constants : register(b0)
 {
-    float4x4 ViewProj;
+    // row_major IS LOAD-BEARING AND ITS ABSENCE IS SILENT. HLSL packs a cbuffer matrix
+    // COLUMN-major unless told otherwise, while .NET's Matrix4x4 is laid out row by row — so an
+    // unqualified declaration reads our row i as its column i and the shader computes transpose(M)
+    // times v instead of v times M. Verified by disassembling this exact source through this exact
+    // Compiler.Compile overload: unqualified emits four dp4s against consecutive cbuffer registers
+    // (a column-vector product), row_major emits the mul/mad chain (the row-vector product FFXIV's
+    // matrices are built for). Nothing errors; every vertex simply lands somewhere meaningless, and
+    // clip.w goes with it, which takes the depth comparison down too. FFXIV-TV's confirmed-working
+    // CopyBlitRenderer declares row_major for the same reason.
+    //
+    // DO NOT ALSO TRANSPOSE ON THE CPU. Both together is the same bug again, spelled twice.
+    row_major float4x4 ViewProj;
     float4   Viewport;   // xy = pixels, zw = 1/pixels
     float4   Options;    // x = occlude, y = depth valid, z = bias, w = spare
 };

@@ -282,8 +282,17 @@ internal sealed class TestCityWindow
         // depth path working badly rather than as it not running at all.
         if (_city.Mode == CityOcclusion.DepthBuffer)
         {
-            if (_city.UsingDepthRenderer)
-                ImGui.TextColored(Ok, "ACTIVE — real geometry, depth-tested per pixel");
+            // SAY WHAT WAS MEASURED, NOT WHAT WAS HOPED. This line read "ACTIVE — real geometry,
+            // depth-tested per pixel" through the whole of 0.84.54.9, during which a zero colour-write
+            // mask meant the GPU never wrote a pixel. Nothing on this path inspects the finished
+            // surface, so the strongest honest claim is that the work was submitted.
+            if (_city.UsingDepthRenderer && _city.DepthSubmitted)
+                ImGui.TextColored(Ok, "SUBMITTED — geometry handed to the GPU this frame\n"
+                                    + "(nothing here reads the finished surface, so \"submitted\"\n"
+                                    + "is the strongest claim this panel can make — your eyes\n"
+                                    + "are the only check that the city actually appeared)");
+            else if (_city.UsingDepthRenderer)
+                ImGui.TextColored(Warn, "RAN, BUT DREW NOTHING — the mesh was empty this frame");
             else
                 ImGui.TextColored(Warn, "SELECTED BUT NOT RUNNING — painted fallback is drawing");
 
