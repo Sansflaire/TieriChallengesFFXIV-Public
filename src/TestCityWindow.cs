@@ -429,6 +429,29 @@ internal sealed class TestCityWindow
                              + "it. Reverse-Z is non-linear, so the right value up close is not the\n"
                              + "right value at 200 yalms — which is why it is a knob.");
 
+            ImGui.Separator();
+
+            ImGui.Checkbox("Keep the game's UI on top", ref _city.RestoreGameUi);
+            ImGui.TextDisabled("Without this the chat log and nameplates sit BEHIND the buildings.\n"
+                             + "That is not a bug in the depth test: everything ImGui draws is\n"
+                             + "composited after the whole game frame, native UI included, so a\n"
+                             + "full-screen blit covers it by construction. And the depth buffer\n"
+                             + "cannot help either — the UI is 2D, drawn after the depth pass, so\n"
+                             + "it writes no depth at all and our shader has no way to know it is\n"
+                             + "there. So we snapshot the back buffer before drawing the city and\n"
+                             + "repaint each visible UI element's rectangle on top afterwards.\n"
+                             + "Costs one full-screen copy per frame. No render hooks — the hook\n"
+                             + "route fixes this properly but needs eleven detours on the hottest\n"
+                             + "functions in the pipeline, and tears them down on every rebuild.");
+
+            if (_city.RestoreGameUi)
+            {
+                if (_city.UiRestoreCaptured)
+                    ImGui.TextColored(Ok, $"{_city.UiRestoreRects} UI rect(s) repainted · {_city.UiRestoreInfo}");
+                else
+                    ImGui.TextColored(Warn, $"back buffer NOT captured — {_city.UiRestoreError}");
+            }
+
             DrawDepthDiagnostics();
         }
 

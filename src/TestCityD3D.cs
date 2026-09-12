@@ -185,6 +185,17 @@ internal sealed unsafe class TestCityD3D : IDisposable
     /// </summary>
     public bool DebugLogNextFrame;
 
+    /// <summary>Repaint the game's native UI on top of the city. See <see cref="TestCityUiLayer"/>
+    /// for why this is necessary and why it is not done with render hooks.</summary>
+    public bool RestoreGameUi = true;
+
+    private readonly TestCityUiLayer _uiLayer = new();
+
+    public bool   UiCaptured      => _uiLayer.Captured;
+    public int    UiRectsLastFrame => _uiLayer.RectsLastFrame;
+    public string UiInfo          => _uiLayer.Info;
+    public string UiError         => _uiLayer.LastError;
+
     public int  VerticesLastFrame { get; private set; }
     public int  TrianglesLastFrame { get; private set; }
     public int  LinesLastFrame { get; private set; }
@@ -558,6 +569,15 @@ internal sealed unsafe class TestCityD3D : IDisposable
                 return true;
             }
 
+            // BEFORE anything of ours is queued. At UiBuilder.Draw time the back buffer holds the
+            // game's scene and its native UI and none of our geometry, which is exactly the snapshot
+            // the restore pass needs. Capturing after the blit would be capturing our own city.
+            if (RestoreGameUi)
+            {
+                _uiLayer.DebugLogNextFrame |= DebugLogNextFrame;
+                _uiLayer.TryCapture(_device!, _context!);
+            }
+
             DepthCaptured = occlude && TryCaptureDepth();
 
             int count = Math.Min(vertices.Length, MaxVertices);
@@ -584,6 +604,10 @@ internal sealed unsafe class TestCityD3D : IDisposable
             DrawSubmitted      = triVerts >= 3 || lineVerts >= 2;
 
             Blit(vpW, vpH, opacity);
+
+            // AFTER the city, because ImGui executes draw commands in submission order — this is
+            // the whole mechanism by which the HUD ends up in front.
+            if (RestoreGameUi) _uiLayer.Restore(vpW, vpH);
 
             return true;
         }
@@ -960,6 +984,8 @@ float4 PS(VS_OUT input) : SV_Target
 
             _depthSrv?.Dispose();
             _depthCopy?.Dispose();
+
+            _uiLayer.Dispose();
 
             _context?.Dispose();
         }

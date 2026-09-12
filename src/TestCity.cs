@@ -330,6 +330,15 @@ internal sealed class TestCityService : IDisposable
     /// column is zero, because such a matrix cannot produce depth for any vertex.</summary>
     public CityMatrixSource MatrixSource = CityMatrixSource.Auto;
 
+    /// <summary>Repaint the game's native UI over the city. Without it the chat log and nameplates
+    /// sit behind the buildings — inherent to compositing at ImGui time, not a bug.</summary>
+    public bool RestoreGameUi = true;
+
+    public bool   UiRestoreCaptured => _d3d?.UiCaptured ?? false;
+    public int    UiRestoreRects    => _d3d?.UiRectsLastFrame ?? 0;
+    public string UiRestoreInfo     => _d3d?.UiInfo ?? "not started";
+    public string UiRestoreError    => _d3d?.UiError ?? string.Empty;
+
     /// <summary>Which candidate the last frame actually used. On the panel because the wrong choice
     /// is otherwise invisible — the city just does not appear.</summary>
     public string MatrixChosen { get; private set; } = "not selected";
@@ -786,7 +795,8 @@ internal sealed class TestCityService : IDisposable
 
         SampleProjection(viewProj);
 
-        _d3d.DebugClearOnly = DebugClearOnly;
+        _d3d.DebugClearOnly  = DebugClearOnly;
+        _d3d.RestoreGameUi   = RestoreGameUi;
 
         if (DebugLogNextFrame)
         {
