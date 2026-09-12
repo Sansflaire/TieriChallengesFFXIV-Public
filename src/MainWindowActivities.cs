@@ -352,6 +352,17 @@ internal sealed partial class MainWindow
                            ?? "the activity runner is not available.";
 
                 Plugin.ChatGui.Print("[Challenges] " + r);
+
+                // GET OUT OF THE WAY ONCE IT IS RUNNING. The trail is played in the world — the clue
+                // is on the HUD and the dial is on screen — so leaving a full-width window sitting
+                // over the top of it is pure obstruction. Sansflaire's call: close on start, and the
+                // player reopens it whenever they want.
+                //
+                // ONLY ON SUCCESS, and asked of the service rather than of the returned sentence.
+                // Every refusal — wrong zone, no vnavmesh, nowhere walkable — also returns a string,
+                // so closing unconditionally would make the window vanish on the exact press that
+                // failed, taking the pane that explains why with it.
+                if (Activities?.Running == true) IsVisible = false;
             }));
         }
 

@@ -221,6 +221,11 @@ Pick three things before you start:
   middle, two. At the hard end, one — and vaguely.
 - **Clues.** How many are buried. More clues is a longer run, not a harder one.
 
+**The plugin window closes when a trail starts.** Everything you need for the run is on screen
+already — the clue, the dial and how close you are — so the window steps out of the way rather than
+covering it. Reopen it whenever you like with `/tchal`; the run carries on regardless of whether it
+is open.
+
 The **Reference map** button opens a map of the area marked up with everything a clue can refer to:
 which part of the map is called what, which way each clock direction points, and the named places,
 people and creatures a clue might mention. It never shows you where anything is buried.
