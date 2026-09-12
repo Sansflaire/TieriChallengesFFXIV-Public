@@ -322,6 +322,10 @@ internal sealed class TestCityService : IDisposable
     /// </summary>
     public string DebugProjection { get; private set; } = "not sampled";
 
+    /// <summary>Dumps one frame of the depth route's real state to the Dalamud log. Set by a panel
+    /// button; clears itself. Reading the log directly beats asking a person to retype numbers.</summary>
+    public bool DebugLogNextFrame;
+
     private void SampleProjection(Matrix4x4 viewProj)
     {
         var lp = Plugin.ObjectTable.LocalPlayer;
@@ -774,6 +778,24 @@ internal sealed class TestCityService : IDisposable
 
         _d3d.DebugClearOnly = DebugClearOnly;
 
+        if (DebugLogNextFrame)
+        {
+            DebugLogNextFrame     = false;
+            _d3d.DebugLogNextFrame = true;
+
+            Diag.Info("[City] ===== one-frame depth-route trace =====");
+            Diag.Info($"[City] TRACE mode={Mode} built={IsBuilt} buildings={_buildings.Count} "
+                    + $"rendered={_rendered.Count} showGrid={ShowGrid} "
+                    + $"bypassSceneDepth={DebugBypassSceneDepth} clearOnly={DebugClearOnly}");
+            Diag.Info($"[City] TRACE eyeFromCamera={EyeFromCamera} eye={eye}");
+            foreach (var line in DebugProjection.Split('\n'))
+                Diag.Info($"[City] TRACE proj {line}");
+            Diag.Info($"[City] TRACE viewProj row0 {viewProj.M11,10:F4} {viewProj.M12,10:F4} {viewProj.M13,10:F4} {viewProj.M14,10:F4}");
+            Diag.Info($"[City] TRACE viewProj row1 {viewProj.M21,10:F4} {viewProj.M22,10:F4} {viewProj.M23,10:F4} {viewProj.M24,10:F4}");
+            Diag.Info($"[City] TRACE viewProj row2 {viewProj.M31,10:F4} {viewProj.M32,10:F4} {viewProj.M33,10:F4} {viewProj.M34,10:F4}");
+            Diag.Info($"[City] TRACE viewProj row3 {viewProj.M41,10:F4} {viewProj.M42,10:F4} {viewProj.M43,10:F4} {viewProj.M44,10:F4}");
+        }
+
         _mesh.Clear();
 
         if (ShowGrid)
@@ -794,6 +816,16 @@ internal sealed class TestCityService : IDisposable
         UsingDepthRenderer = true;
         PanelsDrawn        = _d3d.TrianglesLastFrame;
         RaysLastFrame      = 0;
+
+        if (_d3d.DebugLogNextFrame)
+        {
+            _d3d.DebugLogNextFrame = false;
+            Diag.Info($"[City] TRACE geometry path: meshVerts={vertices.Length} "
+                    + $"triVerts={_mesh.TriangleVertexCount} submitted={_d3d.DrawSubmitted} "
+                    + $"tri={_d3d.TrianglesLastFrame} line={_d3d.LinesLastFrame} "
+                    + $"depthCaptured={_d3d.DepthCaptured} depth={_d3d.DepthInfo} "
+                    + $"lastError='{_d3d.LastError}'");
+        }
 
         return true;
     }

@@ -159,6 +159,16 @@ internal sealed unsafe class TestCityD3D : IDisposable
     /// </summary>
     public bool DebugClearOnly;
 
+    /// <summary>
+    /// DIAGNOSTIC. Dumps one frame's worth of the depth route's real state to the Dalamud log, then
+    /// clears itself.
+    ///
+    /// <para>One frame, not every frame, because this runs at 60 Hz and a per-frame log is unreadable
+    /// within seconds. It exists because asking a human to read numbers off a panel and retype them
+    /// is a lossy channel — the log can be read directly and cannot be misremembered.</para>
+    /// </summary>
+    public bool DebugLogNextFrame;
+
     public int  VerticesLastFrame { get; private set; }
     public int  TrianglesLastFrame { get; private set; }
     public int  LinesLastFrame { get; private set; }
@@ -504,6 +514,16 @@ internal sealed unsafe class TestCityD3D : IDisposable
             if (vpW == 0 || vpH == 0) return false;
             if (!EnsureTargets(vpW, vpH)) return false;
 
+            if (DebugLogNextFrame)
+            {
+                Diag.Info($"[City] TRACE vp {vpW}x{vpH}  rt {_rtW}x{_rtH}  "
+                        + $"colourSrv=0x{(_colourSrv?.NativePointer ?? 0):X}  "
+                        + $"colourTex=0x{(_colourTex?.NativePointer ?? 0):X}");
+                Diag.Info($"[City] TRACE occlude={occlude} clearOnly={DebugClearOnly} "
+                        + $"bias={depthBias} opacity={opacity} verts={vertices.Length} "
+                        + $"triVertArg={triangleVertexCount}");
+            }
+
             // Presentation probe: clear, blit, and skip everything in between. Deliberately placed
             // before the vertex upload and the constant buffer so that not one of those steps can
             // affect the result — a probe that shares setup with the thing it is testing proves less
@@ -512,6 +532,13 @@ internal sealed unsafe class TestCityD3D : IDisposable
             {
                 Draw(0, 0, vpW, vpH);
                 Blit(vpW, vpH, 1f);
+
+                if (DebugLogNextFrame)
+                {
+                    Diag.Info("[City] TRACE clear-only path: cleared, Draw(0,0) and Blit both called.");
+                    DebugLogNextFrame = false;
+                }
+
                 return true;
             }
 
@@ -654,6 +681,33 @@ internal sealed unsafe class TestCityD3D : IDisposable
 
         var list  = ImGui.GetBackgroundDrawList();
         var texId = new ImTextureID(_colourSrv.NativePointer);
+
+        // THE PROBE CARRIES ITS OWN CONTROL, and the first version did not — which made its result
+        // worthless. "No magenta" had two possible meanings: the image did not present, or this
+        // method never ran. Those demand opposite investigations, so a probe that cannot tell them
+        // apart answers nothing. The left half is a plain AddQuadFilled with NO texture, drawn to the
+        // same draw list in the same call: if it appears, this code ran and the draw list accepts us,
+        // and the right half then isolates image presentation alone.
+        //
+        //   cyan left + magenta right -> both work; the fault is in the geometry, not presentation
+        //   cyan left only            -> image/texture presentation is the fault
+        //   neither                   -> this method is not running; look upstream, not here
+        if (DebugClearOnly)
+        {
+            float half = vpW * 0.5f;
+
+            list.AddQuadFilled(new Vector2(0f, 0f),    new Vector2(half, 0f),
+                               new Vector2(half, vpH), new Vector2(0f, vpH),
+                               0xFFFFFF00u);   // ABGR: opaque cyan, no texture involved
+
+            list.AddImageQuad(texId,
+                              new Vector2(half, 0f),  new Vector2(vpW, 0f),
+                              new Vector2(vpW, vpH),  new Vector2(half, vpH),
+                              new Vector2(0f, 0f),    new Vector2(1f, 0f),
+                              new Vector2(1f, 1f),    new Vector2(0f, 1f),
+                              0xFFFFFFFFu);
+            return;
+        }
 
         // The city's opacity, applied ONCE to the whole surface. The geometry pass is opaque so it
         // can be order-independent; this is where translucency happens.

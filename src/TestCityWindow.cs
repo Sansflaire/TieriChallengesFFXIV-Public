@@ -281,14 +281,19 @@ internal sealed class TestCityWindow
         ImGui.Spacing();
 
         // ── 1. presentation ──────────────────────────────────────────────────
-        ImGui.Checkbox("1 · Clear-only magenta probe", ref _city.DebugClearOnly);
-        ImGui.TextDisabled("Fills the whole screen with magenta and draws NO geometry.\n"
-                         + "  magenta  -> target, SRV and ImGui presentation all work; the\n"
-                         + "              fault is in the geometry we draw into the surface.\n"
-                         + "  nothing  -> the surface never reaches the screen at all, and no\n"
-                         + "              amount of geometry debugging would have helped.\n"
-                         + "A clear needs no shader, transform, vertex buffer, depth test or\n"
-                         + "write mask, which is what makes the answer unambiguous.");
+        ImGui.Checkbox("1 · Split presentation probe (cyan | magenta)", ref _city.DebugClearOnly);
+        ImGui.TextDisabled("Draws NO geometry. Splits the screen in two:\n"
+                         + "  LEFT  half  cyan, via AddQuadFilled - NO texture at all.\n"
+                         + "  RIGHT half  magenta, via AddImageQuad - our D3D surface.\n"
+                         + "\n"
+                         + "  cyan + magenta -> presentation works; fault is in the geometry.\n"
+                         + "  cyan only      -> image/texture presentation is the fault.\n"
+                         + "  neither        -> this code is not running; look upstream.\n"
+                         + "\n"
+                         + "The left half is the CONTROL, and the first version of this probe\n"
+                         + "did not have one — so \"no magenta\" meant either \"the image did\n"
+                         + "not present\" or \"this never ran\", which need opposite fixes. A\n"
+                         + "probe that cannot separate those answers nothing.");
 
         ImGui.Spacing();
 
@@ -318,6 +323,21 @@ internal sealed class TestCityWindow
         ImGui.PushStyleColor(ImGuiCol.Text, Ok);
         ImGui.TextUnformatted(_city.DebugProjection);
         ImGui.PopStyleColor();
+
+        ImGui.Spacing();
+        ImGui.Separator();
+
+        // ── 4. dump it all to the log ────────────────────────────────────────
+        if (ImGui.Button("Dump one frame to the Dalamud log"))
+            _city.DebugLogNextFrame = true;
+
+        ImGui.TextDisabled("Writes every number above — plus the full ViewProj, the mesh and\n"
+                         + "submission counts, the SRV pointer, the viewport and target sizes,\n"
+                         + "and the depth-capture format — to dalamud.log as [City] TRACE lines.\n"
+                         + "ONE frame, then it disarms itself; at 60 Hz a per-frame log is\n"
+                         + "unreadable within seconds. Click it once with the depth mode selected\n"
+                         + "and the log can be read directly, instead of someone retyping\n"
+                         + "numbers off a panel.");
     }
 
     private void DrawOcclusion()
