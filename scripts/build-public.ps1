@@ -55,7 +55,8 @@ $markers = @(
     'Draw volumes in world',   # in-world placement overlay toggle
     'Set to my current zone',  # creator zone control
     'Missing details',         # dev-only challenge flag
-    'Animation: '              # dev status readout
+    'Animation: ',             # dev status readout
+    'tc_test_city'             # Test City window id
 )
 # BOTH BYTE PARITIES, and this is not belt-and-braces - a single-parity scan misses about half of
 # what is present. Encoding.Unicode decodes from offset 0, so it only finds a #US heap entry whose

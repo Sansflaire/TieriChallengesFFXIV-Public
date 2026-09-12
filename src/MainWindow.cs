@@ -166,6 +166,9 @@ internal sealed partial class MainWindow : IDisposable
     /// <summary>Wired by Plugin. Opens the dig-test lab. Dev builds only.</summary>
     public Action? OnOpenDigTests;
 
+    /// <summary>Wired by Plugin. Opens the Test City panel. Dev builds only.</summary>
+    public Action? OnOpenTestCity;
+
 #endif
 
     /// <summary>
@@ -2281,6 +2284,7 @@ internal sealed partial class MainWindow : IDisposable
                 new("Dataset Viewer", () => OnOpenDatasets?.Invoke(), Neutral, Ico.None),
                 new("Live Probe", () => OnOpenProbe?.Invoke(), Neutral, Ico.None),
                 new("Dig Tests", () => OnOpenDigTests?.Invoke(), Neutral, Ico.None),
+                new("Test City", () => OnOpenTestCity?.Invoke(), Neutral, Ico.None),
                 new("Preview public build", () =>
                 {
                     _config.PublicPreview = true;

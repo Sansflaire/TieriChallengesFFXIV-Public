@@ -197,6 +197,17 @@ public sealed class Plugin : IDalamudPlugin
     /// </summary>
     private readonly DigTestsWindow _digTestsWindow;
     private readonly DigMapWindow   _digMapWindow;
+
+    /// <summary>
+    /// TEST CITY — tile grid plus coloured buildings, drawn into the world. An experiment Sansflaire asked
+    /// for; dev-only from the service outwards, not merely hidden.
+    ///
+    /// <para>The service is separate from the window because the city keeps being drawn with the
+    /// panel closed — the whole point is to walk around in it — exactly as a dig test keeps running
+    /// with the lab closed.</para>
+    /// </summary>
+    private readonly TestCityService _testCity = new();
+    private readonly TestCityWindow  _testCityWindow;
 #endif
 
     /// <summary>
@@ -402,6 +413,7 @@ public sealed class Plugin : IDalamudPlugin
 
         _digTestsWindow = new DigTestsWindow(_digTests);
         _digMapWindow   = new DigMapWindow(_digTests);
+        _testCityWindow = new TestCityWindow(_testCity);
 
         // The lab's banner preview. Wired here rather than handed to the window's constructor,
         // because the overlay is built after it and does not exist at all when Panache is missing —
@@ -419,6 +431,7 @@ public sealed class Plugin : IDalamudPlugin
             _mainWindow.OnOpenDatasets  = () => _datasetViewer.IsVisible = true;
             _mainWindow.OnOpenProbe     = () => _probeWindow.IsVisible = true;
             _mainWindow.OnOpenDigTests  = () => _digTestsWindow.IsVisible = true;
+            _mainWindow.OnOpenTestCity  = () => _testCityWindow.IsVisible = true;
             _mainWindow.OnOpenSoundTest = () =>
             {
                 if (_soundTestWindow != null) _soundTestWindow.IsVisible = true;
@@ -767,6 +780,12 @@ public sealed class Plugin : IDalamudPlugin
                     _digTestsWindow.IsVisible = !_digTestsWindow.IsVisible;
                     break;
 
+                // Test City — the tile grid and the buildings standing on it.
+                case "city":
+                case "testcity":
+                    _testCityWindow.IsVisible = !_testCityWindow.IsVisible;
+                    break;
+
                 // DEV ONLY, deliberately. PropService itself ships publicly so challenge content
                 // can call it, but a PLAYER must not be able to summon a shovel on demand — the
                 // dig belongs to a challenge, not to a chat command. Sansflaire's call.
@@ -966,6 +985,18 @@ public sealed class Plugin : IDalamudPlugin
 
         try { _digMapWindow.Draw(); }
         catch (Exception ex) { Diag.Error($"[Dig] map debug window failed: {ex.Message}"); }
+
+        // Test City. Ticked and drawn with the panel closed, like a dig test — the city is something
+        // to walk around in, not something to look at from a window. The tick only drops it on a
+        // zone change, so it costs one integer comparison when nothing is built.
+        try { _testCity.Tick(); }
+        catch (Exception ex) { Diag.Error($"[City] tick failed: {ex.Message}"); }
+
+        try { _testCity.DrawWorld(); }
+        catch (Exception ex) { Diag.Error($"[City] world draw failed: {ex.Message}"); }
+
+        try { _testCityWindow.Draw(); }
+        catch (Exception ex) { Diag.Error($"[City] window failed: {ex.Message}"); }
 #endif
 
 #if DEV_BUILD
