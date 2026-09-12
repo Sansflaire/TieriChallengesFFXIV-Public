@@ -248,6 +248,21 @@ Click any run in the **Past runs** list and the line is copied to your clipboard
 anywhere. It names the map, the difficulty, how many clues you dug up and your time. The row says
 "Copied!" for a moment so you know it worked.
 
+## "No map is ready for this yet"
+<!-- keywords: no map, no maps, not ready, cant start, cannot start, wont start, empty, nothing here, greyed, empyreum, missing, broken, stuck, doesnt work, update -->
+
+Wild Trail is hand-authored per map: somebody has to walk the zone and mark out where a clue may and
+may not be buried. Those authored maps **ship with the plugin**, so the commonest cause of this
+message by far is running an older version that did not have them yet.
+
+Under the message the panel prints what the plugin can actually see — its version, which authored
+maps loaded, and which zone you are standing in. Type `/tchal activity` to get the same line in chat,
+where you can copy it.
+
+Read the version there first. If it is older than the release that added the map you are standing in,
+update and the map appears. If the version is current but no maps loaded at all, the plugin's content
+file did not install — reinstalling the plugin replaces it.
+
 ## Wild Trail needs vnavmesh
 <!-- keywords: vnavmesh, navmesh, requirement, required, needs, missing, greyed, grey, disabled, cannot start, wont start, doesnt work, broken, error -->
 

@@ -717,6 +717,15 @@ public sealed class Plugin : IDalamudPlugin
                     _dialogs.RequestReset();
                     break;
 
+                // PUBLIC, and it is a support command rather than a dev one. "No map is ready for
+                // this yet" has three unrelated causes, and a player cannot be asked to read a log
+                // file — this puts the version, what content loaded and where they are standing into
+                // chat, where it can be copied into a message in one go.
+                case "activity":
+                case "trailinfo":
+                    ChatGui.Print("[Challenges] " + ActivityCatalog.Diagnose());
+                    break;
+
                 case "center":
                 case "centre":
                     CenterWindow();

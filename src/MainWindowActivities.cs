@@ -202,7 +202,14 @@ internal sealed partial class MainWindow
             scroll.AppendChild(EmptyNote(
                 "No map is ready for this yet.",
                 "Wild Trail is hand-authored per map, and only the authored ones can place a trail. "
-              + "More are added in plugin updates."));
+              + "If you are standing in a map that should work, check the version below — the "
+              + "authored maps ship with the plugin, so an older build does not have them."));
+
+            // THE DIAGNOSIS, ON SCREEN. This message has three unrelated causes — a stale plugin,
+            // missing content, or genuinely being somewhere unauthored — and printing only the
+            // sentence above made them indistinguishable from a screenshot. Two releases went out
+            // fixing real bugs that were not the reported one because of it.
+            scroll.AppendChild(DiagnosticNote(ActivityCatalog.Diagnose()));
 
             pane.AppendChild(scroll);
             return pane;
@@ -431,6 +438,46 @@ internal sealed partial class MainWindow
                     :                   string.Empty;
 
         return $"{facts}{edge}.";
+    }
+
+    /// <summary>
+    /// A small monospace-ish block of facts under an empty state, styled as secondary information
+    /// rather than as an error — it is context for a screenshot, not a scolding.
+    /// </summary>
+    private Node DiagnosticNote(string text)
+    {
+        var card = PUI.Card(Theme.TextSubtle);
+        card.WithStyle(s =>
+        {
+            s.Flow          = Flow.Vertical;
+            s.WidthMode     = SizeMode.Fill;
+            s.HeightMode    = SizeMode.Fit;
+            s.Padding       = new EdgeSize(8, 10);
+            s.Margin        = new EdgeSize(4, PadPaneX, 0, PadPaneX);
+            s.Gap           = 3;
+            s.PointerEvents = PointerEvents.None;
+        });
+
+        card.AppendChild(new Node().WithText("WHAT THE PLUGIN SEES").WithStyle(s =>
+        {
+            s.WidthMode  = SizeMode.Fill;
+            s.HeightMode = SizeMode.Fit;
+            s.FontSize   = 9f;
+            s.Bold       = true;
+            s.Color      = Theme.TextSubtle;
+        }));
+
+        card.AppendChild(new Node().WithText(text).WithStyle(s =>
+        {
+            s.WidthMode    = SizeMode.Fill;
+            s.HeightMode   = SizeMode.Fit;
+            s.FontSize     = 10f;
+            s.Color        = Theme.TextMuted;
+            s.TextOverflow = TextOverflow.Wrap;
+            s.MaxLines     = 8;
+        }));
+
+        return card;
     }
 
     private Node LabelledLine(string label, string value, PColor colour)

@@ -55,6 +55,41 @@ internal static class ActivityCatalog
         return null;
     }
 
+    /// <summary>
+    /// Why the authored-map list came out the size it did — <b>every fact needed to tell the three
+    /// causes apart, in one line the player can screenshot.</b>
+    ///
+    /// <para><b>This exists because "no map is ready for this yet" was unfalsifiable from outside.</b>
+    /// That one sentence is produced by a stale plugin version, by a missing or unparseable content
+    /// file, and by genuinely standing in an unauthored zone — three unrelated problems with three
+    /// unrelated fixes and no way to tell which you had. It cost two releases that fixed real bugs
+    /// and did not fix the reported one, because the report could not distinguish them.</para>
+    ///
+    /// <para>Same lesson as the placement rejection tally: a pipeline that reports a single boolean
+    /// cannot be debugged from the outside, and the cheapest fix is to make the failure name
+    /// itself. The version is first because a stale build explains everything else.</para>
+    /// </summary>
+    public static string Diagnose()
+    {
+        uint here = Plugin.ClientState.TerritoryType;
+
+        var known = new List<string>();
+        foreach (var m in ActivityMaps.All)
+            known.Add($"{m.Name} ({m.Territory})");
+
+        // The local hand-drawn box is named separately. It is the authoring tool's output and is
+        // only ever present on a machine where somebody is drawing, so listing it with the shipped
+        // maps would make an author's machine look like a normal install.
+        string local = DigTuning.BoxSet &&
+                       DigTuning.TryManualBox(DigTuning.BoxTerritory, out _, out _, out _, out _)
+            ? $" Local hand-drawn box: {ZoneIndex.ZoneName(DigTuning.BoxTerritory)} ({DigTuning.BoxTerritory})."
+            : string.Empty;
+
+        return $"Plugin v{PluginVersion.Current}. Content: {ActivityMaps.Status} "
+             + $"Authored: {(known.Count == 0 ? "none" : string.Join(", ", known))}. "
+             + $"You are in {ZoneIndex.ZoneName(here)} ({here}).{local}";
+    }
+
     /// <summary>One map an activity can be played on.</summary>
     internal readonly record struct AuthoredMap(uint Territory, string Name);
 
