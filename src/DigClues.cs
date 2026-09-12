@@ -255,6 +255,14 @@ internal sealed class DigClueWriter
         lines.Add("                                      everywhere is far from something, so it is");
         lines.Add("                                      always paired with a region.");
         lines.Add("");
+        lines.Add("NO FACT REPEATS ANOTHER'S DIRECTION.");
+        lines.Add("  A region and a clock bearing both answer \"which side of the middle\", so once the");
+        lines.Add("  clock goes vague enough to drop the hour they become the same statement:");
+        lines.Add("    \"North of the map, north of map's middle\"   <- this used to ship");
+        lines.Add("  Any fact whose direction a previous one already gave is DROPPED, and the clue");
+        lines.Add("  comes out shorter rather than saying it twice. \"How far out\" carries no");
+        lines.Add("  direction, so it is always available to take the slot instead.");
+        lines.Add("");
         lines.Add("SECOND ANCHOR — only on a THREE-fact clue, and only when it triangulates:");
         lines.Add("    \"... , <direction> of B as well\"   B must lie on a different quarter of the");
         lines.Add("                                       compass from A, and must not render as the");
@@ -831,23 +839,105 @@ internal sealed class DigClueWriter
     /// The spot located purely by where it falls on the map grid. No anchor, so this works on maps
     /// that have no named anything — which is the reason it exists.
     /// </summary>
-    private string FromQuadrant(Vector3 spot, float hard)
+    private string FromQuadrant(Vector3 spot, float hard) => FromPositional(spot, hard, clockLeads: false);
+
+    /// <summary>
+    /// The three positional facts, in the order this category wants them, <b>with any that repeats
+    /// another's direction dropped rather than printed twice</b>.
+    ///
+    /// <para><b>A region and a clock bearing are the SAME MEASUREMENT once either goes vague.</b>
+    /// Both ask which side of the walkable box's centre the spot is on. At vagueness 2 and above
+    /// <see cref="ClockFact"/> stops naming an hour and renders <c>Compass4(centre, spot)</c> —
+    /// which is precisely what <see cref="RegionFact"/> has been saying all along. That shipped:
+    /// <i>"North of the map, north of map's middle"</i>, two facts spent on one relationship and a
+    /// clue that looks like it is stammering.</para>
+    ///
+    /// <para><b>Compared on the RENDERED direction, not on the vagueness tiers that produce it.</b>
+    /// Same rule the second-anchor guard uses, and for the same reason: what matters is the words
+    /// the player reads, and a tier-by-tier table of which combinations collide would be a second
+    /// thing to keep in step with the writer. <see cref="ReachFact"/> never carries a direction —
+    /// it answers how far OUT, not which way — so it can never be the duplicate and is always
+    /// available as the replacement.</para>
+    ///
+    /// <para><b>A dropped fact is not backfilled, and the clue may come out shorter than the band
+    /// promises.</b> Saying two distinct things is better than saying one thing twice and calling
+    /// it three facts; restating it sharper to fill the slot would hand back precision the
+    /// difficulty deliberately took away.</para>
+    /// </summary>
+    private string FromPositional(Vector3 spot, float hard, bool clockLeads)
     {
-        // WORLD space throughout, matching Quadrant. Working in map coordinates here while the
-        // quadrant worked in world coordinates would let the two clauses of one clue disagree.
         if (!DigLandmarks.WalkableBox(out var lo, out var hi)) return string.Empty;
 
         var (count, vague) = Budget(hard);
 
-        // This category has no anchor, so its facts are all positional. Descending usefulness: the
-        // region first, then a bearing from the centre, then how far out.
-        var facts = new List<string> { RegionFact(spot, vague[0]) };
+        var facts = new List<string>();
+        var taken = new List<string>();
 
-        if (count >= 2) facts.Add(ClockFact(spot, lo, hi, vague[1]));
-        if (count >= 3) facts.Add(ReachFact(spot, lo, hi, vague[2]));
+        // Descending usefulness for this category. The clock leads for the Clock category because
+        // it is what makes that category distinct; the region leads for the Quadrant one.
+        var order = clockLeads
+            ? new Func<int, string>[]
+              {
+                  v => ClockFact(spot, lo, hi, v),
+                  v => ReachFact(spot, lo, hi, v),
+                  v => RegionFact(spot, v),
+              }
+            : new Func<int, string>[]
+              {
+                  v => RegionFact(spot, v),
+                  v => ClockFact(spot, lo, hi, v),
+                  v => ReachFact(spot, lo, hi, v),
+              };
 
-        return Sentence(facts, count);
+        foreach (var make in order)
+        {
+            if (facts.Count >= count) break;
+
+            // The vagueness belongs to the SLOT, not to the candidate — the budget hands out one
+            // tier per fact actually stated, so a skipped candidate must not consume one.
+            string text = make(vague[facts.Count]);
+            if (text.Length == 0) continue;
+
+            string dir = DirectionOf(text);
+            if (dir.Length > 0 && taken.Contains(dir)) continue;
+
+            facts.Add(text);
+            taken.Add(dir);
+        }
+
+        return Sentence(facts, facts.Count);
     }
+
+    /// <summary>
+    /// The compass direction a rendered fact asserts, or empty when it asserts none.
+    ///
+    /// <para>Reads the phrase rather than the state that produced it, so it catches collisions
+    /// between wordings nobody thought to compare. Compounds are tested before their halves or
+    /// "NORTH-EAST" would match as "NORTH", and the adjectival forms fold onto the same answer
+    /// because "the NORTHERN half" and "north of the middle" are the same claim.</para>
+    /// </summary>
+    private static string DirectionOf(string fact)
+    {
+        string t = fact.ToUpperInvariant();
+
+        foreach (string c in Compounds)
+            if (t.Contains(c, StringComparison.Ordinal)) return c;
+
+        if (t.Contains("NORTHERN", StringComparison.Ordinal)) return "NORTH";
+        if (t.Contains("SOUTHERN", StringComparison.Ordinal)) return "SOUTH";
+        if (t.Contains("EASTERN",  StringComparison.Ordinal)) return "EAST";
+        if (t.Contains("WESTERN",  StringComparison.Ordinal)) return "WEST";
+
+        foreach (string c in Cardinals)
+            if (t.Contains(c, StringComparison.Ordinal)) return c;
+
+        return string.Empty;
+    }
+
+    private static readonly string[] Compounds =
+        { "NORTH-EAST", "NORTH-WEST", "SOUTH-EAST", "SOUTH-WEST" };
+
+    private static readonly string[] Cardinals = { "NORTH", "SOUTH", "EAST", "WEST" };
 
     /// <summary>One fact: a clock bearing from the middle of the walkable box, 12 being north.</summary>
     private static string ClockFact(Vector3 spot, Vector2 lo, Vector2 hi, int vague)
@@ -965,21 +1055,8 @@ internal sealed class DigClueWriter
     /// <para><b>Worked in MAP coordinates and not world ones</b>, same as the quadrant: the player
     /// reads this off the map screen, where 12 o'clock is straight up and straight up is north.</para>
     /// </summary>
-    private string FromClock(Vector3 spot, float hard)
-    {
-        if (!DigLandmarks.WalkableBox(out var lo, out var hi)) return string.Empty;
+    private string FromClock(Vector3 spot, float hard) => FromPositional(spot, hard, clockLeads: true);
 
-        var (count, vague) = Budget(hard);
-
-        // Same three facts as the quadrant category, reordered: the bearing leads here because it is
-        // what makes this category distinct, and the region is the backstop.
-        var facts = new List<string> { ClockFact(spot, lo, hi, vague[0]) };
-
-        if (count >= 2) facts.Add(ReachFact(spot, lo, hi, vague[1]));
-        if (count >= 3) facts.Add(RegionFact(spot, vague[2]));
-
-        return Sentence(facts, count);
-    }
 }
 
 /// <summary>
