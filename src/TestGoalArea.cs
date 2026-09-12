@@ -48,9 +48,20 @@ internal sealed class TestGoalService
     /// <summary>Seconds for one pulse to rise and fade.</summary>
     public float PulseSeconds = 1.8f;
 
-    /// <summary>Concurrent pulses, evenly staggered — one wall rising while the last is still fading
+    /// <summary>Pulses per burst, evenly staggered — one wall rising while the last is still fading
     /// is what makes it read as a beacon rather than a blink.</summary>
     public int PulseCount = 2;
+
+    /// <summary>Quiet seconds after a burst finishes, before the next begins. At 0 the bursts run
+    /// back to back, which is what this did before the delay existed.</summary>
+    public float PulseDelay;
+
+    /// <summary>Upper bound on an extra random delay, rolled ONCE per cycle. 0 disables it.</summary>
+    public float PulseDelayRandom;
+
+    /// <summary>Seconds to cross from <see cref="Rgb"/> to <see cref="InsideRgb"/> on entry, and
+    /// back again on exit.</summary>
+    public float TintFadeSeconds = 0.8f;
 
     public float BaseAlpha = 0.50f;
 
@@ -75,13 +86,30 @@ internal sealed class TestGoalService
 
     // ── state ────────────────────────────────────────────────────────────────
 
+    private readonly Random _rng = new();
+
     private bool      _placed;
     private Vector3   _centre;
     private float     _centreY;
     private Vector3[] _ring = Array.Empty<Vector3>();
     private uint      _territory;
-    private long      _placedAtMs;
     private bool      _wasInside;
+
+    /// <summary>When the current burst began, and the random delay drawn for the cycle it ends.</summary>
+    private long  _cycleStartMs;
+    private float _cycleJitter;
+
+    /// <summary>
+    /// How far through the entry tint we are: 0 = outside colour, 1 = inside colour.
+    ///
+    /// <para>A value rather than a boolean, because the tint is now a crossfade. It is driven toward
+    /// its target every frame rather than recomputed from "am I inside", so leaving and re-entering
+    /// mid-fade continues from where it got to instead of snapping.</para>
+    /// </summary>
+    private float _tintT;
+
+    /// <summary>Previous frame's timestamp, for the tint's delta. Zero means "no previous frame".</summary>
+    private long _lastTickMs;
 
     public bool IsPlaced => _placed && _ring.Length >= 3;
 
@@ -128,11 +156,18 @@ internal sealed class TestGoalService
 
         try
         {
-            _centre     = player.Position;
-            _territory  = Plugin.ClientState.TerritoryType;
-            _placedAtMs = Environment.TickCount64;
-            _wasInside  = true;      // the player is standing in it; do not announce an entry
-            _placed     = true;
+            _centre       = player.Position;
+            _territory    = Plugin.ClientState.TerritoryType;
+            _cycleStartMs = Environment.TickCount64;
+            _cycleJitter  = 0f;
+            _wasInside    = true;    // the player is standing in it; do not announce an entry
+            _lastTickMs   = 0;
+            _placed       = true;
+
+            // Starts AT the inside colour rather than fading to it: the player is standing in the
+            // area the moment it is placed, so a fade-in here would be animating a transition that
+            // did not happen. Same reasoning as _wasInside suppressing the entry announcement.
+            _tintT = TintOnEntry ? 1f : 0f;
 
             Measure();
 
@@ -191,6 +226,8 @@ internal sealed class TestGoalService
 
             bool inside = IsInside;
 
+            AdvanceTint(inside);
+
             // Edge-detected, both ways. A per-frame "are you inside" would fire a cue every frame the
             // player stood in it, which is the same mistake as re-rolling window lights per frame.
             if (inside && !_wasInside)
@@ -208,6 +245,32 @@ internal sealed class TestGoalService
             Diag.Error($"[Goal] tick failed: {ex.Message}");
             Clear();
         }
+    }
+
+    /// <summary>
+    /// Walks the entry tint toward wherever it should be.
+    ///
+    /// <para><b>The frame delta is CLAMPED, and that clamp is the whole reason this is not one
+    /// line.</b> A loading screen, an alt-tab or a stalled frame can put seconds between two calls,
+    /// and an unclamped delta would cross the entire fade in a single step — snapping to the target
+    /// exactly where a fade was asked for. Clamping costs nothing when frames are normal and turns
+    /// the pathological case into a slightly slower fade.</para>
+    /// </summary>
+    private void AdvanceTint(bool inside)
+    {
+        long now = Environment.TickCount64;
+
+        float dt = _lastTickMs == 0 ? 0f : (now - _lastTickMs) / 1000f;
+        _lastTickMs = now;
+
+        dt = Math.Clamp(dt, 0f, 0.1f);
+
+        float target = TintOnEntry && inside ? 1f : 0f;
+        float step   = dt / MathF.Max(0.01f, TintFadeSeconds);
+
+        _tintT = target > _tintT
+            ? MathF.Min(target, _tintT + step)
+            : MathF.Max(target, _tintT - step);
     }
 
     // ── measurement ──────────────────────────────────────────────────────────
@@ -279,7 +342,9 @@ internal sealed class TestGoalService
 
         try
         {
-            var rgb = TintOnEntry && IsInside ? InsideRgb : Rgb;
+            // Crossfaded rather than switched. The value is advanced in Tick so it keeps moving
+            // whether or not this frame draws anything.
+            var rgb = TintOnEntry ? Vector3.Lerp(Rgb, InsideRgb, Math.Clamp(_tintT, 0f, 1f)) : Rgb;
 
             // Read ONCE per frame and handed down, not re-read per pulse: six pulses would be six
             // native reads a frame for a value that cannot change between them.
@@ -288,26 +353,90 @@ internal sealed class TestGoalService
 
             // Floor first, wall over it — the wall is the boundary and should read as being in front
             // of the ground it encloses.
-            if (ShowDisc) DigVolumeRender.DrawGroundDisc(_centre, Radius, rgb, 0.20f, Snap);
+            //
+            // The disc's feathering is suppressed for the same reason the wall's is: it is a polar
+            // lattice of abutting quads, so with antialiased fill on it shows its own segment and
+            // ring divisions as a bright web on the floor. Wrapped at the CALL SITE rather than
+            // changed inside DigVolumeRender, because the dig tests draw the same disc and this is
+            // not their decision to make.
+            if (ShowDisc) NoFeather(() =>
+                DigVolumeRender.DrawGroundDisc(_centre, Radius, rgb, 0.20f, Snap));
+
+            // Lines, not fills — feathering is what makes these smooth and is left alone.
             if (ShowRing) DigVolumeRender.DrawGroundRing(_centre, Radius, rgb, 0.90f, 2.4f, Snap);
 
-            double elapsed = (Environment.TickCount64 - _placedAtMs) / 1000.0;
-            float  period  = MathF.Max(0.15f, PulseSeconds);
-            int    pulses  = Math.Clamp(PulseCount, 1, 6);
+            AdvanceCycle();
 
-            for (int p = 0; p < pulses; p++)
+            float rise = MathF.Max(0.15f, PulseSeconds);
+            int   n    = Math.Clamp(PulseCount, 1, 6);
+
+            double into = (Environment.TickCount64 - _cycleStartMs) / 1000.0;
+
+            for (int p = 0; p < n; p++)
             {
-                // Staggered by an even share of the period, so N pulses are evenly spaced in time
-                // whatever N is — a fixed stagger would bunch them up as the count rose.
-                float phase = (float)((elapsed / period + p / (float)pulses) % 1.0);
+                // Staggered by an even share of the rise, so N pulses are evenly spaced within the
+                // burst whatever N is — a fixed stagger would bunch them up as the count rose.
+                double age = into - p * rise / n;
 
-                DrawPulse(phase, rgb, eye);
+                // Not begun yet, or already finished. This is what the delay is made of: outside
+                // every pulse's own lifetime nothing is drawn at all, where the old modulo always
+                // had a wall somewhere mid-rise.
+                if (age < 0.0 || age >= rise) continue;
+
+                DrawPulse((float)(age / rise), rgb, eye);
             }
         }
         catch (Exception ex)
         {
             Diag.Error($"[Goal] world draw failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Rolls the burst over when the current cycle has run out, and draws the next random delay.
+    ///
+    /// <para><b>The cycle is the burst plus the gap, and the burst is longer than one pulse.</b> The
+    /// last pulse of a burst starts <c>(n-1)/n</c> of the way through the rise and still needs a
+    /// full rise to finish, so a cycle measured as "rise + delay" would start the next burst on top
+    /// of the tail of the last one — and the delay would visibly not be the delay that was asked
+    /// for.</para>
+    ///
+    /// <para><b>The jitter is rolled ONCE per cycle, never per frame.</b> A per-frame roll is not a
+    /// random delay, it is a delay that changes while you are waiting out — the cycle would end at
+    /// whatever value happened to come up on the frame the comparison was made, which is a shorter
+    /// wait on average and never the number on the slider. Same family of mistake as re-rolling the
+    /// city's window lights every frame.</para>
+    /// </summary>
+    private void AdvanceCycle()
+    {
+        float rise = MathF.Max(0.15f, PulseSeconds);
+        int   n    = Math.Clamp(PulseCount, 1, 6);
+
+        double burst = rise + (n - 1) * rise / n;
+        double cycle = burst + MathF.Max(0f, PulseDelay) + _cycleJitter;
+
+        if ((Environment.TickCount64 - _cycleStartMs) / 1000.0 < cycle) return;
+
+        _cycleStartMs = Environment.TickCount64;
+        _cycleJitter  = (float)(_rng.NextDouble() * MathF.Max(0f, PulseDelayRandom));
+    }
+
+    /// <summary>
+    /// Runs an action with ImGui's fill feathering switched off, then puts the flag back.
+    ///
+    /// <para><b>Restoring is mandatory, not tidiness.</b> The background draw list is shared with
+    /// every other overlay in this plugin and with every other plugin's, so leaving the flag cleared
+    /// would silently harden the edges of everything drawn after us for the rest of the frame.</para>
+    /// </summary>
+    private static void NoFeather(Action body)
+    {
+        var list  = ImGui.GetBackgroundDrawList();
+        var saved = list.Flags;
+
+        list.Flags &= ~ImDrawListFlags.AntiAliasedFill;
+
+        try { body(); }
+        finally { list.Flags = saved; }
     }
 
     /// <summary>
@@ -331,23 +460,46 @@ internal sealed class TestGoalService
 
         int n = _ring.Length;
 
-        for (int i = 0; i < n; i++)
+        // ANTIALIASED FILL OFF FOR THE WHOLE WALL, and this is what removes the segment lines.
+        //
+        // The wall is a lattice of abutting quads — one column per ring segment, fourteen rows per
+        // column for the gradient — and ImGui feathers the edge of every filled poly by about a
+        // pixel. Two neighbours therefore each lay down a half-covered edge over the SAME pixels,
+        // and the two blends ADD: a bright seam appears exactly where the join was supposed to be
+        // invisible, which reads as a radial grid ruled across the wall. It is precisely that.
+        // With feathering off the quads meet on exact pixel boundaries and the wall is continuous.
+        //
+        // Identical cause and identical fix to DigHuntOverlay's beam slices — see the comment
+        // there; this is the second time it has bitten, which is why it now has a helper.
+        var saved = list.Flags;
+        list.Flags &= ~ImDrawListFlags.AntiAliasedFill;
+
+        try
         {
-            var a = _ring[i];
-            var b = _ring[(i + 1) % n];
-
-            // One ray per segment when occlusion is on, at the segment's mid-height — not the nine a
-            // city face costs. A pulse wall is thin and tall, and a single sample per segment already
-            // gives the blocky-but-honest edge this route can offer.
-            if (eye.HasValue)
+            for (int i = 0; i < n; i++)
             {
-                var mid = new Vector3((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f + h * 0.5f,
-                                      (a.Z + b.Z) * 0.5f);
+                var a = _ring[i];
+                var b = _ring[(i + 1) % n];
 
-                if (TestCityOcclusion.Blocked(eye.Value, mid)) continue;
+                // One ray per segment when occlusion is on, at the segment's mid-height — not the
+                // nine a city face costs. A pulse wall is thin and tall, and a single sample per
+                // segment already gives the blocky-but-honest edge this route can offer.
+                if (eye.HasValue)
+                {
+                    var mid = new Vector3((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f + h * 0.5f,
+                                          (a.Z + b.Z) * 0.5f);
+
+                    if (TestCityOcclusion.Blocked(eye.Value, mid)) continue;
+                }
+
+                DrawSegment(list, a, b, h, rgb, env);
             }
-
-            DrawSegment(list, a, b, h, rgb, env);
+        }
+        finally
+        {
+            // Restored before the rising edge is stroked: that is AddLine, and its feathering is
+            // what keeps the ring smooth rather than stepped.
+            list.Flags = saved;
         }
 
         // The rising edge, stroked brighter. This is what makes "scaling up from the ground" legible

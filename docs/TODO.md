@@ -190,6 +190,18 @@ started right now. Update the indented line in the same edit that changes a depe
 - [ ] **I37** 🤖 Titles / flair, prestige unlocks *(new build)*
   - ⛔ Blocked by: **I35**
 
+### Dev experiments — Test City
+- [ ] **I52** 🤖 Draw the **Goal Area** through the D3D11 depth renderer, so the character occludes
+      the parts of the ring they stand in front of. Sansflaire's note, 2026-09-12 — flagged as a
+      *later* item at the time, not a now item.
+      The wall is translucent banded geometry, so it cannot simply join the city's opaque pass: it
+      needs either depth-test-on / depth-write-off with back-to-front ordering, or to keep its
+      bands and accept per-band sorting. Decide which when the city's own depth path is confirmed
+      working — the answer depends on whether the opaque pass turns out to be the right shape to
+      extend.
+  - ⛔ Blocked by: **the city's depth path drawing at all** — see the `PLAN.md` diagnosis; there is
+    no point extending a renderer that currently outputs nothing.
+
 ### Cheap wins — no dependencies, any time
 *(all done — add new ones here)*
 

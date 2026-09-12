@@ -388,12 +388,27 @@ internal sealed class TestCityWindow
     private void DrawGoalPulse()
     {
         ImGui.SliderFloat("Pulse length (seconds)", ref _goal.PulseSeconds, 0.2f, 8f, "%.2f");
-        ImGui.SliderInt("Concurrent pulses", ref _goal.PulseCount, 1, 6);
+        ImGui.SliderInt("Pulses per burst", ref _goal.PulseCount, 1, 6);
 
-        ImGui.TextDisabled("Pulses are staggered by an even share of the period, so N of them are\n"
-                         + "evenly spaced in time whatever N is. Height eases out — a linear rise\n"
-                         + "reads as a loading bar — and the fade is held at full for the first 55%%\n"
-                         + "so the wall is solid while it is still growing.");
+        ImGui.SliderFloat("Delay between bursts (seconds)", ref _goal.PulseDelay, 0f, 10f, "%.2f");
+        ImGui.SliderFloat("+ random up to (seconds)", ref _goal.PulseDelayRandom, 0f, 10f, "%.2f");
+
+        ImGui.TextDisabled("Pulses are staggered by an even share of the rise, so N of them are\n"
+                         + "evenly spaced within the burst whatever N is. Height eases out — a\n"
+                         + "linear rise reads as a loading bar — and the fade is held at full for\n"
+                         + "the first 55%% so the wall is solid while it is still growing.\n"
+                         + "\n"
+                         + "THE DELAY IS MEASURED FROM THE END OF THE BURST, not from the start of\n"
+                         + "the last pulse: the final pulse begins part-way through the rise and\n"
+                         + "still needs a full rise to finish, so timing it any other way would\n"
+                         + "start the next burst over the tail of the old one and the gap would not\n"
+                         + "be the gap on the slider. At 0 delay bursts run back to back, which is\n"
+                         + "what this did before the delay existed.\n"
+                         + "\n"
+                         + "The random amount is drawn ONCE when a cycle rolls over. Rolling it per\n"
+                         + "frame would not be a random delay — the wait would end on whichever\n"
+                         + "frame happened to draw a low number, which is shorter on average than\n"
+                         + "the slider says and never actually the slider's value.");
     }
 
     private void DrawGoalLook()
@@ -401,7 +416,15 @@ internal sealed class TestCityWindow
         ImGui.ColorEdit3("Colour", ref _goal.Rgb);
 
         ImGui.Checkbox("Turn green inside", ref _goal.TintOnEntry);
-        if (_goal.TintOnEntry) ImGui.ColorEdit3("Inside colour", ref _goal.InsideRgb);
+
+        if (_goal.TintOnEntry)
+        {
+            ImGui.ColorEdit3("Inside colour", ref _goal.InsideRgb);
+            ImGui.SliderFloat("Tint fade (seconds)", ref _goal.TintFadeSeconds, 0.05f, 5f, "%.2f");
+            ImGui.TextDisabled("Crossfades both ways, and from wherever it got to — leaving and\n"
+                             + "re-entering mid-fade continues rather than snapping. Placing the\n"
+                             + "area starts AT the inside colour, because you are standing in it.");
+        }
 
         ImGui.SliderFloat("Base opacity", ref _goal.BaseAlpha, 0.05f, 1f, "%.2f");
         ImGui.SliderFloat("Fade curve", ref _goal.FadeCurve, 0.3f, 4f, "%.2f");
