@@ -1,7 +1,7 @@
-# 017 — A zero write mask and a column-major matrix each blanked the D3D11 city, independently
+# 017 — Three independent faults each blanked the D3D11 city, and a fourth wasted two test rounds
 
-**Status:** Fixed 0.84.54.11, awaiting in-game confirmation · **Severity:** Feature-breaking
-**Versions:** introduced 0.84.54.9 (the D3D11 depth renderer's first release); never worked
+**Status:** ✅ **CONFIRMED WORKING 0.84.54.14** — real per-pixel occlusion, characters included
+**Severity:** Feature-breaking · **Versions:** introduced 0.84.54.9; never worked until 0.84.54.14
 
 ---
 
@@ -10,9 +10,17 @@
 Test City's D3D11 depth renderer shipped at 0.84.54.9 and drew nothing at all. The panel reported
 `ACTIVE — real geometry, depth-tested per pixel` in green the whole time.
 
-Two **independent** defects, either of which alone produces an identical blank screen. That is why
-the fault was hard to reason about from the outside: fixing one and seeing no change looks exactly
-like having fixed nothing, and invites reverting a correct fix.
+**Three independent defects**, any one of which alone produces an identical blank screen, plus a
+testing hazard that invalidated two rounds of live results. That combination is what made this
+expensive: fixing one real fault and seeing no change looks exactly like having fixed nothing, and
+invites reverting a correct fix.
+
+| # | Fault | Fixed |
+|---|---|---|
+| 1 | `RenderTargetWriteMask` was `None` — colour writes disabled | 0.84.54.11 |
+| 2 | HLSL packed the cbuffer matrix column-major — `transpose(M)·v` | 0.84.54.11 |
+| 3 | The projection matrix had **no depth column** — `clip.z == 0` everywhere | 0.84.54.14 |
+| — | An unbuilt city looks identical to a broken renderer | 0.84.54.14 (loud banner) |
 
 ## Root cause 1 — `RenderTargetWriteMask` was `None`
 
@@ -76,6 +84,79 @@ This also took the occlusion down with it: `clip.w` is garbage under the wrong p
 fixed, the city would have drawn as unrecognisable smears and the depth test would have looked
 broken too — three symptoms, one cause.
 
+## Root cause 3 — the projection matrix had no depth column
+
+Found by the one-frame trace, after the first two fixes left the screen still blank:
+
+```
+viewProj row0    -0.2657     0.5572     0.0000     0.9539
+         row1     0.0000     2.3655     0.0000    -0.2335
+         row2     1.3424     0.1103     0.0000     0.1888
+         row3  -195.6722    39.8011     0.0000    10.1714
+clip          (-0.00,       0.14,       0.0000,    7.586)
+```
+
+The **entire third column is zero.** `clip.z` is `dot(position, third column)`, so `clip.z == 0` for
+every vertex in the world — no camera angle helps. Under reverse-Z, 0 is the far plane, so this
+fails **both** our own `Greater` test against a buffer cleared to 0 **and** the scene-depth
+comparison. Either alone draws nothing.
+
+### FFXIV's projection is INFINITE-FAR REVERSE-Z, so `clip.z` is a constant and the depth lives in `w`
+
+This is the part worth remembering, and it is not what "a matrix with a depth column" intuitively
+suggests. The candidate dump from the working frame:
+
+```
+Zcol=(0.0000, 0.0000, 0.0000, 0.1000)  Control.ViewProjectionMatrix        <- works
+Zcol=(0.0000, 0.0000, 0.0000, 0.0000)  view x RenderCamera.ProjectionMatrix2
+Zcol=(0.0000, 0.0000, 0.0000, 0.0000)  view x RenderCamera.ProjectionMatrix
+clip (0.00, 0.02, 0.1000, 5.209)  ->  ndc z = 0.0192 = 0.1 / 5.209
+```
+
+**The working matrix's Z column is also three zeros.** The only difference is `M43 = 0.1`. So
+`clip.z` is a *constant* — the near plane — and every bit of depth information is carried by
+`clip.w`, which is the view distance:
+
+```
+depth = clip.z / clip.w = 0.1 / distance      // 1.0 at the near plane, -> 0 at infinity
+```
+
+That is exactly a standard infinite far-plane reverse-Z projection, and it **independently confirms
+the reverse-Z convention** the rest of this feature was built on. It also explains the other two
+candidates: their `M43` is 0 as well, so `clip.z` is identically zero and no depth exists at all.
+
+**Consequence for any future check: `M43` is the load-bearing element.** A "does this matrix have
+depth" test that inspects only `M13`/`M23`/`M33` — which is the intuitive way to write it — rejects
+the one matrix that works. `HasDepth` sums all four components of the column for this reason.
+
+**What made it nearly invisible is that everything else was right, and provably so.** The same trace
+projected the player's chest to `px(1280.0, 706.3)`, and Dalamud's `WorldToScreen` — the projector
+the working painted renderer uses — gave `px(1280.0, 706.3)`. Pixel-exact, with a sane `w = 7.586`.
+So X, Y and W were perfect, `row_major` and the multiply order were both confirmed correct, and the
+city could never have *looked* wrong. Total absence was the only symptom the fault could produce.
+
+`Render.Camera` holds **two** projection matrices, read from the struct definition rather than
+inferred from names: `ProjectionMatrix2` at **+0x50** and `ProjectionMatrix` at **+0x1A0**. The
+feature shipped on +0x1A0, the one without depth. A third candidate,
+**`Control.ViewProjectionMatrix` (+0x76B0)**, is what FFXIV-TV's `CopyBlitRenderer` uses for this
+exact comparison against this exact captured depth buffer — and **it is the one that works**,
+confirmed live 2026-09-12. `CityMatrixSource.Auto` prefers it and skips any candidate whose third
+column is zero; that test is arithmetic, not a heuristic, so it cannot discard a working matrix.
+
+## The fourth thing: an unbuilt city is indistinguishable from a broken renderer
+
+Two rounds of live testing returned confident negatives that meant nothing, because `Build City` had
+not been pressed. `DrawWorld` returns on its first line when `!IsBuilt`, so no probe, toggle or trace
+executes at all — and "nothing on screen" is exactly what a broken renderer looks like.
+
+It compounds: **the city is in-memory by design, so every plugin reload wipes it — and every rebuild
+is a plugin reload.** Shipping three diagnostic builds in a row therefore created three chances to
+test an unbuilt city. The build state also lived on a different tab from the diagnostics, so every
+switch could be flipped without ever seeing it.
+
+Fixed by making the banner loud, saying *why* it is unbuilt, and repeating it inside the Diagnostics
+block. The deeper rule is below.
+
 ## Why it survived a release: the panel said ACTIVE
 
 `TestCityService.UsingDepthRenderer` was set true whenever `TestCityD3D.Render` returned true, and
@@ -101,6 +182,26 @@ so `TrianglesLastFrame` could survive a frame that drew nothing.
    `TestCityService.DepthSubmitted`, all per-frame counters reset before any early return, and a panel
    that says `SUBMITTED — geometry handed to the GPU this frame` with an explicit note that nothing
    here reads the finished surface.
+
+## Lessons from the third fault and the testing hazard
+
+- **An unbuilt experiment is indistinguishable from a broken one, and the tester will not think of
+  it.** Any feature with an explicit build/arm step must say so loudly *at the place where results
+  are read*, not on another tab. Two rounds of live testing produced confident negatives that meant
+  nothing, and one of them nearly caused a correct fix to be reverted.
+- **Shipping a diagnostic build destroys the state under test.** The city is in-memory by design, so
+  every rebuild wipes it. Three diagnostic builds in a row created three chances to test nothing.
+  When someone is mid-test, *do not rebuild* — and prefer diagnostics that can be re-run without one
+  (a live selector beats a recompiled constant).
+- **A probe must carry its own control.** The first presentation probe drew only the thing under
+  test, so "no magenta" meant either "the image did not present" or "this code never ran" — opposite
+  investigations. The second drew a non-textured control beside it and was decisive in one look.
+- **Prefer a second opinion that is already known to work.** The single most valuable diagnostic was
+  free: projecting one world point with our matrix and with Dalamud's `WorldToScreen`, which the
+  working painted renderer already uses. It exonerated X/Y/W instantly and pointed straight at Z.
+- **Read the struct, not the name.** `Render.Camera` has two projection matrices and neither name
+  says which carries depth; the answer came from the field offsets plus a live dump, and the matrix
+  that actually works belongs to a third type entirely.
 
 ## Lessons
 
