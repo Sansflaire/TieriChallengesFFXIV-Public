@@ -330,14 +330,19 @@ internal sealed class TestCityService : IDisposable
     /// column is zero, because such a matrix cannot produce depth for any vertex.</summary>
     public CityMatrixSource MatrixSource = CityMatrixSource.Auto;
 
-    /// <summary>Repaint the game's native UI over the city. Without it the chat log and nameplates
-    /// sit behind the buildings — inherent to compositing at ImGui time, not a bug.</summary>
-    public bool RestoreGameUi = true;
+    /// <summary>Cut the game's HUD out of the city, so the native UI shows through. Without it the
+    /// chat log and nameplates sit behind the buildings — inherent to compositing at ImGui time, not
+    /// a bug in the depth test.</summary>
+    public bool ProtectHud = true;
 
-    public bool   UiRestoreCaptured => _d3d?.UiCaptured ?? false;
-    public int    UiRestoreRects    => _d3d?.UiRectsLastFrame ?? 0;
-    public string UiRestoreInfo     => _d3d?.UiInfo ?? "not started";
-    public string UiRestoreError    => _d3d?.UiError ?? string.Empty;
+    /// <summary>Outline the protected regions rather than trusting them.</summary>
+    public bool PreviewHudRegions;
+
+    public int    HudRectsMasked => _d3d?.MaskRectsLastFrame ?? 0;
+    public int    HudPlates      => _d3d?.Hud.PlatesFound ?? 0;
+    public int    HudAddons      => _d3d?.Hud.AddonsFound ?? 0;
+    public int    HudRejected    => _d3d?.Hud.RejectedOversized ?? 0;
+    public string HudError       => _d3d?.Hud.LastError ?? string.Empty;
 
     /// <summary>Which candidate the last frame actually used. On the panel because the wrong choice
     /// is otherwise invisible — the city just does not appear.</summary>
@@ -795,8 +800,9 @@ internal sealed class TestCityService : IDisposable
 
         SampleProjection(viewProj);
 
-        _d3d.DebugClearOnly  = DebugClearOnly;
-        _d3d.RestoreGameUi   = RestoreGameUi;
+        _d3d.DebugClearOnly    = DebugClearOnly;
+        _d3d.ProtectHud        = ProtectHud;
+        _d3d.PreviewHudRegions = PreviewHudRegions;
 
         if (DebugLogNextFrame)
         {

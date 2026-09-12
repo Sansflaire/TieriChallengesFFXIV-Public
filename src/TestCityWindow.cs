@@ -431,25 +431,41 @@ internal sealed class TestCityWindow
 
             ImGui.Separator();
 
-            ImGui.Checkbox("Keep the game's UI on top", ref _city.RestoreGameUi);
+            ImGui.Checkbox("Protect the game's HUD", ref _city.ProtectHud);
             ImGui.TextDisabled("Without this the chat log and nameplates sit BEHIND the buildings.\n"
                              + "That is not a bug in the depth test: everything ImGui draws is\n"
                              + "composited after the whole game frame, native UI included, so a\n"
-                             + "full-screen blit covers it by construction. And the depth buffer\n"
-                             + "cannot help either — the UI is 2D, drawn after the depth pass, so\n"
-                             + "it writes no depth at all and our shader has no way to know it is\n"
-                             + "there. So we snapshot the back buffer before drawing the city and\n"
-                             + "repaint each visible UI element's rectangle on top afterwards.\n"
-                             + "Costs one full-screen copy per frame. No render hooks — the hook\n"
-                             + "route fixes this properly but needs eleven detours on the hottest\n"
-                             + "functions in the pipeline, and tears them down on every rebuild.");
+                             + "full-screen blit covers it by construction. The depth buffer cannot\n"
+                             + "help either — the UI is 2D, drawn after the depth pass, writing no\n"
+                             + "depth at all, so the shader has no way to know it is there.\n"
+                             + "\n"
+                             + "So the city cuts holes in ITSELF: each visible HUD rectangle is\n"
+                             + "punched out of our surface as transparent before it is blitted, and\n"
+                             + "the game's already-composited UI shows through. Nameplates come\n"
+                             + "individually from the game's own 50-slot plate array, never as one\n"
+                             + "big container rectangle.");
 
-            if (_city.RestoreGameUi)
+            if (_city.ProtectHud)
             {
-                if (_city.UiRestoreCaptured)
-                    ImGui.TextColored(Ok, $"{_city.UiRestoreRects} UI rect(s) repainted · {_city.UiRestoreInfo}");
-                else
-                    ImGui.TextColored(Warn, $"back buffer NOT captured — {_city.UiRestoreError}");
+                ImGui.Checkbox("Outline the protected regions", ref _city.PreviewHudRegions);
+
+                ImGui.TextColored(Ok, $"{_city.HudRectsMasked} region(s) masked — "
+                                    + $"{_city.HudPlates} nameplate(s), {_city.HudAddons} addon(s)");
+
+                if (_city.HudRejected > 0)
+                    ImGui.TextDisabled($"{_city.HudRejected} oversized container(s) rejected — masking one\n"
+                                     + "would erase the city, so it is reported instead of guessed at.");
+
+                if (!string.IsNullOrEmpty(_city.HudError))
+                    ImGui.TextColored(Warn, $"region gather failed — {_city.HudError}");
+
+                ImGui.TextDisabled("PARTIAL COVERAGE, on purpose. This is a readability fix, not\n"
+                                 + "exact UI-over-city composition: the city is removed from a\n"
+                                 + "rectangle, so it is removed from the transparent gaps inside\n"
+                                 + "that rectangle too — expect holes behind a translucent chat\n"
+                                 + "panel and between glyphs. Unlisted addons are unprotected.\n"
+                                 + "Enlarging the boxes to hide that is the wrong move; the honest\n"
+                                 + "escalation is a pre-HUD render pass, which needs hooks.");
             }
 
             DrawDepthDiagnostics();

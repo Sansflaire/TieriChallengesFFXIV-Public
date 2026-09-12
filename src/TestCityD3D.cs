@@ -185,16 +185,29 @@ internal sealed unsafe class TestCityD3D : IDisposable
     /// </summary>
     public bool DebugLogNextFrame;
 
-    /// <summary>Repaint the game's native UI on top of the city. See <see cref="TestCityUiLayer"/>
-    /// for why this is necessary and why it is not done with render hooks.</summary>
-    public bool RestoreGameUi = true;
+    /// <summary>Cut the game's HUD out of the city's surface, so the already-composited native UI
+    /// shows through. See <see cref="TestCityHudRegions"/> for why this is necessary, why it is not
+    /// a back-buffer snapshot, and why it is not render hooks.</summary>
+    public bool ProtectHud = true;
 
-    private readonly TestCityUiLayer _uiLayer = new();
+    /// <summary>Outline the protected regions instead of trusting them.</summary>
+    public bool PreviewHudRegions;
 
-    public bool   UiCaptured      => _uiLayer.Captured;
-    public int    UiRectsLastFrame => _uiLayer.RectsLastFrame;
-    public string UiInfo          => _uiLayer.Info;
-    public string UiError         => _uiLayer.LastError;
+    public readonly TestCityHudRegions Hud = new();
+
+    public int MaskRectsLastFrame { get; private set; }
+
+    // Mask pipeline. Separate from the city's, so a failure here is local to an optional feature and
+    // never latches the renderer's global failed flag.
+    private ID3D11VertexShader?      _maskVs;
+    private ID3D11PixelShader?       _maskPs;
+    private ID3D11InputLayout?       _maskLayout;
+    private ID3D11Buffer?            _maskBuffer;
+    private ID3D11DepthStencilState? _maskDepthNone;
+    private bool _maskReady;
+
+    /// <summary>Six vertices per rectangle, at the region cap.</summary>
+    private const int MaskMaxVerts = 512 * 6;
 
     public int  VerticesLastFrame { get; private set; }
     public int  TrianglesLastFrame { get; private set; }
@@ -241,6 +254,7 @@ internal sealed unsafe class TestCityD3D : IDisposable
 
             CreateShaders();
             CreateState();
+            CreateMaskPipeline();
 
             _initialised = true;
 
@@ -355,6 +369,127 @@ internal sealed unsafe class TestCityD3D : IDisposable
             MaxLOD         = float.MaxValue,
         });
     }
+
+    /// <summary>
+    /// The HUD-mask pipeline. Built separately and allowed to fail on its own: an optional
+    /// readability feature must never be the reason the city stops drawing, so nothing here touches
+    /// <see cref="_failed"/>.
+    /// </summary>
+    private void CreateMaskPipeline()
+    {
+        try
+        {
+            var vs = Compiler.Compile(MaskShaderSource, "VS", "testcity_mask_vs", "vs_5_0");
+            var ps = Compiler.Compile(MaskShaderSource, "PS", "testcity_mask_ps", "ps_5_0");
+
+            _maskVs = _device!.CreateVertexShader(vs.Span);
+            _maskPs = _device!.CreatePixelShader(ps.Span);
+
+            _maskLayout = _device.CreateInputLayout(
+                new[] { new InputElementDescription("POSITION", 0, Format.R32G32_Float, 0, 0) },
+                vs.Span);
+
+            _maskBuffer = _device.CreateBuffer(new BufferDescription
+            {
+                ByteWidth      = MaskMaxVerts * 8,
+                Usage          = ResourceUsage.Dynamic,
+                BindFlags      = BindFlags.VertexBuffer,
+                CPUAccessFlags = CpuAccessFlags.Write,
+            });
+
+            // Depth OFF for the mask. The holes are screen-space and must punch through whatever the
+            // city wrote, and it must never touch the game's depth target.
+            _maskDepthNone = _device.CreateDepthStencilState(new DepthStencilDescription
+            {
+                DepthEnable   = false,
+                StencilEnable = false,
+            });
+
+            _maskReady = true;
+        }
+        catch (Exception ex)
+        {
+            _maskReady = false;
+            Diag.Error($"[City] HUD mask pipeline unavailable: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Punches the gathered HUD rectangles out of the colour target as transparent black.
+    ///
+    /// <para><b>Blending is OFF and RGBA writes are on</b>, because alpha-blending a zero-alpha
+    /// rectangle changes nothing — the destination has to be overwritten, not blended toward. That is
+    /// the one detail that makes this work at all, and it is the same class of mistake as the zero
+    /// write mask in BROKEN.md 017: a state that looks like it should erase and silently does not.</para>
+    /// </summary>
+    private void DrawHudMask(uint vpW, uint vpH)
+    {
+        MaskRectsLastFrame = 0;
+
+        if (!_maskReady || !ProtectHud) return;
+
+        var rects = Hud.Rects;
+        if (rects.Count == 0) return;
+
+        int verts = Math.Min(rects.Count, MaskMaxVerts / 6) * 6;
+
+        var mapped = _context!.Map(_maskBuffer!, 0, MapMode.WriteDiscard, Vortice.Direct3D11.MapFlags.None);
+
+        try
+        {
+            var dst = (Vector2*)mapped.DataPointer;
+            int n = 0;
+
+            foreach (var r in rects)
+            {
+                if (n + 6 > verts) break;
+
+                // Pixels -> NDC. Y flips because clip-space +Y is up and pixel +Y is down.
+                float x0 =  2f * r.X / vpW - 1f, x1 =  2f * r.Z / vpW - 1f;
+                float y0 =  1f - 2f * r.Y / vpH, y1 =  1f - 2f * r.W / vpH;
+
+                dst[n++] = new Vector2(x0, y0); dst[n++] = new Vector2(x1, y0); dst[n++] = new Vector2(x1, y1);
+                dst[n++] = new Vector2(x0, y0); dst[n++] = new Vector2(x1, y1); dst[n++] = new Vector2(x0, y1);
+            }
+
+            verts = n;
+        }
+        finally
+        {
+            _context.Unmap(_maskBuffer!, 0);
+        }
+
+        if (verts == 0) return;
+
+        var ctx = _context!;
+
+        ctx.OMSetDepthStencilState(_maskDepthNone);
+        ctx.IASetInputLayout(_maskLayout);
+        ctx.IASetVertexBuffer(0, _maskBuffer!, 8, 0);
+        ctx.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
+        ctx.VSSetShader(_maskVs);
+        ctx.PSSetShader(_maskPs);
+        ctx.Draw((uint)verts, 0);
+
+        MaskRectsLastFrame = verts / 6;
+    }
+
+    private const string MaskShaderSource = @"
+struct VS_IN  { float2 pos : POSITION; };
+
+float4 VS(VS_IN input) : SV_Position
+{
+    // Already in NDC. z = 0 keeps it inside the viewport's 0..1 depth range so DepthClipEnable
+    // cannot discard it, and the depth STATE is disabled anyway.
+    return float4(input.pos, 0.0f, 1.0f);
+}
+
+float4 PS() : SV_Target
+{
+    // Transparent black, written rather than blended — see DrawHudMask.
+    return float4(0.0f, 0.0f, 0.0f, 0.0f);
+}
+";
 
     private void Fail(string message)
     {
@@ -569,13 +704,12 @@ internal sealed unsafe class TestCityD3D : IDisposable
                 return true;
             }
 
-            // BEFORE anything of ours is queued. At UiBuilder.Draw time the back buffer holds the
-            // game's scene and its native UI and none of our geometry, which is exactly the snapshot
-            // the restore pass needs. Capturing after the blit would be capturing our own city.
-            if (RestoreGameUi)
+            // Gathered in full BEFORE any GPU work, so a failure mid-walk means no mask this frame
+            // rather than a half-masked surface.
+            if (ProtectHud)
             {
-                _uiLayer.DebugLogNextFrame |= DebugLogNextFrame;
-                _uiLayer.TryCapture(_device!, _context!);
+                Hud.DebugLogNextFrame |= DebugLogNextFrame;
+                Hud.Gather(vpW, vpH);
             }
 
             DepthCaptured = occlude && TryCaptureDepth();
@@ -605,9 +739,7 @@ internal sealed unsafe class TestCityD3D : IDisposable
 
             Blit(vpW, vpH, opacity);
 
-            // AFTER the city, because ImGui executes draw commands in submission order — this is
-            // the whole mechanism by which the HUD ends up in front.
-            if (RestoreGameUi) _uiLayer.Restore(vpW, vpH);
+            if (ProtectHud && PreviewHudRegions) Hud.DrawPreview();
 
             return true;
         }
@@ -692,6 +824,11 @@ internal sealed unsafe class TestCityD3D : IDisposable
                 ctx.IASetPrimitiveTopology(PrimitiveTopology.LineList);
                 ctx.Draw((uint)lineVerts, (uint)triVerts);
             }
+
+            // LAST, while our target is still bound and before it is restored. Everything the city
+            // wrote under the HUD is erased back to transparent, so the blit leaves the game's
+            // already-composited UI showing through untouched.
+            DrawHudMask(vpW, vpH);
         }
         finally
         {
@@ -985,7 +1122,11 @@ float4 PS(VS_OUT input) : SV_Target
             _depthSrv?.Dispose();
             _depthCopy?.Dispose();
 
-            _uiLayer.Dispose();
+            _maskDepthNone?.Dispose();
+            _maskBuffer?.Dispose();
+            _maskLayout?.Dispose();
+            _maskPs?.Dispose();
+            _maskVs?.Dispose();
 
             _context?.Dispose();
         }
