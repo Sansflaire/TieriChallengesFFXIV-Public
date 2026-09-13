@@ -448,6 +448,25 @@ internal sealed class TestCityWindow
             if (_city.ProtectHud)
             {
                 ImGui.Checkbox("Outline the protected regions", ref _city.PreviewHudRegions);
+                ImGui.TextDisabled("GREEN = the mode in use. RED = what the other mode would give.\n"
+                                 + "Whichever colour hugs the chat box and the nameplates is the\n"
+                                 + "right one — that is a matter of LOOKING, not of reasoning about\n"
+                                 + "transforms, which has already been got wrong once.");
+
+                int bm = (int)_city.HudBoundsMode;
+                if (ImGui.RadioButton("Bounds: game's resolved ScreenX/ScreenY", ref bm, (int)TestCityHudRegions.BoundsMode.ScreenXY))
+                    _city.HudBoundsMode = TestCityHudRegions.BoundsMode.ScreenXY;
+                if (ImGui.RadioButton("Bounds: rebuilt from the parent transform chain", ref bm, (int)TestCityHudRegions.BoundsMode.TransformChain))
+                    _city.HudBoundsMode = TestCityHudRegions.BoundsMode.TransformChain;
+                _city.HudBoundsMode = (TestCityHudRegions.BoundsMode)bm;
+
+                ImGui.TextDisabled("0.84.54.16 shipped the transform-chain mode and its holes landed\n"
+                                 + "nowhere near the HUD. Its per-node arithmetic is identical to\n"
+                                 + "Dalamud's own NodeBounds, so the error is outside it — most\n"
+                                 + "likely a scale that never enters the chain, since the walk stops\n"
+                                 + "at a null ParentNode and an addon's X/Y/Scale live outside every\n"
+                                 + "node. ScreenX/ScreenY is the game's own resolved position and\n"
+                                 + "cannot disagree with where the pixels are, so it is the default.");
 
                 ImGui.TextColored(Ok, $"{_city.HudRectsMasked} region(s) masked — "
                                     + $"{_city.HudPlates} nameplate(s), {_city.HudAddons} addon(s)");

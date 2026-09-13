@@ -338,6 +338,10 @@ internal sealed class TestCityService : IDisposable
     /// <summary>Outline the protected regions rather than trusting them.</summary>
     public bool PreviewHudRegions;
 
+    /// <summary>Which way a HUD rectangle is computed. Both are drawn in the preview because the
+    /// first attempt put the holes in the wrong places entirely.</summary>
+    public TestCityHudRegions.BoundsMode HudBoundsMode = TestCityHudRegions.BoundsMode.ScreenXY;
+
     public int    HudRectsMasked => _d3d?.MaskRectsLastFrame ?? 0;
     public int    HudPlates      => _d3d?.Hud.PlatesFound ?? 0;
     public int    HudAddons      => _d3d?.Hud.AddonsFound ?? 0;
@@ -803,6 +807,7 @@ internal sealed class TestCityService : IDisposable
         _d3d.DebugClearOnly    = DebugClearOnly;
         _d3d.ProtectHud        = ProtectHud;
         _d3d.PreviewHudRegions = PreviewHudRegions;
+        _d3d.Hud.Mode          = HudBoundsMode;
 
         if (DebugLogNextFrame)
         {

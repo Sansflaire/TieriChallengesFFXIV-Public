@@ -63,8 +63,33 @@ internal sealed unsafe class TestCityHudRegions
     private const float RejectAreaFraction = 0.55f;
 
     private readonly List<Vector4> _rects = new(64);
+    private readonly List<Vector4> _alt   = new(64);
 
     public IReadOnlyList<Vector4> Rects => _rects;
+
+    /// <summary>
+    /// How a node's screen rectangle is computed.
+    ///
+    /// <para><b>Two ways, both drawn in the preview, because the first attempt was wrong and
+    /// theorising about the second would be guessing twice.</b> 0.84.54.16 used
+    /// <see cref="TransformChain"/> — per-node offset, origin-relative scale and rotation walked up
+    /// <c>ParentNode</c>, arithmetic identical to Dalamud's own <c>NodeBounds.TransformPoints</c> —
+    /// and the holes landed in the wrong places entirely: carved where no UI was, not carved where it
+    /// was. The maths matches, so something outside it does not: most likely a scale that never
+    /// enters the chain, since <c>NodeBounds</c> stops at a null <c>ParentNode</c> and an addon's own
+    /// <c>AtkUnitBase.X/Y/Scale</c> live outside every node.</para>
+    ///
+    /// <para><see cref="ScreenXY"/> sidesteps the reconstruction entirely by using
+    /// <c>AtkResNode.ScreenX/ScreenY</c>, which the GAME maintains as the final resolved screen
+    /// position — the one number that cannot disagree with where the pixels actually are.</para>
+    /// </summary>
+    public enum BoundsMode { TransformChain = 0, ScreenXY = 1 }
+
+    public BoundsMode Mode = BoundsMode.ScreenXY;
+
+    /// <summary>The rectangles the OTHER mode would have produced. Drawn in red beside the chosen
+    /// mode's green, so which one tracks the HUD is a matter of looking rather than reasoning.</summary>
+    public IReadOnlyList<Vector4> Alternative => _alt;
 
     public int    PlatesFound    { get; private set; }
     public int    AddonsFound    { get; private set; }
@@ -103,6 +128,7 @@ internal sealed unsafe class TestCityHudRegions
     public void Gather(uint vpW, uint vpH)
     {
         _rects.Clear();
+        _alt.Clear();
         PlatesFound = AddonsFound = RejectedOversized = 0;
 
         bool log = DebugLogNextFrame;
@@ -160,13 +186,15 @@ internal sealed unsafe class TestCityHudRegions
             var node = (AtkResNode*)root;
             if ((node->NodeFlags & NodeFlags.Visible) == 0) continue;
 
-            if (!TryBounds(node, vpW, vpH, out var rect)) continue;
+            if (!TryBounds(node, vpW, vpH, out var rect, out var other)) continue;
 
             _rects.Add(rect);
+            _alt.Add(other);
             PlatesFound++;
 
             if (log)
-                Diag.Info($"[City] HUD plate[{i,2}] ({rect.X:F0},{rect.Y:F0})-({rect.Z:F0},{rect.W:F0})");
+                Diag.Info($"[City] HUD plate[{i,2}] chosen=({rect.X:F0},{rect.Y:F0})-({rect.Z:F0},{rect.W:F0}) "
+                        + $"other=({other.X:F0},{other.Y:F0})-({other.Z:F0},{other.W:F0})");
         }
     }
 
@@ -190,12 +218,16 @@ internal sealed unsafe class TestCityHudRegions
             var root = addon->RootNode;
             if (root == null) continue;
 
-            if (!TryBounds(root, vpW, vpH, out var rect)) continue;
+            if (!TryBounds(root, vpW, vpH, out var rect, out var other)) continue;
 
             float frac = Area(rect) / screenArea;
 
             if (log)
-                Diag.Info($"[City] HUD {name,-24} ({rect.X:F0},{rect.Y:F0})-({rect.Z:F0},{rect.W:F0}) area={frac:P1}");
+                Diag.Info($"[City] HUD {name,-24} chosen=({rect.X:F0},{rect.Y:F0})-({rect.Z:F0},{rect.W:F0}) "
+                        + $"other=({other.X:F0},{other.Y:F0})-({other.Z:F0},{other.W:F0}) "
+                        + $"area={frac:P1} addon=({addon->X},{addon->Y}) scale={addon->Scale:F3} "
+                        + $"root=({root->X:F0},{root->Y:F0}) screen=({root->ScreenX:F0},{root->ScreenY:F0}) "
+                        + $"wh=({root->Width}x{root->Height}) rootScale=({root->ScaleX:F3},{root->ScaleY:F3})");
 
             // Rejected and reported, never silently turned into a screen-wide hole.
             if (frac > RejectAreaFraction)
@@ -206,6 +238,7 @@ internal sealed unsafe class TestCityHudRegions
             }
 
             _rects.Add(rect);
+            _alt.Add(other);
             AddonsFound++;
         }
     }
@@ -223,12 +256,59 @@ internal sealed unsafe class TestCityHudRegions
     /// <c>IsVisible()</c> are native methods and are deliberately not used; per BROKEN.md 012 a C#
     /// catch cannot survive a bad one, so the managed transform is both safer and sufficient.</para>
     /// </summary>
-    private static bool TryBounds(AtkResNode* node, uint vpW, uint vpH, out Vector4 rect)
+    private bool TryBounds(AtkResNode* node, uint vpW, uint vpH, out Vector4 rect, out Vector4 other)
     {
-        rect = default;
+        var chain  = TryChainBounds(node, vpW, vpH, out bool okChain);
+        var screen = TryScreenBounds(node, vpW, vpH, out bool okScreen);
+
+        bool chosenOk = Mode == BoundsMode.ScreenXY ? okScreen : okChain;
+
+        rect  = Mode == BoundsMode.ScreenXY ? screen : chain;
+        other = Mode == BoundsMode.ScreenXY ? chain  : screen;
+
+        return chosenOk;
+    }
+
+    /// <summary>
+    /// The game's own resolved screen position, with size scaled by the accumulated ancestor scale.
+    ///
+    /// <para><c>ScreenX</c>/<c>ScreenY</c> are maintained by the game as the final on-screen position,
+    /// so nothing here reconstructs a transform that could disagree with the pixels. Only the SIZE
+    /// needs the scale chain, because <c>Width</c>/<c>Height</c> are unscaled local extents.</para>
+    /// </summary>
+    private static Vector4 TryScreenBounds(AtkResNode* node, uint vpW, uint vpH, out bool ok)
+    {
+        ok = false;
 
         float w = node->Width, h = node->Height;
-        if (w <= 0f || h <= 0f) return false;
+        if (w <= 0f || h <= 0f) return default;
+
+        float sx = 1f, sy = 1f;
+        int depth = 0;
+
+        for (var cur = node; cur != null && depth < MaxParentDepth; cur = cur->ParentNode, depth++)
+        {
+            sx *= cur->ScaleX;
+            sy *= cur->ScaleY;
+        }
+
+        if (!float.IsFinite(sx) || !float.IsFinite(sy)) return default;
+        if (!float.IsFinite(node->ScreenX) || !float.IsFinite(node->ScreenY)) return default;
+
+        var rect = Clamp(node->ScreenX, node->ScreenY,
+                         node->ScreenX + w * sx, node->ScreenY + h * sy, vpW, vpH);
+
+        ok = Area(rect) > 0f;
+        return rect;
+    }
+
+    private static Vector4 TryChainBounds(AtkResNode* node, uint vpW, uint vpH, out bool ok)
+    {
+        ok = false;
+        var rect = default(Vector4);
+
+        float w = node->Width, h = node->Height;
+        if (w <= 0f || h <= 0f) return rect;
 
         Span<Vector2> pts = stackalloc Vector2[4];
         pts[0] = new Vector2(0f, 0f);
@@ -261,30 +341,40 @@ internal sealed unsafe class TestCityHudRegions
 
         for (int i = 0; i < 4; i++)
         {
-            if (!float.IsFinite(pts[i].X) || !float.IsFinite(pts[i].Y)) return false;
+            if (!float.IsFinite(pts[i].X) || !float.IsFinite(pts[i].Y)) return rect;
             x0 = MathF.Min(x0, pts[i].X); y0 = MathF.Min(y0, pts[i].Y);
             x1 = MathF.Max(x1, pts[i].X); y1 = MathF.Max(y1, pts[i].Y);
         }
 
-        // Rounded OUTWARD, then clamped: a half-pixel short leaves a tinted fringe on the UI edge.
-        x0 = MathF.Max(MathF.Floor(x0), 0f);
-        y0 = MathF.Max(MathF.Floor(y0), 0f);
-        x1 = MathF.Min(MathF.Ceiling(x1), vpW);
-        y1 = MathF.Min(MathF.Ceiling(y1), vpH);
-
-        if (x1 - x0 <= 0f || y1 - y0 <= 0f) return false;
-
-        rect = new Vector4(x0, y0, x1, y1);
-        return true;
+        rect = Clamp(x0, y0, x1, y1, vpW, vpH);
+        ok   = Area(rect) > 0f;
+        return rect;
     }
 
-    private static float Area(in Vector4 r) => (r.Z - r.X) * (r.W - r.Y);
+    /// <summary>Rounded OUTWARD then clamped to the viewport: a half-pixel short leaves a tinted
+    /// fringe along the UI's edge, which is the most visible way for this to look broken.</summary>
+    private static Vector4 Clamp(float x0, float y0, float x1, float y1, uint vpW, uint vpH)
+        => new(MathF.Max(MathF.Floor(x0), 0f),
+               MathF.Max(MathF.Floor(y0), 0f),
+               MathF.Min(MathF.Ceiling(x1), vpW),
+               MathF.Min(MathF.Ceiling(y1), vpH));
+
+    private static float Area(in Vector4 r)
+    {
+        float w = r.Z - r.X, h = r.W - r.Y;
+        return w <= 0f || h <= 0f ? 0f : w * h;
+    }
 
     /// <summary>Outlines every gathered region, so the boxes can be checked against the pixels they
     /// are meant to cover in the same frame.</summary>
     public void DrawPreview()
     {
         var list = ImGui.GetForegroundDrawList();
+
+        // Red first so green wins where they coincide. Whichever colour hugs the HUD is the correct
+        // mode, which is a matter of looking rather than of reasoning about transforms.
+        foreach (var r in _alt)
+            list.AddRect(new Vector2(r.X, r.Y), new Vector2(r.Z, r.W), 0xFF0000FFu);
 
         foreach (var r in _rects)
             list.AddRect(new Vector2(r.X, r.Y), new Vector2(r.Z, r.W), 0xFF00FF00u);
